@@ -21,10 +21,10 @@
 6. **文档语言：** 中文；代码标识符用英文。
 
 ## 工程约定
-- 运行时：Python 3.11+（asyncio），以 `_docs/01-*`（S1 调研）的结论为准修订本节。
+- 运行时：Python 3.12（asyncio）。语言由用户于 2026-08-29 确认（S1 调研：本机 3.12.13，httpx 0.28 可用）。
 - **不引入 Agent 框架**（LangChain / LangGraph / AutoGen 等）：一切手撕。
 - 代码布局：`skillworld/` 包（`graph.py` / `agent.py` / `record.py` …），CLI 入口 `python -m skillworld`。
-- 测试：`tests/`，`pytest`；主循环的行为变更必须有测试跟上。
+- 测试：`tests/`，**标准库 `unittest`**（零依赖，不装 pytest）；主循环的行为变更必须有测试跟上。
 - 提交：一个计划步骤 = 一个（或少数）提交，提交信息引用 plan.md 步骤号（如 `S3: 手撕主循环 v0`）。
 
 ## 执行循环

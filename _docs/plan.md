@@ -21,7 +21,7 @@
 | # | 步骤 | 产出 / 完成标准 | 状态 |
 |---|------|----------------|------|
 | S1 | **调研：技术决策**（~15min） | ① 确认运行时：Python 3.11+ + asyncio（v0.2 遗留主题）；② 调研本环境可用的 LLM 通道（Claude API / OpenAI 兼容端点 / 本地模型，key 从哪来），只调研不接入，产出 `LLMAdapter` 接口草案；③ 结论写入开发记录 | ✅ |
-| S2 | **数据模型 + DAG 核心**（~15min） | `skillworld/graph.py`：`Node` / `Edge` / `GraphVersion`（纯 dataclass，无框架）；实现拓扑取序、成功后解锁后继、环检测 | ⬜ |
+| S2 | **数据模型 + DAG 核心**（~15min） | `skillworld/graph.py`：`Node` / `Edge` / `GraphVersion`（纯 dataclass，无框架）；实现拓扑取序、成功后解锁后继、环检测 | ✅ |
 | S3 | **手撕主循环 v0**（~20min） | `skillworld/agent.py`：单文件实现 `plan → 执行下一节点 → verify → 通过解锁 / 失败改图(v2) → 重执行`；plan 与 verify 先用**规则式 mock**（可确定、可调试） | ⬜ |
 | S4 | **记录层**（~10min） | `skillworld/record.py`：JSONL 追加式事件流（每次改图带 before/after + 理由，每次执行/验证带结果）；图版本快照持久化，可回答"计划为什么变了" | ⬜ |
 | S5 | **CLI 端到端演示**（~10min） | `python -m skillworld` 跑一个小目标：≥3 节点 DAG，故意让某节点首次失败 → 触发再规划插入前置节点 → 最终全部通过；打印图版本演化 + 事件流 | ⬜ |

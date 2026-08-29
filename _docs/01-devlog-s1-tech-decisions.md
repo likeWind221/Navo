@@ -16,6 +16,8 @@
    - **没有** Anthropic/OpenAI 云端 key，也没有其他 MCP LLM 通道
 3. **依赖面**：`anthropic` / `openai` SDK 均未安装；`httpx 0.28.1` 可用 → P1.1 用手撕 HTTP 客户端（httpx）实现 GatewayAdapter，贴合"不引框架"原则。
 
+> **补充（同日）：** 语言选择经用户确认为 **Python 3.12**（此前只是 S1 的遗留待决事项，调研时差点当成既定决策）；测试改用**标准库 unittest**，不装 pytest。CLAUDE.md 工程约定已同步修订。
+
 ## 关键决策（`LLMAdapter` 接口草案）
 
 ```python
