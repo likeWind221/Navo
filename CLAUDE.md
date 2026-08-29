@@ -20,15 +20,3 @@
 5. **调研/探索步骤同样要留痕**：调研结论写进对应的开发记录文档，不只在对话里说。
 6. **文档语言：** 中文；代码标识符用英文。
 
-## 工程约定
-- 运行时：Python 3.12（asyncio）。语言由用户于 2026-08-29 确认（S1 调研：本机 3.12.13，httpx 0.28 可用）。
-- **不引入 Agent 框架**（LangChain / LangGraph / AutoGen 等）：一切手撕。
-- 代码布局：`skillworld/` 包（`graph.py` / `agent.py` / `record.py` …），CLI 入口 `python -m skillworld`。
-- 测试：`tests/`，**标准库 `unittest`**（零依赖，不装 pytest）；主循环的行为变更必须有测试跟上。
-- 提交：一个计划步骤 = 一个（或少数）提交，提交信息引用 plan.md 步骤号（如 `S3: 手撕主循环 v0`）。
-
-## 执行循环
-```
-读 plan.md 找到下一个 ⬜ 步骤 → 调研/实现/验证到"完成标准" →
-写 devlog + 更新 index + 更新 plan 状态 → git commit → 下一步
-```
