@@ -7,13 +7,15 @@ import {
   type MessageId,
   type SessionId,
   type ToolCallId,
-} from "../src/shared/ids.js";
+} from "../src/brand/ids.js";
 import type {
   AssistantMessage,
   FinishReason,
   GenerateResponse,
   ToolCallContentBlock,
   ToolResultContentBlock,
+  ToolResultMessage,
+  UserMessage,
 } from "../src/llm/types.js";
 
 const sessionId = createSessionId("session-1");
@@ -45,6 +47,21 @@ const toolResult = {
 
 expectTypeOf(toolCall.id).toEqualTypeOf<ToolCallId>();
 expectTypeOf(toolResult.toolCallId).toEqualTypeOf<ToolCallId>();
+
+const userMessage = {
+  id: messageId,
+  role: "user",
+  content: [{ type: "text", text: "hello" }],
+} satisfies UserMessage;
+
+const toolResultMessage = {
+  id: messageId,
+  role: "user",
+  content: [toolResult],
+} satisfies ToolResultMessage;
+
+expectTypeOf(userMessage.role).toEqualTypeOf<"user">();
+expectTypeOf(toolResultMessage.content[0]).toMatchTypeOf<ToolResultContentBlock>();
 
 const response = {
   message: {

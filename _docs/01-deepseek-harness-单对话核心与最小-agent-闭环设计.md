@@ -189,7 +189,7 @@ SkillWorld 需要明确区分两个循环：
 ```text
 AgentLoop
   ├─ Inbox                 接收用户输入或系统续跑指令
-  ├─ ConversationLog       追加式会话事件
+  ├─ SessionLog            追加式会话事件
   ├─ SurfaceProjector      从事件生成模型 messages
   ├─ LLMAdapter            屏蔽具体模型协议
   ├─ ToolRegistry          提供名称、描述和参数 Schema
@@ -245,7 +245,7 @@ async def run_turn(user_input):
 
     for step in range(max_steps_per_turn):
         append("step/start", step)
-        messages = projector.derive(conversation_log)
+        messages = projector.derive(session_log)
 
         try:
             response = await llm.generate(messages, visible_tools)
@@ -318,7 +318,7 @@ PRD 要求 Planning 与 Execution 互不越权。最简单的落地方式不是�
 
 建议分开保存：
 
-- **ConversationLog**：模型对话、工具调用及运行边界；
+- **SessionLog**：模型对话、工具调用及运行边界；
 - **GraphStore / EvidenceStore**：图版本、节点运行、证据和验证结论。
 
 会话事件只保存领域对象的 ID、版本和必要摘要。下一次模型请求时，再从领域存储生成当前相关快照并作为一条可追踪的上下文事件进入会话。不要把完整 DAG 的唯一副本埋在聊天消息里。
@@ -352,7 +352,7 @@ GoalController
 
 ## 9. 建议的实现顺序（仅设计）
 
-1. ConversationLog + SurfaceProjector；
+1. SessionLog + SurfaceProjector；
 2. LLMAdapter + 最小消息类型；
 3. ToolRegistry + 顺序 ToolExecutor；
 4. 带终止保护的 AgentLoop；
@@ -390,14 +390,14 @@ AgentLoop 看起来简单是刻意的。其主要工程价值不在增加更多�
 建议按以下可独立验收的增量实现：
 
 1. **协议类型**：定义 `Message`、`ContentBlock`、`ToolCall`、`ToolResult`、`FinishReason` 和品牌化 ID；reasoning 是可选内容块，不参与流程判断。
-2. **ConversationLog**：实现仅追加事件和单调 sequence；先使用内存 Provider，但接口允许替换持久化实现。
+2. **SessionLog**：实现仅追加事件和单调 sequence；先使用内存 Provider，但接口允许替换持久化实现。
 3. **上下文投影**：只由 `user/message`、非空 `assistant/message`、`tool/result` 派生 messages；为同一事件前缀保证确定性结果。
 4. **LLM seam**：定义 provider-neutral `generate()`；请求包含 provider、model、system、messages、tools 和 `AbortSignal`。第一版可不持久化流式 chunk。
 5. **工具 seam**：注册工具 schema 与 executor；校验参数；未知工具、参数错误和业务异常规范化为可回送模型的错误结果。
 6. **单步执行**：冻结并记录请求快照，调用 LLM，记录 assistant message；有工具调用则顺序执行并记录 call/result，无工具调用则自然结束。
 7. **单轮循环**：追加 turn/step 边界；工具结果后重新投影上下文并进入下一 step；支持最大 step 数。
 8. **终止与取消**：统一 `AbortSignal`、模型超时、工具超时、有限重试；所有退出路径只写一次 `step/end` 和 `turn/end`。
-9. **Cordis 组合**：将 Conversation、LLM、Tools、AgentRuntime 分别作为 Service；Provider 和策略作为 Plugin；AgentRuntime 只依赖 Service 抽象。
+9. **Cordis 组合**：将 Session、LLM、Tools、AgentRuntime 分别作为 Service；Provider 和策略作为 Plugin；AgentRuntime 只依赖 Service 抽象。
 10. **闭环测试**：覆盖“直接回答”“一次工具后回答”“多次工具”“工具错误后恢复”“最大步数”“模型错误”“工具超时”“取消”和“日志重建请求”。
 
 第一版明确不做：并行工具、动态热替换、compaction、子 Agent、多 Profile、完整流式回放和 DAG 领域逻辑。Node 执行器后续把同一个 AgentRuntime 当作能力使用，而不是把 Node/DAG 状态写进内层循环。

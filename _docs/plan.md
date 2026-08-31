@@ -39,20 +39,20 @@
 
 | 状态 | 步骤 | 目标文件 | 工作内容 | 完成标准 |
 |---|---|---|---|---|
-| ✅ | 1.1 品牌化 ID | `src/shared/ids.ts` | 定义 Session、Message、Event、ToolCall 等品牌化 ID 及构造函数 | 不同 ID 在 TypeScript 中不可互换；运行时仍可序列化为字符串 |
+| ✅ | 1.1 品牌化 ID | `src/brand/ids.ts` | 定义 Session、Message、Event、ToolCall 等品牌化 ID 及构造函数 | 不同 ID 在 TypeScript 中不可互换；运行时仍可序列化为字符串 |
 | ✅ | 1.2 消息协议 | `src/llm/types.ts` | 定义 Message、text/reasoning/tool-call/tool-result 内容块、ToolSchema、FinishReason、TokenUsage 和 LLM 请求响应 | 不依赖具体 Provider；reasoning 可记录但不参与循环判断；tool call/result 可关联 |
 | ✅ | 1.3 协议编译期断言 | `tests/llm-types.typecheck.ts` | 用类型断言验证品牌化 ID、内容块关联和响应类型边界 | 类型检查通过；错误 ID 混用、缺失 error failure 均有编译期证据 |
 | ✅ | 1.4 协议运行时样例 | `tests/llm-types.spec.ts` | 用运行时样例验证 ID 构造、消息协议与 JSON 序列化 | JSON 数据可稳定构造；空 ID 被拒绝；品牌化 ID 运行时仍为字符串 |
 
-## 阶段 2：ConversationLog 与上下文投影
+## 阶段 2：SessionLog 与上下文投影
 
 | 状态 | 步骤 | 目标文件 | 工作内容 | 完成标准 |
 |---|---|---|---|---|
-| ⬜ | 2.1 会话事件协议 | `src/conversation/types.ts` | 定义 turn/step、user/assistant、request、tool call/result、error 事件及事件信封 | 事件由 type 判别；包含 session、sequence、timestamp；事件数据可序列化 |
-| ⬜ | 2.2 Conversation Service | `src/conversation/service.ts` | 定义 Cordis `ctx.conversations` Service、仅追加接口和内存实现 | sequence 严格递增；提交后不可变；先提交再发布事件 |
-| ⬜ | 2.3 Message Projector | `src/conversation/projector.ts` | 从事件日志投影模型 messages | 只投影 user、非空 assistant 和 tool result；相同前缀产生相同结果 |
-| ⬜ | 2.4 会话日志测试 | `tests/conversation-service.spec.ts` | 验证追加、顺序、不可变性和 Cordis 生命周期 | 注册、使用、释放均通过；监听器只看到已提交事实 |
-| ⬜ | 2.5 投影测试 | `tests/message-projector.spec.ts` | 验证模型可见与非可见事件边界 | 边界事件不进入 messages；工具结果顺序稳定；可从完整日志重建 |
+| ✅ | 2.1 会话事件协议 | `src/session/types.ts` | 定义 turn/step、user/assistant、request、tool call/result、error 事件及事件信封 | 事件由 type 判别；包含 session、sequence、timestamp；事件数据可序列化 |
+| ✅ | 2.2 Session Store | `src/session/store.ts` | 定义 Cordis `ctx.sessions` Service、仅追加接口和内存实现 | sequence 严格递增；提交后不可变；先提交再发布事件 |
+| ✅ | 2.3 Message Projector | `src/session/projector.ts` | 从事件日志投影模型 messages | 只投影 user、非空 assistant 和 tool result；相同前缀产生相同结果 |
+| ✅ | 2.4 会话日志测试 | `tests/session-store.spec.ts` | 验证追加、顺序、不可变性和 Cordis 生命周期 | 注册、使用、释放均通过；监听器只看到已提交事实 |
+| ✅ | 2.5 投影测试 | `tests/message-projector.spec.ts` | 验证模型可见与非可见事件边界 | 边界事件不进入 messages；工具结果顺序稳定；可从完整日志重建 |
 
 ## 阶段 3：LLM 与工具能力接口
 
@@ -80,7 +80,7 @@
 
 | 状态 | 步骤 | 目标文件 | 工作内容 | 完成标准 |
 |---|---|---|---|---|
-| ⬜ | 5.1 最小组合入口 | `src/app.ts` | 组合 Conversation、LLM、Tools 和 AgentRuntime 插件 | Cordis 依赖自动激活；应用释放时所有 Service 和注册项正常撤销 |
+| ⬜ | 5.1 最小组合入口 | `src/app.ts` | 组合 Session、LLM、Tools 和 AgentRuntime 插件 | Cordis 依赖自动激活；应用释放时所有 Service 和注册项正常撤销 |
 | ⬜ | 5.2 闭环集成测试 | `tests/agent-loop.integration.spec.ts` | 模拟“用户输入 → 模型调用工具 → 工具返回 → 模型最终回答” | 精确验证两次模型请求及完整事件序列；上下文可由日志重建 |
 | ⬜ | 5.3 Node 调用边界 | `src/node/node-agent.ts` | 定义最小 NodeAgent 适配器，将节点描述转换为一次 AgentRuntime 调用 | 仅证明 Node 可以调用内层循环；不实现 DAG、节点调度、证据或验证 |
 | ⬜ | 5.4 最小闭环验收 | `tests/node-agent.integration.spec.ts` | 验证一个 Node 通过 AgentLoop 使用工具并返回结果 | Node 层不绕过 AgentRuntime；内层事件完整；领域状态未泄漏进 AgentLoop |
@@ -94,13 +94,13 @@
 - Evidence、Verdict 和 GoalController；
 - 并行工具和独占屏障；
 - 流式 chunk 全量持久化；
-- 上下文压缩和 surface replacement；
+- 上下文压缩、surface replacement 和投影增量缓存；
 - Inbox、steering、inject 和 Session fork；
 - 子 Agent、多 Profile、Web UI 和远程 RPC；
 - Thought 文本解析或以自然语言思维链驱动状态机。
 
 ## 5. 当前下一步
 
-当前等待执行：**步骤 2.1 会话事件协议**。
+当前等待执行：**步骤 3.1 LLM Service**。
 
-执行前先说明事件分类、事件信封和可序列化边界；获得确认后只创建 `src/conversation/types.ts`。
+执行前按四段式流程说明 Service 范围、Provider 解耦目标、Adapter 注册与路由方案和 Cordis 生命周期设计；获得确认后只创建 `src/llm/service.ts`。

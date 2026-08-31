@@ -17,7 +17,10 @@ function assertIdValue(value: string, idName: string): void {
   }
 }
 
-function makeId<TId extends Brand<string, string>>(value: string, idName: string): TId {
+function makeId<TId extends Brand<string, string>>(
+  value: string,
+  idName: string,
+): TId {
   assertIdValue(value, idName);
   return value as TId;
 }

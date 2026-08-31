@@ -7,7 +7,7 @@ import {
   createStepId,
   createToolCallId,
   createTurnId,
-} from "../src/shared/ids.js";
+} from "../src/brand/ids.js";
 import type { GenerateRequest, GenerateResponse } from "../src/llm/types.js";
 
 const idFactories = [

@@ -1,4 +1,4 @@
-import type { MessageId, ToolCallId } from "../shared/ids.js";
+import type { MessageId, ToolCallId } from "../brand/ids.js";
 
 export type JsonValue =
   | null
@@ -13,6 +13,51 @@ export interface JsonObject {
 }
 
 export type MessageRole = "system" | "user" | "assistant";
+
+export type ContentBlock =
+  | TextContentBlock
+  | ReasoningContentBlock
+  | ToolCallContentBlock
+  | ToolResultContentBlock;
+
+export interface Message {
+  readonly id: MessageId;
+  readonly role: MessageRole;
+  readonly content: readonly ContentBlock[];
+}
+
+export type UserMessage = Message & { readonly role: "user" };
+
+export type AssistantMessage = Message & { readonly role: "assistant" };
+
+export type ToolResultMessage = UserMessage & {
+  readonly content: readonly [ToolResultContentBlock];
+};
+
+export type FinishReason =
+  | { readonly kind: "stop" }
+  | { readonly kind: "tool-calls" }
+  | { readonly kind: "max-tokens" }
+  | { readonly kind: "content-filter" }
+  | { readonly kind: "cancelled" }
+  | { readonly kind: "error"; readonly failure: LlmFailure };
+
+export interface GenerateRequest {
+  readonly provider: string;
+  readonly model: string;
+  readonly messages: readonly Message[];
+  readonly tools?: readonly ToolSchema[];
+  readonly temperature?: number;
+  readonly maxTokens?: number;
+  /** Operation control, not a serializable payload field. */
+  readonly signal?: AbortSignal;
+}
+
+export interface GenerateResponse {
+  readonly message: AssistantMessage;
+  readonly finishReason: FinishReason;
+  readonly usage?: TokenUsage;
+}
 
 export type TextContentBlock = {
   readonly type: "text";
@@ -40,20 +85,6 @@ export type ToolResultContentBlock = {
   readonly isError: boolean;
 };
 
-export type ContentBlock =
-  | TextContentBlock
-  | ReasoningContentBlock
-  | ToolCallContentBlock
-  | ToolResultContentBlock;
-
-export interface Message {
-  readonly id: MessageId;
-  readonly role: MessageRole;
-  readonly content: readonly ContentBlock[];
-}
-
-export type AssistantMessage = Message & { readonly role: "assistant" };
-
 export interface ToolSchema {
   readonly name: string;
   readonly description?: string;
@@ -74,29 +105,4 @@ export interface LlmFailure {
   readonly message: string;
   readonly status?: number;
   readonly retryAfterMs?: number;
-}
-
-export type FinishReason =
-  | { readonly kind: "stop" }
-  | { readonly kind: "tool-calls" }
-  | { readonly kind: "max-tokens" }
-  | { readonly kind: "content-filter" }
-  | { readonly kind: "cancelled" }
-  | { readonly kind: "error"; readonly failure: LlmFailure };
-
-export interface GenerateRequest {
-  readonly provider: string;
-  readonly model: string;
-  readonly messages: readonly Message[];
-  readonly tools?: readonly ToolSchema[];
-  readonly temperature?: number;
-  readonly maxTokens?: number;
-  /** Operation control, not a serializable payload field. */
-  readonly signal?: AbortSignal;
-}
-
-export interface GenerateResponse {
-  readonly message: AssistantMessage;
-  readonly finishReason: FinishReason;
-  readonly usage?: TokenUsage;
 }
