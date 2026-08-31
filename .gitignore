@@ -1,2 +1,13 @@
+node_modules/
+dist/
+
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+# S4 记录层的运行产物
+*.events.jsonl
+snapshots/
 # 第三方参考源码（不纳入版本库，仅本地研究用）
 deepseek-harness/
