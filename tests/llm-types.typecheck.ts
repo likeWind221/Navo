@@ -9,9 +9,8 @@ import {
   type ToolCallId,
 } from "../src/brand/ids.js";
 import type {
-  AssistantMessage,
   FinishReason,
-  GenerateResponse,
+  StreamChunk,
   ToolCallContentBlock,
   ToolResultContentBlock,
   ToolResultMessage,
@@ -63,17 +62,31 @@ const toolResultMessage = {
 expectTypeOf(userMessage.role).toEqualTypeOf<"user">();
 expectTypeOf(toolResultMessage.content[0]).toMatchTypeOf<ToolResultContentBlock>();
 
-const response = {
-  message: {
-    id: messageId,
-    role: "assistant",
-    content: [{ type: "text", text: "done" }],
-  },
-  finishReason: { kind: "stop" },
-} satisfies GenerateResponse;
+const toolDelta = {
+  type: "tool-call-delta",
+  index: 0,
+  id: toolCallId,
+  name: "echo",
+  argumentsDelta: '{"text":"hel',
+} satisfies StreamChunk;
 
-expectTypeOf(response.message).toMatchTypeOf<AssistantMessage>();
-expectTypeOf(response.message.role).toEqualTypeOf<"assistant">();
+expectTypeOf(toolDelta.id).toEqualTypeOf<ToolCallId>();
+expectTypeOf(toolDelta.type).toEqualTypeOf<"tool-call-delta">();
+
+const completedToolBlock = {
+  type: "block-end",
+  index: 0,
+  block: toolCall,
+} satisfies StreamChunk;
+
+expectTypeOf(completedToolBlock.block).toMatchTypeOf<ToolCallContentBlock>();
+
+const invalidToolResultEnd: StreamChunk = {
+  type: "block-end",
+  index: 1,
+  // @ts-expect-error A model stream cannot end with a tool-result block.
+  block: toolResult,
+};
 
 const failed: FinishReason = {
   kind: "error",
@@ -88,3 +101,4 @@ const invalidFinishReason: FinishReason = { kind: "error" };
 void invalidMessageId;
 void invalidToolCallId;
 void invalidFinishReason;
+void invalidToolResultEnd;

@@ -58,12 +58,15 @@
 
 | 状态 | 步骤 | 目标文件 | 工作内容 | 完成标准 |
 |---|---|---|---|---|
-| ⬜ | 3.1 LLM Service | `src/llm/service.ts` | 定义 Cordis `ctx.llm`、Adapter 注册、路由和 generate 接口 | AgentLoop 不依赖 Provider SDK；支持 AbortSignal；注册可随插件卸载撤销 |
-| ⬜ | 3.2 Mock LLM Adapter | `src/llm/mock-adapter.ts` | 提供按队列返回响应的测试 Adapter | 可记录请求并确定性返回文本、reasoning 或工具调用 |
-| ⬜ | 3.3 LLM Service 测试 | `tests/llm-service.spec.ts` | 验证注册、路由、缺失 Adapter、卸载和取消 | 所有错误具有稳定分类；生命周期无残留注册 |
-| ⬜ | 3.4 Tool Service | `src/tools/service.ts` | 定义 Cordis `ctx.tools`、工具注册、Schema 查询、参数校验与顺序执行 | 未知工具、参数错误和业务异常都规范化为错误 tool result；注册可撤销 |
-| ⬜ | 3.5 测试工具插件 | `src/tools/test-tools.ts` | 提供 echo、失败和延迟工具用于闭环测试 | 工具行为确定、支持取消，不进入生产默认组合 |
-| ⬜ | 3.6 Tool Service 测试 | `tests/tool-service.spec.ts` | 验证成功、未知工具、非法参数、异常、超时/取消和卸载 | 每个已接收调用都产生规范结果；错误不会破坏 callId 关联 |
+| ✅ | 3.1 LLM Service | `src/llm/service.ts` | 定义 Cordis `ctx.llm`、Adapter 注册、路由和 generate 接口 | AgentLoop 不依赖 Provider SDK；支持 AbortSignal；注册可随插件卸载撤销 |
+| ✅ | 3.2 Mock LLM Adapter | `src/llm/mock-adapter.ts` | 提供按队列返回响应的测试 Adapter | 可记录请求并确定性返回文本、reasoning 或工具调用 |
+| ✅ | 3.3 流式 LLM 协议 | `src/llm/types.ts` | 参考 Harness 增加 block-start/delta/block-end/usage/finish 流协议；暂保留旧完整响应类型作为迁移桥 | Chunk 可表达文本、reasoning、多工具调用、usage 和终止原因；不持久化 chunk；现有代码仍可编译 |
+| ✅ | 3.4 LLM 流式边界重构 | `src/llm/service.ts`、`src/llm/mock-adapter.ts` | 将 Service 与 Mock Adapter 原子切换为 stream-only；实现逐次迭代取消、错误终止和部分输出脚本 | 公共调用不再提供 generate；Adapter 接收同一 signal；Mock 可输出部分 chunk 后挂起/取消；无 timer/listener 残留 |
+| ✅ | 3.5 流式 LLM 测试与旧协议清理 | `tests/llm-service.spec.ts`、`tests/llm-types.*`、`src/llm/types.ts` | 验证流注册、路由、块顺序、错误、卸载和调用中取消，并移除迁移期完整响应类型 | 流式边界具有稳定分类；旧 generate/GenerateResponse 不再存在；生命周期无残留注册 |
+| ✅ | 3.6 Tool Service | `src/tools/service.ts` | 定义 Cordis `ctx.tools`、工具注册、Schema 查询、参数校验与顺序执行 | 未知工具、参数错误和业务异常都规范化为错误 tool result；注册可撤销 |
+| ✅ | 3.6.1 Plugin 职责与文件规模修正 | `src/tools/{types,errors,schema,service}.ts`、`src/llm/errors.ts`、`tests/llm-service*.spec.ts`、`CLAUDE.md` | 拆分 Tool 协议/错误/Schema/执行和 LLM 错误，按行为拆分超长测试，建立手写代码 300 行限制与模块级 errors 约定 | 所有手写代码文件不超过 300 行；公开可抛出错误归属模块 errors.ts；行为和测试语义不变 |
+| ✅ | 3.7 测试工具插件 | `src/tools/test-tools.ts` | 提供 echo、失败和延迟工具用于闭环测试 | 工具行为确定、支持取消，不进入生产默认组合 |
+| ✅ | 3.8 Tool Service 测试 | `tests/tool-service.spec.ts` | 验证成功、未知工具、非法参数、异常、超时/取消和卸载 | 每个已接收调用都产生规范结果；错误不会破坏 callId 关联 |
 
 ## 阶段 4：Agent 步骤与轮次循环
 
@@ -101,6 +104,6 @@
 
 ## 5. 当前下一步
 
-当前等待执行：**步骤 3.1 LLM Service**。
+当前等待执行：**步骤 4.1 Agent Runtime 协议**。
 
-执行前按四段式流程说明 Service 范围、Provider 解耦目标、Adapter 注册与路由方案和 Cordis 生命周期设计；获得确认后只创建 `src/llm/service.ts`。
+执行前按四段式流程从架构功能层面说明 Turn/Step 输入输出、限制配置、终态分类和与 Session/LLM/Tools 的依赖边界；设计前先只读检查 Harness Agent Loop 对应协议，并明确当前方案与 Harness 的差异。

@@ -8,7 +8,7 @@ import {
   createToolCallId,
   createTurnId,
 } from "../src/brand/ids.js";
-import type { GenerateRequest, GenerateResponse } from "../src/llm/types.js";
+import type { GenerateRequest, StreamChunk } from "../src/llm/types.js";
 
 const idFactories = [
   ["SessionId", createSessionId],
@@ -38,7 +38,6 @@ describe("LLM protocol", () => {
     const userMessageId = createMessageId("message-user");
     const assistantMessageId = createMessageId("message-assistant-tool");
     const toolMessageId = createMessageId("message-tool-result");
-    const finalMessageId = createMessageId("message-assistant-final");
     const toolCallId = createToolCallId("call-weather-1");
 
     const request: GenerateRequest = {
@@ -87,22 +86,27 @@ describe("LLM protocol", () => {
       ],
     };
 
-    const response: GenerateResponse = {
-      message: {
-        id: finalMessageId,
-        role: "assistant",
-        content: [{ type: "text", text: "北京当前晴，20°C。" }],
+    const stream: StreamChunk[] = [
+      { type: "block-start", index: 0, blockType: "text" },
+      { type: "text-delta", index: 0, text: "北京当前晴，20°C。" },
+      {
+        type: "block-end",
+        index: 0,
+        block: { type: "text", text: "北京当前晴，20°C。" },
       },
-      finishReason: { kind: "stop" },
-      usage: {
-        inputTokens: 100,
-        outputTokens: 20,
-        totalTokens: 120,
-        reasoningTokens: 10,
+      {
+        type: "usage",
+        usage: {
+          inputTokens: 100,
+          outputTokens: 20,
+          totalTokens: 120,
+          reasoningTokens: 10,
+        },
       },
-    };
+      { type: "finish", reason: { kind: "stop" } },
+    ];
 
-    const payload = { request, response };
+    const payload = { request, stream };
     const firstJson = JSON.stringify(payload);
     const restored = JSON.parse(firstJson);
 
