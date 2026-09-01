@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { Service } from "cordis";
 import type { Context } from "cordis";
 
@@ -24,7 +26,6 @@ declare module "cordis" {
 /** In-memory, append-only session log exposed as `ctx.sessions`. */
 export class SessionStore extends Service {
   private readonly eventsBySession = new Map<SessionId, SessionEvent[]>();
-  private eventCount = 0;
 
   constructor(ctx: Context) {
     super(ctx, "sessions");
@@ -35,7 +36,7 @@ export class SessionStore extends Service {
     const event = deepFreeze(
       structuredClone({
         ...draft,
-        id: createEventId(`event-${++this.eventCount}`),
+        id: createEventId(randomUUID()),
         sequence: events.length + 1,
         timestamp: new Date().toISOString(),
       }) as SessionEvent,

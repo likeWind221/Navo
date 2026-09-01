@@ -22,6 +22,32 @@ afterEach(async () => {
 });
 
 describe("SessionStore", () => {
+  it("generates unique UUID event IDs across store instances", async () => {
+    const firstContext = createContext();
+    const secondContext = createContext();
+    await Promise.all([
+      firstContext.plugin(SessionStore),
+      secondContext.plugin(SessionStore),
+    ]);
+
+    const first = firstContext.sessions.append({
+      sessionId: createSessionId("session-first-store"),
+      type: "turn-started",
+      data: { turnId: createTurnId("turn-first-store") },
+    });
+    const second = secondContext.sessions.append({
+      sessionId: createSessionId("session-second-store"),
+      type: "turn-started",
+      data: { turnId: createTurnId("turn-second-store") },
+    });
+    const uuidPattern =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    expect(first.id).toMatch(uuidPattern);
+    expect(second.id).toMatch(uuidPattern);
+    expect(first.id).not.toBe(second.id);
+  });
+
   it("appends events in a strictly increasing order within each session", async () => {
     const ctx = createContext();
     await ctx.plugin(SessionStore);
