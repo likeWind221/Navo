@@ -70,6 +70,34 @@ describe("LLMService adapter errors", () => {
     }
   });
 
+  it("keeps a provider AbortError distinct from caller cancellation", async () => {
+    const ctx = await kit.createContext();
+    const providerFailure = new DOMException(
+      "provider request timed out",
+      "AbortError",
+    );
+    ctx.llm.registerAdapter("provider-abort", {
+      stream: () => ({
+        [Symbol.asyncIterator]: () => ({
+          next: () => Promise.reject(providerFailure),
+        }),
+      }),
+    });
+
+    await expect(
+      collect(ctx.llm.stream(request("provider-abort"))),
+    ).resolves.toEqual([{
+      type: "finish",
+      reason: {
+        kind: "error",
+        failure: {
+          code: "stream-failed",
+          message: "provider request timed out",
+        },
+      },
+    }]);
+  });
+
   it.each(["done", "value"] as const)(
     "normalizes a throwing IteratorResult.%s getter without cleanup",
     async (field) => {

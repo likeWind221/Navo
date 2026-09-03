@@ -5,8 +5,8 @@
 - 完成品牌化 ID、LLM 消息协议、编译期协议断言和运行时协议样例。
 - 新增 `src/brand/ids.ts`：定义 `SessionId`、`MessageId`、`EventId`、`ToolCallId`、`TurnId`、`StepId` 及构造函数。
 - 新增 `src/llm/types.ts`：定义 Provider-neutral 的消息、内容块、工具 Schema、结束原因、用量、失败信息和生成请求/响应。
-- 新增 `tests/llm-types.typecheck.ts`：验证 ID 不可混用、工具调用/结果关联、assistant 响应角色与 error 结束原因边界。
-- 新增 `tests/llm-types.spec.ts`：验证 ID 运行时字符串表示、空 ID 拒绝，以及包含 reasoning、tool call/result 的协议 JSON 往返。
+- 新增 `tests/protocol.typecheck.ts`：验证 ID 不可混用、工具调用/结果关联、assistant 响应角色与 error 结束原因边界。
+- 新增 `tests/protocol.spec.ts`：验证 ID 运行时字符串表示、空 ID 拒绝，以及包含 reasoning、tool call/result 的协议 JSON 往返。
 - 新增 `vitest.config.ts`：限制测试发现范围为 `tests/**/*.spec.ts`，避免运行只读参考目录中的测试。
 
 ## 关键决策

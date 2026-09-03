@@ -2,7 +2,7 @@ import { Context } from "cordis";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { StreamChunk } from "../src/llm/types.js";
-import { MockLLMAdapter } from "../src/llm/mock-adapter.js";
+import { MockLLMAdapter } from "../src/llm/mock.js";
 import { LLMService } from "../src/llm/service.js";
 import {
   collect,

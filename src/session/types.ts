@@ -45,7 +45,15 @@ export interface EventRecord<TType extends string, TData> {
   readonly timestamp: string;
   readonly type: TType;
   readonly data: TData;
+  /** Placement in the current model-visible surface; absent for log-only facts. */
+  readonly surfaceOp?: SurfaceOp;
 }
+
+export type SurfaceOp = "append" | {
+  readonly op: "replace";
+  readonly start: number;
+  readonly end: number;
+};
 
 export type TurnEndStatus = "completed" | "blocked" | "cancelled" | "failed";
 

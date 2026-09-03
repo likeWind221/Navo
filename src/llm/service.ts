@@ -205,7 +205,7 @@ function failureChunk(
   error: unknown,
   signal: AbortSignal | undefined,
 ): FinishChunk {
-  if (signal?.aborted || isAbortError(error)) {
+  if (signal?.aborted) {
     return { type: "finish", reason: { kind: "cancelled" } };
   }
   return {
@@ -226,12 +226,4 @@ function normalizeFailure(error: unknown): LlmFailure {
 
 function abortedError(cause?: unknown): LLMServiceError {
   return new LLMServiceError("aborted", "LLM stream was aborted.", { cause });
-}
-
-function isAbortError(error: unknown): boolean {
-  return (
-    error instanceof DOMException && error.name === "AbortError"
-  ) || (
-    error instanceof Error && error.name === "AbortError"
-  );
 }

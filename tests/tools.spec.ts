@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { JsonObject } from "../src/llm/types.js";
-import { TEST_TOOL_NAMES, TestTools } from "../src/tools/test-tools.js";
+import { TEST_TOOL_NAMES, TestTools } from "../src/tools/testing.js";
+import { ToolExecutionError } from "../src/tools/service.js";
 import {
   createToolTestKit,
   toolCall,
@@ -189,5 +190,109 @@ describe("ToolService execution results", () => {
         message: "Tool output block at index 0 must be a text block.",
       },
     });
+  });
+
+  it("accepts safe integers and rejects silently rounded integers", async () => {
+    const ctx = await kit.createContext();
+    const received: number[] = [];
+    ctx.tools.register({
+      name: "safe_integer",
+      parameters: {
+        type: "object",
+        properties: { value: { type: "integer" } },
+        required: ["value"],
+        additionalProperties: false,
+      },
+      execute: async (arguments_) => {
+        received.push(arguments_.value as number);
+        return "accepted";
+      },
+    });
+
+    const safe = await ctx.tools.execute(
+      toolCall("safe-integer", "safe_integer", {
+        value: Number.MAX_SAFE_INTEGER,
+      }),
+      signal,
+    );
+    const rounded = await ctx.tools.execute(
+      toolCall(
+        "rounded-integer",
+        "safe_integer",
+        '{"value":9007199254740993}',
+      ),
+      signal,
+    );
+
+    expect(safe.kind).toBe("success");
+    expect(rounded).toMatchObject({
+      kind: "failure",
+      block: {
+        content: [{
+          type: "text",
+          text: expect.stringContaining("$.value must be an integer"),
+        }],
+      },
+      failure: { code: "invalid-arguments" },
+    });
+    expect(received).toEqual([Number.MAX_SAFE_INTEGER]);
+  });
+
+  it("keeps raw failures internal while preserving safe model guidance", async () => {
+    const ctx = await kit.createContext();
+    const rawSecret = "postgres://admin:secret@db.internal connection refused";
+    ctx.tools.register({
+      name: "unexpected_secret",
+      parameters: { type: "object", properties: {} },
+      execute: async () => {
+        throw new Error(rawSecret);
+      },
+    });
+    ctx.tools.register({
+      name: "safe_guidance",
+      parameters: { type: "object", properties: {} },
+      execute: async () => {
+        throw new ToolExecutionError(
+          "row lock owner is db-node-4",
+          "The record is temporarily locked; retry later.",
+        );
+      },
+    });
+
+    const unexpected = await ctx.tools.execute(
+      toolCall("unexpected-secret", "unexpected_secret", {}),
+      signal,
+    );
+    const guided = await ctx.tools.execute(
+      toolCall("safe-guidance", "safe_guidance", {}),
+      signal,
+    );
+
+    expect(unexpected).toMatchObject({
+      kind: "failure",
+      failure: { code: "tool-failed", message: rawSecret },
+      block: {
+        content: [{
+          type: "text",
+          text: "Error: Tool execution failed unexpectedly. Check the arguments or try another approach.",
+        }],
+      },
+    });
+    expect(JSON.stringify(unexpected.block)).not.toContain(rawSecret);
+    expect(guided).toMatchObject({
+      kind: "failure",
+      failure: {
+        code: "tool-failed",
+        message: "row lock owner is db-node-4",
+        modelMessage: "The record is temporarily locked; retry later.",
+      },
+      block: {
+        content: [{
+          type: "text",
+          text: "Error: The record is temporarily locked; retry later.",
+        }],
+      },
+    });
+    expect(JSON.stringify(guided.block)).not.toContain("db-node-4");
   });
 });

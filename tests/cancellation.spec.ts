@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { TEST_TOOL_NAMES, TestTools } from "../src/tools/test-tools.js";
+import { TEST_TOOL_NAMES, TestTools } from "../src/tools/testing.js";
 import {
   createToolTestKit,
   toolCall,
@@ -62,6 +62,55 @@ describe("ToolService cancellation", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it("preserves success when a tool completes as the signal aborts", async () => {
+    const ctx = await kit.createContext();
+    const controller = new AbortController();
+    ctx.tools.register({
+      name: "commit_then_abort",
+      parameters: { type: "object", properties: {} },
+      execute: async () => {
+        controller.abort("stop after committed result");
+        return "committed";
+      },
+    });
+    const call = toolCall("commit-then-abort", "commit_then_abort", {});
+
+    const result = await ctx.tools.execute(call, controller.signal);
+
+    expect(result).toEqual({
+      kind: "success",
+      block: {
+        type: "tool-result",
+        toolCallId: call.id,
+        content: [{ type: "text", text: "committed" }],
+        isError: false,
+      },
+    });
+  });
+
+  it("treats an unrelated AbortError as a tool failure", async () => {
+    const ctx = await kit.createContext();
+    ctx.tools.register({
+      name: "internal_abort",
+      parameters: { type: "object", properties: {} },
+      execute: async () => {
+        throw new DOMException("internal timeout", "AbortError");
+      },
+    });
+    const call = toolCall("internal-abort", "internal_abort", {});
+
+    const result = await ctx.tools.execute(
+      call,
+      new AbortController().signal,
+    );
+
+    expect(result).toMatchObject({
+      kind: "failure",
+      block: { toolCallId: call.id, isError: true },
+      failure: { code: "tool-failed", message: "internal timeout" },
+    });
+  });
+
   it("returns cancelled results for calls remaining after an abort", async () => {
     vi.useFakeTimers();
     const ctx = await kit.createContext();
@@ -102,6 +151,45 @@ describe("ToolService cancellation", () => {
 });
 
 describe("ToolService sequential execution", () => {
+  it("keeps a completed call successful and cancels later calls", async () => {
+    const ctx = await kit.createContext();
+    const controller = new AbortController();
+    let laterInvocations = 0;
+    ctx.tools.register({
+      name: "finish_and_stop",
+      parameters: { type: "object", properties: {} },
+      execute: async () => {
+        controller.abort("stop remaining calls");
+        return "finished";
+      },
+    });
+    ctx.tools.register({
+      name: "must_not_follow",
+      parameters: { type: "object", properties: {} },
+      execute: async () => {
+        laterInvocations += 1;
+        return "unexpected";
+      },
+    });
+    const calls = [
+      toolCall("finished", "finish_and_stop", {}),
+      toolCall("not-started", "must_not_follow", {}),
+    ];
+
+    const results = await ctx.tools.executeSequential(calls, controller.signal);
+
+    expect(results[0]).toMatchObject({
+      kind: "success",
+      block: { toolCallId: calls[0]!.id, isError: false },
+    });
+    expect(results[1]).toMatchObject({
+      kind: "failure",
+      block: { toolCallId: calls[1]!.id, isError: true },
+      failure: { code: "cancelled" },
+    });
+    expect(laterInvocations).toBe(0);
+  });
+
   it("does not start the next call before the prior call settles", async () => {
     const ctx = await kit.createContext();
     const events: string[] = [];

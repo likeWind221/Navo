@@ -220,7 +220,7 @@ function matchesType(type: JsonSchemaType, value: unknown): boolean {
     case "array": return Array.isArray(value);
     case "string": return typeof value === "string";
     case "number": return typeof value === "number" && Number.isFinite(value);
-    case "integer": return typeof value === "number" && Number.isInteger(value);
+    case "integer": return typeof value === "number" && Number.isSafeInteger(value);
     case "boolean": return typeof value === "boolean";
     case "null": return value === null;
   }

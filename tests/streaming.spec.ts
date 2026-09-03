@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { StreamChunk } from "../src/llm/types.js";
-import { MockLLMAdapter } from "../src/llm/mock-adapter.js";
+import { MockLLMAdapter } from "../src/llm/mock.js";
 import type { LLMAdapter } from "../src/llm/service.js";
 import {
   collect,

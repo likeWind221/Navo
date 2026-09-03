@@ -52,6 +52,9 @@ export type ToolFailureCode =
 /** Serializable diagnostic kept outside the model-facing result block. */
 export interface ToolFailure {
   readonly code: ToolFailureCode;
+  /** Full same-process diagnostic; never copied to the model by default. */
   readonly message: string;
+  /** Explicitly approved, actionable text that may be shown to the model. */
+  readonly modelMessage?: string;
   readonly details?: JsonValue;
 }

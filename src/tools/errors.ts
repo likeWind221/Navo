@@ -20,3 +20,24 @@ export class ToolServiceError extends Error {
 export function isToolServiceError(error: unknown): error is ToolServiceError {
   return error instanceof ToolServiceError;
 }
+
+/** Tool-body failure with a separate message explicitly approved for the model. */
+export class ToolExecutionError extends Error {
+  readonly modelMessage: string;
+
+  constructor(
+    message: string,
+    modelMessage: string,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.name = "ToolExecutionError";
+    this.modelMessage = modelMessage;
+  }
+}
+
+export function isToolExecutionError(
+  error: unknown,
+): error is ToolExecutionError {
+  return error instanceof ToolExecutionError;
+}

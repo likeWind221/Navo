@@ -8,7 +8,7 @@ import type {
   ToolCallContentBlock,
   ToolSchema,
 } from "../llm/types.js";
-import { ToolServiceError } from "./errors.js";
+import { ToolExecutionError, ToolServiceError } from "./errors.js";
 import { parseToolArguments, snapshotParameters } from "./schema.js";
 import type {
   ToolDefinition,
@@ -32,7 +32,9 @@ export type {
   ToolRegistration,
 } from "./types.js";
 export {
+  ToolExecutionError,
   ToolServiceError,
+  isToolExecutionError,
   isToolServiceError,
 } from "./errors.js";
 export type { ToolServiceErrorCode } from "./errors.js";
@@ -98,18 +100,20 @@ export class ToolService extends Service {
     }
 
     const context = Object.freeze({ callId: call.id, signal });
+    let output: ToolOutput;
     try {
-      const output = await tool.execute(parsed.arguments, context);
-      if (signal.aborted) return cancelledResult(call.id);
-      return successResult(call.id, normalizeOutput(output));
+      output = await tool.execute(parsed.arguments, context);
     } catch (error: unknown) {
-      if (signal.aborted || isAbortError(error)) {
+      if (signal.aborted) {
         return cancelledResult(call.id);
       }
-      return failureResult(call.id, {
-        code: "tool-failed",
-        message: errorMessage(error),
-      });
+      return toolFailedResult(call.id, error);
+    }
+
+    try {
+      return successResult(call.id, normalizeOutput(output));
+    } catch (error: unknown) {
+      return toolFailedResult(call.id, error);
     }
   }
 
@@ -189,12 +193,13 @@ function failureResult(
   callId: ToolCallId,
   failure: ToolFailure,
 ): ToolExecutionFailure {
+  const modelMessage = modelVisibleFailureMessage(failure);
   return deepFreeze({
     kind: "failure",
     block: {
       type: "tool-result",
       toolCallId: callId,
-      content: [{ type: "text", text: `Error: ${failure.message}` }],
+      content: [{ type: "text", text: `Error: ${modelMessage}` }],
       isError: true,
     },
     failure,
@@ -208,16 +213,35 @@ function cancelledResult(callId: ToolCallId): ToolExecutionFailure {
   });
 }
 
+function toolFailedResult(
+  callId: ToolCallId,
+  error: unknown,
+): ToolExecutionFailure {
+  return failureResult(callId, {
+    code: "tool-failed",
+    message: errorMessage(error),
+    ...(error instanceof ToolExecutionError
+      ? { modelMessage: error.modelMessage }
+      : {}),
+  });
+}
+
+function modelVisibleFailureMessage(failure: ToolFailure): string {
+  if (failure.modelMessage !== undefined) {
+    return failure.modelMessage;
+  }
+  if (failure.code !== "tool-failed") {
+    return failure.message;
+  }
+  return "Tool execution failed unexpectedly. Check the arguments or try another approach.";
+}
+
 function invalidDefinition(message: string): ToolServiceError {
   return new ToolServiceError("invalid-tool-definition", message);
 }
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function isAbortError(error: unknown): boolean {
-  return error instanceof Error && error.name === "AbortError";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
