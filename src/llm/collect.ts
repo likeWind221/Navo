@@ -4,6 +4,7 @@ import type {
   StreamContentBlock,
   TokenUsage,
 } from "./types.js";
+import { BlockAssembler } from "./assembler.js";
 
 /** Complete provider-neutral facts collected from one LLM stream. */
 export interface CollectedStream {
@@ -16,16 +17,20 @@ export interface CollectedStream {
 export async function collectStream(
   stream: AsyncIterable<StreamChunk>,
 ): Promise<CollectedStream> {
-  const content: StreamContentBlock[] = [];
+  const assembler = new BlockAssembler();
   let finishReason: FinishReason | undefined;
   let usage: TokenUsage | undefined;
   for await (const chunk of stream) {
-    if (chunk.type === "block-end") content.push(chunk.block);
-    if (chunk.type === "finish") finishReason = chunk.reason;
+    assembler.push(chunk);
+    if (chunk.type === "finish") {
+      finishReason = chunk.reason;
+      break;
+    }
     if (chunk.type === "usage") usage = chunk.usage;
   }
+  const content = assembler.blocks(finishReason);
   return Object.freeze({
-    content: Object.freeze(content),
+    content,
     ...(finishReason === undefined ? {} : { finishReason }),
     ...(usage === undefined ? {} : { usage }),
   });

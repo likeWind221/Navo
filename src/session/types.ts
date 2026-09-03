@@ -57,7 +57,12 @@ export type SurfaceOp = "append" | {
 
 export type TurnEndStatus = "completed" | "blocked" | "cancelled" | "failed";
 
-export type StepEndStatus = "completed" | "continue" | "cancelled" | "failed";
+export type StepEndStatus =
+  | "completed"
+  | "continue"
+  | "blocked"
+  | "cancelled"
+  | "failed";
 
 export type TurnStartedEvent = EventRecord<
   "turn-started",
@@ -139,13 +144,15 @@ export interface Failure {
   readonly details?: JsonValue;
 }
 
+export type ErrorSource = "llm" | "tool" | "runtime";
+
 export type ErrorEvent = EventRecord<
   "error",
   {
     readonly turnId: TurnId;
     readonly stepId?: StepId;
     readonly toolCallId?: ToolCallId;
-    readonly source: "llm" | "tool" | "runtime";
+    readonly source: ErrorSource;
     readonly failure: Failure;
   }
 >;

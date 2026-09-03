@@ -6,6 +6,7 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
+.claude/settings.local.json
 # S4 记录层的运行产物
 *.events.jsonl
 snapshots/

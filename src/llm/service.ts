@@ -11,6 +11,7 @@ import type {
   LlmFailure,
   StreamChunk,
 } from "./types.js";
+import type { LLMAdapter } from "./adapter.js";
 
 export {
   LLMServiceError,
@@ -19,10 +20,6 @@ export {
 export type { LLMServiceErrorCode } from "./errors.js";
 
 export type LLMAdapterRegistration = () => void;
-
-export interface LLMAdapter {
-  stream(request: GenerateRequest): AsyncIterable<StreamChunk>;
-}
 
 declare module "cordis" {
   interface Context {

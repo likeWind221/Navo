@@ -24,6 +24,7 @@
 - ⬜ 未开始
 - 🔄 进行中
 - ✅ 已完成
+- ⏸️ 延期
 - ⛔ 阻塞
 
 ## 阶段 0：TypeScript 与 Cordis 工程骨架
@@ -86,10 +87,10 @@
 
 | 状态 | 步骤 | 目标文件 | 工作内容 | 完成标准 |
 |---|---|---|---|---|
-| ⬜ | 5.1 最小组合入口 | `src/app.ts` | 组合 Session、LLM、Tools 和 AgentRuntime 插件 | Cordis 依赖自动激活；应用释放时所有 Service 和注册项正常撤销 |
-| ⬜ | 5.2 闭环集成测试 | `tests/integration.spec.ts` | 模拟“用户输入 → 模型调用工具 → 工具返回 → 模型最终回答” | 精确验证两次模型请求及完整事件序列；上下文可由日志重建 |
-| ⬜ | 5.3 Node 调用边界 | `src/node/agent.ts` | 定义最小 NodeAgent 适配器，将节点描述转换为一次 AgentRuntime 调用 | 仅证明 Node 可以调用内层循环；不实现 DAG、节点调度、证据或验证 |
-| ⬜ | 5.4 最小闭环验收 | `tests/node.spec.ts` | 验证一个 Node 通过 AgentLoop 使用工具并返回结果 | Node 层不绕过 AgentRuntime；内层事件完整；领域状态未泄漏进 AgentLoop |
+| ✅ | 5.1 最小组合入口 | `src/app.ts` | 组合 Session、LLM、Tools 和 AgentRuntime 插件 | Cordis 依赖自动激活；应用释放时所有 Service 和注册项正常撤销 |
+| ✅ | 5.2 闭环集成测试 | `tests/integration.spec.ts` | 模拟“用户输入 → 模型调用工具 → 工具返回 → 模型最终回答” | 精确验证两次模型请求及完整事件序列；上下文可由日志重建 |
+| ⏸️ | 5.3 Node 调用边界 | `src/node/agent.ts` | 延期：Node 应面向持续 Session，而不是包装单个 Turn；等待公开消息 Inbox 与领域边界设计 | 不以错误的单 Turn 抽象提前固化 Node 生命周期 |
+| ⏸️ | 5.4 最小闭环验收 | `tests/node.spec.ts` | 随 5.3 延期；待 Node、DAG、Evidence 与 Verification 边界明确后重新规划 | 当前版本以 5.2 的内层 AgentLoop 闭环作为验收终点 |
 
 ## 4. 本轮非目标
 
@@ -101,7 +102,7 @@
 - 并行工具和独占屏障；
 - 流式 chunk 全量持久化；
 - 上下文压缩、surface replacement 和投影增量缓存；
-- Inbox、steering、inject 和 Session fork；
+- 面向外部消息的公开 Inbox、steering、inject 和 Session fork；
 - 子 Agent、多 Profile、Web UI 和远程 RPC；
 - Thought 文本解析或以自然语言思维链驱动状态机。
 
@@ -111,6 +112,4 @@
 
 ## 5. 当前下一步
 
-当前等待执行：**步骤 5.1 最小组合入口**。
-
-执行前按四段式流程说明 Session、LLM、Tools 与 AgentRuntime 的装配顺序、Cordis 生命周期和应用释放边界；实现前只读核对 Harness 的最小组合方式，并明确当前项目不包含的外围能力。
+当前版本已在**步骤 5.2 闭环集成测试**收口。步骤 5.3 与 5.4 延期：现有 `AgentInbox` 是按 Session 串行执行完整 Turn 的内部队列，并非可向持续会话投递消息的公开 Inbox；真正的 Node 执行器应等待 Session-scoped Agent、DAG、Evidence 与 Verification 边界明确后再设计。

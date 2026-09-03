@@ -1,0 +1,130 @@
+import type { Context } from "cordis";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { createApp } from "../src/app.js";
+import {
+  createMessageId,
+  createSessionId,
+  createToolCallId,
+} from "../src/brand/ids.js";
+import { MockLLMAdapter } from "../src/llm/mock.js";
+import type { JsonObject, ToolCallContentBlock } from "../src/llm/types.js";
+
+let app: Context | undefined;
+
+afterEach(async () => {
+  await app?.fiber.dispose();
+  app = undefined;
+});
+
+describe("SkillWorld application integration", () => {
+  it("runs a model-tool-model loop and rebuilds its context from Session", async () => {
+    app = await createApp();
+    const sessionId = createSessionId("integration-loop");
+    const userMessage = {
+      id: createMessageId("integration-user"),
+      role: "user" as const,
+      content: [{ type: "text" as const, text: "Echo closed loop" }],
+    };
+    const toolCall: ToolCallContentBlock = {
+      type: "tool-call",
+      id: createToolCallId("integration-echo"),
+      name: "echo",
+      arguments: JSON.stringify({ text: "closed loop" }),
+    };
+    const adapter = new MockLLMAdapter([
+      {
+        kind: "chunks",
+        chunks: [
+          { type: "block-end", index: 0, block: toolCall },
+          { type: "finish", reason: { kind: "tool-calls" } },
+        ],
+      },
+      {
+        kind: "chunks",
+        chunks: [
+          {
+            type: "block-end",
+            index: 0,
+            block: { type: "text", text: "FINAL: closed loop" },
+          },
+          { type: "finish", reason: { kind: "stop" } },
+        ],
+      },
+    ]);
+    const execute = vi.fn(async (arguments_: JsonObject) =>
+      String(arguments_.text));
+    await app.plugin(Object.assign(
+      (ctx: Context) => {
+        const unregisterAdapter = ctx.llm.registerAdapter("mock", adapter);
+        const unregisterTool = ctx.tools.register({
+          name: "echo",
+          description: "Return the provided text.",
+          parameters: {
+            type: "object",
+            properties: { text: { type: "string" } },
+            required: ["text"],
+            additionalProperties: false,
+          },
+          execute,
+        });
+        return () => {
+          unregisterTool();
+          unregisterAdapter();
+        };
+      },
+      { inject: ["llm", "tools"] },
+    ));
+
+    await expect(app.agentRuntime.runTurn({
+      sessionId,
+      userMessage,
+      model: { provider: "mock", model: "integration" },
+    })).resolves.toMatchObject({ status: "completed", steps: 2 });
+
+    expect(execute).toHaveBeenCalledOnce();
+    expect(execute.mock.calls[0]?.[0]).toEqual({ text: "closed loop" });
+    expect(adapter.requests).toHaveLength(2);
+    expect(adapter.requests[0]?.messages).toEqual([userMessage]);
+    expect(adapter.requests[0]?.tools).toEqual([
+      expect.objectContaining({ name: "echo" }),
+    ]);
+    expect(adapter.requests[1]?.messages.map((message) => message.role))
+      .toEqual(["user", "assistant", "user"]);
+    expect(adapter.requests[1]?.messages[1]?.content).toEqual([toolCall]);
+    expect(adapter.requests[1]?.messages[2]?.content).toEqual([{
+      type: "tool-result",
+      toolCallId: toolCall.id,
+      content: [{ type: "text", text: "closed loop" }],
+      isError: false,
+    }]);
+    expect(adapter.requests[1]?.tools).toEqual(adapter.requests[0]?.tools);
+
+    const events = app.sessions.getEvents(sessionId);
+    expect(events.map((event) => event.type)).toEqual([
+      "turn-started",
+      "user-message",
+      "step-started",
+      "llm-requested",
+      "assistant-message",
+      "tool-call-requested",
+      "tool-call-result",
+      "step-ended",
+      "step-started",
+      "llm-requested",
+      "assistant-message",
+      "step-ended",
+      "turn-ended",
+    ]);
+    const requests = events.filter((event) => event.type === "llm-requested");
+    expect(requests.map((event) => event.data.messages))
+      .toEqual(adapter.requests.map((request) => request.messages));
+
+    const rebuilt = app.sessions.deriveMessages(sessionId);
+    expect(rebuilt.map((message) => message.role))
+      .toEqual(["user", "assistant", "user", "assistant"]);
+    expect(rebuilt.at(-1)?.content).toEqual([
+      { type: "text", text: "FINAL: closed loop" },
+    ]);
+  });
+});

@@ -2,7 +2,10 @@ import type { Context } from "cordis";
 
 import type { StepId } from "../brand/ids.js";
 import type { ToolCallContentBlock } from "../llm/types.js";
-import { toolResultMessage } from "./result.js";
+import {
+  toolResultMessage,
+  unexecutedToolResultMessage,
+} from "./result.js";
 import type { StepOutcome } from "./result.js";
 import type { ModelCompletion, TurnScope } from "./types.js";
 
@@ -15,6 +18,9 @@ export async function acceptResponse(
 ): Promise<StepOutcome> {
   const { input: { sessionId }, turnId, signal } = turn;
   const { message, finishReason, usage } = response;
+  const calls = message.content.filter(
+    (block): block is ToolCallContentBlock => block.type === "tool-call",
+  );
   ctx.sessions.append({
     type: "assistant-message",
     sessionId,
@@ -27,6 +33,18 @@ export async function acceptResponse(
     },
   });
   if (finishReason.kind === "max-tokens") {
+    for (const toolCall of calls) {
+      appendToolCall(ctx, sessionId, turnId, stepId, toolCall);
+      ctx.sessions.append({
+        type: "tool-call-result",
+        sessionId,
+        data: {
+          turnId,
+          stepId,
+          message: unexecutedToolResultMessage(toolCall.id),
+        },
+      });
+    }
     return blocked(stepId, "max-tokens", "Model output reached its token limit.");
   }
   if (finishReason.kind === "content-filter") {
@@ -36,24 +54,44 @@ export async function acceptResponse(
       "Model output was stopped by a content filter.",
     );
   }
-  const calls = message.content.filter(
-    (block): block is ToolCallContentBlock => block.type === "tool-call",
-  );
   for (const toolCall of calls) {
-    ctx.sessions.append({
-      type: "tool-call-requested",
-      sessionId,
-      data: { turnId, stepId, toolCall },
-    });
+    appendToolCall(ctx, sessionId, turnId, stepId, toolCall);
     const result = await ctx.tools.execute(toolCall, signal);
     ctx.sessions.append({
       type: "tool-call-result",
       sessionId,
       data: { turnId, stepId, message: toolResultMessage(result) },
     });
+    if (result.kind === "failure") {
+      ctx.sessions.append({
+        type: "error",
+        sessionId,
+        data: {
+          turnId,
+          stepId,
+          toolCallId: toolCall.id,
+          source: "tool",
+          failure: result.failure,
+        },
+      });
+    }
   }
   if (signal.aborted) return { status: "cancelled", stepId };
   return { status: calls.length === 0 ? "completed" : "continue", stepId };
+}
+
+function appendToolCall(
+  ctx: Context,
+  sessionId: TurnScope["input"]["sessionId"],
+  turnId: TurnScope["turnId"],
+  stepId: StepId,
+  toolCall: ToolCallContentBlock,
+): void {
+  ctx.sessions.append({
+    type: "tool-call-requested",
+    sessionId,
+    data: { turnId, stepId, toolCall },
+  });
 }
 
 function blocked(
@@ -62,9 +100,9 @@ function blocked(
   message: string,
 ): StepOutcome {
   return {
-    status: "completed",
-    turnStatus: "blocked",
+    status: "blocked",
     stepId,
     failure: { code, message },
+    failureSource: "llm",
   };
 }

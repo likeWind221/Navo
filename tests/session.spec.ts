@@ -134,6 +134,39 @@ describe("SessionStore", () => {
     expect(observedCommittedEvent).toBe(true);
   });
 
+  it("isolates synchronous and asynchronous observer failures", async () => {
+    const ctx = createContext();
+    await ctx.plugin(SessionStore);
+    const sessionId = createSessionId("session-observer-failure");
+    const observed: string[] = [];
+
+    ctx.on("session/event", () => {
+      observed.push("throwing");
+      throw new Error("synchronous observer failure");
+    });
+    ctx.on("session/event", async () => {
+      observed.push("rejecting");
+      throw new Error("asynchronous observer failure");
+    });
+    ctx.on("session/event", () => {
+      observed.push("healthy");
+    });
+
+    let committed: ReturnType<SessionStore["append"]> | undefined;
+    expect(() => {
+      committed = ctx.sessions.append({
+        sessionId,
+        type: "turn-started",
+        data: { turnId: createTurnId("turn-observer-failure") },
+      });
+    }).not.toThrow();
+
+    expect(ctx.sessions.getEvents(sessionId)).toEqual([committed]);
+    expect(observed).toEqual(["throwing", "rejecting", "healthy"]);
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
   it("registers and releases the service with its Cordis fiber", async () => {
     const ctx = createContext();
     const fiber = await ctx.plugin(SessionStore);

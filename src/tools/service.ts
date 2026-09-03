@@ -117,16 +117,6 @@ export class ToolService extends Service {
     }
   }
 
-  async executeSequential(
-    calls: readonly ToolCallContentBlock[],
-    signal: AbortSignal,
-  ): Promise<readonly ToolExecutionResult[]> {
-    const results: ToolExecutionResult[] = [];
-    for (const call of calls) {
-      results.push(await this.execute(call, signal));
-    }
-    return Object.freeze(results);
-  }
 }
 
 interface RegisteredTool {

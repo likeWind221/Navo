@@ -7,3 +7,6 @@
 - [04 - 阶段 2 SessionLog 与上下文投影开发记录](04-devlog-phase-2-session-log.md)：汇总 Session 事件协议、只追加 Store、Message 投影及相关测试。
 - [05 - 阶段 3 LLM 与工具能力接口开发记录](05-devlog-phase-3-llm-tools.md)：汇总流式 LLM、Mock Adapter、Tool Service、测试工具、错误/取消边界及完整验收。
 - [06 - 阶段 4 Agent Runtime 开发记录](06-devlog-phase-4-agent-runtime.md)：汇总 AgentLoop、Session Surface、模型重试与终止保护、真实接口验证及完整测试。
+- [07 - 阶段 5.1 最小组合入口开发记录](07-devlog-phase-5-app-composition.md)：记录核心 Cordis Service 的应用组合、依赖激活与统一释放边界。
+- [08 - 阶段 5.2 闭环集成测试开发记录](08-devlog-phase-5-loop-integration.md)：记录从公开应用入口完成模型、工具、Session 闭环的集成验收。
+- [09 - 当前版本收口记录](09-devlog-version-closure.md)：记录内层 AgentLoop 版本验收，以及 Node 接入延期的架构决策。

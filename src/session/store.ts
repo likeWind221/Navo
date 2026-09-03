@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { Service } from "cordis";
-import type { Context } from "cordis";
+import type { Context, Logger } from "cordis";
 
 import { createEventId, createMessageId } from "../brand/ids.js";
 import type { SessionId } from "../brand/ids.js";
@@ -28,9 +28,11 @@ declare module "cordis" {
 export class SessionStore extends Service {
   private readonly events = new Map<SessionId, SessionEvent[]>();
   private readonly surfaces = new Map<SessionId, SurfaceState>();
+  private readonly logger: Logger;
 
   constructor(ctx: Context) {
     super(ctx, "sessions");
+    this.logger = ctx.logger("session");
   }
 
   append(draft: SessionEventDraft, surfaceOp?: SurfaceOp): SessionEvent {
@@ -52,7 +54,7 @@ export class SessionStore extends Service {
       this.surfaces.set(event.sessionId, surface);
     }
     events.push(event);
-    this.ctx.emit("session/event", event);
+    this.publish(event);
     return event;
   }
 
@@ -81,6 +83,18 @@ export class SessionStore extends Service {
     }
     surface.derivedNodes = surface.nodes.length;
     return withSystemPrompt(surface.derived, sessionId, systemPrompt);
+  }
+
+  /** Publishes an already committed fact without changing append's outcome. */
+  private publish(event: SessionEvent): void {
+    void this.ctx.parallel("session/event", event).catch((error: unknown) => {
+      this.logger.warn(
+        "session/event observers failed for %s:%d: %o",
+        event.sessionId,
+        event.sequence,
+        error,
+      );
+    });
   }
 }
 

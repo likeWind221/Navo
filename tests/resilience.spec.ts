@@ -32,6 +32,9 @@ describe("AgentRuntime resilience", () => {
     });
     expect(eventTypes(kit, "limit").filter((type) => type === "step-started"))
       .toHaveLength(1);
+    expect(kit.ctx.sessions.getEvents(turnInput("limit").sessionId)
+      .find((event) => event.type === "error")?.data)
+      .toMatchObject({ source: "runtime", failure: { code: "max-steps-exceeded" } });
     assertClosed(kit, "limit");
   });
 
@@ -204,10 +207,45 @@ describe("AgentRuntime resilience", () => {
       expect(events.find((event) => event.type === "assistant-message"))
         .toBeDefined();
       expect(events.find((event) => event.type === "step-ended")?.data.status)
-        .toBe("completed");
+        .toBe("blocked");
       assertClosed(kit, finish);
     },
   );
+
+  it("pairs a completed max-tokens tool call with a not-executed result", async () => {
+    const call = toolCall("truncated", "must_not_run", {});
+    const kit = await createRuntime([
+      modelResponse([call], "max-tokens"),
+      modelResponse([{ type: "text", text: "recovered" }]),
+    ]);
+    let executions = 0;
+    kit.ctx.tools.register({
+      name: "must_not_run",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+      execute: async () => {
+        executions += 1;
+        return "unexpected";
+      },
+    });
+
+    const first = await kit.ctx.agentRuntime.runTurn(turnInput("truncated-pair"));
+
+    expect(first).toMatchObject({ status: "blocked", failure: { code: "max-tokens" } });
+    expect(executions).toBe(0);
+    const events = kit.ctx.sessions.getEvents(turnInput("truncated-pair").sessionId);
+    expect(events.find((event) => event.type === "tool-call-result")?.data.message.content[0])
+      .toMatchObject({ toolCallId: call.id, isError: true });
+    expect(events.find((event) => event.type === "error")?.data)
+      .toMatchObject({ source: "llm", failure: { code: "max-tokens" } });
+    expect(kit.ctx.sessions.deriveMessages(turnInput("truncated-pair").sessionId)
+      .map((message) => message.role))
+      .toEqual(["user", "assistant", "user"]);
+
+    await expect(kit.ctx.agentRuntime.runTurn(turnInput("truncated-pair")))
+      .resolves.toMatchObject({ status: "completed" });
+    expect(kit.adapter.requests[1]?.messages.map((message) => message.role))
+      .toEqual(["user", "assistant", "user", "user"]);
+  });
 });
 
 async function flushUntil(condition: () => boolean): Promise<void> {

@@ -1,6 +1,6 @@
 import type { MessageId, ToolCallId } from "../brand/ids.js";
 
-/** Raw, provider-independent chunks emitted by one model stream. */
+/** Canonical, provider-independent events emitted by one model stream. */
 export type StreamChunk =
   | BlockStartChunk
   | TextDeltaChunk

@@ -2,7 +2,7 @@ import type {
   GenerateRequest,
   StreamChunk,
 } from "./types.js";
-import type { LLMAdapter } from "./service.js";
+import type { LLMAdapter } from "./adapter.js";
 
 export type MockLLMEntry =
   | MockLLMChunksEntry

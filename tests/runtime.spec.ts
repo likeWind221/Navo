@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { createSessionId } from "../src/brand/ids.js";
 import { TEST_TOOL_NAMES } from "../src/tools/testing.js";
 import {
   assertClosed,
@@ -18,6 +19,83 @@ afterEach(async () => {
 });
 
 describe("AgentRuntime", () => {
+  it("serializes concurrent Turns through one Session Actor Inbox", async () => {
+    const firstStarted = Promise.withResolvers<void>();
+    const releaseFirst = Promise.withResolvers<void>();
+    const sessionId = createSessionId("shared-session");
+    const kit = await createRuntime([
+      {
+        kind: "handler",
+        handle: async function* () {
+          firstStarted.resolve();
+          await releaseFirst.promise;
+          yield {
+            type: "block-end",
+            index: 0,
+            block: { type: "text", text: "first answer" },
+          };
+          yield { type: "finish", reason: { kind: "stop" } };
+        },
+      },
+      modelResponse([{ type: "text", text: "second answer" }]),
+    ]);
+    const first = kit.ctx.agentRuntime.runTurn({
+      ...turnInput("first-concurrent"),
+      sessionId,
+    });
+    await firstStarted.promise;
+    const second = kit.ctx.agentRuntime.runTurn({
+      ...turnInput("second-concurrent"),
+      sessionId,
+    });
+
+    await Promise.resolve();
+    expect(kit.adapter.requests).toHaveLength(1);
+    expect(kit.ctx.sessions.getEvents(sessionId)
+      .filter((event) => event.type === "turn-started"))
+      .toHaveLength(1);
+
+    releaseFirst.resolve();
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      expect.objectContaining({ status: "completed" }),
+      expect.objectContaining({ status: "completed" }),
+    ]);
+    expect(kit.adapter.requests).toHaveLength(2);
+    expect(kit.adapter.requests[0]?.messages.map(messageText))
+      .toEqual(["first-concurrent"]);
+    expect(kit.adapter.requests[1]?.messages.map(messageText))
+      .toEqual(["first-concurrent", "first answer", "second-concurrent"]);
+    expect(kit.ctx.sessions.getEvents(sessionId)
+      .filter((event) => event.type === "turn-started" || event.type === "turn-ended")
+      .map((event) => event.type))
+      .toEqual(["turn-started", "turn-ended", "turn-started", "turn-ended"]);
+  });
+
+  it("lets different Session Actors run concurrently", async () => {
+    const firstStarted = Promise.withResolvers<void>();
+    const releaseFirst = Promise.withResolvers<void>();
+    const kit = await createRuntime([
+      {
+        kind: "handler",
+        handle: async function* () {
+          firstStarted.resolve();
+          await releaseFirst.promise;
+          yield { type: "finish", reason: { kind: "stop" } };
+        },
+      },
+      modelResponse([{ type: "text", text: "independent" }]),
+    ]);
+    const first = kit.ctx.agentRuntime.runTurn(turnInput("actor-one"));
+    await firstStarted.promise;
+
+    await expect(kit.ctx.agentRuntime.runTurn(turnInput("actor-two")))
+      .resolves.toMatchObject({ status: "completed" });
+    expect(kit.adapter.requests).toHaveLength(2);
+
+    releaseFirst.resolve();
+    await expect(first).resolves.toMatchObject({ status: "completed" });
+  });
+
   it("records a completed direct-answer Turn", async () => {
     const kit = await createRuntime([modelResponse([
       { type: "reasoning", text: "think" },
@@ -68,6 +146,14 @@ describe("AgentRuntime", () => {
       .toEqual(calls.map((call) => call.id));
     expect(results.map((event) => event.data.message.content[0].isError))
       .toEqual([false, true, false]);
+    const errors = kit.ctx.sessions.getEvents(turnInput("tools").sessionId)
+      .filter((event) => event.type === "error");
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.data).toMatchObject({
+      source: "tool",
+      toolCallId: calls[1]!.id,
+      failure: { code: "tool-failed" },
+    });
     assertClosed(kit, "tools");
   });
 
@@ -77,6 +163,19 @@ describe("AgentRuntime", () => {
     await expect(kit.ctx.agentRuntime.runTurn(turnInput("failure")))
       .resolves.toMatchObject({ status: "failed", failure: { code: "AUTH" } });
     expect(kit.adapter.requests).toHaveLength(1);
+    expect(kit.ctx.sessions.getEvents(turnInput("failure").sessionId)
+      .find((event) => event.type === "error")?.data)
+      .toMatchObject({ source: "llm", failure: { code: "AUTH" } });
     assertClosed(kit, "failure");
   });
 });
+
+function messageText(message: {
+  readonly content: readonly {
+    readonly type: string;
+    readonly text?: string;
+  }[];
+}): string | undefined {
+  const block = message.content.find((candidate) => candidate.type === "text");
+  return block?.text;
+}
