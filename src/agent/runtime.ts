@@ -22,6 +22,8 @@ declare module "cordis" {
 
 /** The sole owner of Turn/Step lifecycle, Session writes, and tool dispatch. */
 export class AgentRuntime extends Service {
+  static inject = ["sessions", "llm", "tools"];
+
   private readonly defaultLimits: AgentRuntimeLimits;
   private readonly inbox: AgentInbox;
 
@@ -40,7 +42,10 @@ export class AgentRuntime extends Service {
     const limits = resolveAgentRuntimeLimits(this.defaultLimits, input.limits);
     const turnId = createTurnId(randomUUID());
     const signal = input.signal ?? new AbortController().signal;
-    const turn: TurnScope = { input, turnId, signal, limits };
+    const scopedInput: RunTurnInput = input.toolNames === undefined
+      ? input
+      : { ...input, toolNames: Object.freeze([...input.toolNames]) };
+    const turn: TurnScope = { input: scopedInput, turnId, signal, limits };
     let steps = 0;
     let status: TurnEndStatus = "failed";
     let failure: Failure | undefined;

@@ -13,6 +13,7 @@ import { parseToolArguments, snapshotParameters } from "./schema.js";
 import type {
   ToolDefinition,
   ToolExecutionFailure,
+  ToolExecutionOptions,
   ToolExecutionResult,
   ToolExecutionSuccess,
   ToolFailure,
@@ -24,6 +25,7 @@ export type {
   ToolDefinition,
   ToolExecutionContext,
   ToolExecutionFailure,
+  ToolExecutionOptions,
   ToolExecutionResult,
   ToolExecutionSuccess,
   ToolFailure,
@@ -73,18 +75,28 @@ export class ToolService extends Service {
     };
   }
 
-  schemas(): readonly ToolSchema[] {
+  schemas(allowedNames?: readonly string[]): readonly ToolSchema[] {
+    const allowed = this.allowedNames(allowedNames);
     return Object.freeze(
-      [...this.tools.values()].map(({ schema }) =>
-        deepFreeze(structuredClone(schema))),
+      [...this.tools.entries()]
+        .filter(([name]) => allowed === undefined || allowed.has(name))
+        .map(([, { schema }]) => deepFreeze(structuredClone(schema))),
     );
   }
 
   async execute(
     call: ToolCallContentBlock,
     signal: AbortSignal,
+    options: ToolExecutionOptions = {},
   ): Promise<ToolExecutionResult> {
     if (signal.aborted) return cancelledResult(call.id);
+    if (options.allowedTools !== undefined
+      && !options.allowedTools.includes(call.name)) {
+      return failureResult(call.id, {
+        code: "tool-not-allowed",
+        message: `Tool '${call.name}' is not allowed for this Turn.`,
+      });
+    }
 
     const tool = this.tools.get(call.name);
     if (!tool) {
@@ -99,7 +111,11 @@ export class ToolService extends Service {
       return failureResult(call.id, parsed.failure);
     }
 
-    const context = Object.freeze({ callId: call.id, signal });
+    const context = Object.freeze({
+      callId: call.id,
+      signal,
+      ...(options.sessionId === undefined ? {} : { sessionId: options.sessionId }),
+    });
     let output: ToolOutput;
     try {
       output = await tool.execute(parsed.arguments, context);
@@ -117,6 +133,18 @@ export class ToolService extends Service {
     }
   }
 
+  private allowedNames(names: readonly string[] | undefined): Set<string> | undefined {
+    if (names === undefined) return undefined;
+    const allowed = new Set(names);
+    const unknown = [...allowed].filter((name) => !this.tools.has(name));
+    if (unknown.length > 0) {
+      throw new ToolServiceError(
+        "unknown-tool-selection",
+        `Unknown selected tool${unknown.length === 1 ? "" : "s"}: ${unknown.join(", ")}.`,
+      );
+    }
+    return allowed;
+  }
 }
 
 interface RegisteredTool {

@@ -16,7 +16,8 @@ export async function acceptResponse(
   stepId: StepId,
   response: ModelCompletion,
 ): Promise<StepOutcome> {
-  const { input: { sessionId }, turnId, signal } = turn;
+  const { input, turnId, signal } = turn;
+  const { sessionId } = input;
   const { message, finishReason, usage } = response;
   const calls = message.content.filter(
     (block): block is ToolCallContentBlock => block.type === "tool-call",
@@ -56,7 +57,10 @@ export async function acceptResponse(
   }
   for (const toolCall of calls) {
     appendToolCall(ctx, sessionId, turnId, stepId, toolCall);
-    const result = await ctx.tools.execute(toolCall, signal);
+    const result = await ctx.tools.execute(toolCall, signal, {
+      sessionId,
+      ...(input.toolNames === undefined ? {} : { allowedTools: input.toolNames }),
+    });
     ctx.sessions.append({
       type: "tool-call-result",
       sessionId,

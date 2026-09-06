@@ -1,6 +1,8 @@
 # 文档索引
 
 - [00 - SkillWorld 简化 PRD](00-skillworld-prd.md)：系统核心定义与产品原则。
+- [后端与 Agent 内核开发计划](backend-plan.md)：后端阶段、步骤、状态与验收标准。
+- [前端开发计划](frontend-plan.md)：Electron + React 前端阶段、步骤、状态与验收标准。
 - [01 - DeepSeek Harness 单对话核心与最小 Agent 闭环设计](01-deepseek-harness-单对话核心与最小-agent-闭环设计.md)：源码调研、设计亮点及适配 SkillWorld 的最小闭环方案。
 - [02 - 阶段 0 工程骨架开发记录](02-阶段-0-工程骨架开发记录.md)：汇总 TypeScript、Node.js、pnpm、Cordis 和最小入口的设计与验收。
 - [03 - 阶段 1 核心协议开发记录](03-devlog-phase-1-core-protocol.md)：汇总品牌化 ID、提供商无关消息协议、静态/运行时测试与 Vitest 范围配置。
@@ -10,3 +12,36 @@
 - [07 - 阶段 5.1 最小组合入口开发记录](07-devlog-phase-5-app-composition.md)：记录核心 Cordis Service 的应用组合、依赖激活与统一释放边界。
 - [08 - 阶段 5.2 闭环集成测试开发记录](08-devlog-phase-5-loop-integration.md)：记录从公开应用入口完成模型、工具、Session 闭环的集成验收。
 - [09 - 当前版本收口记录](09-devlog-version-closure.md)：记录内层 AgentLoop 版本验收，以及 Node 接入延期的架构决策。
+- [10 - Step 6.1 学习产品契约收敛开发记录](10-devlog-step-6-1-learning-contract.md)：记录 Node、双层 Session、交互工作区与 Agent 权限边界。
+- [11 - Step 6.2 学习领域身份与协议开发记录](11-devlog-step-6-2-learning-types.md)：记录 Node 品牌身份、工作区协议与三条独立状态轴。
+- [12 - Step 6.3 学习领域事件协议开发记录](12-devlog-step-6-3-learning-events.md)：记录 NodeEvent 信封、六类领域事实及其与 SessionLog 的分离边界。
+- [13 - Step 6.3.1 双 Workspace Session 与功能切片修正](13-devlog-step-6-3-1-workspace-sessions.md)：记录双 Session 隔离、未验证协议回撤及 Learn Workspace MVP 重排。
+- [14 - Step 6.3.2 单 NodeSession 与内容面板修正](14-devlog-step-6-3-2-node-content.md)：记录单一对话记忆、教材/练习领域内容与无状态 Grader 边界。
+- [15 - Step 6.4 Node Store 与单 Session 绑定](15-devlog-step-6-4-node-store.md)：记录独立 NodeEvent Store、严格投影、唯一 Session 绑定与提交后通知。
+- [16 - Step 6.5 Node Store 行为测试](16-devlog-step-6-5-node-store-tests.md)：记录创建/绑定、不变性、严格投影、观察者隔离与 Cordis 生命周期测试。
+- [17 - Step 6.6 教材与练习内容协议](17-devlog-step-6-6-node-content-protocol.md)：记录教材/题集快照、隐藏参考答案、独立内容 revision 和严格重建。
+- [18 - Step F0.1 桌面前端骨架](18-devlog-step-f0-1-frontend-scaffold.md)：记录前后端计划隔离、Electron/React 工程、安全 preload 与独立依赖边界。
+- [19 - Step 6.7 Node 内容 Store 与受限工具](19-devlog-step-6-7-node-content-tools.md)：记录内容替换命令、per-turn 工具白名单和基于 Session 的 Node 写入授权。
+- [20 - Step 6.8 Node 内容行为测试](20-devlog-step-6-8-node-content-tests.md)：记录内容 revision、严格重建、脱敏、Session 授权、工具白名单和取消测试。
+- [21 - 前端信息架构](21-frontend-information-architecture.md)：定义目标、路线、Node 工作区、设置、导航、状态与权限边界。
+- [22 - Step F1.1 页面信息架构](22-devlog-step-f1-1-information-architecture.md)：记录桌面信息架构、Node 工作区优先级和未实现能力的占位原则。
+- [23 - F1.2 三版 Node 视觉原型（历史记录）](23-devlog-step-f1-2-visual-prototypes.md)：记录三版原型与预览排障；原型代码已清理，已选 C 方案。
+- [24 - 视觉设计规范](24-visual-design.md)：选定山丘远征站的亮白地形主题、色板、排版、布局与可访问性要求。
+- [25 - 视觉方向与 Miracle 前端调研](25-devlog-visual-selection-miracle-review.md)：记录原型清理及 Miracle 可借鉴的交互、组件与工程边界。
+- [28 - F1.2.1 最小视觉样板（待确认）](28-devlog-step-f1-2-1-minimal-sample.md)：记录自绘图标、最小控件样板、开发预览隔离与地图后续 3D 建模边界。
+- [30 - F1.2.2 最小对话工作区（待验收）](30-devlog-step-f1-2-2-minimal-chat.md)：记录顶部品牌栏、导航插槽、本地消息与输入交互。
+- [26 - Step 6.9.1–6.9.3 搜索协议与注册服务](26-devlog-step-6-9-1-3-search-registry.md)：记录搜索协议、安全错误、确定性路由、插件注册生命周期及后续拆分。
+- [27 - Step 6.9.4 搜索执行与边界防护](27-devlog-step-6-9-4-search-execution.md)：记录搜索入口、输入输出校验、有界冻结、取消超时及插件执行生命周期。
+- [29 - Step 6.9.5 确定性 Mock Search Adapter](29-devlog-step-6-9-5-search-mock.md)：记录离线脚本、请求快照、合作取消、并发消费与服务冒烟验证。
+- [30 - Step 6.9.6 Exa HTTP Adapter](30-devlog-step-6-9-6-exa-adapter.md)：记录现行 Exa 协议、有界 HTTP 读取、来源映射、取消与离线验证。
+- [31 - Step 6.9.7 搜索工具与真实 Exa 验证](31-devlog-step-6-9-7-search-tool.md)：记录工具注册、有界不可信输出、内存密钥注入及真实搜索冒烟。
+- [32 - Step 6.9.8 Node 模块归并](32-devlog-step-6-9-8-node-consolidation.md)：记录 Node 目录统一、存储与错误重命名、内部通知迁移及回归验证。
+- [33 - Step 6.10 搜索测试](33-devlog-step-6-10-search-tests.md)：记录 Search Service、Exa HTTP Adapter 与 `web_search` Runtime 闭环的离线验收。
+- [35 - Step 6.11 NodeAgent Profile](35-devlog-step-6-11-node-agent-profile.md)：记录由当前 Node 快照确定性组装 system prompt、工具白名单与安全边界。
+- [36 - Step 6.12 持续 NodeSession Service](36-devlog-step-6-12-node-session-service.md)：记录 Node-scoped start/send/stop、单 Session 复用、Profile 刷新、FIFO 与精确取消。
+- [37 - Step 6.13 NodeSession 行为测试](37-devlog-step-6-13-node-session-tests.md)：记录持续上下文、内容刷新、Node 隔离、FIFO、取消恢复、失败和卸载验收。
+- [34 - F2 Electron 调用 Agent 规划](34-devlog-step-f2-agent-integration-plan.md)：记录跨进程链路、版本化契约、后端交接依赖和真实流式对话实施顺序。
+- [38 - F2.1 通用 Stream RPC MVP](38-devlog-step-f2-1-stream-rpc.md)：记录共享流式 RPC 核心、Agent Turn 契约、NDJSON 分帧、取消和运行时校验。
+- [39 - Step 6.14 分层应用组合接入](39-devlog-step-6-14-layered-app-composition.md)：记录五个同层根模块、Tools 内置 Search、Node 领域收拢、就绪时序与工具白名单边界。
+- [40 - 阶段 6 Node 学习内容闭环收口](40-devlog-phase-6-node-content.md)：记录公开入口端到端验收、Node 隔离、事件重建、Exa Adapter 与大文本存储决策。
+- [41 - F1.2.3 交互与响应式验收](41-devlog-step-f1-2-3-interaction-acceptance.md)：记录本地对话输入、输入法组合态、消息间距、长列表滚动、窄屏与焦点验收。

@@ -3,31 +3,36 @@ import { Context } from "cordis";
 import { AgentRuntime } from "./agent/runtime.js";
 import type { AgentRuntimeLimits } from "./agent/types.js";
 import { LLMService } from "./llm/service.js";
+import type { NodePluginConfig } from "./node/plugin.js";
+import { NodePlugin } from "./node/plugin.js";
 import { SessionStore } from "./session/store.js";
-import { ToolService } from "./tools/service.js";
+import type { ToolsPluginConfig } from "./tools/plugin.js";
+import { ToolsPlugin } from "./tools/plugin.js";
 
-/** Configuration owned by the minimal SkillWorld application composition. */
+/** Configuration delegated by the application root to its peer plugins. */
 export interface SkillWorldAppConfig {
   readonly runtime?: Partial<AgentRuntimeLimits>;
+  readonly tools?: ToolsPluginConfig;
+  readonly node: NodePluginConfig;
 }
 
-/** Mounts the core services and activates the runtime once its dependencies exist. */
-export function SkillWorldApp(
+/** Mounts the Session, LLM, Tools, Runtime, and Node roots as peers. */
+export async function SkillWorldApp(
   ctx: Context,
-  config: SkillWorldAppConfig = {},
-): void {
-  ctx.inject(["sessions", "llm", "tools"], (runtimeContext) => {
-    new AgentRuntime(runtimeContext, config.runtime);
-  });
-
-  ctx.plugin(SessionStore);
-  ctx.plugin(LLMService);
-  ctx.plugin(ToolService);
+  config: SkillWorldAppConfig,
+): Promise<void> {
+  await Promise.all([
+    ctx.plugin(SessionStore),
+    ctx.plugin(LLMService),
+    ctx.plugin(ToolsPlugin, config.tools),
+  ]);
+  await ctx.plugin(AgentRuntime, config.runtime);
+  await ctx.plugin(NodePlugin, config.node);
 }
 
 /** Creates a ready-to-use application context owned by the caller. */
 export async function createApp(
-  config: SkillWorldAppConfig = {},
+  config: SkillWorldAppConfig,
 ): Promise<Context> {
   const ctx = new Context();
   try {

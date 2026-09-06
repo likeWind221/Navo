@@ -1,0 +1,22 @@
+@import "./styles/tokens.css";
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-synthesis: none;
+  line-height: 1.8;
+}
+button, textarea { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 4px; }
+::selection { background: #e9d7c6; }
+.placeholder { max-width: 760px; padding: 32px; margin: 12vh auto; }
+.placeholder h1 { font-family: var(--font-heading); font-weight: 500; }
+@media (prefers-reduced-motion: reduce) {
+  :root { --duration: 0ms; }
+}

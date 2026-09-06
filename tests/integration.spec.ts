@@ -9,6 +9,8 @@ import {
 } from "../src/brand/ids.js";
 import { MockLLMAdapter } from "../src/llm/mock.js";
 import type { JsonObject, ToolCallContentBlock } from "../src/llm/types.js";
+import { NODE_AGENT_TOOL_NAMES } from "../src/node/profile.js";
+import { MockSearchAdapter } from "../src/tools/builtins/search/adapters/mock.js";
 
 let app: Context | undefined;
 
@@ -19,7 +21,14 @@ afterEach(async () => {
 
 describe("SkillWorld application integration", () => {
   it("runs a model-tool-model loop and rebuilds its context from Session", async () => {
-    app = await createApp();
+    app = await createApp({
+      node: { session: { model: { provider: "mock", model: "node-test" } } },
+      tools: { search: { adapter: new MockSearchAdapter([]) } },
+    });
+    expect(app.tools.schemas().map((tool) => tool.name).sort())
+      .toEqual([...NODE_AGENT_TOOL_NAMES].sort());
+    expect(app.nodes).toBeDefined();
+    expect(app.nodeSessions).toBeDefined();
     const sessionId = createSessionId("integration-loop");
     const userMessage = {
       id: createMessageId("integration-user"),
@@ -80,6 +89,7 @@ describe("SkillWorld application integration", () => {
       sessionId,
       userMessage,
       model: { provider: "mock", model: "integration" },
+      toolNames: ["echo"],
     })).resolves.toMatchObject({ status: "completed", steps: 2 });
 
     expect(execute).toHaveBeenCalledOnce();

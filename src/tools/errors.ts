@@ -1,6 +1,7 @@
 export type ToolServiceErrorCode =
   | "tool-already-registered"
-  | "invalid-tool-definition";
+  | "invalid-tool-definition"
+  | "unknown-tool-selection";
 
 /** Tool registration or definition failure thrown at the plugin boundary. */
 export class ToolServiceError extends Error {

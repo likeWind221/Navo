@@ -14,6 +14,8 @@ export interface RunTurnInput {
   readonly model: TurnModelConfig;
   /** Model-visible Turn prefix, recorded in every resulting request snapshot. */
   readonly systemPrompt?: string;
+  /** Exact registered tools visible and executable during this Turn; absent means all. */
+  readonly toolNames?: readonly string[];
   /** Cooperative cancellation for the entire turn; never persisted. */
   readonly signal?: AbortSignal;
   /** Per-turn overrides to the runtime's configured safety limits. */

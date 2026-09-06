@@ -10,6 +10,8 @@ export type EventId = Brand<string, "EventId">;
 export type ToolCallId = Brand<string, "ToolCallId">;
 export type TurnId = Brand<string, "TurnId">;
 export type StepId = Brand<string, "StepId">;
+export type NodeId = Brand<string, "NodeId">;
+export type ExerciseId = Brand<string, "ExerciseId">;
 
 function assertIdValue(value: string, idName: string): void {
   if (value.length === 0) {
@@ -47,6 +49,14 @@ export function createTurnId(value: string): TurnId {
 
 export function createStepId(value: string): StepId {
   return makeId<StepId>(value, "StepId");
+}
+
+export function createNodeId(value: string): NodeId {
+  return makeId<NodeId>(value, "NodeId");
+}
+
+export function createExerciseId(value: string): ExerciseId {
+  return makeId<ExerciseId>(value, "ExerciseId");
 }
 
 export function idToString(id: Brand<string, string>): string {

@@ -1,0 +1,56 @@
+{
+  "behavior": {
+    "initial": {
+      "buttonDisabled": true,
+      "messageCount": 0
+    },
+    "blank": {
+      "buttonDisabled": true
+    },
+    "composing": {
+      "messageCount": 0,
+      "draft": "中文输入法组合态"
+    },
+    "submitted": {
+      "messageCount": 1,
+      "draft": ""
+    },
+    "shifted": {
+      "messageCount": 1,
+      "draft": "保留换行"
+    },
+    "spacing": {
+      "paddingTop": "12px",
+      "paddingBottom": "12px",
+      "paragraphMarginTop": "0px",
+      "paragraphMarginBottom": "0px"
+    },
+    "focus": {
+      "activeElement": "chat-input",
+      "outlineStyle": "none",
+      "outlineWidth": "3px",
+      "boxShadow": "rgb(148, 129, 108) 0px -1px 0px 0px inset"
+    }
+  },
+  "nativeKeyboard": {
+    "draft": "第一行\n",
+    "messageCount": 2
+  },
+  "overflow": {
+    "messageCount": 33,
+    "historyClientHeight": 489,
+    "historyScrollHeight": 3830,
+    "followedScrollTop": 3262,
+    "followedDistanceFromBottom": 0,
+    "preservedScrollTop": 0,
+    "horizontalOverflow": false,
+    "lastBubbleWidth": 676.796875,
+    "historyWidth": 1267
+  },
+  "narrow": {
+    "viewportWidth": 547,
+    "inputPadding": "10px 16px 18px",
+    "messageColumnPadding": "20px 16px",
+    "horizontalOverflow": false
+  }
+}

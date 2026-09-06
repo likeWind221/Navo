@@ -1,4 +1,4 @@
-import type { ToolCallId } from "../brand/ids.js";
+import type { SessionId, ToolCallId } from "../brand/ids.js";
 import type {
   JsonObject,
   JsonValue,
@@ -27,6 +27,14 @@ export interface ToolDefinition extends ToolSchema {
 export interface ToolExecutionContext {
   readonly callId: ToolCallId;
   readonly signal: AbortSignal;
+  /** Authoritative caller identity when execution originates from AgentRuntime. */
+  readonly sessionId?: SessionId;
+}
+
+/** Runtime-owned restrictions applied before a registered tool is dispatched. */
+export interface ToolExecutionOptions {
+  readonly sessionId?: SessionId;
+  readonly allowedTools?: readonly string[];
 }
 
 /** Current minimal model-facing output contract for native tools. */
@@ -45,6 +53,7 @@ export interface ToolExecutionFailure {
 
 export type ToolFailureCode =
   | "unknown-tool"
+  | "tool-not-allowed"
   | "invalid-arguments"
   | "tool-failed"
   | "cancelled";

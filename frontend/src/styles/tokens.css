@@ -1,0 +1,23 @@
+:root {
+  color-scheme: light;
+  --canvas: #fffefa;
+  --surface: #ffffff;
+  --surface-muted: #faf3ea;
+  --text: #554b40;
+  --text-secondary: #756958;
+  --accent: #bb8663;
+  --accent-strong: #805536;
+  --border: #eee6db;
+  --control-border: #94816c;
+  --font-ui: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  --font-heading: "Songti SC", "SimSun", Georgia, serif;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-control: 10px;
+  --radius-card: 20px;
+  --duration: 160ms;
+}
