@@ -91,4 +91,22 @@ describe("Stream RPC protocol", () => {
     ]);
     expect(decoder.finish()).toEqual([]);
   });
+
+  it("rejects malformed UTF-8 instead of silently replacing bytes", () => {
+    const decoder = new NdjsonDecoder(parseRpcClientFrame);
+    const encoder = new TextEncoder();
+    const prefix = encoder.encode('{"version":1,"type":"cancel","id":"');
+    const suffix = encoder.encode('"}\n');
+    const bytes = new Uint8Array(prefix.length + 2 + suffix.length);
+    bytes.set(prefix);
+    bytes.set([0xc3, 0x28], prefix.length);
+    bytes.set(suffix, prefix.length + 2);
+
+    expect(() => decoder.push(bytes)).toThrow(expect.objectContaining({
+      code: "invalid-frame",
+    }));
+    expect(() => decoder.push(encoder.encode("{}\n"))).toThrow(expect.objectContaining({
+      code: "connection-closed",
+    }));
+  });
 });

@@ -55,6 +55,7 @@ export class AgentRuntime extends Service {
       data: { turnId },
     });
     try {
+      await input.observer?.onStarted(turnId);
       this.ctx.sessions.append({
         type: "user-message",
         sessionId: input.sessionId,

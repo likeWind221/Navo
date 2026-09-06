@@ -10,8 +10,7 @@ import { NodeStore } from "../src/node/store.js";
 import { SessionStore } from "../src/session/store.js";
 import { MockSearchAdapter } from "../src/tools/builtins/search/adapters/mock.js";
 import { SearchError } from "../src/tools/builtins/search/errors.js";
-import { SEARCH_OUTPUT_MAX_CHARACTERS } from "../src/tools/builtins/search/format.js";
-import { SearchService } from "../src/tools/builtins/search/service.js";
+import { SEARCH_OUTPUT_MAX_CHARACTERS } from "../src/tools/builtins/search/tool.js";
 import { SearchTool, WEB_SEARCH_TOOL_NAME } from "../src/tools/builtins/search/tool.js";
 import type { SearchAdapter, SearchResult } from "../src/tools/builtins/search/types.js";
 import { ToolService } from "../src/tools/service.js";
@@ -24,9 +23,7 @@ async function createToolContext(adapter?: SearchAdapter): Promise<Context> {
   const ctx = new Context();
   contexts.add(ctx);
   await ctx.plugin(ToolService);
-  await ctx.plugin(SearchService);
-  if (adapter) ctx.search.registerAdapter(adapter);
-  await ctx.plugin(SearchTool);
+  await ctx.plugin(SearchTool, adapter === undefined ? {} : { adapter });
   return ctx;
 }
 
@@ -36,11 +33,9 @@ async function createRuntime(adapter: SearchAdapter, entries: ConstructorParamet
   await ctx.plugin(SessionStore);
   await ctx.plugin(LLMService);
   await ctx.plugin(ToolService);
-  await ctx.plugin(SearchService);
   await ctx.plugin(NodeStore);
-  await ctx.plugin(SearchTool);
+  await ctx.plugin(SearchTool, { adapter });
   await ctx.plugin(AgentRuntime);
-  ctx.search.registerAdapter(adapter);
   const llm = new MockLLMAdapter(entries);
   ctx.llm.registerAdapter("mock", llm);
   return { ctx, llm };
@@ -56,7 +51,6 @@ describe("web_search tool boundary", () => {
     const ctx = new Context();
     contexts.add(ctx);
     await ctx.plugin(ToolService);
-    await ctx.plugin(SearchService);
     const fiber = await ctx.plugin(SearchTool);
 
     expect(ctx.tools.schemas()).toEqual([{
@@ -157,6 +151,30 @@ describe("web_search tool boundary", () => {
     await expect(pending).resolves.toMatchObject({
       kind: "failure", failure: { code: "cancelled" },
     });
+  });
+
+  it("settles adapter work and unregisters when the tool unloads", async () => {
+    const ctx = new Context();
+    contexts.add(ctx);
+    const adapter = new MockSearchAdapter([{ kind: "hang" }]);
+    await ctx.plugin(ToolService);
+    const fiber = await ctx.plugin(SearchTool, { adapter });
+    const pending = ctx.tools.execute(
+      toolCall("unload", WEB_SEARCH_TOOL_NAME, { query: "q" }),
+      signal,
+    );
+    await Promise.resolve();
+
+    await fiber.dispose();
+
+    await expect(pending).resolves.toMatchObject({
+      kind: "failure",
+      failure: {
+        code: "tool-failed",
+        modelMessage: "The search request was cancelled.",
+      },
+    });
+    expect(ctx.tools.schemas()).toEqual([]);
   });
 });
 

@@ -9,14 +9,16 @@ import {
   createNodeId,
 } from "../brand/ids.js";
 import type { ExerciseId, NodeId, SessionId } from "../brand/ids.js";
-import type { Exercise, MaterialDocument, SourceReference } from "./content.js";
 import { NodeError } from "./errors.js";
 import type { NodeEvent } from "./events.js";
-import { projectNode } from "./projector.js";
 import type {
   CapabilityTarget,
+  Exercise,
+  MaterialDocument,
   NodeSnapshot,
-} from "./types.js";
+  SourceReference,
+} from "./model.js";
+import { projectNode } from "./projector.js";
 
 /** Input accepted when the Node domain creates an identity. */
 export interface CreateNodeInput {

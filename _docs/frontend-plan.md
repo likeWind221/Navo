@@ -81,12 +81,12 @@ Renderer（渲染进程）
 |---|---|---|---|
 | ✅ | F2.R Qwen 流式可行性调研 | 前端只读调研；记录于开发记录 | 已确认 Pi 的 `local-vllm/qwen3.8-27b` 使用 OpenAI Chat Completions SSE；正文可产生真实增量；未输出密钥或改服务器 |
 | ✅ | F2.1 通用 Stream RPC MVP 与 Agent 契约 | **共享控制面，由本 Step 唯一写入**；`rpc/**` | 已实现无框架依赖的 `v1` open/item/end/error/cancel、双向运行时校验、StreamRpcClient/Server/Router、NDJSON 分帧与 `agent.turn`；只做请求对应流式响应，不做 unary、snapshot、重连或多会话并发 |
-| ⛔ | F2.2 Backend Kernel Host 与真实模型 | **后端 Agent**；后端计划和后端所有权文件 | 提供可由 Electron 启停的 Host 入口、Qwen Adapter 与 `agent.turn` Handler；凭据只在 Host；工具默认禁用；按 started/delta/唯一终态输出并通过断流/取消测试后解除前端阻塞 |
-| ⬜ | F2.3 Main Host 生命周期与传输 | 前端 Agent；`frontend/electron/**` | Main 启动并监督 Host，通过 stdio NDJSON 收发帧；实现单实例、启动失败、退出、崩溃、窗口关闭取消、stderr 日志脱敏和请求路由；不在 Main 解释 Agent 私有事件 |
-| ⬜ | F2.4 Preload 最小安全桥 | 前端 Agent；`frontend/electron/preload.ts`、`frontend/src/env.d.ts` 及前端协议适配文件 | 仅暴露开始一个 Agent Turn 流与取消，并将已校验事件投递给 Renderer；订阅返回 cleanup，Renderer 无权构造任意 RPC method/channel |
-| ⬜ | F2.5 Renderer 对话状态内核 | 前端 Agent；`frontend/src/workspace/**` 内按职责拆分 | 用 reducer/状态机管理本地用户消息、助手占位和 delta；按当前请求隔离迟到流，只允许一个在途 Turn；完成、取消、失败后保持部分正文并进入明确终态 |
-| ⬜ | F2.6 流式对话界面 | 前端 Agent；`frontend/src/workspace/**` | Composer 调用 Agent；MessageList 展示用户/助手消息、等待与流式光标；发送中切换停止按钮；自动滚动仅在用户位于底部附近时跟随；纯文本安全渲染 |
-| ⬜ | F2.7 错误与桌面验收 | 前端 Agent；`frontend/**` 测试/验证文件 | 覆盖 Host 启动失败、拒绝、超时、断流、截断、取消竞争、终态后帧和窗口关闭；Electron 实机验证中文 IME、长回答、滚动与停止，不以浏览器或 build 代替；恢复/重连延期 |
+| ✅ | F2.2 Backend Kernel Host 与真实模型 | **后端 Agent**；后端计划和后端所有权文件 | 提供可由 Electron 启停的 Host 入口、Qwen Adapter 与 `agent.turn` Handler；凭据只在 Host；工具默认禁用；按 started/delta/唯一终态输出并通过断流/取消测试后解除前端阻塞 |
+| ✅ | F2.3 Main Host 生命周期与传输 | 前端 Agent；`frontend/electron/**` | Main 启动并监督 Host，通过 stdio NDJSON 收发帧；实现单实例、启动失败、退出、崩溃、窗口关闭取消、stderr 日志脱敏和请求路由；不在 Main 解释 Agent 私有事件 |
+| ✅ | F2.4 Preload 最小安全桥 | 前端 Agent；`frontend/electron/preload.ts`、`frontend/src/env.d.ts` 及前端协议适配文件 | 仅暴露开始一个 Agent Turn 流与取消，并将已校验事件投递给 Renderer；订阅返回 cleanup，Renderer 无权构造任意 RPC method/channel |
+| ✅ | F2.5 Renderer 对话状态内核 | 前端 Agent；`frontend/src/workspace/**` 内按职责拆分 | 用 reducer/状态机管理本地用户消息、助手占位和 delta；按当前请求隔离迟到流，只允许一个在途 Turn；完成、取消、失败后保持部分正文并进入明确终态 |
+| ✅ | F2.6 流式对话界面 | 前端 Agent；`frontend/src/workspace/**` | Composer 调用 Agent；MessageList 展示用户/助手消息、等待与流式光标；发送中切换停止按钮；自动滚动仅在用户位于底部附近时跟随；纯文本安全渲染 |
+| ✅ | F2.7 错误与桌面验收 | 前端 Agent；`frontend/**` 测试/验证文件 | 覆盖 Host 启动失败、拒绝、超时、断流、截断、取消竞争、终态后帧和窗口关闭；Electron 实机验证中文 IME、长回答、滚动与停止，不以浏览器或 build 代替；恢复/重连延期 |
 
 ### F2.1 已确定的 MVP 契约
 
@@ -108,4 +108,4 @@ F2.1 已串行完成，F2.2 后端契约测试通过后才进入 F2.3；F2.3–F
 
 ## 4. 当前下一步
 
-**F2.1 通用 Stream RPC MVP 已完成。** 下一步是将 F2.2 交给后端 Agent：在其计划中安排 Kernel Host、`agent.turn` Handler、真实 Qwen Adapter 与可脚本化 Mock Host。后端满足共享 `rpc/` 契约并通过取消/断流测试后，前端再进入 F2.3；不使用 Main 直连 Qwen 绕过 Agent Runtime。
+**F2 阶段已完成。** 真实 Agent 对话现为桌面默认能力；恢复/重连、多会话、Markdown、工具调用与长期历史仍需在后续独立阶段规划。

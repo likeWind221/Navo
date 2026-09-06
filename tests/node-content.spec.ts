@@ -5,7 +5,7 @@ import {
   createExerciseId,
   createSessionId,
 } from "../src/brand/ids.js";
-import { toLearnerExerciseSet } from "../src/node/content.js";
+import { toLearnerExerciseSet } from "../src/node/model.js";
 import type { MaterialReplacedEvent } from "../src/node/events.js";
 import { projectNode } from "../src/node/projector.js";
 import { NodeStore } from "../src/node/store.js";

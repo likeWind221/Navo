@@ -102,37 +102,37 @@
 | 状态 | 步骤 | 目标文件 | 工作内容 | 完成标准 |
 |---|---|---|---|---|
 | ✅ | 6.1 学习产品契约收敛 | `_docs/00-skillworld-prd.md` | 明确技能学习应用、Node、MainSession、workspace 和 Agent 权限边界 | 产品术语与职责形成首版契约；后续由功能切片继续修订 |
-| ✅ | 6.2 学习领域身份与协议 | `src/brand/ids.ts`、`src/node/types.ts` | 建立首版 Node、PracticeAttempt、Evidence 与状态轴协议 | 完成首版探索；其中尚未被功能验证的协议由 6.3.1 收回 |
+| ✅ | 6.2 学习领域身份与协议 | `src/brand/ids.ts`、`src/node/model.ts` | 建立首版 Node、PracticeAttempt、Evidence 与状态轴协议 | 完成首版探索；其中尚未被功能验证的协议由 6.3.1 收回 |
 | ✅ | 6.3 学习领域事件协议 | `src/node/events.ts` | 建立首版六类 NodeEvent，并确认其与 SessionLog 分离 | 完成首版探索；具体事件词汇由后续功能修正逐步收缩 |
 | ✅ | 6.3.1 双 Workspace Session 与功能切片修正 | `_docs/{00-skillworld-prd,plan}.md`、`src/{brand/ids,node/types,node/events}.ts` | 探索双 WorkspaceSession 与 Learn MVP 方案 | 形成可审查方案；其双 Session 假设由 6.3.2 根据真实 UI 交互修正 |
-| ✅ | 6.3.2 单 NodeSession 与内容面板修正 | `_docs/{00-skillworld-prd,plan}.md`、`src/node/{types,events}.ts` | 将 learn/practice 从独立 Session 改为同一 NodeSession 下的教材/练习内容；将 Grader 定义为无状态 LLM 边界；再次收缩预实现协议 | 当前只保留 Node、单 Session 绑定和创建事件；计划围绕内容生成、修改和后续无状态批改组织 |
+| ✅ | 6.3.2 单 NodeSession 与内容面板修正 | `_docs/{00-skillworld-prd,backend-plan}.md`、`src/node/{model,events}.ts` | 将 learn/practice 从独立 Session 改为同一 NodeSession 下的教材/练习内容；将 Grader 定义为无状态 LLM 边界；再次收缩预实现协议 | 当前只保留 Node、单 Session 绑定和创建事件；计划围绕内容生成、修改和后续无状态批改组织 |
 | ✅ | 6.4 Node Store 与单 Session 绑定 | `src/node/{errors,projector,store}.ts` | 定义 `ctx.nodes`；创建/读取 Node、绑定唯一 NodeSession、追加两类 NodeEvent 并重建快照 | revision 连续；事实不可变；Node 与 Session 一对一；事件不写入 SessionLog；观察者失败不回滚提交 |
 | ✅ | 6.5 Node Store 行为测试 | `tests/node-store.spec.ts` | 验证创建、唯一绑定、跨 Node Session 占用、重建、损坏历史、观察者失败和 Cordis 生命周期 | 无模型调用；Store 边界确定；测试后无监听器残留 |
-| ✅ | 6.6 教材与练习内容协议 | `src/brand/ids.ts`、`src/node/{content,types,events,projector}.ts` | 根据实际 UI 定义纯文字教材、来源、题目、隐藏参考答案、独立内容 revision、替换事实及严格投影 | UI 可直接读取当前快照；参考答案可从学习者视图排除；不从 assistant 文本解析领域内容；内容历史可严格重建 |
+| ✅ | 6.6 教材与练习内容协议 | `src/brand/ids.ts`、`src/node/{model,events,projector}.ts` | 根据实际 UI 定义纯文字教材、来源、题目、隐藏参考答案、独立内容 revision、替换事实及严格投影 | UI 可直接读取当前快照；参考答案可从学习者视图排除；不从 assistant 文本解析领域内容；内容历史可严格重建 |
 | ✅ | 6.7 Node 内容 Store 与受限工具 | `src/node/store.ts`、`src/node/tools.ts`、`src/{agent/types,agent/request,agent/response,agent/runtime,tools/types,tools/errors,tools/service}.ts` | 实现教材/题集替换命令；增加 per-turn 工具白名单和 `ToolExecutionContext.sessionId`，使内容工具按绑定的 NodeSession 授权 | 模型只看到本 Turn 允许的工具；内容工具只能修改调用 Session 所属 Node；结果不泄露隐藏答案；不允许跨 Node 写入 |
 | ✅ | 6.8 Node 内容行为测试 | `tests/node-content.spec.ts` | 验证教材与题集创建、修改、重建、工具白名单、Session 来源授权、非法输入、取消和卸载 | 不解析自然语言；失败不留下半提交内容；无跨 Node 污染；既有 Runtime 工具闭环不回归 |
 | ✅ | 6.9.1 搜索公共协议 | `src/tools/builtins/search/types.ts` | 定义请求、来源、结果、Adapter、注册撤销与可信配置 | 不依赖 Pi/Node/厂商；空结果合法；取消作为独立执行参数 |
 | ✅ | 6.9.2 搜索错误协议 | `src/tools/builtins/search/errors.ts` | 定义本模块错误码及固定安全模型消息 | 内部 message/cause 与模型消息分离；超时和取消各自分类 |
-| ✅ | 6.9.3 Adapter 注册与生命周期 | `src/tools/builtins/search/service.ts` | 建立 ctx.search、按 ID 注册与撤销、显式默认或唯一 Adapter 路由 | 重复拒绝；调用插件卸载自动撤销；路由不依赖注册顺序；无静默降级 |
+| ✅ | 6.9.3 Adapter 注册与生命周期（历史，7.0 已收回） | `src/tools/builtins/search/service.ts` | 曾建立 ctx.search 与动态 Adapter 路由；阶段 7 根据实际单消费者边界删除该 Service | 历史行为已验收；当前以 7.0 的 SearchTool 构造时注入为准 |
 | ✅ | 6.9.4 搜索执行与边界防护 | `src/tools/builtins/search/{types,service,validation,execution}.ts` | 执行委托、输入输出校验、有界复制冻结、取消与超时收敛 | 预取消不启动；迟到结果不接纳；不声称能强停不合作 Adapter |
 | ✅ | 6.9.5 确定性 Mock Adapter | `src/tools/builtins/search/adapters/mock.ts` | 可编排结果、失败和取消，记录请求 | 离线确定性；不进入生产默认组合 |
 | ✅ | 6.9.6 Exa HTTP Adapter | `src/tools/builtins/search/adapters/{exa,exa-response}.ts` | 核实官方接口后实现可信密钥注入、固定 HTTPS 请求与结果映射 | 拒绝重定向；有界读取；取消传播；安全错误；不重试 |
-| ✅ | 6.9.7 搜索工具与模型输出 | `src/tools/builtins/search/{tool,format}.ts`、`scripts/search-smoke.ts` | 注册 web_search、Schema、结果预算与不可信内容标记 | 服从 per-turn 白名单；不写领域事实；注册可撤销 |
-| ✅ | 6.9.8 Node 模块归并与命名统一 | `src/node/{types,events,content,errors,projector,store,tools}.ts`、`tests/{node-store,node-content}.spec.ts` | 将原 learning 模块迁入 node，统一 NodeStore/NodeError/ctx.nodes 及内部 node/event 通知 | 无旧源码引用；事件数据、版本、授权和算法不变；测试全部通过；不保留旧名转发 |
-| ✅ | 6.10.1 Search Service 行为测试 | `tests/search-service.spec.ts` | 注册、路由、校验、冻结、取消、超时和卸载 | 离线验证确定性路由与执行边界 |
+| ✅ | 6.9.7 搜索工具与模型输出 | `src/tools/builtins/search/tool.ts`、`scripts/search-smoke.ts` | 注册 web_search、Schema、结果预算与不可信内容标记 | 服从 per-turn 白名单；不写领域事实；注册可撤销 |
+| ✅ | 6.9.8 Node 模块归并与命名统一 | `src/node/{model,events,errors,projector,store,tools}.ts`、`tests/{node-store,node-content}.spec.ts` | 将原 learning 模块迁入 node，统一 NodeStore/NodeError/ctx.nodes 及内部 node/event 通知 | 无旧源码引用；事件数据、版本、授权和算法不变；测试全部通过；不保留旧名转发 |
+| ✅ | 6.10.1 Search 执行行为测试 | `tests/search-execution.spec.ts` | 校验、冻结、取消、超时和安全错误；动态注册与路由测试由 7.0 删除 | 离线验证单 Adapter 的纯执行边界 |
 | ✅ | 6.10.2 Exa 协议测试 | `tests/search-exa.spec.ts` | 模拟 HTTP 校验认证、请求、响应字节限制、坏响应与取消 | 不依赖真实密钥；无真实网络请求 |
 | ✅ | 6.10.3 Search 工具闭环测试 | `tests/search-tool.spec.ts` | Schema、白名单、安全错误、输出预算与 Runtime 上下文 | 搜索结果进入下一次模型请求；无 Node 领域写入 |
 | ✅ | 6.11 NodeAgent Profile | `src/node/profile.ts` | 注入能力目标、当前教材和当前练习题；要求先调研，再通过结构化工具提交内容 | 相同 Node 快照产生相同 Profile；不暴露其他 NodeSession；不允许修改 DAG 或宣布 mastery |
-| ✅ | 6.12 持续 NodeSession Service | `src/node/service.ts` | 定义开始学习、继续对话和停止操作；创建或恢复单一 NodeSession，以限定工具集串行调用 AgentRuntime | 同一 Node 复用 Session；FIFO；不同 Node 隔离；取消只终止当前 Turn；Service 不直接写 SessionLog |
+| ✅ | 6.12 持续 NodeSession Service | `src/node/session-service.ts` | 定义开始学习、继续对话和停止操作；创建或恢复单一 NodeSession，以限定工具集串行调用 AgentRuntime | 同一 Node 复用 Session；FIFO；不同 Node 隔离；取消只终止当前 Turn；Service 不直接写 SessionLog |
 | ✅ | 6.13 NodeSession 行为测试 | `tests/node.spec.ts` | 覆盖开始学习、持续上下文、Profile、内容修改、节点隔离、FIFO、取消后继续、Runtime 失败和卸载 | 每条已执行消息对应闭合 Turn；当前内容被重新注入；无后台任务和悬挂 AbortController |
 | ✅ | 6.14 分层应用组合接入 | `src/{app,agent/runtime}.ts`、`src/tools/plugin.ts`、`src/node/plugin.ts`、`tests/integration.spec.ts` | 将 Session、LLM、Tools、Runtime、Node 作为应用同层根模块；Tools 根内置 Search，Node 根收拢 NodeStore、内容工具与 NodeSession Service | `createApp()` 返回时五个根模块及其内部能力均已就绪；Node 通过 per-turn 白名单暴露工具；依赖按序激活并逆序释放 |
-| ✅ | 6.15 内容生成端到端验收与收口 | `tests/node-learning-integration.spec.ts`、`_docs/40-devlog-phase-6-node-content.md` | 从公开入口完成“开始 → 搜索 → 教材 → 练习题 → 对话修改”，并记录真实搜索 Adapter 和大文本存储的后续决策 | typecheck 和完整测试通过；NodeEvent 重建内容状态；NodeSession 重建对话；另一 Node 无法读取或修改二者 |
+| ✅ | 6.15 内容生成端到端验收与收口 | `tests/node-learning-integration.spec.ts`、`_docs/10-devlog-phase-6-node-learning.md` | 从公开入口完成“开始 → 搜索 → 教材 → 练习题 → 对话修改”，并记录真实搜索 Adapter 和大文本存储的后续决策 | typecheck 和完整测试通过；NodeEvent 重建内容状态；NodeSession 重建对话；另一 Node 无法读取或修改二者 |
 
 ## 后续功能路线
 
 - **阶段 7：Fetch 网页读取与调研闭环补齐**——阶段 6 先完成 Search 与基于搜索摘要的内容生成；紧接着增加独立 `web_fetch`，将调研扩展为“搜索 → 选择来源 → 读取正文 → 生成或修改内容”，优先于练习批改。
   - 代码归属：`src/tools/builtins/fetch/**`；与 Search 分离，不将 URL 抓取塞入搜索 Adapter，不从 Renderer 直接访问后端内部实现。
-  - 输入与输出：接收用户提供或搜索发现的 HTTP(S) URL，返回可读正文、最终 URL 及必要的类型/截断信息；首版考虑 HTML、Markdown 和纯文本，不做浏览器自动化或 PDF/二进制解析。
+  - 输入与输出：接收用户提供或搜索发现的 HTTP(S) URL；仅在完整正文可在受限预算内取得时返回正文、最终 URL 和类型信息，超限返回稳定错误；首版考虑 HTML、Markdown 和纯文本，不做浏览器自动化或 PDF/二进制解析。
   - 安全边界：URL/协议校验、内网与特殊地址防护（IPv4/IPv6）、DNS 校验与连接目标一致性、逐跳重定向检查、响应类型及字节限制、正文输出预算、不可信内容标记；不可把搜索返回的 URL 直接视为可信网络目标。
   - 执行边界：贯穿取消、超时、错误归一化和资源释放；不自动重试，不承诺强制停止不合作实现。
   - 接入与验收：通过 ToolService 和 NodeAgent 白名单接入；Fetch 只返回外部资料，不直接写 NodeEvent；离线验证网络安全、提取、取消和“Search → Fetch → 内容提交”闭环。
@@ -164,4 +164,31 @@
 
 ## 5. 当前下一步
 
-阶段 0–6 已完成。Node 学习内容纵向闭环已从公开应用入口离线验收：同一 NodeSession 完成 Search、教材、练习题及后续修改，NodeEvent 可重建当前内容，SessionLog 可重建对话，不同 Node 的会话、Profile 与内容写入相互隔离；完整测试现为 20 个文件、151 项通过。真实搜索继续采用已完成冒烟验证的 Exa Adapter，由可信 Host 注入密钥；教材和题集在当前内存事件存储中保留完整文本，进入持久化阶段时再根据实际规模评估正文外置与内容寻址，不提前引入对象存储。当前等待规划并执行：**阶段 7 Fetch 网页读取与调研闭环补齐**；跨端真实对话链路仍按 F2.2 Kernel Host 路线独立推进。
+阶段 0–7 已完成。`web_fetch` 现作为 Tools 根内置的纯文本工具，由内部 FetchCore 组合安全 HTTP、公共网络策略和有界 HTML→Markdown；NodeAgent 通过白名单执行 Search→Fetch→内容提交，Fetch 结果只进入 SessionLog，NodeEvent 只记录最终教材与题集。阶段 7 专项测试 5 个文件、29 项通过，全项目 28 个测试文件、198 项通过；真实 `https://example.com` 冒烟在当前环境因 `blocked-url` 安全关闭，未绕过 DNS/代理返回的非公网地址。跨端 F2.2 已完成 Kernel Host、Qwen SSE Adapter、agent.turn Handler 和可脚本化 Mock Host。当前后端等待执行：**阶段 8 无状态练习批改 MVP**；桌面链路可继续进入前端 F2.3。
+
+## 6. 阶段 7：Fetch 网页读取与调研闭环补齐
+
+**阶段目标：** 在 Tools 根内增加不暴露独立 Cordis Service 的 `web_fetch`，让 NodeAgent 从搜索摘要进一步读取选定网页正文，再通过既有领域工具提交教材或练习题。
+
+**阶段验收场景：** NodeAgent 依次调用 `web_search`、`web_fetch` 和 Node 内容工具；Tools 根内部的 FetchCore 只访问经过公共网络校验并固定连接地址的 HTTP(S) 目标，返回有界、不可信标记的 Markdown/文本；跨 Node 隔离与内容授权保持不变。
+
+| 状态 | 步骤 | 目标文件 | 工作内容 | 完成标准 |
+|---|---|---|---|---|
+| ✅ | 7.0 Search Tool 边界收缩 | `src/tools/builtins/search/{types,errors,execution,tool}.ts`、`src/tools/plugin.ts`、`tests/{search-execution,search-tool,node}.spec.ts`、`scripts/search-smoke.ts` | 删除 ctx.search 与 SearchService；SearchTool 构造时接收单个 Adapter，执行与生命周期保持有界 | Cordis 只暴露 ctx.tools；动态 Provider 注册和路由删除；卸载取消在途搜索；完整回归通过 |
+| ✅ | 7.1 Fetch 公共协议与错误 | `src/tools/builtins/fetch/{types,errors}.ts` | 定义请求、完整 HTML/文本正文、最终 URL、状态码与稳定安全错误；不定义 Adapter 或 Provider 协议 | 不依赖 Node、Cordis 或具体 HTTP 实现；模型消息不泄露网络诊断 |
+| ✅ | 7.2 FetchCore 与校验边界 | `src/tools/builtins/fetch/{core,validation}.ts` | 实现内部普通 FetchCore、配置/请求/结果校验、有界复制冻结、超时、取消和迟到结果处理 | 不继承 Cordis Service、不暴露 Context 属性；预取消不执行；异常分类稳定；资源由一次调用拥有 |
+| ✅ | 7.3 URL 与公共网络策略 | `src/tools/builtins/fetch/{policy,network}.ts`、`package.json`、`pnpm-lock.yaml` | 校验 HTTP(S)、凭据与长度；识别 IPv4/IPv6/NAT64 特殊地址；校验完整 DNS 集并固定实际连接地址 | 搜索 URL 不被直接信任；混合 DNS 与 rebinding 失败关闭；新增依赖精确锁定 |
+| ✅ | 7.4 HTTP Fetch 实现 | `src/tools/builtins/fetch/{http,response}.ts` | 为 FetchCore 提供匿名底层读取函数；逐跳同源重定向、响应流读取、类型/charset/字节与字符限制、资源释放 | 不携带环境凭据；跨源重定向拒绝；只接收 HTML、Markdown 和纯文本；不重试 |
+| ✅ | 7.5 Mock Fetch Core | `src/tools/builtins/fetch/mock.ts` | 提供确定性结果、失败、挂起与请求记录，作为工具和端到端测试替身 | 离线可复现；取消无 timer/listener 残留；不进入生产默认配置 |
+| ✅ | 7.6 HTML 转换、输出格式与 FetchTool | `src/tools/builtins/fetch/{html,format,tool}.ts` | 将有界 HTML 转为 Markdown，移除非正文/隐藏元素，注册 `web_fetch` 并标记外部内容不可信 | 限制转换深度和最终输出；工具卸载取消在途读取；Fetch 不写 NodeEvent |
+| ✅ | 7.7 Tools 根与 Node 白名单接入 | `src/tools/plugin.ts`、`src/node/profile.ts`、`tests/integration.spec.ts` | ToolsPlugin 内置 FetchTool 配置；NodeAgent 增加 `web_fetch` 白名单和 Search→Fetch 指令 | 不新增 ctx.webFetch；createApp 返回时工具就绪；其他 Agent 仍按自己的白名单选择工具 |
+| ✅ | 7.9 Harness 风格完整正文语义 | `src/tools/builtins/fetch/{types,validation,response,html,format}.ts`、`tests/fetch-*.spec.ts` | 删除 Fetch 截断前缀；传输、解码、转换或模型输出超限均失败，只有完整正文才返回给 Agent | 不实现 spill 或 read；后续若引入，必须由独立临时结果存储与受控读取工具承担 |
+| ✅ | 7.8.1 FetchCore 与网络测试 | `tests/fetch-core.spec.ts`、`tests/fetch-network.spec.ts` | 覆盖协议校验、冻结、IPv4/IPv6/NAT64、DNS、连接固定、取消和超时 | 不访问公网；安全策略和核心执行边界确定性通过 |
+| ✅ | 7.8.2 HTTP 实现与工具测试 | `tests/fetch-http.spec.ts`、`tests/fetch-tool.spec.ts` | 覆盖重定向、响应限制、charset、HTML 转换、输出预算、白名单、卸载和错误脱敏 | 本地可控传输；二进制/过大/恶意 HTML 被拒绝或有界收敛 |
+| ✅ | 7.9 调研端到端验收与收口 | `tests/node-research-integration.spec.ts`、`scripts/fetch-smoke.ts`、`_docs/53-devlog-phase-7-fetch.md` | 从公开入口完成 Search→Fetch→教材→练习题→修改，并记录真实 HTTP 冒烟与后续范围 | SessionLog 中 Fetch 结果有界；NodeEvent 只记录最终领域内容；完整测试和 typecheck 通过 |
+
+## 7. 跨端接入：F2.2 Backend Kernel Host 与真实模型
+
+| 状态 | 步骤 | 目标文件 | 工作内容 | 完成标准 |
+|---|---|---|---|---|
+| ✅ | F2.2 Kernel Host 与真实 Qwen | `src/host/**`、`src/llm/qwen-*.ts`、`scripts/{real,mock-kernel-host}.ts`、`tests/{kernel-host,host-process,qwen-chat-adapter}.spec.ts` | 由独立进程装配 `createApp()`、Qwen Adapter 和 Stream RPC Server；stdio 只传 NDJSON，日志走 stderr；Runtime 提供正文观察出口；Mock Host 可编排完成、失败、截断、挂起和崩溃 | `agent.turn` 按 started/delta/唯一终态输出；reasoning 不混入正文；取消贯穿；工具默认禁用；断流、HTTP、Host 生命周期和共享 RPC 契约测试通过 |

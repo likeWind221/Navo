@@ -1,0 +1,10 @@
+{
+  "assistantCount": 1,
+  "lastAssistantLength": 0,
+  "lastAssistantStatus": "Agent 服务暂不可用，请稍后重试",
+  "buttonLabel": "发送消息",
+  "hasCursor": false,
+  "scrollTop": 0,
+  "distanceFromBottom": 0,
+  "horizontalOverflow": false
+}

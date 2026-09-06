@@ -1,8 +1,12 @@
 import type { ExerciseId, NodeId } from "../brand/ids.js";
-import type { ExerciseSet, MaterialDocument } from "./content.js";
 import { NodeError } from "./errors.js";
 import type { NodeEvent } from "./events.js";
-import type { Node, NodeSnapshot } from "./types.js";
+import type {
+  ExerciseSet,
+  MaterialDocument,
+  Node,
+  NodeSnapshot,
+} from "./model.js";
 
 /** Strictly reconstruct one Node from its complete committed event stream. */
 export function projectNode(

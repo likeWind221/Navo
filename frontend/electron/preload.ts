@@ -1,4 +1,5 @@
-import { contextBridge } from "electron";
+import { contextBridge, ipcRenderer } from "electron";
+import { createDesktopAgentApi } from "./preload-agent-api.js";
 
 const desktopApi = Object.freeze({
   platform: process.platform,
@@ -6,6 +7,7 @@ const desktopApi = Object.freeze({
     chrome: process.versions.chrome,
     electron: process.versions.electron,
   }),
+  agent: createDesktopAgentApi(ipcRenderer),
 });
 
 contextBridge.exposeInMainWorld("desktop", desktopApi);

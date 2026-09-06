@@ -1,6 +1,8 @@
 node_modules/
 dist/
 frontend/out/
+_docs/codex-reviews/.result-*.json
+_docs/codex-reviews/.debug-*.tmp
 
 __pycache__/
 *.pyc

@@ -22,7 +22,12 @@ export async function requestModel(
   const request = buildRequest(ctx, input, deadline.signal);
   appendRequest(ctx, input.sessionId, turnId, stepId, request);
   try {
-    const collected = await collectStream(ctx.llm.stream(request));
+    let publishedText = false;
+    const collected = await collectStream(ctx.llm.stream(request), async (chunk) => {
+      if (chunk.type !== "text-delta" || chunk.text.length === 0) return;
+      publishedText = true;
+      await input.observer?.onTextDelta(chunk.text);
+    });
     if (signal.aborted) return { kind: "cancelled" };
     if (deadline.timedOut) {
       return {
@@ -46,7 +51,17 @@ export async function requestModel(
       return { kind: "cancelled" };
     }
     if (collected.finishReason.kind === "error") {
-      return { kind: "failed", failure: collected.finishReason.failure };
+      return {
+        kind: "failed",
+        failure: publishedText
+          ? {
+              code: "stream-output-interrupted",
+              message: "Model stream failed after publishing visible output.",
+              ...(collected.finishReason.failure.status === undefined
+                ? {} : { status: collected.finishReason.failure.status }),
+            }
+          : collected.finishReason.failure,
+      };
     }
     return {
       kind: "completed",

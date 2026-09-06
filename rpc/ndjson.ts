@@ -3,7 +3,7 @@ import { RPC_MAX_FRAME_CHARS } from "./protocol.js";
 import { isJsonValue } from "./validation.js";
 
 export class NdjsonDecoder<T> {
-  private readonly decoder = new TextDecoder();
+  private readonly decoder = new TextDecoder("utf-8", { fatal: true });
   private buffer = "";
   private finished = false;
 
@@ -11,15 +11,25 @@ export class NdjsonDecoder<T> {
 
   push(chunk: Uint8Array): readonly T[] {
     if (this.finished) throw new RpcError("connection-closed", "NDJSON decoder is finished");
-    this.buffer += this.decoder.decode(chunk, { stream: true });
+    this.buffer += this.decode(chunk, true);
     return this.takeLines(false);
   }
 
   finish(): readonly T[] {
     if (this.finished) return [];
     this.finished = true;
-    this.buffer += this.decoder.decode();
+    this.buffer += this.decode(undefined, false);
     return this.takeLines(true);
+  }
+
+  private decode(chunk: Uint8Array | undefined, stream: boolean): string {
+    try {
+      return this.decoder.decode(chunk, { stream });
+    } catch (cause: unknown) {
+      this.finished = true;
+      this.buffer = "";
+      throw new RpcError("invalid-frame", "NDJSON input is not valid UTF-8", { cause });
+    }
   }
 
   private takeLines(flush: boolean): readonly T[] {

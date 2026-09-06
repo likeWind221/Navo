@@ -15,6 +15,8 @@
     "dev:web": "vite --host 127.0.0.1",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
+    "test": "vitest run",
+    "qa:f2-6": "electron out/main/f2-6-qa.js",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
   },
   "dependencies": {
@@ -29,7 +31,8 @@
     "electron": "44.2.0",
     "electron-vite": "5.0.0",
     "typescript": "7.0.2",
-    "vite": "7.3.6"
+    "vite": "7.3.6",
+    "vitest": "4.1.11"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

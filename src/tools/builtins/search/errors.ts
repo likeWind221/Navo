@@ -15,10 +15,7 @@ export class SearchError extends Error {
 export type SearchErrorCode =
   | "invalid-config"
   | "invalid-adapter"
-  | "adapter-already-registered"
-  | "adapter-not-found"
   | "provider-unavailable"
-  | "provider-ambiguous"
   | "invalid-request"
   | "request-failed"
   | "invalid-response"
@@ -29,10 +26,7 @@ export type SearchErrorCode =
 const MODEL_MESSAGES: Readonly<Record<SearchErrorCode, string>> = Object.freeze({
   "invalid-config": "Search configuration is invalid.",
   "invalid-adapter": "Search adapter configuration is invalid.",
-  "adapter-already-registered": "A search adapter is already registered.",
-  "adapter-not-found": "The configured search provider is not registered.",
   "provider-unavailable": "No search provider is available.",
-  "provider-ambiguous": "A default search provider must be configured.",
   "invalid-request": "Search parameters are invalid.",
   "request-failed": "The search request failed.",
   "invalid-response": "The search provider returned an invalid response.",

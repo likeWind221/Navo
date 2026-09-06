@@ -7,7 +7,10 @@ export default defineConfig({
     build: {
       externalizeDeps: true,
       rollupOptions: {
-        input: { index: resolve("electron/main.ts") },
+        input: {
+          index: resolve("electron/main.ts"),
+          "f2-6-qa": resolve("scripts/f2-6-qa.ts"),
+        },
       },
     },
   },

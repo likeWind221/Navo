@@ -1,18 +1,30 @@
 import { SearchError } from "./errors.js";
 import type { SearchAdapter, SearchRequest, SearchResult } from "./types.js";
-import { normalizeSearchResult } from "./validation.js";
+import {
+  normalizeSearchRequest,
+  normalizeSearchResult,
+  resolveSearchTimeout,
+} from "./validation.js";
+
+export interface SearchExecutionOptions {
+  readonly timeoutMs?: number;
+  readonly signals?: readonly AbortSignal[];
+}
 
 /** Own one operation's deadline/listeners and observe even late adapter rejection. */
-export function executeSearch(
-  adapter: SearchAdapter,
-  request: Required<SearchRequest>,
-  timeoutMs: number,
-  signals: readonly AbortSignal[],
+export async function executeSearch(
+  adapter: SearchAdapter | undefined,
+  request: SearchRequest,
+  options: SearchExecutionOptions = {},
 ): Promise<SearchResult> {
+  const signals = options.signals ?? [];
   assertSearchActive(signals);
+  const normalized = normalizeSearchRequest(request);
+  const timeoutMs = resolveSearchTimeout(options.timeoutMs);
+  assertSearchAdapter(adapter);
   const controller = new AbortController();
   const deadline = performance.now() + timeoutMs;
-  return new Promise<SearchResult>((resolve, reject) => {
+  return await new Promise<SearchResult>((resolve, reject) => {
     let settled = false;
     const timer = setTimeout(onTimeout, timeoutMs);
     for (const signal of signals) signal.addEventListener("abort", onAbort, { once: true });
@@ -48,7 +60,7 @@ export function executeSearch(
         return;
       }
       try {
-        const result = normalizeSearchResult(value, request.maxResults);
+        const result = normalizeSearchResult(value, normalized.maxResults);
         if (signals.some((signal) => signal.aborted)) return onAbort();
         if (performance.now() >= deadline) return onTimeout();
         finish(undefined, result);
@@ -59,7 +71,7 @@ export function executeSearch(
 
     try {
       // Call synchronously so pre-cancellation cannot race an unobserved microtask.
-      Promise.resolve(adapter.search(request, controller.signal)).then(
+      Promise.resolve(adapter.search(normalized, controller.signal)).then(
         (value) => accept(value, false),
         (error: unknown) => accept(error, true),
       );
@@ -67,6 +79,19 @@ export function executeSearch(
       accept(error, true);
     }
   });
+}
+
+function assertSearchAdapter(
+  adapter: SearchAdapter | undefined,
+): asserts adapter is SearchAdapter {
+  if (adapter === undefined) {
+    throw new SearchError("provider-unavailable", "No search adapter is configured.");
+  }
+  if (typeof adapter.id !== "string" ||
+      !/^[a-z][a-z0-9-]{0,63}$/.test(adapter.id) ||
+      typeof adapter.search !== "function") {
+    throw new SearchError("invalid-adapter", "Search adapter configuration is invalid.");
+  }
 }
 
 export function assertSearchActive(signals: readonly AbortSignal[]): void {

@@ -22,10 +22,24 @@
 .composerFooter button svg { transform: rotate(-90deg); }
 .composerFooter button:hover:not(:disabled) { background: #694329; }
 .composerFooter button:disabled { color: var(--text-secondary); background: var(--surface-muted); }
-.messageColumn { max-width: 800px; margin: auto; padding: 32px 24px; }
-.message { margin: 0 0 28px auto; width: fit-content; max-width: 90%; padding: 12px 20px; border-radius: 16px 16px 4px 16px; background: var(--surface-muted); }
+.composerFooter .stopButton { background: var(--text-secondary); }
+.composerFooter .stopButton:hover { background: var(--text); }
+.stopIcon { display: block; width: 12px; height: 12px; border-radius: 3px; background: currentColor; }
+.messageColumn { max-width: 800px; margin: 0 auto; padding: 32px 24px; }
+.message { margin-bottom: 28px; max-width: 90%; }
+.userMessage { margin-left: auto; width: fit-content; padding: 12px 20px; border-radius: 16px 16px 4px 16px; background: var(--surface-muted); }
+.assistantMessage { margin-right: auto; padding: 4px 0; }
 .message p { margin: 0; font-size: 15px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.messageStatus { display: flex; align-items: center; gap: 8px; margin-top: 8px; color: var(--text-secondary); font-size: 12px; }
+.assistantMessage > .messageStatus:first-child { margin-top: 0; }
+.waitingDot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: waitingPulse 1.2s ease-in-out infinite; }
+.streamCursor { display: inline-block; width: 2px; height: 1em; margin-left: 3px; vertical-align: -0.12em; background: var(--accent-strong); animation: cursorBlink 0.9s steps(1) infinite; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@keyframes waitingPulse { 50% { opacity: 0.3; transform: scale(0.75); } }
+@keyframes cursorBlink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .waitingDot, .streamCursor { animation: none; }
+}
 @media (max-width: 600px) {
   .topbar { height: 60px; padding: 0 20px; }
   .inputArea { padding: 10px 16px 18px; }

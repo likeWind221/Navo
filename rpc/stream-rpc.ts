@@ -86,23 +86,45 @@ export class StreamRpcClient {
     if (this.streams.has(id)) throw new RpcError("duplicate-request", `Duplicate RPC id: ${id}`);
     const queue = new AsyncQueue<unknown>();
     this.streams.set(id, queue);
+    let openPromise: Promise<void> | undefined;
+    let cancelPromise: Promise<void> | undefined;
+
+    const cancelRemote = (): Promise<void> => {
+      if (cancelPromise !== undefined) return cancelPromise;
+      if (openPromise === undefined) return Promise.resolve();
+      cancelPromise = openPromise.then(
+        () => this.transport.send({ version: RPC_PROTOCOL_VERSION, type: "cancel", id }),
+        () => undefined,
+      ).then(() => undefined, () => undefined);
+      return cancelPromise;
+    };
 
     const abort = (): void => {
       if (!this.streams.delete(id)) return;
-      void Promise.resolve(
-        this.transport.send({ version: RPC_PROTOCOL_VERSION, type: "cancel", id }),
-      ).catch(() => undefined);
       queue.fail(new RpcError("cancelled", "RPC stream was cancelled"));
+      void cancelRemote();
     };
     options.signal?.addEventListener("abort", abort, { once: true });
     try {
       if (options.signal?.aborted === true) abort();
-      else await this.transport.send({ version: RPC_PROTOCOL_VERSION, type: "open", id, method: method.name, params });
+      else {
+        // Defer invocation by one microtask so openPromise is assigned before a
+        // transport can synchronously trigger cancellation through re-entrancy.
+        openPromise = Promise.resolve().then(() =>
+          this.transport.send({ version: RPC_PROTOCOL_VERSION, type: "open", id, method: method.name, params }),
+        ).then(() => undefined);
+        await openPromise;
+      }
       for await (const value of queue) yield outputValidator.parse(value);
       outputValidator.end();
     } finally {
       options.signal?.removeEventListener("abort", abort);
-      if (this.streams.delete(id)) await this.transport.send({ version: RPC_PROTOCOL_VERSION, type: "cancel", id });
+      if (this.streams.delete(id)) {
+        queue.end();
+        await cancelRemote();
+      } else if (cancelPromise !== undefined) {
+        await cancelPromise;
+      }
     }
   }
 
@@ -144,6 +166,10 @@ export class StreamRpcClient {
 
 export class StreamRpcServer {
   private readonly active = new Map<string, AbortController>();
+  private readonly tasks = new Set<Promise<void>>();
+  private closing = false;
+  private drainPromise: Promise<void> | undefined;
+  private disposePromise: Promise<void> | undefined;
 
   constructor(
     private readonly transport: RpcServerTransport,
@@ -153,6 +179,7 @@ export class StreamRpcServer {
   async serve(): Promise<void> {
     try {
       for await (const candidate of this.transport.incoming) {
+        if (this.closing) break;
         const frame = parseRpcClientFrame(candidate);
         if (frame.type === "cancel") {
           this.active.get(frame.id)?.abort();
@@ -176,18 +203,25 @@ export class StreamRpcServer {
         }
         const controller = new AbortController();
         this.active.set(frame.id, controller);
-        void this.run(frame.id, registered, input, controller);
+        const task = this.run(frame.id, registered, input, controller);
+        this.tasks.add(task);
+        // Attach both handlers immediately: detached request failures remain
+        // observed even before shutdown begins waiting for the task set.
+        void task.then(
+          () => this.tasks.delete(task),
+          () => this.tasks.delete(task),
+        );
       }
     } finally {
-      for (const controller of this.active.values()) controller.abort();
-      this.active.clear();
+      await this.stopAndDrain();
     }
   }
 
-  async dispose(): Promise<void> {
-    for (const controller of this.active.values()) controller.abort();
-    this.active.clear();
-    await this.transport.close();
+  dispose(): Promise<void> {
+    if (this.disposePromise === undefined) {
+      this.disposePromise = this.closeAfterDrain();
+    }
+    return this.disposePromise;
   }
 
   private async run(
@@ -218,6 +252,21 @@ export class StreamRpcServer {
 
   private async sendError(id: string, error: RpcFailure): Promise<void> {
     await this.transport.send({ version: RPC_PROTOCOL_VERSION, type: "error", id, error });
+  }
+
+  private stopAndDrain(): Promise<void> {
+    if (this.drainPromise !== undefined) return this.drainPromise;
+    this.closing = true;
+    for (const controller of this.active.values()) controller.abort();
+    this.drainPromise = Promise.allSettled([...this.tasks]).then(() => {
+      this.active.clear();
+    });
+    return this.drainPromise;
+  }
+
+  private async closeAfterDrain(): Promise<void> {
+    await this.stopAndDrain();
+    await this.transport.close();
   }
 }
 

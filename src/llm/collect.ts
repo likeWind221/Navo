@@ -16,11 +16,13 @@ export interface CollectedStream {
 /** Folds chunks without creating messages or assigning Agent lifecycle meaning. */
 export async function collectStream(
   stream: AsyncIterable<StreamChunk>,
+  onChunk?: (chunk: StreamChunk) => void | Promise<void>,
 ): Promise<CollectedStream> {
   const assembler = new BlockAssembler();
   let finishReason: FinishReason | undefined;
   let usage: TokenUsage | undefined;
   for await (const chunk of stream) {
+    await onChunk?.(chunk);
     assembler.push(chunk);
     if (chunk.type === "finish") {
       finishReason = chunk.reason;

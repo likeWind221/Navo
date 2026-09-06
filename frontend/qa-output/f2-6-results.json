@@ -1,0 +1,52 @@
+{
+  "streaming": {
+    "assistantCount": 1,
+    "lastAssistantLength": 200,
+    "lastAssistantStatus": "",
+    "buttonLabel": "停止生成",
+    "hasCursor": true,
+    "scrollTop": 0,
+    "distanceFromBottom": 0,
+    "horizontalOverflow": false
+  },
+  "completed": {
+    "assistantCount": 1,
+    "lastAssistantLength": 2220,
+    "lastAssistantStatus": "",
+    "buttonLabel": "发送消息",
+    "hasCursor": false,
+    "scrollTop": 1040,
+    "distanceFromBottom": 0,
+    "horizontalOverflow": false
+  },
+  "cancelled": {
+    "assistantCount": 2,
+    "lastAssistantLength": 160,
+    "lastAssistantStatus": "已停止生成",
+    "buttonLabel": "发送消息",
+    "hasCursor": false,
+    "scrollTop": 1292.5,
+    "distanceFromBottom": 0.5,
+    "horizontalOverflow": false
+  },
+  "preserved": {
+    "assistantCount": 3,
+    "lastAssistantLength": 2220,
+    "lastAssistantStatus": "",
+    "buttonLabel": "发送消息",
+    "hasCursor": false,
+    "scrollTop": 0,
+    "distanceFromBottom": 2758,
+    "horizontalOverflow": false
+  },
+  "narrow": {
+    "assistantCount": 3,
+    "lastAssistantLength": 2220,
+    "lastAssistantStatus": "",
+    "buttonLabel": "发送消息",
+    "hasCursor": false,
+    "scrollTop": 0,
+    "distanceFromBottom": 4184,
+    "horizontalOverflow": false
+  }
+}

@@ -1,6 +1,10 @@
 import type { EventId, NodeId, SessionId } from "../brand/ids.js";
-import type { ExerciseSet, MaterialDocument } from "./content.js";
-import type { CapabilityTarget, SourceReference } from "./types.js";
+import type {
+  CapabilityTarget,
+  ExerciseSet,
+  MaterialDocument,
+  SourceReference,
+} from "./model.js";
 
 /** Every committed fact in one Node's current domain history. */
 export type NodeEvent =

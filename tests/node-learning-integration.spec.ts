@@ -9,7 +9,7 @@ import type {
   StreamContentBlock,
   ToolCallContentBlock,
 } from "../src/llm/types.js";
-import { toLearnerExerciseSet } from "../src/node/content.js";
+import { toLearnerExerciseSet } from "../src/node/model.js";
 import { NODE_AGENT_TOOL_NAMES } from "../src/node/profile.js";
 import { projectNode } from "../src/node/projector.js";
 import { NODE_CONTENT_TOOL_NAMES } from "../src/node/tools.js";

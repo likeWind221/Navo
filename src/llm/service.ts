@@ -2,6 +2,7 @@ import { Service } from "cordis";
 import type { Context } from "cordis";
 
 import {
+  LLMProviderError,
   LLMServiceError,
   isLLMServiceError,
 } from "./errors.js";
@@ -212,6 +213,14 @@ function failureChunk(
 }
 
 function normalizeFailure(error: unknown): LlmFailure {
+  if (error instanceof LLMProviderError) {
+    return {
+      code: error.code,
+      message: error.message,
+      ...(error.status === undefined ? {} : { status: error.status }),
+      ...(error.retryAfterMs === undefined ? {} : { retryAfterMs: error.retryAfterMs }),
+    };
+  }
   if (error instanceof LLMServiceError) {
     return { code: error.code, message: error.message };
   }

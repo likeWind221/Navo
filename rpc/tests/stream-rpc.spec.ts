@@ -128,6 +128,81 @@ describe("Stream RPC core", () => {
     await client.dispose();
   });
 
+  it("sends cancellation only after an in-flight open frame is delivered", async () => {
+    const incoming = new Channel<RpcServerFrame>();
+    const openStarted = Promise.withResolvers<void>();
+    const releaseOpen = Promise.withResolvers<void>();
+    const frames: RpcClientFrame[] = [];
+    const client = new StreamRpcClient({
+      incoming,
+      async send(frame) {
+        frames.push(frame);
+        if (frame.type === "open") {
+          openStarted.resolve();
+          await releaseOpen.promise;
+        }
+      },
+      close: () => incoming.close(),
+    }, () => "rpc-ordered-cancel");
+    const controller = new AbortController();
+    const iterator = client.stream(agentTurnMethod, {
+      sessionId: "session-1",
+      requestId: "request-ordered-cancel",
+      text: "cancel while opening",
+    }, { signal: controller.signal })[Symbol.asyncIterator]();
+
+    const pending = iterator.next();
+    await openStarted.promise;
+    controller.abort();
+    await Promise.resolve();
+    expect(frames.map((frame) => frame.type)).toEqual(["open"]);
+
+    releaseOpen.resolve();
+    await expect(pending).rejects.toMatchObject({ code: "cancelled" });
+    expect(frames.map((frame) => frame.type)).toEqual(["open", "cancel"]);
+    await client.dispose();
+  });
+
+  it("waits for active handlers to settle before closing the server transport", async () => {
+    const pair = createTransportPair();
+    const router = new StreamRpcRouter();
+    const entered = Promise.withResolvers<void>();
+    const observedAbort = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    router.register(agentTurnMethod, async function* (_input, signal) {
+      entered.resolve();
+      yield { type: "started", turnId: "turn-drain" };
+      if (!signal.aborted) {
+        await new Promise<void>((resolve) =>
+          signal.addEventListener("abort", () => resolve(), { once: true }));
+      }
+      observedAbort.resolve();
+      await release.promise;
+      yield { type: "cancelled" };
+    });
+    const server = new StreamRpcServer(pair.server, router);
+    const serving = server.serve();
+    await pair.client.send({
+      version: 1,
+      type: "open",
+      id: "rpc-drain",
+      method: "agent.turn",
+      params: { sessionId: "session-1", requestId: "request-drain", text: "drain" },
+    });
+    await entered.promise;
+
+    let disposed = false;
+    const disposing = server.dispose().then(() => { disposed = true; });
+    await observedAbort.promise;
+    await Promise.resolve();
+    expect(disposed).toBe(false);
+
+    release.resolve();
+    await disposing;
+    expect(disposed).toBe(true);
+    await serving;
+  });
+
   it("returns a safe remote error for unknown methods", async () => {
     const pair = createTransportPair();
     const server = new StreamRpcServer(pair.server, new StreamRpcRouter());

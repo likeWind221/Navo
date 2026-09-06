@@ -7,12 +7,13 @@ import { LLMService } from "../src/llm/service.js";
 import { MockLLMAdapter } from "../src/llm/mock.js";
 import type { GenerateRequest, StreamContentBlock, ToolCallContentBlock } from "../src/llm/types.js";
 import { createNodeAgentProfile, NODE_AGENT_TOOL_NAMES } from "../src/node/profile.js";
-import { NodeSessionService } from "../src/node/service.js";
+import { NodeSessionService } from "../src/node/session-service.js";
 import { NodeStore } from "../src/node/store.js";
 import { NODE_CONTENT_TOOL_NAMES, NodeContentTools } from "../src/node/tools.js";
 import { SessionStore } from "../src/session/store.js";
+import { MockFetchCore } from "../src/tools/builtins/fetch/mock.js";
+import { FetchTool } from "../src/tools/builtins/fetch/tool.js";
 import { MockSearchAdapter } from "../src/tools/builtins/search/adapters/mock.js";
-import { SearchService } from "../src/tools/builtins/search/service.js";
 import { SearchTool } from "../src/tools/builtins/search/tool.js";
 import { ToolService } from "../src/tools/service.js";
 
@@ -31,10 +32,9 @@ async function createKit(entries: ConstructorParameters<typeof MockLLMAdapter>[0
   await ctx.plugin(ToolService);
   await ctx.plugin(AgentRuntime);
   await ctx.plugin(NodeStore);
-  await ctx.plugin(SearchService);
-  ctx.search.registerAdapter(new MockSearchAdapter([]));
   await ctx.plugin(NodeContentTools);
-  await ctx.plugin(SearchTool);
+  await ctx.plugin(SearchTool, { adapter: new MockSearchAdapter([]) });
+  await ctx.plugin(FetchTool, { core: new MockFetchCore([]) });
   const adapter = new MockLLMAdapter(entries);
   ctx.llm.registerAdapter("mock", adapter);
   const serviceFiber = await ctx.plugin(NodeSessionService, {

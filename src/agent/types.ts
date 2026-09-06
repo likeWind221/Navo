@@ -20,6 +20,14 @@ export interface RunTurnInput {
   readonly signal?: AbortSignal;
   /** Per-turn overrides to the runtime's configured safety limits. */
   readonly limits?: Partial<AgentRuntimeLimits>;
+  /** Ordered live observations for trusted in-process consumers; never persisted. */
+  readonly observer?: AgentTurnObserver;
+}
+
+/** A deliberately small live surface that excludes reasoning and tool internals. */
+export interface AgentTurnObserver {
+  onStarted(turnId: TurnId): void | Promise<void>;
+  onTextDelta(text: string): void | Promise<void>;
 }
 
 /** Terminal outcome of one requested turn. */

@@ -1,0 +1,10 @@
+{
+  "assistantCount": 1,
+  "lastAssistantLength": 40,
+  "lastAssistantStatus": "Agent 响应超时，请重试",
+  "buttonLabel": "发送消息",
+  "hasCursor": false,
+  "scrollTop": 0,
+  "distanceFromBottom": 0,
+  "horizontalOverflow": false
+}

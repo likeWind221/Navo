@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { Context } from "cordis";
 import { createToolCallId } from "../src/brand/ids.js";
 import { ToolService } from "../src/tools/service.js";
-import { SearchService } from "../src/tools/builtins/search/service.js";
 import { SearchTool, WEB_SEARCH_TOOL_NAME } from "../src/tools/builtins/search/tool.js";
 import { ExaSearchAdapter } from "../src/tools/builtins/search/adapters/exa.js";
 
@@ -22,9 +21,9 @@ async function main(): Promise<void> {
   process.once("SIGINT", stop);
   try {
     await ctx.plugin(ToolService);
-    await ctx.plugin(SearchService, { defaultProvider: "exa" });
-    ctx.search.registerAdapter(new ExaSearchAdapter({ apiKey }));
-    await ctx.plugin(SearchTool);
+    await ctx.plugin(SearchTool, {
+      adapter: new ExaSearchAdapter({ apiKey }),
+    });
     const result = await ctx.tools.execute({
       type: "tool-call",
       id: createToolCallId(randomUUID()),

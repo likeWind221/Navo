@@ -3,7 +3,7 @@ import type { Context } from "cordis";
 import { createExerciseId } from "../brand/ids.js";
 import type { NodeId, SessionId } from "../brand/ids.js";
 import { NodeError } from "./errors.js";
-import type { NodeSnapshot } from "./types.js";
+import type { NodeSnapshot } from "./model.js";
 import type {
   ExerciseInput,
   ReplaceExerciseSetInput,
