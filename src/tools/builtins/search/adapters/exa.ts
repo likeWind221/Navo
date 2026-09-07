@@ -1,7 +1,7 @@
 import { SearchError } from "../errors.js";
 import type { SearchAdapter, SearchRequest, SearchResult } from "../types.js";
 import { normalizeSearchRequest, SEARCH_LIMITS } from "../validation.js";
-import { mapExaResponse, readExaResponse } from "./exa-response.js";
+import { mapExaResponse, readExaResponse } from "./exa/response.js";
 
 /** Direct HTTP adapter; install explicitly after supplying trusted credentials. */
 export class ExaSearchAdapter implements SearchAdapter {

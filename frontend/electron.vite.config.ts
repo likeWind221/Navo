@@ -9,7 +9,7 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve("electron/main.ts"),
-          "f2-6-qa": resolve("scripts/f2-6-qa.ts"),
+          chat: resolve("scripts/qa/chat.ts"),
         },
       },
     },

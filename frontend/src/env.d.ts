@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { DesktopAgentApi } from "./agent/desktop-agent-contract";
+import type { DesktopAgentApi } from "../shared/agent.js";
 
 declare global {
   interface Window {

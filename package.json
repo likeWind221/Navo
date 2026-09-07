@@ -12,8 +12,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
-    "host": "tsx src/host/kernel-host.ts",
-    "host:mock": "tsx scripts/mock-kernel-host.ts",
+    "host": "tsx src/host/main.ts",
+    "host:mock": "tsx scripts/host/mock.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:real": "tsx scripts/real.ts"

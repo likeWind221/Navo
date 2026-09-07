@@ -6,7 +6,7 @@ export interface RpcMethod<TInput, TOutput> {
   readonly name: string;
   readonly parseInput: (value: unknown) => TInput;
   readonly parseOutput: (value: unknown) => TOutput;
-  readonly createOutputValidator?: () => RpcOutputValidator<TOutput>;
+  readonly createOutputValidator?: (input: TInput) => RpcOutputValidator<TOutput>;
 }
 
 export interface RpcOutputValidator<TOutput> {

@@ -1,9 +1,9 @@
 import { join } from "node:path";
 import { app, BrowserWindow, shell } from "electron";
-import { KernelHostProcess } from "./host/kernel-host-process.js";
-import { resolveHostLaunchConfig } from "./host/launch-config.js";
-import { AgentTurnController } from "./ipc/agent-turn-controller.js";
-import { registerAgentTurnIpc } from "./ipc/agent-turn-ipc.js";
+import { KernelHostProcess } from "./host/process.js";
+import { resolveHostLaunchConfig } from "./host/launch.js";
+import { AgentTurnController } from "./ipc/agent/controller.js";
+import { registerAgentTurnIpc } from "./ipc/agent.js";
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 let quittingAfterCleanup = false;

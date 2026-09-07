@@ -1,9 +1,9 @@
 import { lazy, Suspense } from "react";
-import { WorkspaceShell } from "./workspace/WorkspaceShell";
-import { ChatWorkspace } from "./workspace/ChatWorkspace";
+import { WorkspaceShell } from "./workspace/Shell";
+import { ChatWorkspace } from "./workspace/Chat";
 
 const DesignSample = import.meta.env.DEV
-  ? lazy(() => import("./preview/DesignSample"))
+  ? lazy(() => import("./preview/Sample"))
   : null;
 
 export function App(): React.JSX.Element {

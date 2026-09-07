@@ -16,7 +16,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "test": "vitest run",
-    "qa:f2-6": "electron out/main/f2-6-qa.js",
+    "qa:f2-6": "electron out/main/chat.js",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
   },
   "dependencies": {

@@ -4,7 +4,7 @@ import type { JsonObject } from "../../../llm/types.js";
 import { ToolExecutionError } from "../../errors.js";
 import type { FetchCore } from "./core.js";
 import { FetchError } from "./errors.js";
-import { formatFetchOutput, resolveFetchOutputLimit } from "./format.js";
+import { formatFetchOutput, resolveFetchOutputLimit } from "./output.js";
 import type { FetchRequest } from "./types.js";
 
 export const WEB_FETCH_TOOL_NAME = "web_fetch";

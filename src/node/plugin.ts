@@ -1,7 +1,7 @@
 import type { Context } from "cordis";
 
-import type { NodeSessionServiceConfig } from "./session-service.js";
-import { NodeSessionService } from "./session-service.js";
+import type { NodeSessionServiceConfig } from "./session.js";
+import { NodeSessionService } from "./session.js";
 import { NodeStore } from "./store.js";
 import { NodeContentTools } from "./tools.js";
 

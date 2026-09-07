@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { createDesktopAgentApi } from "./preload-agent-api.js";
+import { createDesktopAgentApi } from "./preload/agent.js";
 
 const desktopApi = Object.freeze({
   platform: process.platform,

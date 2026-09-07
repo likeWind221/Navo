@@ -1,5 +1,5 @@
-import type { AgentTurnHandlerConfig } from "./agent-turn-handler.js";
-import type { QwenChatAdapterConfig } from "../llm/qwen-chat-adapter.js";
+import type { AgentTurnHandlerConfig } from "./turn.js";
+import type { QwenChatAdapterConfig } from "../llm/adapters/qwen.js";
 
 export interface KernelHostConfig {
   readonly provider: "qwen";

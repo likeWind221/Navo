@@ -3,7 +3,7 @@ import { Context } from "cordis";
 import { createMessageId, createSessionId } from "../../src/brand/ids.js";
 import { AgentRuntime } from "../../src/agent/runtime.js";
 import type { RunTurnInput } from "../../src/agent/types.js";
-import { MockLLMAdapter } from "../../src/llm/mock.js";
+import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import type { StreamContentBlock } from "../../src/llm/types.js";
 import { LLMService } from "../../src/llm/service.js";
 import { SessionStore } from "../../src/session/store.js";

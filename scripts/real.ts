@@ -6,7 +6,7 @@ import {
 } from "../src/brand/ids.js";
 import { AgentRuntime } from "../src/agent/runtime.js";
 import { resolveKernelHostConfig } from "../src/host/config.js";
-import { QwenChatCompletionsAdapter } from "../src/llm/qwen-chat-adapter.js";
+import { QwenChatCompletionsAdapter } from "../src/llm/adapters/qwen.js";
 import { LLMService } from "../src/llm/service.js";
 import { SessionStore } from "../src/session/store.js";
 import { ToolService } from "../src/tools/service.js";

@@ -34,22 +34,24 @@
 
 | 状态 | 步骤 | 目标文件 | 工作内容 | 完成标准 |
 |---|---|---|---|---|
-| ✅ | F1.1 页面信息架构 | `_docs/21-frontend-information-architecture.md` | 根据 PRD 明确目标、路线、Node 工作区和设置的页面关系 | 形成可审查的导航与页面职责，不假设未实现的后端接口 |
-| ✅ | F1.2 Node 学习工作区静态界面 | `_docs/24-visual-design.md`、`frontend/src/**` | 已按用户收敛后的最小范围实现品牌顶部栏、本地对话和输入区，并完成交互与响应式验收 | 不接真实数据；输入、滚动、窄屏与基础可访问性已在 Electron Renderer 验证 |
+| ✅ | F1.1 页面信息架构 | `_docs/12-frontend-information-architecture.md` | 根据 PRD 明确目标、路线、Node 工作区和设置的页面关系 | 形成可审查的导航与页面职责，不假设未实现的后端接口 |
+| ✅ | F1.2 Node 学习工作区静态界面 | `_docs/14-visual-design.md`、`frontend/src/**` | 已按用户收敛后的最小范围实现品牌顶部栏、本地对话和输入区，并完成交互与响应式验收 | 不接真实数据；输入、滚动、窄屏与基础可访问性已在 Electron Renderer 验证 |
 
 ### F1.2 剩余实施拆分
 
-设计基线：`_docs/24-visual-design.md` v1.1。图标与组件视觉自定义；地图地块后续采用 3D 建模，本阶段不做地形资产，暂不引入图标库、组件库或动画库。
+设计基线：`_docs/14-visual-design.md` v1.1。图标与组件视觉自定义；地图地块后续采用 3D 建模，本阶段不做地形资产，暂不引入图标库、组件库或动画库。
 
 | 状态 | 子步骤 | 目标文件（计划，尚未创建） | 工作内容与完成标准 |
 |---|---|---|---|
 | ✅ | F1.2.1 视觉基础与样板 | `frontend/src/styles/tokens.css`、`frontend/src/ui/Icon.tsx`、`frontend/src/preview/DesignSample{.tsx,.module.css}`、`App.tsx`、`styles.css` | 最小样板已实现并收敛到当前对话界面：色板/字体、按钮/标签、卡片/输入框和消息，三个自绘操作图标；不制作地块 |
 | ✅ | F1.2.2 最小对话工作区 | `frontend/src/workspace/**`、`frontend/src/App.tsx` | 按用户最新要求只实现品牌顶部栏和本地交互式对话，导航预留可选插槽但不渲染；不做教材、练习、节点标题；已完成交互验收 |
-| ✅ | F1.2.3 状态与响应式验收 | `frontend/src/workspace/**`、`frontend/scripts/f1-2-3-qa.cjs`、`frontend/qa-output/**` | 已验证草稿、空白输入、输入法组合态、长消息、547px 窄屏、滚动跟随/保护及键盘焦点；真实加载/错误等待 Agent 契约，不恢复教材/练习面板 |
+| ✅ | F1.2.3 状态与响应式验收 | `frontend/src/workspace/**`、`frontend/scripts/qa/static.cjs`、`frontend/qa-output/**` | 已验证草稿、空白输入、输入法组合态、长消息、547px 窄屏、滚动跟随/保护及键盘焦点；真实加载/错误等待 Agent 契约，不恢复教材/练习面板 |
 
 各子步骤分别介绍、确认与审查；完成之前不创建下一步文件，开发记录编号由共享控制面协调。
 
 ## 阶段 F2：Electron 调用 Agent 与真实流式对话
+
+阶段开发记录已合并至 [F2：Electron 接入 Agent 与真实流式对话](15-devlog-phase-f2-agent-integration.md)，包含历史验收证据与 F3 承接基线。
 
 ### F2 范围与架构决策
 
@@ -106,6 +108,56 @@ Renderer（渲染进程）
 
 F2.1 已串行完成，F2.2 后端契约测试通过后才进入 F2.3；F2.3–F2.5 可在 Mock Host 上开发，F2.6 接真实 Host，F2.7 完成后才把真实对话设为默认桌面入口。任何“临时 Main 直连 Qwen”只能作为隔离实验，不能代替上述正式链路。
 
+## 阶段 F3：助手内容展示与会话级命令反馈
+
+### 范围与抽象
+
+F3 完善真实 Agent 会话的内容展示与命令反馈。沿用 F2 的 Renderer → Preload → Electron Main → Kernel Host 链路；F3.1 公共契约已完成，F3.2–F3.6 仍待实现，桌面尚未接入新能力。
+
+```text
+Conversation（会话时间线）
+├─ UserMessage（用户消息）
+├─ AssistantMessage（助手消息）
+│  └─ 有序内容块
+│     ├─ Text（正文）
+│     ├─ Reasoning（思考）
+│     └─ ToolCall / ToolResult（工具调用与结果）
+└─ Notification（系统通知）
+   └─ 命令反馈：running → succeeded / failed / cancelled
+```
+
+- 正文、reasoning 和工具按实际产生顺序展示，支持“正文 → 工具 → 正文”及同一 Turn 内多次模型请求；正文继续使用真实增量，reasoning 使用模型提供的可展示内容并默认折叠。
+- 工具调用与结果通过 toolCallId 关联成工具卡片；区分参数生成、实际执行和结果返回，不把参数生成误显示为工具已开始执行。结果默认展示摘要，详情可展开。
+- notification 是独立的会话时间线提示行，不属于助手消息，不套工具活动卡片，也不只作为短暂 toast。一次命令的执行中提示可原位更新为成功、失败或取消。
+- 通知具有稳定 id；命令反馈以 commandId 关联执行，归属 sessionId，不强制要求 turnId。其他会话级通知可不带 commandId。命令可在没有 Agent 回合时执行，反馈出口不能仅依赖 agent.turn。
+- notification 是业务事件，可由 RPC item 帧承载；F3.1 已选择独立命令响应流并固定生命周期与清理方式，不直接增加无关联的底层通知帧。
+- Host 拥有实际操作及结果，Main/Preload 只传递受校验契约；Renderer 不导入后端私有 Store，也不通过解析提示文案驱动状态。
+- 复用后端已有 reasoning、工具执行闭环与 Session 事实。对已提交的业务事实，在提交成功后发布对应观察事件；流式增量与已提交事实明确区分，不因展示需求强制持久化所有 chunk。
+- 命令提示不自动进入模型上下文；实际上下文变更由具体后端处理器负责。
+
+### F3 实施步骤
+
+| 状态 | 子步骤 | 所有权与目标范围 | 工作内容与完成标准 |
+|---|---|---|---|
+| ✅ | F3.1 公共事件契约 | 共享 rpc/**，本 Step 指定唯一写入者 | 定义正文、reasoning、工具调用与结果的有序内容块及 notification；明确 sessionId、requestId、turnId、stepId、messageId、blockId、toolCallId、commandId 的适用边界与关联；确定独立命令反馈出口、版本兼容、运行时校验、终态、取消及尺寸限制。多次模型请求不会混串，通知无需 Turn。 |
+| ⬜ | F3.2 后端事件出口 | 后端 Agent；后端计划及其所有权文件 | 扩展 Runtime/Host 的观察出口，复用已有工具执行能力并明确桌面允许工具；输出 reasoning、工具执行事件及独立命令反馈。提供确定性 Mock 场景和至少一个真实命令处理器用于后续验收；真实事件经 RPC 到达 Main，结果关联正确，无 Turn 时也能执行命令。 |
+| ⬜ | F3.3 桌面桥接与会话状态 | 前端 Agent；frontend/electron/**、frontend/shared/agent/**、frontend/src/workspace/** | 扩展 Main、Preload、Hook 和 reducer；纯文本消息升级为有序内容块，加入独立通知条目及命令接口。验证增量追加、工具状态、通知原位更新、取消、订阅清理和迟到事件隔离；明确命令与活动 Turn 的并发或拒绝规则。 |
+| ⬜ | F3.4 助手内容展示 | 前端 Agent；frontend/src/workspace/** | 展示流式正文、默认折叠 reasoning、工具调用与结果卡片；参数和结果可展开，成功、失败、取消可辨识。多轮工具调用顺序正确，长结果及窄窗口可用，保留现有滚动和部分输出行为。 |
+| ⬜ | F3.5 命令入口与通知展示 | 前端 Agent；frontend/src/workspace/** 与桌面命令桥接 | 识别斜杠命令，经专用接口执行；未知命令、参数错误、执行中及终态统一显示为会话中的系统提示行。命令不会误发成普通聊天，通知按 id 原位更新；仅在真实处理器返回成功后显示成功。 |
+| ⬜ | F3.6 完整链路验收 | 前端验收由前端 Agent 负责，后端修复由后端 Agent 负责 | Electron 验收真实模型、受控工具和已接入命令；覆盖多内容块、多工具、长结果、失败、取消、Host 中断、重复与迟到事件、无 Turn 命令及与活动 Turn 冲突。通过类型检查、适当测试和构建，更新开发记录与索引。 |
+
+### 后端交接与实施边界
+
+F3.1 已冻结公共契约（独立命令响应流、同 Session 命令与 Turn 默认互斥），接下来由后端 Agent 在后端计划登记 F3.2 并实现交接；前端 Agent 不跨界修改 src/**。交接应包含事件顺序样例、工具启用规则、命令处理器与支持列表、错误/取消语义和 Mock 场景。F3.3 可基于已冻结契约与 Mock 开发，真实链路验收需等待 F3.2。
+
+参考项目内 Harness 的 agent-loop/src/agent.ts、agent-loop/src/tool-calls.ts 与 session/src/{index,types}.ts（均位于 deepseek-harness/packages/core/）：采用正文/reasoning 分离、工具调用与结果关联、Session 事实与实时观察区分、统一取消和终态收敛。F3.1 已核对 interaction/commands 的命令生命周期和 api/session-controller 的 Host 所有权；独立命令响应流是本项目的公共契约，不是 Harness 的既有 UI 协议。
+
+F3 建设命令共用的入口与反馈机制；/compact、/model、/clear 仅为应用示例，不代表本阶段承诺实现所有命令。/compact 的压缩算法、上下文替换与来源追踪单独规划，是否依赖持久化按其实际需求确定；不能只显示压缩成功而不改变上下文。多会话、持久化与恢复、Markdown、通用 Gateway、多 Carrier 和完整事件回放均不自动纳入 F3。
+
 ## 4. 当前下一步
 
-**F2 阶段已完成。** 真实 Agent 对话现为桌面默认能力；恢复/重连、多会话、Markdown、工具调用与长期历史仍需在后续独立阶段规划。
+**F3.1 公共事件契约已完成。** `agent.turn.v2` 与 `session.command.v1` 已冻结并通过校验测试，F2 入口继续兼容；详见 [F3.1 开发与交接记录](23-devlog-step-f3-1-public-events.md)。下一步由后端所有者完成 F3.2 事件出口与真实命令交接，前端 F3.3 基于本契约实现桥接与状态。
+
+## 源码目录整理
+
+已按 [目录整理方案](24-structure.md) 完成单词文件命名、子模块目录归位与测试／脚本引用迁移，详见 [实施记录](25-structure.md)。RPC 传输实现位于 `rpc/stream/`，桌面共享契约位于 `frontend/shared/`；本次结构重构未推进后续功能步骤。

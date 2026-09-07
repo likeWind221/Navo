@@ -1,7 +1,7 @@
 import { FetchError } from "./errors.js";
 import { publicFetchNetwork } from "./network.js";
 import { isSameOrigin, validateFetchUrl } from "./policy.js";
-import { readFetchResponse } from "./response.js";
+import { readFetchResponse } from "./http/response.js";
 import type { FetchRequest, FetchResult } from "./types.js";
 
 export const HTTP_FETCH_DEFAULTS = Object.freeze({
