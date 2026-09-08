@@ -13,6 +13,7 @@ import { SearchError } from "../../../src/tools/builtins/search/errors.js";
 import { SEARCH_OUTPUT_MAX_CHARACTERS } from "../../../src/tools/builtins/search/tool.js";
 import { SearchTool, WEB_SEARCH_TOOL_NAME } from "../../../src/tools/builtins/search/tool.js";
 import type { SearchAdapter, SearchResult } from "../../../src/tools/builtins/search/types.js";
+import { modelResponse } from "../../helpers/runtime.js";
 import { ToolService } from "../../../src/tools/service.js";
 import { toolCall } from "../../helpers/tools.js";
 
@@ -231,11 +232,5 @@ function response(
   block: ToolCallContentBlock | { readonly type: "text"; readonly text: string },
   finish: "tool-calls" | "stop",
 ) {
-  return {
-    kind: "chunks" as const,
-    chunks: [
-      { type: "block-end" as const, index: 0, block },
-      { type: "finish" as const, reason: { kind: finish } },
-    ],
-  };
+  return modelResponse([block], finish);
 }

@@ -2,18 +2,36 @@ import { describe, expect, it } from "vitest";
 
 import { createToolCallId } from "../../src/brand/ids.js";
 import { collectStream } from "../../src/llm/collect.js";
-import type { StreamChunk } from "../../src/llm/types.js";
+import type { FinishReason, ModelEvent } from "../../src/llm/types.js";
 
 describe("collectStream", () => {
-  it("collects completed blocks, usage, and the terminal reason", async () => {
-    const chunks: StreamChunk[] = [
-      { type: "text-delta", index: 0, text: "ignored delta" },
-      { type: "block-end", index: 0, block: { type: "text", text: "done" } },
+  it.each<FinishReason>([
+    { kind: "error", failure: { code: "SERVER", message: "original", status: 503 } },
+    { kind: "error", failure: { code: "TIMEOUT", message: "original timeout" } },
+    { kind: "cancelled" },
+  ])("preserves $kind and drops nameless interrupted tool calls", async (reason) => {
+    const events: ModelEvent[] = [
+      { type: "content-started", contentIndex: 0, contentType: "text" },
+      { type: "content-delta", contentIndex: 0, contentType: "text", delta: "prefix" },
+      { type: "content-started", contentIndex: 1, contentType: "tool-call",
+        toolCallId: createToolCallId("nameless") },
+      { type: "finished", reason },
+    ];
+    await expect(collectStream(asStream(events))).resolves.toEqual({
+      content: [{ type: "text", text: "prefix" }], finishReason: reason,
+    });
+  });
+
+  it("collects completed content, usage, and the terminal reason", async () => {
+    const events: ModelEvent[] = [
+      { type: "content-started", contentIndex: 0, contentType: "text" },
+      { type: "content-delta", contentIndex: 0, contentType: "text", delta: "done" },
+      { type: "content-completed", contentIndex: 0, contentType: "text" },
       { type: "usage", usage: { inputTokens: 4, outputTokens: 2 } },
-      { type: "finish", reason: { kind: "stop" } },
+      { type: "finished", reason: { kind: "stop" } },
     ];
 
-    await expect(collectStream(asStream(chunks))).resolves.toEqual({
+    await expect(collectStream(asStream(events))).resolves.toEqual({
       content: [{ type: "text", text: "done" }],
       usage: { inputTokens: 4, outputTokens: 2 },
       finishReason: { kind: "stop" },
@@ -24,29 +42,37 @@ describe("collectStream", () => {
     await expect(collectStream(asStream([]))).resolves.toEqual({ content: [] });
   });
 
-  it("assembles delta-only text, reasoning, and tool calls by block index", async () => {
+  it("assembles interleaved text, reasoning, and tool calls by content index", async () => {
     const callId = createToolCallId("weather");
-    const chunks: StreamChunk[] = [
-      { type: "text-delta", index: 0, text: "Checking " },
-      { type: "reasoning-delta", index: 1, text: "Need weather." },
-      { type: "text-delta", index: 0, text: "now." },
+    const events: ModelEvent[] = [
+      { type: "content-started", contentIndex: 0, contentType: "text" },
+      { type: "content-started", contentIndex: 1, contentType: "reasoning" },
+      { type: "content-started", contentIndex: 2, contentType: "tool-call", toolCallId: callId },
+      { type: "content-delta", contentIndex: 0, contentType: "text", delta: "Checking " },
+      { type: "content-delta", contentIndex: 1, contentType: "reasoning", delta: "Need weather." },
+      { type: "content-delta", contentIndex: 0, contentType: "text", delta: "now." },
       {
-        type: "tool-call-delta",
-        index: 2,
-        id: callId,
-        name: "weather",
-        argumentsDelta: "{\"city\"",
+        type: "content-delta",
+        contentIndex: 2,
+        contentType: "tool-call",
+        toolCallId: callId,
+        toolNameDelta: "weather",
+        delta: "{\"city\"",
       },
       {
-        type: "tool-call-delta",
-        index: 2,
-        id: callId,
-        argumentsDelta: ":\"Shanghai\"}",
+        type: "content-delta",
+        contentIndex: 2,
+        contentType: "tool-call",
+        toolCallId: callId,
+        delta: ":\"Shanghai\"}",
       },
-      { type: "finish", reason: { kind: "tool-calls" } },
+      { type: "content-completed", contentIndex: 0, contentType: "text" },
+      { type: "content-completed", contentIndex: 1, contentType: "reasoning" },
+      { type: "content-completed", contentIndex: 2, contentType: "tool-call" },
+      { type: "finished", reason: { kind: "tool-calls" } },
     ];
 
-    await expect(collectStream(asStream(chunks))).resolves.toEqual({
+    await expect(collectStream(asStream(events))).resolves.toEqual({
       content: [
         { type: "text", text: "Checking now." },
         { type: "reasoning", text: "Need weather." },
@@ -61,56 +87,51 @@ describe("collectStream", () => {
     });
   });
 
-  it("uses block-end as the authoritative completed value", async () => {
-    const chunks: StreamChunk[] = [
-      { type: "text-delta", index: 0, text: "draft" },
-      { type: "block-end", index: 0, block: { type: "text", text: "final" } },
-      { type: "text-delta", index: 0, text: " ignored" },
-      { type: "finish", reason: { kind: "stop" } },
+  it("rejects content data emitted outside its lifecycle", async () => {
+    const events: ModelEvent[] = [
+      { type: "content-delta", contentIndex: 0, contentType: "text", delta: "orphan" },
+      { type: "finished", reason: { kind: "stop" } },
     ];
 
-    await expect(collectStream(asStream(chunks))).resolves.toEqual({
-      content: [{ type: "text", text: "final" }],
-      finishReason: { kind: "stop" },
-    });
+    await expect(collectStream(asStream(events))).rejects.toThrow("before it started");
   });
 
   it("drops an open tool call when max-tokens interrupts its arguments", async () => {
-    const chunks: StreamChunk[] = [
-      { type: "text-delta", index: 0, text: "partial" },
+    const events: ModelEvent[] = [
+      { type: "content-started", contentIndex: 0, contentType: "text" },
+      { type: "content-delta", contentIndex: 0, contentType: "text", delta: "partial" },
       {
-        type: "tool-call-delta",
-        index: 1,
-        id: createToolCallId("partial-call"),
-        name: "weather",
-        argumentsDelta: "{\"city\":",
+        type: "content-started",
+        contentIndex: 1,
+        contentType: "tool-call",
+        toolCallId: createToolCallId("partial-call"),
       },
-      { type: "finish", reason: { kind: "max-tokens" } },
+      { type: "content-delta", contentIndex: 1, contentType: "tool-call",
+        toolCallId: createToolCallId("partial-call"), toolNameDelta: "weather",
+        delta: "{\"city\":" },
+      { type: "finished", reason: { kind: "max-tokens" } },
     ];
 
-    await expect(collectStream(asStream(chunks))).resolves.toEqual({
+    await expect(collectStream(asStream(events))).resolves.toEqual({
       content: [{ type: "text", text: "partial" }],
       finishReason: { kind: "max-tokens" },
     });
   });
 
   it("removes tool calls from a content-filtered response", async () => {
-    const chunks: StreamChunk[] = [
-      { type: "block-end", index: 0, block: { type: "text", text: "safe prefix" } },
-      {
-        type: "block-end",
-        index: 1,
-        block: {
-          type: "tool-call",
-          id: createToolCallId("filtered-call"),
-          name: "dangerous",
-          arguments: "{}",
-        },
-      },
-      { type: "finish", reason: { kind: "content-filter" } },
+    const callId = createToolCallId("filtered-call");
+    const events: ModelEvent[] = [
+      { type: "content-started", contentIndex: 0, contentType: "text" },
+      { type: "content-delta", contentIndex: 0, contentType: "text", delta: "safe prefix" },
+      { type: "content-completed", contentIndex: 0, contentType: "text" },
+      { type: "content-started", contentIndex: 1, contentType: "tool-call", toolCallId: callId },
+      { type: "content-delta", contentIndex: 1, contentType: "tool-call",
+        toolCallId: callId, toolNameDelta: "dangerous", delta: "{}" },
+      { type: "content-completed", contentIndex: 1, contentType: "tool-call" },
+      { type: "finished", reason: { kind: "content-filter" } },
     ];
 
-    await expect(collectStream(asStream(chunks))).resolves.toEqual({
+    await expect(collectStream(asStream(events))).resolves.toEqual({
       content: [{ type: "text", text: "safe prefix" }],
       finishReason: { kind: "content-filter" },
     });
@@ -118,7 +139,7 @@ describe("collectStream", () => {
 });
 
 async function* asStream(
-  chunks: readonly StreamChunk[],
-): AsyncGenerator<StreamChunk> {
-  yield* chunks;
+  events: readonly ModelEvent[],
+): AsyncGenerator<ModelEvent> {
+  yield* events;
 }

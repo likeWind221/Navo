@@ -4,7 +4,7 @@ import { createMessageId, createSessionId } from "../../src/brand/ids.js";
 import { AgentRuntime } from "../../src/agent/runtime.js";
 import type { RunTurnInput } from "../../src/agent/types.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
-import type { StreamContentBlock } from "../../src/llm/types.js";
+import type { ContentBlock, ModelEvent } from "../../src/llm/types.js";
 import { LLMService } from "../../src/llm/service.js";
 import { SessionStore } from "../../src/session/store.js";
 import { ToolService } from "../../src/tools/service.js";
@@ -50,30 +50,43 @@ export function turnInput(suffix: string): RunTurnInput {
 }
 
 export function modelResponse(
-  blocks: readonly StreamContentBlock[],
+  content: readonly ContentBlock[],
   finish: "stop" | "tool-calls" | "content-filter" | "max-tokens" = "stop",
 ) {
   return {
-    kind: "chunks" as const,
-    chunks: [
-      ...blocks.map((block, index) => ({
-        type: "block-end" as const,
-        index,
-        block,
-      })),
-      { type: "finish" as const, reason: { kind: finish } },
+    kind: "events" as const,
+    events: [
+      ...content.flatMap(contentEvents),
+      { type: "finished" as const, reason: { kind: finish } },
     ],
   };
 }
 
 export function modelError(code: string) {
   return {
-    kind: "chunks" as const,
-    chunks: [{
-      type: "finish" as const,
+    kind: "events" as const,
+    events: [{
+      type: "finished" as const,
       reason: { kind: "error" as const, failure: { code, message: code } },
     }],
   };
+}
+
+function contentEvents(content: ContentBlock, contentIndex: number): readonly ModelEvent[] {
+  if (content.type === "text" || content.type === "reasoning") {
+    return [
+      { type: "content-started", contentIndex, contentType: content.type },
+      { type: "content-delta", contentIndex, contentType: content.type, delta: content.text },
+      { type: "content-completed", contentIndex, contentType: content.type },
+    ];
+  }
+  return [
+    { type: "content-started", contentIndex, contentType: "tool-call",
+      toolCallId: content.id },
+    { type: "content-delta", contentIndex, contentType: "tool-call",
+      toolCallId: content.id, toolNameDelta: content.name, delta: content.arguments },
+    { type: "content-completed", contentIndex, contentType: "tool-call" },
+  ];
 }
 
 export function eventTypes(kit: RuntimeTestkit, suffix: string): string[] {

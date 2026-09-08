@@ -17,14 +17,16 @@ afterEach(disposeRuntimes);
 describe("Kernel Host agent.turn", () => {
   it("emits started, visible deltas and one completed terminal while hiding reasoning", async () => {
     const kit = await createRuntime([{
-      kind: "chunks",
-      chunks: [
-        { type: "reasoning-delta", index: 0, text: "private" },
-        { type: "text-delta", index: 1, text: "hello " },
-        { type: "text-delta", index: 1, text: "world" },
-        { type: "block-end", index: 0, block: { type: "reasoning", text: "private" } },
-        { type: "block-end", index: 1, block: { type: "text", text: "hello world" } },
-        { type: "finish", reason: { kind: "stop" } },
+      kind: "events",
+      events: [
+        { type: "content-started", contentIndex: 0, contentType: "reasoning" },
+        { type: "content-delta", contentIndex: 0, contentType: "reasoning", delta: "private" },
+        { type: "content-completed", contentIndex: 0, contentType: "reasoning" },
+        { type: "content-started", contentIndex: 1, contentType: "text" },
+        { type: "content-delta", contentIndex: 1, contentType: "text", delta: "hello " },
+        { type: "content-delta", contentIndex: 1, contentType: "text", delta: "world" },
+        { type: "content-completed", contentIndex: 1, contentType: "text" },
+        { type: "finished", reason: { kind: "stop" } },
       ],
     }]);
     const handler = createAgentTurnHandler(kit.ctx, {
@@ -49,7 +51,10 @@ describe("Kernel Host agent.turn", () => {
   it("retains a published prefix and terminates as cancelled", async () => {
     const kit = await createRuntime([{
       kind: "hang",
-      chunksBeforeHang: [{ type: "text-delta", index: 0, text: "partial" }],
+      eventsBeforeHang: [
+        { type: "content-started", contentIndex: 0, contentType: "text" },
+        { type: "content-delta", contentIndex: 0, contentType: "text", delta: "partial" },
+      ],
     }]);
     const controller = new AbortController();
     const handler = createAgentTurnHandler(kit.ctx, {
@@ -74,73 +79,15 @@ describe("Kernel Host agent.turn", () => {
     await expect(iterator.next()).resolves.toEqual({ done: true, value: undefined });
   });
 
-  it("turns an incomplete visible model stream into one failed terminal without retry", async () => {
-    const kit = await createRuntime([
-      {
-        kind: "chunks",
-        chunks: [{ type: "text-delta", index: 0, text: "partial" }],
-      },
-      {
-        kind: "chunks",
-        chunks: [{ type: "finish", reason: { kind: "stop" } }],
-      },
-    ]);
-    const handler = createAgentTurnHandler(kit.ctx, {
-      model: { provider: "mock", model: "test" },
-    });
-
-    const events = await collect(handler({
-      sessionId: "broken-session",
-      requestId: "broken-request",
-      text: "break",
-    }, new AbortController().signal));
-
-    expect(events.map((event) => event.type)).toEqual([
-      "started", "text-delta", "failed",
-    ]);
-    expect(events.at(-1)).toMatchObject({
-      failure: { code: "stream-incomplete" },
-    });
-    expect(kit.adapter.remainingEntries).toBe(1);
-  });
-
-  it("does not retry a provider error after visible output was published", async () => {
-    const kit = await createRuntime([
-      {
-        kind: "error",
-        chunksBeforeError: [{ type: "text-delta", index: 0, text: "visible" }],
-        error: new Error("socket failed"),
-      },
-      {
-        kind: "chunks",
-        chunks: [{ type: "finish", reason: { kind: "stop" } }],
-      },
-    ]);
-    const handler = createAgentTurnHandler(kit.ctx, {
-      model: { provider: "mock", model: "test" },
-    });
-
-    const events = await collect(handler({
-      sessionId: "retry-session",
-      requestId: "retry-request",
-      text: "retry",
-    }, new AbortController().signal));
-
-    expect(events.at(-1)).toMatchObject({
-      type: "failed",
-      failure: { code: "stream-output-interrupted" },
-    });
-    expect(kit.adapter.remainingEntries).toBe(1);
-  });
-
   it("splits oversized provider deltas at the public RPC output limit", async () => {
     const text = `${"a".repeat(16_383)}😀tail`;
     const kit = await createRuntime([{
-      kind: "chunks",
-      chunks: [
-        { type: "text-delta", index: 0, text },
-        { type: "block-end", index: 0, block: { type: "text", text } },
-        { type: "finish", reason: { kind: "stop" } },
+      kind: "events",
+      events: [
+        { type: "content-started", contentIndex: 0, contentType: "text" },
+        { type: "content-delta", contentIndex: 0, contentType: "text", delta: text },
+        { type: "content-completed", contentIndex: 0, contentType: "text" },
+        { type: "finished", reason: { kind: "stop" } },
       ],
     }]);
     const handler = createAgentTurnHandler(kit.ctx, {
@@ -198,6 +145,53 @@ describe("stdio RPC transport and scripted Mock Host", () => {
     expect(frames.map((frame) => frame.value?.type).filter(Boolean)).toEqual([
       "started", "text-delta", "text-delta", "completed",
     ]);
+  });
+
+  it("reports one invalid stdin frame and continues serving later frames", async () => {
+    const input = new PassThrough();
+    const output = new PassThrough();
+    output.setEncoding("utf8");
+    let stdout = "";
+    const diagnostics: string[] = [];
+    const ended = Promise.withResolvers<void>();
+    output.on("data", (chunk: string) => {
+      stdout += chunk;
+      if (stdout.includes('"type":"end"')) ended.resolve();
+    });
+    const transport = new StdioRpcServerTransport(
+      input,
+      output,
+      (error) => diagnostics.push(error.message),
+    );
+    const router = new StreamRpcRouter();
+    router.register(agentTurnMethod, createMockAgentTurnHandler({
+      mode: "completed",
+      text: "OK",
+      chunkChars: 2,
+      delayMs: 0,
+    }));
+    const server = new StreamRpcServer(transport, router);
+    const serving = server.serve();
+    input.write("not-json\n");
+    input.write(`${JSON.stringify({ version: 1, type: "unknown" })}\n`);
+    input.write(`${JSON.stringify({
+      version: 1,
+      type: "open",
+      id: "rpc-after-invalid",
+      method: "agent.turn",
+      params: { sessionId: "s", requestId: "r", text: "go" },
+    })}\n`);
+    await ended.promise;
+    input.end();
+    await serving;
+    await transport.close();
+
+    expect(diagnostics).toEqual([
+      "NDJSON frame is not valid JSON",
+      "Unknown or malformed RPC client frame",
+    ]);
+    expect(stdout.trim().split("\n").map((line) => JSON.parse(line).type))
+      .toEqual(["item", "item", "item", "end"]);
   });
 
   it("supports deterministic failure, hang and environment validation", async () => {

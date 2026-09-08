@@ -1,6 +1,6 @@
-import type { GenerateRequest, StreamChunk } from "./types.js";
+import type { GenerateRequest, ModelEvent } from "./types.js";
 
 /** Provider boundary: implementations translate provider data into the canonical stream. */
 export interface LLMAdapter {
-  stream(request: GenerateRequest): AsyncIterable<StreamChunk>;
+  stream(request: GenerateRequest): AsyncIterable<ModelEvent>;
 }

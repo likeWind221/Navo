@@ -5,7 +5,7 @@ import { AgentRuntime } from "../../src/agent/runtime.js";
 import { createNodeId, createToolCallId } from "../../src/brand/ids.js";
 import { LLMService } from "../../src/llm/service.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
-import type { GenerateRequest, StreamContentBlock, ToolCallContentBlock } from "../../src/llm/types.js";
+import type { ContentBlock, GenerateRequest, ToolCallContentBlock } from "../../src/llm/types.js";
 import { createNodeAgentProfile, NODE_AGENT_TOOL_NAMES } from "../../src/node/profile.js";
 import { NodeSessionService } from "../../src/node/session.js";
 import { NodeStore } from "../../src/node/store.js";
@@ -16,6 +16,7 @@ import { FetchTool } from "../../src/tools/builtins/fetch/tool.js";
 import { MockSearchAdapter } from "../../src/tools/builtins/search/adapters/mock.js";
 import { SearchTool } from "../../src/tools/builtins/search/tool.js";
 import { ToolService } from "../../src/tools/service.js";
+import { modelResponse } from "../helpers/runtime.js";
 
 const contexts = new Set<Context>();
 
@@ -53,14 +54,8 @@ function createNode(ctx: Context, title = "Capability") {
   });
 }
 
-function response(block: StreamContentBlock, finish: "stop" | "tool-calls" = "stop") {
-  return {
-    kind: "chunks" as const,
-    chunks: [
-      { type: "block-end" as const, index: 0, block },
-      { type: "finish" as const, reason: { kind: finish } },
-    ],
-  };
+function response(block: ContentBlock, finish: "stop" | "tool-calls" = "stop") {
+  return modelResponse([block], finish);
 }
 
 function textResponse(text: string) {
@@ -185,7 +180,7 @@ describe("NodeSessionService scheduling and lifecycle", () => {
       { kind: "handler", handle: async function* () {
         started.resolve();
         await release.promise;
-        yield* chunks("first done");
+        yield* events("first done");
       } },
       textResponse("second done"),
     ]);
@@ -232,8 +227,8 @@ describe("NodeSessionService scheduling and lifecycle", () => {
 
   it("returns Runtime failures with a closed Turn log", async () => {
     const { ctx } = await createKit([{
-      kind: "chunks",
-      chunks: [{ type: "finish", reason: { kind: "error", failure: { code: "MODEL", message: "failed" } } }],
+      kind: "events",
+      events: [{ type: "finished", reason: { kind: "error", failure: { code: "MODEL", message: "failed" } } }],
     }]);
     const node = createNode(ctx);
 
@@ -263,7 +258,10 @@ describe("NodeSessionService scheduling and lifecycle", () => {
   });
 });
 
-async function* chunks(text: string) {
-  yield { type: "block-end" as const, index: 0, block: { type: "text" as const, text } };
-  yield { type: "finish" as const, reason: { kind: "stop" as const } };
+async function* events(text: string) {
+  yield { type: "content-started" as const, contentIndex: 0, contentType: "text" as const };
+  yield { type: "content-delta" as const, contentIndex: 0,
+    contentType: "text" as const, delta: text };
+  yield { type: "content-completed" as const, contentIndex: 0, contentType: "text" as const };
+  yield { type: "finished" as const, reason: { kind: "stop" as const } };
 }

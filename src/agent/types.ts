@@ -1,11 +1,23 @@
-import type { SessionId, TurnId } from "../brand/ids.js";
+import type { MessageId, SessionId, StepId, TurnId } from "../brand/ids.js";
 import type {
   AssistantMessage,
   FinishReason,
+  ModelEvent,
   TokenUsage,
   UserMessage,
 } from "../llm/types.js";
-import type { Failure, TurnEndStatus } from "../session/types.js";
+import type { Failure, StepEndStatus, TurnEndStatus } from "../session/types.js";
+
+/** Ordered live facts emitted by one running Turn. */
+export type TurnEvent =
+  | { readonly type: "turn-started"; readonly turnId: TurnId }
+  | (TurnStepIdentity & { readonly type: "step-started" })
+  | (TurnStepIdentity & Extract<ModelEvent, { readonly contentIndex: number }>)
+  | (TurnStepIdentity & {
+      readonly type: "step-completed";
+      readonly status: StepEndStatus;
+    })
+  | { readonly type: "turn-finished"; readonly result: TurnResult };
 
 /** Public input for one self-contained model-and-tool turn. */
 export interface RunTurnInput {
@@ -20,14 +32,15 @@ export interface RunTurnInput {
   readonly signal?: AbortSignal;
   /** Per-turn overrides to the runtime's configured safety limits. */
   readonly limits?: Partial<AgentRuntimeLimits>;
-  /** Ordered live observations for trusted in-process consumers; never persisted. */
-  readonly observer?: AgentTurnObserver;
+  /** Ordered live facts; false means private output. A thrown callback stops execution;
+   * a step-started rejection happens before the model request. Caller abort wins. */
+  readonly onEvent?: (event: TurnEvent) => boolean | void | Promise<boolean | void>;
 }
 
-/** A deliberately small live surface that excludes reasoning and tool internals. */
-export interface AgentTurnObserver {
-  onStarted(turnId: TurnId): void | Promise<void>;
-  onTextDelta(text: string): void | Promise<void>;
+interface TurnStepIdentity {
+  readonly turnId: TurnId;
+  readonly stepId: StepId;
+  readonly messageId: MessageId;
 }
 
 /** Terminal outcome of one requested turn. */

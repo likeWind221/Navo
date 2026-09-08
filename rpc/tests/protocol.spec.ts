@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   NdjsonDecoder,
+  RPC_MAX_FRAME_CHARS,
   RPC_PROTOCOL_VERSION,
   encodeNdjson,
   createAgentTurnOutputValidator,
@@ -108,5 +109,26 @@ describe("Stream RPC protocol", () => {
     expect(() => decoder.push(encoder.encode("{}\n"))).toThrow(expect.objectContaining({
       code: "connection-closed",
     }));
+  });
+
+  it("can skip invalid and oversized lines before resuming at the next frame", () => {
+    const errors: string[] = [];
+    const decoder = new NdjsonDecoder(parseRpcClientFrame, {
+      onInvalidFrame(error) {
+        errors.push(error.message);
+      },
+    });
+    const encoder = new TextEncoder();
+    expect(decoder.push(encoder.encode(`not-json\n${"x".repeat(RPC_MAX_FRAME_CHARS + 1)}`)))
+      .toEqual([]);
+    expect(decoder.push(encoder.encode(`\n${encodeNdjson({
+      version: 1,
+      type: "cancel",
+      id: "recovered",
+    })}`))).toEqual([{ version: 1, type: "cancel", id: "recovered" }]);
+    expect(errors).toEqual([
+      "NDJSON frame is not valid JSON",
+      "NDJSON frame exceeds the size limit",
+    ]);
   });
 });

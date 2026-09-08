@@ -44,11 +44,12 @@ describe("AgentRuntime resilience", () => {
       {
         kind: "error",
         error: new Error("connection dropped"),
-        chunksBeforeError: [{
-          type: "block-end",
-          index: 0,
-          block: { type: "text", text: "discard me" },
-        }],
+        eventsBeforeError: [
+          { type: "content-started", contentIndex: 0, contentType: "reasoning" },
+          { type: "content-delta", contentIndex: 0,
+            contentType: "reasoning", delta: "discard me" },
+          { type: "content-completed", contentIndex: 0, contentType: "reasoning" },
+        ],
       },
       modelResponse([{ type: "text", text: "recovered" }]),
     ]);
@@ -69,6 +70,36 @@ describe("AgentRuntime resilience", () => {
       .toEqual([{ type: "text", text: "recovered" }]);
     assertClosed(kit, "retry");
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("does not retry after publishing live content from an attempt", async () => {
+    const kit = await createRuntime([
+      {
+        kind: "error",
+        error: new Error("connection dropped"),
+        eventsBeforeError: [
+          { type: "content-started", contentIndex: 0, contentType: "reasoning" },
+          { type: "content-delta", contentIndex: 0,
+            contentType: "reasoning", delta: "visible" },
+        ],
+      },
+      modelResponse([{ type: "text", text: "must not retry" }]),
+    ]);
+    const live: string[] = [];
+
+    const result = await kit.ctx.agentRuntime.runTurn({
+      ...turnInput("published"),
+      limits: { maxModelRetries: 1 },
+      onEvent: (event) => { live.push(event.type); },
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      failure: { code: "stream-output-interrupted" },
+    });
+    expect(kit.adapter.requests).toHaveLength(1);
+    expect(live.filter((type) => type === "content-started")).toHaveLength(1);
+    assertClosed(kit, "published");
   });
 
   it("stops after the exact transient retry budget is exhausted", async () => {

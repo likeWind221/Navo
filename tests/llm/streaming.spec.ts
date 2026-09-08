@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { StreamChunk } from "../../src/llm/types.js";
+import type { ModelEvent } from "../../src/llm/types.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import type { LLMAdapter } from "../../src/llm/adapter.js";
 import {
   collect,
   createLLMTestKit,
   request,
-  textStream,
+  textEvents,
 } from "../helpers/llm.js";
 
 const kit = createLLMTestKit();
@@ -17,16 +17,16 @@ afterEach(async () => {
 });
 
 describe("LLMService cancellation and cleanup", () => {
-  it("keeps prefix chunks and finishes as cancelled on mid-stream abort", async () => {
+  it("keeps prefix events and finishes as cancelled on mid-stream abort", async () => {
     const ctx = await kit.createContext();
     const controller = new AbortController();
-    const prefix: StreamChunk[] = [
-      { type: "block-start", index: 0, blockType: "text" },
-      { type: "text-delta", index: 0, text: "partial" },
+    const prefix: ModelEvent[] = [
+      { type: "content-started", contentIndex: 0, contentType: "text" },
+      { type: "content-delta", contentIndex: 0, contentType: "text", delta: "partial" },
     ];
     const adapter = new MockLLMAdapter([{
       kind: "hang",
-      chunksBeforeHang: prefix,
+      eventsBeforeHang: prefix,
     }]);
     ctx.llm.registerAdapter("mock", adapter);
     const iterator = ctx.llm
@@ -40,19 +40,19 @@ describe("LLMService cancellation and cleanup", () => {
 
     await expect(pending).resolves.toEqual({
       done: false,
-      value: { type: "finish", reason: { kind: "cancelled" } },
+      value: { type: "finished", reason: { kind: "cancelled" } },
     });
     await expect(iterator.next()).resolves.toEqual({ done: true, value: undefined });
   });
 
   it("does not start the adapter when already aborted", async () => {
     const ctx = await kit.createContext();
-    const adapter = new MockLLMAdapter([{ kind: "chunks", chunks: textStream }]);
+    const adapter = new MockLLMAdapter([{ kind: "events", events: textEvents }]);
     const signal = AbortSignal.abort("already cancelled");
     ctx.llm.registerAdapter("mock", adapter);
 
     await expect(collect(ctx.llm.stream(request("mock", signal)))).resolves.toEqual([
-      { type: "finish", reason: { kind: "cancelled" } },
+      { type: "finished", reason: { kind: "cancelled" } },
     ]);
     expect(adapter.requests).toHaveLength(0);
     expect(adapter.remainingEntries).toBe(1);
@@ -65,7 +65,7 @@ describe("LLMService cancellation and cleanup", () => {
     const adapter: LLMAdapter = {
       stream: () => ({
         [Symbol.asyncIterator]: () => ({
-          next: () => new Promise<IteratorResult<StreamChunk>>(() => undefined),
+          next: () => new Promise<IteratorResult<ModelEvent>>(() => undefined),
           return: () => {
             returnCalls += 1;
             return Promise.resolve({ done: true, value: undefined });
@@ -77,15 +77,15 @@ describe("LLMService cancellation and cleanup", () => {
     const pending = collect(ctx.llm.stream(request("stuck", controller.signal)));
 
     controller.abort("stop waiting");
-    const chunks = await Promise.race([
+    const events = await Promise.race([
       pending,
       new Promise<never>((_resolve, reject) => {
         setTimeout(() => reject(new Error("abort did not settle promptly")), 100);
       }),
     ]);
 
-    expect(chunks).toEqual([
-      { type: "finish", reason: { kind: "cancelled" } },
+    expect(events).toEqual([
+      { type: "finished", reason: { kind: "cancelled" } },
     ]);
     expect(returnCalls).toBe(1);
   });
@@ -97,7 +97,7 @@ describe("LLMService cancellation and cleanup", () => {
     const adapter: LLMAdapter = {
       stream: () => ({
         [Symbol.asyncIterator]: () => ({
-          next: () => Promise.resolve({ done: false, value: textStream[0]! }),
+          next: () => Promise.resolve({ done: false, value: textEvents[0]! }),
           return: () => {
             returnCalls += 1;
             return Promise.reject(cleanupFailure);
@@ -118,9 +118,9 @@ describe("LLMService cancellation and cleanup", () => {
     const ctx = await kit.createContext();
     const controller = new AbortController();
     const adapter = new MockLLMAdapter([{
-      kind: "chunks",
-      chunks: textStream,
-      chunkDelayMs: 10_000,
+      kind: "events",
+      events: textEvents,
+      eventDelayMs: 10_000,
     }]);
     ctx.llm.registerAdapter("slow", adapter);
     const pending = collect(ctx.llm.stream(request("slow", controller.signal)));
@@ -129,7 +129,7 @@ describe("LLMService cancellation and cleanup", () => {
     expect(vi.getTimerCount()).toBeGreaterThan(0);
     controller.abort("cancel delay");
     await expect(pending).resolves.toEqual([
-      { type: "finish", reason: { kind: "cancelled" } },
+      { type: "finished", reason: { kind: "cancelled" } },
     ]);
     expect(vi.getTimerCount()).toBe(0);
   });

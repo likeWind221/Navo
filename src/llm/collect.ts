@@ -1,36 +1,36 @@
 import type {
+  ContentBlock,
   FinishReason,
-  StreamChunk,
-  StreamContentBlock,
+  ModelEvent,
   TokenUsage,
 } from "./types.js";
-import { BlockAssembler } from "./assembler.js";
+import { StepAccumulator } from "./accumulator.js";
 
 /** Complete provider-neutral facts collected from one LLM stream. */
 export interface CollectedStream {
-  readonly content: readonly StreamContentBlock[];
+  readonly content: readonly ContentBlock[];
   readonly finishReason?: FinishReason;
   readonly usage?: TokenUsage;
 }
 
 /** Folds chunks without creating messages or assigning Agent lifecycle meaning. */
 export async function collectStream(
-  stream: AsyncIterable<StreamChunk>,
-  onChunk?: (chunk: StreamChunk) => void | Promise<void>,
+  stream: AsyncIterable<ModelEvent>,
+  onEvent?: (event: ModelEvent) => void | Promise<void>,
 ): Promise<CollectedStream> {
-  const assembler = new BlockAssembler();
+  const accumulator = new StepAccumulator();
   let finishReason: FinishReason | undefined;
   let usage: TokenUsage | undefined;
-  for await (const chunk of stream) {
-    await onChunk?.(chunk);
-    assembler.push(chunk);
-    if (chunk.type === "finish") {
-      finishReason = chunk.reason;
+  for await (const event of stream) {
+    accumulator.push(event);
+    await onEvent?.(event);
+    if (event.type === "finished") {
+      finishReason = event.reason;
       break;
     }
-    if (chunk.type === "usage") usage = chunk.usage;
+    if (event.type === "usage") usage = event.usage;
   }
-  const content = assembler.blocks(finishReason);
+  const content = accumulator.content(finishReason);
   return Object.freeze({
     content,
     ...(finishReason === undefined ? {} : { finishReason }),

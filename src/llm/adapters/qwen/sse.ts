@@ -1,23 +1,26 @@
+import { randomUUID } from "node:crypto";
+
 import { createToolCallId } from "../../../brand/ids.js";
 import { LLMProviderError } from "../../errors.js";
-import type { FinishReason, StreamChunk, StreamContentBlock, TokenUsage } from "../../types.js";
+import type { ContentBlockType, FinishReason, ModelEvent, TokenUsage } from "../../types.js";
 
 export const QWEN_SSE_MAX_EVENT_CHARS = 1_048_576;
 
-interface OpenBlock {
-  readonly index: number;
+interface OpenContent {
+  readonly contentIndex: number;
   readonly remoteToolIndex?: number;
-  readonly type: StreamContentBlock["type"];
-  text: string;
+  readonly contentType: ContentBlockType;
+  started: boolean;
   id?: ReturnType<typeof createToolCallId>;
+  remoteId?: ReturnType<typeof createToolCallId>;
   name?: string;
 }
 
-/** Incrementally parse SSE and translate Qwen deltas into canonical chunks. */
+/** Incrementally parse SSE and translate Qwen deltas into canonical model events. */
 export async function* translateQwenSse(
   body: ReadableStream<Uint8Array>,
-): AsyncGenerator<StreamChunk> {
-  const blocks: OpenBlock[] = [];
+): AsyncGenerator<ModelEvent> {
+  const contents: OpenContent[] = [];
   let finish: FinishReason | undefined;
   let usage: TokenUsage | undefined;
   for await (const payload of readSseData(body)) {
@@ -28,56 +31,81 @@ export async function* translateQwenSse(
     if (choice === undefined) continue;
     const delta = choice.delta;
     if (typeof delta?.reasoning_content === "string" && delta.reasoning_content.length > 0) {
-      const block = ensureTextBlock(blocks, "reasoning");
-      if (block.text.length === 0) yield { type: "block-start", index: block.index, blockType: "reasoning" };
-      block.text += delta.reasoning_content;
-      yield { type: "reasoning-delta", index: block.index, text: delta.reasoning_content };
+      const content = ensureTextContent(contents, "reasoning");
+      if (!content.started) {
+        content.started = true;
+        yield { type: "content-started", contentIndex: content.contentIndex, contentType: "reasoning" };
+      }
+      yield { type: "content-delta", contentIndex: content.contentIndex,
+        contentType: "reasoning", delta: delta.reasoning_content };
     }
     if (typeof delta?.content === "string" && delta.content.length > 0) {
-      const block = ensureTextBlock(blocks, "text");
-      if (block.text.length === 0) yield { type: "block-start", index: block.index, blockType: "text" };
-      block.text += delta.content;
-      yield { type: "text-delta", index: block.index, text: delta.content };
+      const content = ensureTextContent(contents, "text");
+      if (!content.started) {
+        content.started = true;
+        yield { type: "content-started", contentIndex: content.contentIndex, contentType: "text" };
+      }
+      yield { type: "content-delta", contentIndex: content.contentIndex,
+        contentType: "text", delta: delta.content };
     }
-    yield* translateToolCalls(blocks, delta?.tool_calls ?? []);
+    yield* translateToolCalls(contents, delta?.tool_calls ?? []);
     if (choice.finish_reason !== null && choice.finish_reason !== undefined) {
       finish = mapFinishReason(choice.finish_reason);
     }
   }
   if (finish === undefined) return;
-  for (const block of blocks) {
-    yield { type: "block-end", index: block.index, block: completeBlock(block) };
+  for (const content of contents) {
+    if (content.contentType === "tool-call") {
+      if (finish.kind === "max-tokens" || finish.kind === "content-filter") continue;
+      if (!content.started || !content.name) {
+        throw invalidEvent("Qwen SSE tool call ended without a function name.");
+      }
+    }
+    if (!content.started) continue;
+    yield { type: "content-completed", contentIndex: content.contentIndex,
+      contentType: content.contentType };
   }
   if (usage !== undefined) yield { type: "usage", usage };
-  yield { type: "finish", reason: finish };
+  yield { type: "finished", reason: finish };
 }
 
 function* translateToolCalls(
-  blocks: OpenBlock[],
+  contents: OpenContent[],
   calls: readonly OpenAiToolCallDelta[],
-): Generator<StreamChunk> {
+): Generator<ModelEvent> {
   for (const call of calls) {
     if (!Number.isSafeInteger(call.index) || call.index < 0) {
       throw invalidEvent("Qwen SSE tool call has an invalid index.");
     }
-    const block = ensureToolBlock(blocks, call.index);
-    const first = block.id === undefined;
-    if (typeof call.id === "string" && call.id.length > 0) block.id = createToolCallId(call.id);
-    if (block.id === undefined) block.id = createToolCallId(`qwen-call-${call.index}`);
-    if (first) yield { type: "block-start", index: block.index, blockType: "tool-call" };
+    const content = ensureToolContent(contents, call.index);
+    if (typeof call.id === "string" && call.id.length > 0) {
+      const remoteId = createToolCallId(call.id);
+      if (content.remoteId !== undefined && content.remoteId !== remoteId) {
+        throw invalidEvent("Qwen SSE tool call changed id.");
+      }
+      content.remoteId = remoteId;
+    }
+    if (content.id === undefined) {
+      content.id = content.remoteId ?? createToolCallId(`qwen-generated-${randomUUID()}`);
+    }
     const name = call.function?.name;
-    const argumentsDelta = call.function?.arguments ?? "";
-    if (typeof name === "string") block.name = `${block.name ?? ""}${name}`;
-    if (typeof argumentsDelta !== "string") {
+    const delta = call.function?.arguments ?? "";
+    if (typeof delta !== "string") {
       throw invalidEvent("Qwen SSE tool arguments delta is invalid.");
     }
-    block.text += argumentsDelta;
+    if (typeof name === "string") content.name = `${content.name ?? ""}${name}`;
+    if (!content.started) {
+      content.started = true;
+      yield { type: "content-started", contentIndex: content.contentIndex,
+        contentType: "tool-call", toolCallId: content.id };
+    }
     yield {
-      type: "tool-call-delta",
-      index: block.index,
-      id: block.id,
-      ...(typeof name === "string" && name.length > 0 ? { name } : {}),
-      argumentsDelta,
+      type: "content-delta",
+      contentIndex: content.contentIndex,
+      contentType: "tool-call",
+      toolCallId: content.id,
+      ...(typeof name === "string" && name.length > 0 ? { toolNameDelta: name } : {}),
+      delta,
     };
   }
 }
@@ -154,31 +182,27 @@ function parseEvent(payload: string): OpenAiStreamEvent {
   }
 }
 
-function ensureTextBlock(blocks: OpenBlock[], type: "text" | "reasoning"): OpenBlock {
-  let block = blocks.find((candidate) => candidate.type === type);
-  if (block === undefined) {
-    block = { index: blocks.length, type, text: "" };
-    blocks.push(block);
+function ensureTextContent(
+  contents: OpenContent[],
+  contentType: "text" | "reasoning",
+): OpenContent {
+  let content = contents.find((candidate) => candidate.contentType === contentType);
+  if (content === undefined) {
+    content = { contentIndex: contents.length, contentType, started: false };
+    contents.push(content);
   }
-  return block;
+  return content;
 }
 
-function ensureToolBlock(blocks: OpenBlock[], remoteIndex: number): OpenBlock {
-  let block = blocks.find((candidate) =>
-    candidate.type === "tool-call" && candidate.remoteToolIndex === remoteIndex);
-  if (block === undefined) {
-    block = { index: blocks.length, remoteToolIndex: remoteIndex, type: "tool-call", text: "" };
-    blocks.push(block);
+function ensureToolContent(contents: OpenContent[], remoteIndex: number): OpenContent {
+  let content = contents.find((candidate) =>
+    candidate.contentType === "tool-call" && candidate.remoteToolIndex === remoteIndex);
+  if (content === undefined) {
+    content = { contentIndex: contents.length, remoteToolIndex: remoteIndex,
+      contentType: "tool-call", started: false };
+    contents.push(content);
   }
-  return block;
-}
-
-function completeBlock(block: OpenBlock): StreamContentBlock {
-  if (block.type === "text" || block.type === "reasoning") return { type: block.type, text: block.text };
-  if (block.id === undefined || !block.name) {
-    throw invalidEvent("Qwen SSE tool call ended without an id or function name.");
-  }
-  return { type: "tool-call", id: block.id, name: block.name, arguments: block.text };
+  return content;
 }
 
 function mapFinishReason(value: unknown): FinishReason {

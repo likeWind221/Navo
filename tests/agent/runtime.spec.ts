@@ -29,12 +29,11 @@ describe("AgentRuntime", () => {
         handle: async function* () {
           firstStarted.resolve();
           await releaseFirst.promise;
-          yield {
-            type: "block-end",
-            index: 0,
-            block: { type: "text", text: "first answer" },
-          };
-          yield { type: "finish", reason: { kind: "stop" } };
+          yield { type: "content-started", contentIndex: 0, contentType: "text" } as const;
+          yield { type: "content-delta", contentIndex: 0,
+            contentType: "text", delta: "first answer" } as const;
+          yield { type: "content-completed", contentIndex: 0, contentType: "text" } as const;
+          yield { type: "finished", reason: { kind: "stop" } } as const;
         },
       },
       modelResponse([{ type: "text", text: "second answer" }]),
@@ -80,7 +79,7 @@ describe("AgentRuntime", () => {
         handle: async function* () {
           firstStarted.resolve();
           await releaseFirst.promise;
-          yield { type: "finish", reason: { kind: "stop" } };
+          yield { type: "finished", reason: { kind: "stop" } } as const;
         },
       },
       modelResponse([{ type: "text", text: "independent" }]),
@@ -109,6 +108,23 @@ describe("AgentRuntime", () => {
       "assistant-message", "step-ended", "turn-ended",
     ]);
     assertClosed(kit, "direct");
+  });
+
+  it("commits turn-ended before publishing the terminal live event", async () => {
+    const kit = await createRuntime([modelResponse([{ type: "text", text: "answer" }])]);
+    const input = turnInput("terminal-order");
+    let lastPersisted: string | undefined;
+
+    await kit.ctx.agentRuntime.runTurn({
+      ...input,
+      onEvent(event) {
+        if (event.type === "turn-finished") {
+          lastPersisted = kit.ctx.sessions.getEvents(input.sessionId).at(-1)?.type;
+        }
+      },
+    });
+
+    expect(lastPersisted).toBe("turn-ended");
   });
 
   it("feeds the assistant call and tool result into the next request", async () => {

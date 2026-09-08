@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { StreamChunk } from "../../src/llm/types.js";
+import type { ModelEvent } from "../../src/llm/types.js";
 import type { LLMAdapter } from "../../src/llm/adapter.js";
 import {
   collect,
@@ -17,7 +17,7 @@ describe("LLMService adapter errors", () => {
 
     await expect(collect(ctx.llm.stream(request("missing")))).resolves.toEqual([
       {
-        type: "finish",
+        type: "finished",
         reason: {
           kind: "error",
           failure: {
@@ -61,7 +61,7 @@ describe("LLMService adapter errors", () => {
       ["next", "plain provider failure"],
     ] as const) {
       expect(await collect(ctx.llm.stream(request(provider)))).toEqual([{
-        type: "finish",
+        type: "finished",
         reason: {
           kind: "error",
           failure: { code: "stream-failed", message },
@@ -87,7 +87,7 @@ describe("LLMService adapter errors", () => {
     await expect(
       collect(ctx.llm.stream(request("provider-abort"))),
     ).resolves.toEqual([{
-      type: "finish",
+      type: "finished",
       reason: {
         kind: "error",
         failure: {
@@ -109,9 +109,9 @@ describe("LLMService adapter errors", () => {
           throw new Error(`${field} getter failed`);
         },
       });
-      const iterator: AsyncIterator<StreamChunk> = {
+      const iterator: AsyncIterator<ModelEvent> = {
         next: () => Promise.resolve(
-          result as unknown as IteratorResult<StreamChunk>,
+          result as unknown as IteratorResult<ModelEvent>,
         ),
       };
       Object.defineProperty(iterator, "return", {
@@ -126,7 +126,7 @@ describe("LLMService adapter errors", () => {
 
       await expect(collect(ctx.llm.stream(request("getter")))).resolves.toEqual([
         {
-          type: "finish",
+          type: "finished",
           reason: {
             kind: "error",
             failure: {

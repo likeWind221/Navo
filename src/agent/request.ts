@@ -1,11 +1,8 @@
-import { randomUUID } from "node:crypto";
-
 import type { Context } from "cordis";
 
-import { createMessageId } from "../brand/ids.js";
-import type { StepId } from "../brand/ids.js";
+import type { MessageId, StepId } from "../brand/ids.js";
 import { collectStream } from "../llm/collect.js";
-import type { GenerateRequest } from "../llm/types.js";
+import type { FinishReason, GenerateRequest } from "../llm/types.js";
 import { createDeadline } from "./limits.js";
 import type { RetryableAttempt } from "./limits.js";
 import type { ModelCompletion, RunTurnInput, TurnScope } from "./types.js";
@@ -15,6 +12,7 @@ export async function requestModel(
   ctx: Context,
   turn: TurnScope,
   stepId: StepId,
+  messageId: MessageId,
 ): Promise<RetryableAttempt<ModelCompletion>> {
   const { input, turnId, signal, limits } = turn;
   const timeoutMs = limits.modelTimeoutMs;
@@ -22,56 +20,60 @@ export async function requestModel(
   const request = buildRequest(ctx, input, deadline.signal);
   appendRequest(ctx, input.sessionId, turnId, stepId, request);
   try {
-    let publishedText = false;
-    const collected = await collectStream(ctx.llm.stream(request), async (chunk) => {
-      if (chunk.type !== "text-delta" || chunk.text.length === 0) return;
-      publishedText = true;
-      await input.observer?.onTextDelta(chunk.text);
+    let publishedContent = false;
+    const collected = await collectStream(ctx.llm.stream(request), async (event) => {
+      switch (event.type) {
+        case "content-started":
+        case "content-completed":
+        case "content-delta":
+          if (input.onEvent !== undefined
+            && await input.onEvent({ ...event, turnId, stepId, messageId }) !== false) {
+            publishedContent = true;
+          }
+          return;
+        case "usage":
+        case "finished":
+          return;
+      }
     });
     if (signal.aborted) return { kind: "cancelled" };
-    if (deadline.timedOut) {
-      return {
-        kind: "failed",
-        failure: {
+    const finishReason: FinishReason = deadline.timedOut
+      ? { kind: "error", failure: {
           code: "TIMEOUT",
           message: `Model request timed out after ${timeoutMs}ms.`,
-        },
-      };
-    }
-    if (!collected.finishReason) {
-      return {
-        kind: "failed",
-        failure: {
+        } }
+      : collected.finishReason ?? { kind: "error", failure: {
           code: "stream-incomplete",
           message: "LLM stream ended without a finish chunk.",
-        },
-      };
-    }
-    if (collected.finishReason.kind === "cancelled") {
+        } };
+    if (finishReason.kind === "cancelled") {
       return { kind: "cancelled" };
     }
-    if (collected.finishReason.kind === "error") {
+    if (finishReason.kind === "error") {
       return {
         kind: "failed",
-        failure: publishedText
+        // Missing finish is already non-retryable; retain its shipped v1 code.
+        failure: publishedContent && finishReason.failure.code !== "stream-incomplete"
           ? {
               code: "stream-output-interrupted",
-              message: "Model stream failed after publishing visible output.",
-              ...(collected.finishReason.failure.status === undefined
-                ? {} : { status: collected.finishReason.failure.status }),
+              message: "Model stream failed after publishing live content.",
+              ...(finishReason.failure.status === undefined
+                ? {} : { status: finishReason.failure.status }),
             }
-          : collected.finishReason.failure,
+          : finishReason.failure,
       };
     }
     return {
       kind: "completed",
       value: {
+        // The message id was fixed when the Step started so the v2 stream
+        // can announce it in step-started before any content arrives.
         message: Object.freeze({
-          id: createMessageId(randomUUID()),
+          id: messageId,
           role: "assistant",
           content: collected.content,
         }),
-        finishReason: collected.finishReason,
+        finishReason,
         ...(collected.usage === undefined ? {} : { usage: collected.usage }),
       },
     };

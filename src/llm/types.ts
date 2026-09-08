@@ -1,14 +1,20 @@
 import type { MessageId, ToolCallId } from "../brand/ids.js";
 
-/** Canonical, provider-independent events emitted by one model stream. */
-export type StreamChunk =
-  | BlockStartChunk
-  | TextDeltaChunk
-  | ReasoningDeltaChunk
-  | ToolCallDeltaChunk
-  | BlockEndChunk
-  | UsageChunk
-  | FinishChunk;
+/** Canonical, provider-independent events emitted by one model request. */
+export type ModelEvent =
+  | { readonly type: "content-started"; readonly contentIndex: number;
+      readonly contentType: "text" | "reasoning" }
+  | { readonly type: "content-started"; readonly contentIndex: number;
+      readonly contentType: "tool-call"; readonly toolCallId: ToolCallId }
+  | { readonly type: "content-delta"; readonly contentIndex: number;
+      readonly contentType: "text" | "reasoning"; readonly delta: string }
+  | { readonly type: "content-delta"; readonly contentIndex: number;
+      readonly contentType: "tool-call"; readonly toolCallId: ToolCallId;
+      readonly toolNameDelta?: string; readonly delta: string }
+  | { readonly type: "content-completed"; readonly contentIndex: number;
+      readonly contentType: ContentBlockType }
+  | { readonly type: "usage"; readonly usage: TokenUsage }
+  | { readonly type: "finished"; readonly reason: FinishReason };
 
 export type JsonValue =
   | null
@@ -24,23 +30,28 @@ export interface JsonObject {
 
 export type MessageRole = "system" | "user" | "assistant";
 
+/** Complete model-emitted content; never represents a streaming partial. */
 export type ContentBlock =
   | TextContentBlock
   | ReasoningContentBlock
-  | ToolCallContentBlock
-  | ToolResultContentBlock;
+  | ToolCallContentBlock;
+
+export type MessageContent = ContentBlock | ToolResultContentBlock;
 
 export interface Message {
   readonly id: MessageId;
   readonly role: MessageRole;
-  readonly content: readonly ContentBlock[];
+  readonly content: readonly MessageContent[];
 }
 
 export type UserMessage = Message & { readonly role: "user" };
 
-export type AssistantMessage = Message & { readonly role: "assistant" };
+export type AssistantMessage = Omit<Message, "role" | "content"> & {
+  readonly role: "assistant";
+  readonly content: readonly ContentBlock[];
+};
 
-export type ToolResultMessage = UserMessage & {
+export type ToolResultMessage = Omit<UserMessage, "content"> & {
   readonly content: readonly [ToolResultContentBlock];
 };
 
@@ -63,55 +74,7 @@ export interface GenerateRequest {
   readonly signal?: AbortSignal;
 }
 
-/** Model-emittable blocks carried by `block-end`. */
-export type StreamContentBlock =
-  | TextContentBlock
-  | ReasoningContentBlock
-  | ToolCallContentBlock;
-
-export type StreamContentBlockType = StreamContentBlock["type"];
-
-export interface BlockStartChunk {
-  readonly type: "block-start";
-  readonly index: number;
-  readonly blockType: StreamContentBlockType;
-}
-
-export interface TextDeltaChunk {
-  readonly type: "text-delta";
-  readonly index: number;
-  readonly text: string;
-}
-
-export interface ReasoningDeltaChunk {
-  readonly type: "reasoning-delta";
-  readonly index: number;
-  readonly text: string;
-}
-
-export interface ToolCallDeltaChunk {
-  readonly type: "tool-call-delta";
-  readonly index: number;
-  readonly id: ToolCallId;
-  readonly name?: string;
-  readonly argumentsDelta: string;
-}
-
-export interface BlockEndChunk {
-  readonly type: "block-end";
-  readonly index: number;
-  readonly block: StreamContentBlock;
-}
-
-export interface UsageChunk {
-  readonly type: "usage";
-  readonly usage: TokenUsage;
-}
-
-export interface FinishChunk {
-  readonly type: "finish";
-  readonly reason: FinishReason;
-}
+export type ContentBlockType = ContentBlock["type"];
 
 export type TextContentBlock = {
   readonly type: "text";

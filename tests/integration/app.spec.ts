@@ -11,6 +11,7 @@ import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import type { JsonObject, ToolCallContentBlock } from "../../src/llm/types.js";
 import { NODE_AGENT_TOOL_NAMES } from "../../src/node/profile.js";
 import { MockSearchAdapter } from "../../src/tools/builtins/search/adapters/mock.js";
+import { modelResponse } from "../helpers/runtime.js";
 
 let app: Context | undefined;
 
@@ -42,24 +43,8 @@ describe("SkillWorld application integration", () => {
       arguments: JSON.stringify({ text: "closed loop" }),
     };
     const adapter = new MockLLMAdapter([
-      {
-        kind: "chunks",
-        chunks: [
-          { type: "block-end", index: 0, block: toolCall },
-          { type: "finish", reason: { kind: "tool-calls" } },
-        ],
-      },
-      {
-        kind: "chunks",
-        chunks: [
-          {
-            type: "block-end",
-            index: 0,
-            block: { type: "text", text: "FINAL: closed loop" },
-          },
-          { type: "finish", reason: { kind: "stop" } },
-        ],
-      },
+      modelResponse([toolCall], "tool-calls"),
+      modelResponse([{ type: "text", text: "FINAL: closed loop" }]),
     ]);
     const execute = vi.fn(async (arguments_: JsonObject) =>
       String(arguments_.text));

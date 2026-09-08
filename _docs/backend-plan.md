@@ -208,6 +208,7 @@
 | 状态 | 步骤 | 目标文件 | 工作内容 | 完成标准 |
 |---|---|---|---|---|
 | ✅ | F2.2 Kernel Host 与真实 Qwen | `src/host/**`、`src/llm/adapters/qwen*.ts`、`scripts/{real,mock-kernel-host}.ts`、`tests/{kernel-host,host-process,qwen-chat-adapter}.spec.ts` | 由独立进程装配 `createApp()`、Qwen Adapter 和 Stream RPC Server；stdio 只传 NDJSON，日志走 stderr；Runtime 提供正文观察出口；Mock Host 可编排完成、失败、截断、挂起和崩溃 | `agent.turn` 按 started/delta/唯一终态输出；reasoning 不混入正文；取消贯穿；工具默认禁用；断流、HTTP、Host 生命周期和共享 RPC 契约测试通过 |
+| ✅ | F3.2.1.1 助手流语义与链路收敛 | `src/{llm,agent,host}/**`、`rpc/content/**`、相关测试 | 让同一模型输出在实时展示与内核处理之间只分叉一次：前端获得可自行重建内容的有序片段，内核获得可持久化和执行工具的完整消息；各层术语与身份粒度保持唯一 | 实时路径不经过后端内容聚合；每个 Step 和内容单元生命周期闭合；多 Step 与交错内容不串混；旧 `agent.turn` 行为不变；完整类型检查和测试通过 |
 
 阶段 8.1 已定义四个文件工具的模型 Schema、输入/分页结果、协议上限与安全错误；尚未执行文件 IO，详细契约见 [8.1 开发记录](22-devlog-step-8-1-file-protocol.md)。
 

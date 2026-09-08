@@ -7,10 +7,9 @@ import {
   isLLMServiceError,
 } from "./errors.js";
 import type {
-  FinishChunk,
   GenerateRequest,
   LlmFailure,
-  StreamChunk,
+  ModelEvent,
 } from "./types.js";
 import type { LLMAdapter } from "./adapter.js";
 
@@ -62,14 +61,14 @@ export class LLMService extends Service {
     };
   }
 
-  stream(request: GenerateRequest): AsyncIterable<StreamChunk> {
+  stream(request: GenerateRequest): AsyncIterable<ModelEvent> {
     return this.adapterStream(request);
   }
 
   private async *adapterStream(
     request: GenerateRequest,
-  ): AsyncGenerator<StreamChunk> {
-    let iterator: AsyncIterator<StreamChunk>;
+  ): AsyncGenerator<ModelEvent> {
+    let iterator: AsyncIterator<ModelEvent>;
     try {
       assertNotAborted(request.signal);
       const adapter = this.adapters.get(request.provider);
@@ -81,7 +80,7 @@ export class LLMService extends Service {
       }
       iterator = adapter.stream(request)[Symbol.asyncIterator]();
     } catch (error: unknown) {
-      yield failureChunk(error, request.signal);
+      yield failureEvent(error, request.signal);
       return;
     }
 
@@ -90,7 +89,7 @@ export class LLMService extends Service {
       while (true) {
         let item:
           | { readonly done: true }
-          | { readonly done: false; readonly value: StreamChunk };
+          | { readonly done: false; readonly value: ModelEvent };
         try {
           const next = await nextWithAbort(
             () => iterator.next(),
@@ -101,7 +100,7 @@ export class LLMService extends Service {
             : { done: false, value: next.value };
         } catch (error: unknown) {
           completed = !request.signal?.aborted;
-          yield failureChunk(error, request.signal);
+          yield failureEvent(error, request.signal);
           return;
         }
 
@@ -179,7 +178,7 @@ function nextWithAbort<TValue>(
 
 /** Close cooperatively; an aborted, uncooperative iterator must not block its caller. */
 async function closeIterator(
-  iterator: AsyncIterator<StreamChunk>,
+  iterator: AsyncIterator<ModelEvent>,
   signal: AbortSignal | undefined,
 ): Promise<void> {
   const close = iterator.return?.bind(iterator);
@@ -199,15 +198,15 @@ async function closeIterator(
   await close();
 }
 
-function failureChunk(
+function failureEvent(
   error: unknown,
   signal: AbortSignal | undefined,
-): FinishChunk {
+): Extract<ModelEvent, { readonly type: "finished" }> {
   if (signal?.aborted) {
-    return { type: "finish", reason: { kind: "cancelled" } };
+    return { type: "finished", reason: { kind: "cancelled" } };
   }
   return {
-    type: "finish",
+    type: "finished",
     reason: { kind: "error", failure: normalizeFailure(error) },
   };
 }

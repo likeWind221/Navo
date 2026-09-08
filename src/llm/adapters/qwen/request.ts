@@ -1,8 +1,8 @@
 import type {
-  ContentBlock,
   GenerateRequest,
   JsonValue,
   Message,
+  MessageContent,
   ToolCallContentBlock,
 } from "../../types.js";
 
@@ -62,7 +62,7 @@ function serializeMessage(message: Message): Readonly<Record<string, JsonValue>>
   };
 }
 
-function textContent(blocks: readonly ContentBlock[]): string {
+function textContent(blocks: readonly MessageContent[]): string {
   return blocks.filter((block) => block.type === "text")
     .map((block) => block.text).join("");
 }

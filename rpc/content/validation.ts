@@ -1,12 +1,12 @@
 import { DISPLAY_SUMMARY_MAX_CHARS, parseDisplayFailure } from "../failure.js";
-import type { AssistantEvent } from "../content.js";
+import type { TurnEvent } from "../content.js";
 import { CONTENT_DELTA_MAX_CHARS, TOOL_DETAIL_MAX_CHARS } from "../content.js";
 import { RpcError } from "../errors.js";
 import { exactKeys, requireBoundedString, requireRecord } from "../validation.js";
 
 /** Parse one exact event; lifecycle and identity association belong to the stream validator. */
-export function parseAssistantEvent(value: unknown): AssistantEvent {
-  const event = requireRecord(value, "assistant event");
+export function parseTurnEvent(value: unknown): TurnEvent {
+  const event = requireRecord(value, "turn event");
   const keys = ["type", "sessionId", "requestId", "turnId"];
   const scope = {
     sessionId: requireBoundedString(event.sessionId, "sessionId", 128),
@@ -32,31 +32,31 @@ export function parseAssistantEvent(value: unknown): AssistantEvent {
     requireKeys(event, keys);
     return { ...step, type };
   }
-  keys.push("blockId");
-  const block = { ...step, blockId: requireBoundedString(event.blockId, "blockId", 128) };
-  if (type === "block-started") {
+  keys.push("contentIndex");
+  const content = { ...step, contentIndex: requireContentIndex(event.contentIndex) };
+  if (type === "content-started") {
     if (event.kind === "text" || event.kind === "reasoning") {
       requireKeys(event, [...keys, "kind"]);
-      return { ...block, type, kind: event.kind };
+      return { ...content, type, kind: event.kind };
     }
     if (event.kind === "tool-call") {
       requireKeys(event, [...keys, "kind", "toolCallId", "toolName"]);
-      return { ...block, type, kind: event.kind,
+      return { ...content, type, kind: event.kind,
         toolCallId: requireBoundedString(event.toolCallId, "toolCallId", 128),
         toolName: requireBoundedString(event.toolName, "toolName", 128) };
     }
   }
-  if (type === "block-delta") {
+  if (type === "content-delta") {
     requireKeys(event, [...keys, "delta"]);
-    return { ...block, type, delta: requireBoundedString(event.delta, "delta", CONTENT_DELTA_MAX_CHARS) };
+    return { ...content, type, delta: requireBoundedString(event.delta, "delta", CONTENT_DELTA_MAX_CHARS) };
   }
-  if (type === "block-completed") {
+  if (type === "content-completed") {
     requireKeys(event, keys);
-    return { ...block, type };
+    return { ...content, type };
   }
   if (type === "tool-started" || type === "tool-result") {
     keys.push("toolCallId");
-    const tool = { ...block, toolCallId: requireBoundedString(event.toolCallId, "toolCallId", 128) };
+    const tool = { ...content, toolCallId: requireBoundedString(event.toolCallId, "toolCallId", 128) };
     if (type === "tool-started") {
       requireKeys(event, keys);
       return { ...tool, type };
@@ -80,4 +80,11 @@ export function parseAssistantEvent(value: unknown): AssistantEvent {
 
 function requireKeys(value: Record<string, unknown>, keys: readonly string[]): void {
   if (!exactKeys(value, keys)) throw new RpcError("invalid-frame", "Malformed event fields");
+}
+
+function requireContentIndex(value: unknown): number {
+  if (!Number.isSafeInteger(value) || (value as number) < 0) {
+    throw new RpcError("invalid-frame", "contentIndex must be a non-negative safe integer");
+  }
+  return value as number;
 }

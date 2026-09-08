@@ -1,11 +1,11 @@
 import type {
   GenerateRequest,
-  StreamChunk,
+  ModelEvent,
 } from "../types.js";
 import type { LLMAdapter } from "../adapter.js";
 
 export type MockLLMEntry =
-  | MockLLMChunksEntry
+  | MockLLMEventsEntry
   | MockLLMErrorEntry
   | MockLLMHandlerEntry
   | MockLLMHangEntry;
@@ -27,7 +27,7 @@ export class MockLLMAdapter implements LLMAdapter {
     return this.queue.length;
   }
 
-  async *stream(request: GenerateRequest): AsyncIterable<StreamChunk> {
+  async *stream(request: GenerateRequest): AsyncIterable<ModelEvent> {
     throwIfAborted(request.signal);
     this.recordedRequests.push(snapshotRequest(request));
 
@@ -40,13 +40,13 @@ export class MockLLMAdapter implements LLMAdapter {
     }
 
     switch (entry.kind) {
-      case "chunks":
-        yield* emitChunks(entry.chunks, entry.chunkDelayMs, request.signal);
+      case "events":
+        yield* emitEvents(entry.events, entry.eventDelayMs, request.signal);
         return;
       case "error":
-        yield* emitChunks(
-          entry.chunksBeforeError ?? [],
-          entry.chunkDelayMs,
+        yield* emitEvents(
+          entry.eventsBeforeError ?? [],
+          entry.eventDelayMs,
           request.signal,
         );
         throw entry.error;
@@ -54,9 +54,9 @@ export class MockLLMAdapter implements LLMAdapter {
         yield* emitIterable(entry.handle(request), request.signal);
         return;
       case "hang":
-        yield* emitChunks(
-          entry.chunksBeforeHang ?? [],
-          entry.chunkDelayMs,
+        yield* emitEvents(
+          entry.eventsBeforeHang ?? [],
+          entry.eventDelayMs,
           request.signal,
         );
         await waitForAbort(request.signal);
@@ -67,19 +67,19 @@ export class MockLLMAdapter implements LLMAdapter {
 
 export type MockLLMHandler = (
   request: GenerateRequest,
-) => Iterable<StreamChunk> | AsyncIterable<StreamChunk>;
+) => Iterable<ModelEvent> | AsyncIterable<ModelEvent>;
 
-export interface MockLLMChunksEntry {
-  readonly kind: "chunks";
-  readonly chunks: readonly StreamChunk[];
-  readonly chunkDelayMs?: number;
+export interface MockLLMEventsEntry {
+  readonly kind: "events";
+  readonly events: readonly ModelEvent[];
+  readonly eventDelayMs?: number;
 }
 
 export interface MockLLMErrorEntry {
   readonly kind: "error";
   readonly error: unknown;
-  readonly chunksBeforeError?: readonly StreamChunk[];
-  readonly chunkDelayMs?: number;
+  readonly eventsBeforeError?: readonly ModelEvent[];
+  readonly eventDelayMs?: number;
 }
 
 export interface MockLLMHandlerEntry {
@@ -89,8 +89,8 @@ export interface MockLLMHandlerEntry {
 
 export interface MockLLMHangEntry {
   readonly kind: "hang";
-  readonly chunksBeforeHang?: readonly StreamChunk[];
-  readonly chunkDelayMs?: number;
+  readonly eventsBeforeHang?: readonly ModelEvent[];
+  readonly eventDelayMs?: number;
 }
 
 export type MockLLMAdapterErrorCode = "script-exhausted" | "invalid-delay";
@@ -105,26 +105,26 @@ export class MockLLMAdapterError extends Error {
   }
 }
 
-async function* emitChunks(
-  chunks: readonly StreamChunk[],
-  chunkDelayMs = 0,
+async function* emitEvents(
+  events: readonly ModelEvent[],
+  eventDelayMs = 0,
   signal: AbortSignal | undefined,
-): AsyncGenerator<StreamChunk> {
-  assertDelay(chunkDelayMs);
-  for (const chunk of chunks) {
-    await waitForDelay(chunkDelayMs, signal);
+): AsyncGenerator<ModelEvent> {
+  assertDelay(eventDelayMs);
+  for (const event of events) {
+    await waitForDelay(eventDelayMs, signal);
     throwIfAborted(signal);
-    yield snapshotChunk(chunk);
+    yield snapshotEvent(event);
   }
 }
 
 async function* emitIterable(
-  chunks: Iterable<StreamChunk> | AsyncIterable<StreamChunk>,
+  events: Iterable<ModelEvent> | AsyncIterable<ModelEvent>,
   signal: AbortSignal | undefined,
-): AsyncGenerator<StreamChunk> {
-  for await (const chunk of chunks) {
+): AsyncGenerator<ModelEvent> {
+  for await (const event of events) {
     throwIfAborted(signal);
-    yield snapshotChunk(chunk);
+    yield snapshotEvent(event);
   }
 }
 
@@ -205,8 +205,8 @@ function snapshotRequest(request: GenerateRequest): GenerateRequest {
   });
 }
 
-function snapshotChunk(chunk: StreamChunk): StreamChunk {
-  return deepFreeze(structuredClone(chunk));
+function snapshotEvent(event: ModelEvent): ModelEvent {
+  return deepFreeze(structuredClone(event));
 }
 
 function deepFreeze<TValue>(

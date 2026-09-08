@@ -2,7 +2,7 @@ import { LLMProviderError } from "../errors.js";
 import type { LLMAdapter } from "../adapter.js";
 import { translateQwenSse } from "./qwen/sse.js";
 import { serializeQwenRequest } from "./qwen/request.js";
-import type { GenerateRequest, StreamChunk } from "../types.js";
+import type { GenerateRequest, ModelEvent } from "../types.js";
 
 export interface QwenChatAdapterConfig {
   readonly baseUrl: string;
@@ -26,7 +26,7 @@ export class QwenChatCompletionsAdapter implements LLMAdapter {
     this.fetchImpl = config.fetch ?? fetch;
   }
 
-  async *stream(request: GenerateRequest): AsyncGenerator<StreamChunk> {
+  async *stream(request: GenerateRequest): AsyncGenerator<ModelEvent> {
     let response: Response;
     try {
       response = await this.fetchImpl(`${this.baseUrl}/chat/completions`, {

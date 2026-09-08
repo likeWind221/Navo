@@ -39,6 +39,7 @@
 - [F3.1：公共事件契约](23-devlog-step-f3-1-public-events.md)：助手有序内容块、独立命令通知流、身份与终态校验、兼容及后端交接。
 
 - [源码目录与命名重构实施记录](25-structure.md)：77 条路径迁移、RPC 与共享契约拆分、用户偏好记忆和 278 项测试及 Electron 验收。
+- [F3.2.1：助手内容事件接通与链路收敛](27-devlog-f3-2-1-assistant-content-events.md)：ModelEvent 单点分叉、StepAccumulator 唯一聚合、TurnEvent 实时路径、超时与残缺工具收敛、全业务事件资源预算及 stdio 坏帧恢复。
 
 ## 研究与自动审查
 

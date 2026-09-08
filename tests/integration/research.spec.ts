@@ -4,13 +4,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createApp } from "../../src/app.js";
 import { createToolCallId } from "../../src/brand/ids.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
-import type { StreamContentBlock, ToolCallContentBlock } from "../../src/llm/types.js";
+import type { ToolCallContentBlock } from "../../src/llm/types.js";
 import { NODE_AGENT_TOOL_NAMES } from "../../src/node/profile.js";
 import { NODE_CONTENT_TOOL_NAMES } from "../../src/node/tools.js";
 import { MockFetchCore } from "../../src/tools/builtins/fetch/mock.js";
 import { WEB_FETCH_TOOL_NAME } from "../../src/tools/builtins/fetch/tool.js";
 import { MockSearchAdapter } from "../../src/tools/builtins/search/adapters/mock.js";
 import { WEB_SEARCH_TOOL_NAME } from "../../src/tools/builtins/search/tool.js";
+import { modelResponse } from "../helpers/runtime.js";
 
 let app: Context | undefined;
 
@@ -170,19 +171,9 @@ function call(id: string, name: string, arguments_: unknown): ToolCallContentBlo
 }
 
 function toolResponse(block: ToolCallContentBlock) {
-  return response(block, "tool-calls");
+  return modelResponse([block], "tool-calls");
 }
 
 function textResponse(text: string) {
-  return response({ type: "text", text }, "stop");
-}
-
-function response(block: StreamContentBlock, finish: "stop" | "tool-calls") {
-  return {
-    kind: "chunks" as const,
-    chunks: [
-      { type: "block-end" as const, index: 0, block },
-      { type: "finish" as const, reason: { kind: finish } },
-    ],
-  };
+  return modelResponse([{ type: "text", text }], "stop");
 }

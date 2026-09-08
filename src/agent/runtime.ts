@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { Service } from "cordis";
 import type { Context } from "cordis";
 
-import { createStepId, createTurnId } from "../brand/ids.js";
+import { createMessageId, createStepId, createTurnId } from "../brand/ids.js";
 import type { StepId } from "../brand/ids.js";
 import type { ErrorSource, Failure, TurnEndStatus } from "../session/types.js";
 import { resolveAgentRuntimeLimits, runWithModelRetries } from "./limits.js";
@@ -47,15 +47,14 @@ export class AgentRuntime extends Service {
       : { ...input, toolNames: Object.freeze([...input.toolNames]) };
     const turn: TurnScope = { input: scopedInput, turnId, signal, limits };
     let steps = 0;
-    let status: TurnEndStatus = "failed";
-    let failure: Failure | undefined;
+    let result: TurnResult;
     this.ctx.sessions.append({
       type: "turn-started",
       sessionId: input.sessionId,
       data: { turnId },
     });
     try {
-      await input.observer?.onStarted(turnId);
+      await input.onEvent?.({ type: "turn-started", turnId });
       this.ctx.sessions.append({
         type: "user-message",
         sessionId: input.sessionId,
@@ -63,44 +62,46 @@ export class AgentRuntime extends Service {
       });
       while (true) {
         if (signal.aborted) {
-          status = "cancelled";
-          return turnResult(status, turnId, steps, undefined);
+          result = turnResult("cancelled", turnId, steps, undefined);
+          break;
         }
         if (steps >= limits.maxSteps) {
-          status = "blocked";
-          failure = {
+          const failure: Failure = {
             code: "max-steps-exceeded",
             message: `Turn reached its ${limits.maxSteps}-step limit.`,
           };
           this.appendError(input.sessionId, turnId, "runtime", failure);
-          return turnResult(status, turnId, steps, failure);
+          result = turnResult("blocked", turnId, steps, failure);
+          break;
         }
         steps += 1;
         const step = await this.runStep(turn);
-        if (step.status === "continue") {
-          continue;
-        }
-        status = step.status;
-        failure = "failure" in step ? step.failure : undefined;
-        return turnResult(status, turnId, steps, failure);
+        if (step.status === "continue") continue;
+        const failure = "failure" in step ? step.failure : undefined;
+        result = turnResult(step.status, turnId, steps, failure);
+        break;
       }
     } catch (error: unknown) {
-      status = signal.aborted ? "cancelled" : "failed";
-      failure = signal.aborted ? undefined : runtimeFailure(error);
+      const status: TurnEndStatus = signal.aborted ? "cancelled" : "failed";
+      const failure = signal.aborted ? undefined : runtimeFailure(error);
       if (failure) this.appendError(input.sessionId, turnId, "runtime", failure);
-      return turnResult(status, turnId, steps, failure);
-    } finally {
-      this.ctx.sessions.append({
-        type: "turn-ended",
-        sessionId: input.sessionId,
-        data: { turnId, status },
-      });
+      result = turnResult(status, turnId, steps, failure);
     }
+    this.ctx.sessions.append({
+      type: "turn-ended",
+      sessionId: input.sessionId,
+      data: { turnId, status: result.status },
+    });
+    await input.onEvent?.({ type: "turn-finished", result });
+    return result;
   }
 
   private async runStep(turn: TurnScope): Promise<StepOutcome> {
     const { input, turnId, signal, limits } = turn;
     const stepId = createStepId(randomUUID());
+    // The assistant message id is fixed when the Step starts: the v2 stream
+    // must announce it in step-started before any content arrives.
+    const messageId = createMessageId(randomUUID());
     this.ctx.sessions.append({
       type: "step-started",
       sessionId: input.sessionId,
@@ -108,10 +109,11 @@ export class AgentRuntime extends Service {
     });
     let outcome: StepOutcome;
     try {
+      await input.onEvent?.({ type: "step-started", turnId, stepId, messageId });
       const response = await runWithModelRetries(
         signal,
         limits.maxModelRetries,
-        () => requestModel(this.ctx, turn, stepId),
+        () => requestModel(this.ctx, turn, stepId, messageId),
       );
       outcome = response.kind === "completed"
         ? await acceptResponse(this.ctx, turn, stepId, response.value)
@@ -146,6 +148,13 @@ export class AgentRuntime extends Service {
       type: "step-ended",
       sessionId: input.sessionId,
       data: { turnId, stepId, status: outcome.status },
+    });
+    await input.onEvent?.({
+      type: "step-completed",
+      turnId,
+      stepId,
+      messageId,
+      status: outcome.status,
     });
     return outcome;
   }

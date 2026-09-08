@@ -4,7 +4,7 @@ import { createMessageId } from "../../../src/brand/ids.js";
 import { LLMProviderError } from "../../../src/llm/errors.js";
 import { QwenChatCompletionsAdapter } from "../../../src/llm/adapters/qwen.js";
 import { QWEN_SSE_MAX_EVENT_CHARS } from "../../../src/llm/adapters/qwen/sse.js";
-import type { GenerateRequest, StreamChunk } from "../../../src/llm/types.js";
+import type { GenerateRequest, ModelEvent } from "../../../src/llm/types.js";
 
 describe("QwenChatCompletionsAdapter", () => {
   it("streams reasoning and visible text separately and serializes a safe request", async () => {
@@ -25,7 +25,7 @@ describe("QwenChatCompletionsAdapter", () => {
       },
     });
 
-    const chunks = await collect(adapter.stream(request()));
+    const events = await collect(adapter.stream(request()));
 
     expect(sentUrl).toBe("http://model.test/v1/chat/completions");
     expect(new Headers(sentInit?.headers).get("authorization")).toBe("Bearer secret-token");
@@ -36,16 +36,16 @@ describe("QwenChatCompletionsAdapter", () => {
       chat_template_kwargs: { enable_thinking: false },
       messages: [{ role: "user", content: "hello" }],
     });
-    expect(chunks).toEqual([
-      { type: "block-start", index: 0, blockType: "reasoning" },
-      { type: "reasoning-delta", index: 0, text: "think" },
-      { type: "block-start", index: 1, blockType: "text" },
-      { type: "text-delta", index: 1, text: "你" },
-      { type: "text-delta", index: 1, text: "好" },
-      { type: "block-end", index: 0, block: { type: "reasoning", text: "think" } },
-      { type: "block-end", index: 1, block: { type: "text", text: "你好" } },
+    expect(events).toEqual([
+      { type: "content-started", contentIndex: 0, contentType: "reasoning" },
+      { type: "content-delta", contentIndex: 0, contentType: "reasoning", delta: "think" },
+      { type: "content-started", contentIndex: 1, contentType: "text" },
+      { type: "content-delta", contentIndex: 1, contentType: "text", delta: "你" },
+      { type: "content-delta", contentIndex: 1, contentType: "text", delta: "好" },
+      { type: "content-completed", contentIndex: 0, contentType: "reasoning" },
+      { type: "content-completed", contentIndex: 1, contentType: "text" },
       { type: "usage", usage: { inputTokens: 3, outputTokens: 2, totalTokens: 5, reasoningTokens: 1 } },
-      { type: "finish", reason: { kind: "stop" } },
+      { type: "finished", reason: { kind: "stop" } },
     ]);
   });
 
@@ -85,7 +85,7 @@ describe("QwenChatCompletionsAdapter", () => {
     expect(body.chat_template_kwargs).toEqual({ enable_thinking: true });
   });
 
-  it("ends without a finish chunk when the provider disconnects", async () => {
+  it("ends without a finished event when the provider disconnects", async () => {
     const adapter = new QwenChatCompletionsAdapter({
       baseUrl: "https://model.test/v1",
       fetch: async () => sseResponse([
@@ -93,10 +93,55 @@ describe("QwenChatCompletionsAdapter", () => {
       ]),
     });
 
-    const chunks = await collect(adapter.stream(request()));
-    expect(chunks).toEqual([
-      { type: "block-start", index: 0, blockType: "text" },
-      { type: "text-delta", index: 0, text: "partial" },
+    const events = await collect(adapter.stream(request()));
+    expect(events).toEqual([
+      { type: "content-started", contentIndex: 0, contentType: "text" },
+      { type: "content-delta", contentIndex: 0, contentType: "text", delta: "partial" },
+    ]);
+  });
+
+  it("drops an incomplete tool call when max tokens ends generation", async () => {
+    const adapter = new QwenChatCompletionsAdapter({
+      baseUrl: "https://model.test/v1",
+      fetch: async () => sseResponse([
+        "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call-1\",\"function\":{\"name\":\"read\",\"arguments\":\"{\"}}]},\"finish_reason\":\"length\"}]}\n\n",
+        "data: [DONE]\n\n",
+      ]),
+    });
+
+    const events = await collect(adapter.stream(request()));
+
+    expect(events.map((event) => event.type)).toEqual([
+      "content-started", "content-delta", "finished",
+    ]);
+    expect(events.at(-1)).toEqual({ type: "finished", reason: { kind: "max-tokens" } });
+  });
+
+  it("keeps a stable fallback id when the provider supplies its id late", async () => {
+    const adapter = new QwenChatCompletionsAdapter({
+      baseUrl: "https://model.test/v1",
+      fetch: async () => sseResponse([
+        "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"name\":\"re\",\"arguments\":\"{\"}}]},\"finish_reason\":null}]}\n\n",
+        "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call-1\",\"function\":{\"name\":\"ad\",\"arguments\":\"}\"}}]},\"finish_reason\":\"tool_calls\"}]}\n\n",
+        "data: [DONE]\n\n",
+      ]),
+    });
+
+    const events = await collect(adapter.stream(request()));
+
+    const generatedId = (events[0] as Extract<ModelEvent, {
+      type: "content-started"; contentType: "tool-call";
+    }>).toolCallId;
+    expect(generatedId).toMatch(/^qwen-generated-/);
+    expect(events).toEqual([
+      { type: "content-started", contentIndex: 0, contentType: "tool-call",
+        toolCallId: generatedId },
+      { type: "content-delta", contentIndex: 0, contentType: "tool-call",
+        toolCallId: generatedId, toolNameDelta: "re", delta: "{" },
+      { type: "content-delta", contentIndex: 0, contentType: "tool-call",
+        toolCallId: generatedId, toolNameDelta: "ad", delta: "}" },
+      { type: "content-completed", contentIndex: 0, contentType: "tool-call" },
+      { type: "finished", reason: { kind: "tool-calls" } },
     ]);
   });
 
@@ -176,8 +221,8 @@ function sseResponse(chunks: readonly string[]): Response {
   }), { status: 200, headers: { "content-type": "text/event-stream" } });
 }
 
-async function collect(stream: AsyncIterable<StreamChunk>): Promise<StreamChunk[]> {
-  const chunks: StreamChunk[] = [];
-  for await (const chunk of stream) chunks.push(chunk);
-  return chunks;
+async function collect(stream: AsyncIterable<ModelEvent>): Promise<ModelEvent[]> {
+  const events: ModelEvent[] = [];
+  for await (const event of stream) events.push(event);
+  return events;
 }

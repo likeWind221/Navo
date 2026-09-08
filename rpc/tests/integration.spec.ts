@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { StreamRpcClient, StreamRpcRouter, StreamRpcServer, agentTurnMethod, assistantTurnMethod, sessionCommandMethod } from "../index.js";
+import { StreamRpcClient, StreamRpcRouter, StreamRpcServer, agentTurnMethod, agentTurnV2Method, sessionCommandMethod } from "../index.js";
 import type { RpcServerFrame } from "../index.js";
 import { Channel, createTransportPair, collect } from "./helpers/transport.js";
 
@@ -11,7 +11,7 @@ describe("F3 RPC integration", () => {
       yield { type: "started", turnId: "legacy" };
       yield { type: "completed" };
     });
-    router.register(assistantTurnMethod, async function* (input) {
+    router.register(agentTurnV2Method, async function* (input) {
       const scope = { sessionId: input.sessionId, requestId: input.requestId, turnId: "new" };
       yield { ...scope, type: "turn-started" };
       yield { ...scope, stepId: "step", messageId: "message", type: "step-started" };
@@ -29,7 +29,7 @@ describe("F3 RPC integration", () => {
     try {
       const input = { sessionId: "s", requestId: "r", text: "hi" };
       expect(await collect(client.stream(agentTurnMethod, input))).toHaveLength(2);
-      expect(await collect(client.stream(assistantTurnMethod, input))).toHaveLength(4);
+      expect(await collect(client.stream(agentTurnV2Method, input))).toHaveLength(4);
       const notices = await collect(client.stream(sessionCommandMethod, { sessionId: "s", commandId: "c", name: "model", args: "" }));
       expect(notices.map(n => n.status)).toEqual(["running", "succeeded"]);
       expect(notices.every(n => !("turnId" in n))).toBe(true);
@@ -43,7 +43,7 @@ describe("F3 RPC integration", () => {
   it("rejects cross-request output on both server and client", async () => {
     const pair = createTransportPair();
     const router = new StreamRpcRouter();
-    router.register(assistantTurnMethod, async function* (input) {
+    router.register(agentTurnV2Method, async function* (input) {
       yield { type: "turn-started", sessionId: input.sessionId, requestId: "wrong", turnId: "t" };
     });
     const server = new StreamRpcServer(pair.server, router);
@@ -51,7 +51,7 @@ describe("F3 RPC integration", () => {
     const client = new StreamRpcClient(pair.client);
     const input = { sessionId: "s", requestId: "r", text: "hi" };
     try {
-      await expect(collect(client.stream(assistantTurnMethod, input))).rejects.toMatchObject({ failure: { code: "stream-failed" } });
+      await expect(collect(client.stream(agentTurnV2Method, input))).rejects.toMatchObject({ failure: { code: "stream-failed" } });
     } finally {
       pair.close();
       await serving;
@@ -63,7 +63,7 @@ describe("F3 RPC integration", () => {
         value: { type: "turn-started", sessionId: "wrong", requestId: "r", turnId: "t" } });
     }, close: () => incoming.close() });
     try {
-      await expect(collect(raw.stream(assistantTurnMethod, input))).rejects.toMatchObject({ code: "invalid-output" });
+      await expect(collect(raw.stream(agentTurnV2Method, input))).rejects.toMatchObject({ code: "invalid-output" });
     } finally { await raw.dispose(); }
   });
 

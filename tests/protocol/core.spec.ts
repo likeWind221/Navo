@@ -8,7 +8,7 @@ import {
   createToolCallId,
   createTurnId,
 } from "../../src/brand/ids.js";
-import type { GenerateRequest, StreamChunk } from "../../src/llm/types.js";
+import type { GenerateRequest, ModelEvent } from "../../src/llm/types.js";
 
 const idFactories = [
   ["SessionId", createSessionId],
@@ -86,14 +86,10 @@ describe("LLM protocol", () => {
       ],
     };
 
-    const stream: StreamChunk[] = [
-      { type: "block-start", index: 0, blockType: "text" },
-      { type: "text-delta", index: 0, text: "北京当前晴，20°C。" },
-      {
-        type: "block-end",
-        index: 0,
-        block: { type: "text", text: "北京当前晴，20°C。" },
-      },
+    const stream: ModelEvent[] = [
+      { type: "content-started", contentIndex: 0, contentType: "text" },
+      { type: "content-delta", contentIndex: 0, contentType: "text", delta: "北京当前晴，20°C。" },
+      { type: "content-completed", contentIndex: 0, contentType: "text" },
       {
         type: "usage",
         usage: {
@@ -103,7 +99,7 @@ describe("LLM protocol", () => {
           reasoningTokens: 10,
         },
       },
-      { type: "finish", reason: { kind: "stop" } },
+      { type: "finished", reason: { kind: "stop" } },
     ];
 
     const payload = { request, stream };
