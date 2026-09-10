@@ -69,8 +69,7 @@ describe("interrupted model attempts", () => {
     vi.useFakeTimers();
     const controller = new AbortController();
     const kit = await createRuntime([{ kind: "hang", eventsBeforeHang: [
-      { type: "content-started", contentIndex: 0, contentType: "tool-call",
-        toolCallId: createToolCallId("cancelled-call") },
+      { type: "content-started", contentIndex: 0, contentType: "text" },
     ] }]);
     const pending = kit.ctx.agentRuntime.runTurn({
       ...turnInput("priority"), signal: controller.signal,

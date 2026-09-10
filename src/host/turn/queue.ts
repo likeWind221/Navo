@@ -1,9 +1,9 @@
-/** FIFO between the runtime event callback and the RPC stream consumer. */
 export class StreamEventQueue<T> implements AsyncIterable<T> {
   private readonly values: T[] = [];
   private readonly waiters: Array<(value: IteratorResult<T>) => void> = [];
   private head = 0;
   private ended = false;
+  private failure: { error: unknown } | undefined;
 
   push(value: T): void {
     if (this.ended) return;
@@ -20,6 +20,11 @@ export class StreamEventQueue<T> implements AsyncIterable<T> {
     }
   }
 
+  fail(error: unknown): void {
+    this.failure = { error };
+    this.end();
+  }
+
   async *[Symbol.asyncIterator](): AsyncGenerator<T> {
     while (true) {
       if (this.head < this.values.length) {
@@ -30,12 +35,18 @@ export class StreamEventQueue<T> implements AsyncIterable<T> {
           this.head = 0;
         }
         yield value;
-      } else if (this.ended) return;
+      } else if (this.ended) {
+        if (this.failure) throw this.failure.error;
+        return;
+      }
       else {
         const next = await new Promise<IteratorResult<T>>((resolve) => {
           this.waiters.push(resolve);
         });
-        if (next.done) return;
+        if (next.done) {
+          if (this.failure) throw this.failure.error;
+          return;
+        }
         yield next.value;
       }
     }

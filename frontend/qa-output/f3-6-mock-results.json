@@ -1,0 +1,49 @@
+{
+  "hello": {
+    "label": "系统提示",
+    "status": "succeeded",
+    "summary": "hello",
+    "failure": ""
+  },
+  "unknown": {
+    "label": "系统提示",
+    "status": "failed",
+    "summary": "",
+    "failure": "Unknown command 'unknown'."
+  },
+  "invalidArgs": {
+    "label": "系统提示",
+    "status": "failed",
+    "summary": "",
+    "failure": "hello does not accept arguments."
+  },
+  "concurrentCommand": {
+    "label": "系统提示",
+    "status": "succeeded",
+    "summary": "hello",
+    "failure": ""
+  },
+  "concurrentTurn": {
+    "commandCount": 4,
+    "assistantBusy": "true",
+    "buttonLabel": "停止生成"
+  },
+  "cancelledTurn": {
+    "commandCount": 4,
+    "assistantBusy": "false",
+    "buttonLabel": "发送消息"
+  },
+  "alignment": {
+    "assistantLeft": 269.5,
+    "assistantRight": 997.5,
+    "userRight": 997.5,
+    "composerLeft": 257.5,
+    "composerRight": 1009.5,
+    "composerTop": 577,
+    "lastMessageBottom": 521.15625,
+    "historyBottom": 739,
+    "chatBottom": 739,
+    "inputPaddingTop": "0px",
+    "inputBackground": "rgb(255, 254, 250)"
+  }
+}

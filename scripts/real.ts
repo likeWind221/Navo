@@ -44,6 +44,7 @@ async function main(): Promise<void> {
         }],
       },
       model: config.agent.model,
+      toolNames: ["echo_for_real_test"],
     });
     if (result.status !== "completed" || result.steps !== 2) {
       throw new Error(`Expected a completed two-Step Turn; received ${JSON.stringify(result)}.`);

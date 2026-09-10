@@ -35,6 +35,7 @@ export interface ToolExecutionContext {
 export interface ToolExecutionOptions {
   readonly sessionId?: SessionId;
   readonly allowedTools?: readonly string[];
+  readonly onStarted?: () => void | Promise<void>;
 }
 
 /** Current minimal model-facing output contract for native tools. */

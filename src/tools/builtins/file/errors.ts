@@ -24,7 +24,6 @@ export type FileErrorCode =
   | "invalid-text"
   | "file-too-large"
   | "output-too-large"
-  | "scan-limit-exceeded"
   | "edit-not-found"
   | "edit-not-unique"
   | "permission-denied"
@@ -35,16 +34,15 @@ const FILE_MODEL_MESSAGES: Readonly<Record<FileErrorCode, string>> = Object.free
   "invalid-config": "File tool configuration is invalid.",
   "invalid-request": "File tool parameters are invalid. Check the scope, required fields and numeric limits.",
   "session-required": "File tools require an active Session.",
-  "invalid-path": "Use a valid relative path inside the current Session workspace.",
-  "path-not-allowed": "The requested path is not allowed in the current Session workspace.",
+  "invalid-path": "Use a valid path in the current Session execution world.",
+  "path-not-allowed": "The requested path is not available in the current execution world.",
   "not-found": "The requested file or directory does not exist.",
   "already-exists": "The file already exists. Use overwrite explicitly to replace it.",
   "not-a-file": "The requested path is not a regular file.",
   "not-a-directory": "The requested search path is not a directory.",
   "invalid-text": "Only valid UTF-8 text without NUL characters is supported.",
   "file-too-large": "The file exceeds the supported UTF-8 byte limit.",
-  "output-too-large": "A complete line or result cannot fit the output budget. Use find to locate a bounded preview.",
-  "scan-limit-exceeded": "The directory search exceeds its scan budget. Search a narrower relative directory.",
+  "output-too-large": "A complete line or result cannot fit the output budget.",
   "edit-not-found": "The exact oldText was not found. Read the file and retry.",
   "edit-not-unique": "The oldText occurs more than once. Include more context to select a unique match.",
   "permission-denied": "The requested file operation is not permitted.",

@@ -1,5 +1,5 @@
 import { DISPLAY_SUMMARY_MAX_CHARS, parseDisplayFailure } from "../failure.js";
-import type { TurnEvent } from "../content.js";
+import type { CommandEvent, TurnEvent } from "../content.js";
 import { CONTENT_DELTA_MAX_CHARS, TOOL_DETAIL_MAX_CHARS } from "../content.js";
 import { RpcError } from "../errors.js";
 import { exactKeys, requireBoundedString, requireRecord } from "../validation.js";
@@ -7,6 +7,7 @@ import { exactKeys, requireBoundedString, requireRecord } from "../validation.js
 /** Parse one exact event; lifecycle and identity association belong to the stream validator. */
 export function parseTurnEvent(value: unknown): TurnEvent {
   const event = requireRecord(value, "turn event");
+  if (isCommandType(event.type)) return parseCommandEventRecord(event);
   const keys = ["type", "sessionId", "requestId", "turnId"];
   const scope = {
     sessionId: requireBoundedString(event.sessionId, "sessionId", 128),
@@ -76,6 +77,57 @@ export function parseTurnEvent(value: unknown): TurnEvent {
     }
   }
   throw new RpcError("invalid-frame", "Unknown assistant event variant");
+}
+
+export function parseCommandEvent(value: unknown): CommandEvent {
+  const event = requireRecord(value, "command event");
+  if (!isCommandType(event.type)) throw new RpcError("invalid-frame", "Unknown command event variant");
+  return parseCommandEventRecord(event);
+}
+
+function parseCommandEventRecord(event: Record<string, unknown>): CommandEvent {
+  const keys = ["type", "sessionId", "commandId", "name", "anchor"];
+  const name = requireBoundedString(event.name, "command name", 64);
+  if (!/^[a-z][a-z0-9-]*$/.test(name)) throw new RpcError("invalid-frame", "Invalid command name");
+  const scope = {
+    sessionId: requireBoundedString(event.sessionId, "sessionId", 128),
+    commandId: requireBoundedString(event.commandId, "commandId", 128),
+    name,
+    anchor: parseCommandAnchor(event.anchor),
+  };
+  if (event.type === "command-started") {
+    requireKeys(event, keys);
+    return { ...scope, type: event.type };
+  }
+  if (event.type === "command-completed") {
+    requireKeys(event, [...keys, "summary"]);
+    return { ...scope, type: event.type,
+      summary: requireBoundedString(event.summary, "command summary", DISPLAY_SUMMARY_MAX_CHARS) };
+  }
+  if (event.type === "command-failed") {
+    requireKeys(event, [...keys, "failure"]);
+    return { ...scope, type: event.type, failure: parseDisplayFailure(event.failure) };
+  }
+  requireKeys(event, keys);
+  return { ...scope, type: "command-cancelled" };
+}
+
+function parseCommandAnchor(value: unknown): CommandEvent["anchor"] {
+  const anchor = requireRecord(value, "command anchor");
+  if (anchor.kind === "session") {
+    requireKeys(anchor, ["kind"]);
+    return { kind: "session" };
+  }
+  if (anchor.kind === "turn") {
+    requireKeys(anchor, ["kind", "turnId"]);
+    return { kind: "turn", turnId: requireBoundedString(anchor.turnId, "anchor turnId", 128) };
+  }
+  throw new RpcError("invalid-frame", "Malformed command anchor");
+}
+
+function isCommandType(value: unknown): value is CommandEvent["type"] {
+  return value === "command-started" || value === "command-completed"
+    || value === "command-failed" || value === "command-cancelled";
 }
 
 function requireKeys(value: Record<string, unknown>, keys: readonly string[]): void {

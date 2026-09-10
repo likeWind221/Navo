@@ -1,15 +1,18 @@
 import { join } from "node:path";
 import { app, BrowserWindow, shell } from "electron";
+import { externalHref } from "../shared/link.js";
 import { KernelHostProcess } from "./host/process.js";
 import { resolveHostLaunchConfig } from "./host/launch.js";
-import { AgentTurnController } from "./ipc/agent/controller.js";
-import { registerAgentTurnIpc } from "./ipc/agent.js";
+import { AgentCommandController } from "./ipc/command/controller.js";
+import { AgentTurnV2Controller } from "./ipc/agent/v2.js";
+import { cancelAgentSessionOwner, registerAgentSessionIpc } from "./ipc/session.js";
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 let quittingAfterCleanup = false;
 let kernelHost: KernelHostProcess | undefined;
-let agentTurns: AgentTurnController | undefined;
-let unregisterAgentTurnIpc: (() => void) | undefined;
+let agentTurns: AgentTurnV2Controller | undefined;
+let agentCommands: AgentCommandController | undefined;
+let unregisterAgentSessionIpc: (() => void) | undefined;
 
 function createWindow(): void {
   const window = new BrowserWindow({
@@ -29,11 +32,17 @@ function createWindow(): void {
 
   window.on("ready-to-show", () => window.show());
   window.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
+    const href = externalHref(url);
+    if (href !== null) void shell.openExternal(href).catch((error: unknown) => console.error("[external-link]", error));
     return { action: "deny" };
   });
+  window.webContents.on("will-navigate", (event) => event.preventDefault());
   const ownerId = window.webContents.id;
-  window.webContents.once("destroyed", () => agentTurns?.cancelOwner(ownerId));
+  window.webContents.once("destroyed", () => {
+    if (agentTurns !== undefined && agentCommands !== undefined) {
+      cancelAgentSessionOwner(agentTurns, agentCommands, ownerId);
+    }
+  });
 
   const rendererUrl = process.env.ELECTRON_RENDERER_URL;
   if (rendererUrl !== undefined) {
@@ -55,8 +64,9 @@ if (!hasSingleInstanceLock) {
 
   app.whenReady().then(() => {
     kernelHost = new KernelHostProcess(resolveHostLaunchConfig({ appPath: app.getAppPath() }));
-    agentTurns = new AgentTurnController(kernelHost);
-    unregisterAgentTurnIpc = registerAgentTurnIpc(agentTurns);
+    agentTurns = new AgentTurnV2Controller(kernelHost);
+    agentCommands = new AgentCommandController(kernelHost);
+    unregisterAgentSessionIpc = registerAgentSessionIpc(agentTurns, agentCommands);
     void kernelHost.start().catch((error: unknown) => {
       const message = error instanceof Error ? error.message : "Unknown Kernel Host startup failure";
       console.error(`[electron-main] ${message}`);
@@ -71,8 +81,9 @@ if (!hasSingleInstanceLock) {
     if (quittingAfterCleanup || kernelHost === undefined) return;
     event.preventDefault();
     quittingAfterCleanup = true;
-    unregisterAgentTurnIpc?.();
+    unregisterAgentSessionIpc?.();
     agentTurns?.dispose();
+    agentCommands?.dispose();
     void kernelHost.close().finally(() => app.quit());
   });
 

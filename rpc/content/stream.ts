@@ -1,16 +1,16 @@
 import { parseAgentTurnInput } from "../agent.js";
 import type { AgentTurnInput } from "../agent.js";
-import type { TurnEvent } from "../content.js";
+import type { AgentTurnV2Event } from "../content.js";
 import type { RpcMethod, RpcOutputValidator } from "../protocol.js";
 import { CONTENT_MAX_CHARS, CONTENT_MAX_COUNT, CONTENT_MAX_EVENTS,
   CONTENT_TURN_MAX_CHARS } from "../content.js";
 import { parseTurnEvent } from "./validation.js";
 import { RpcError } from "../errors.js";
 
-export const agentTurnV2Method: RpcMethod<AgentTurnInput, TurnEvent> = Object.freeze({
+export const agentTurnV2Method: RpcMethod<AgentTurnInput, AgentTurnV2Event> = Object.freeze({
   name: "agent.turn.v2",
   parseInput: parseAgentTurnInput,
-  parseOutput: parseTurnEvent,
+  parseOutput: parseAgentTurnEvent,
   createOutputValidator: createTurnOutputValidator,
 });
 
@@ -23,7 +23,7 @@ interface ContentState {
 }
 
 /** One bounded state machine per RPC invocation; never reuse after rejection. */
-export function createTurnOutputValidator(input: AgentTurnInput): RpcOutputValidator<TurnEvent> {
+export function createTurnOutputValidator(input: AgentTurnInput): RpcOutputValidator<AgentTurnV2Event> {
   const { sessionId, requestId } = input;
   let turnId: string | undefined;
   let terminal = false;
@@ -37,7 +37,7 @@ export function createTurnOutputValidator(input: AgentTurnInput): RpcOutputValid
   const contents = new Map<number, ContentState>();
   let contentCount = 0;
 
-  const accept = (event: TurnEvent): void => {
+  const accept = (event: AgentTurnV2Event): void => {
     if (++eventCount > CONTENT_MAX_EVENTS) invalid("Turn event limit exceeded");
     if (terminal) invalid("Event after terminal");
     if (event.sessionId !== sessionId || event.requestId !== requestId) invalid("Request identity mismatch");
@@ -126,10 +126,10 @@ export function createTurnOutputValidator(input: AgentTurnInput): RpcOutputValid
     if (chars > CONTENT_TURN_MAX_CHARS) invalid("Turn content limit exceeded");
   };
   return {
-    parse(value: unknown): TurnEvent {
+    parse(value: unknown): AgentTurnV2Event {
       if (poisoned) invalid("Validator is closed after rejection");
       try {
-        const event = parseTurnEvent(value);
+        const event = parseAgentTurnEvent(value);
         accept(event);
         return event;
       } catch (error) {
@@ -144,6 +144,12 @@ export function createTurnOutputValidator(input: AgentTurnInput): RpcOutputValid
       }
     },
   };
+}
+
+function parseAgentTurnEvent(value: unknown): AgentTurnV2Event {
+  const event = parseTurnEvent(value);
+  if ("commandId" in event) invalid("agent.turn does not accept command events");
+  return event;
 }
 
 function invalid(message: string): never {

@@ -9,7 +9,6 @@ import {
 import type { StepOutcome } from "./result.js";
 import type { ModelCompletion, TurnScope } from "./types.js";
 
-/** Persists one accepted response and dispatches its model-requested tools. */
 export async function acceptResponse(
   ctx: Context,
   turn: TurnScope,
@@ -36,14 +35,19 @@ export async function acceptResponse(
   if (finishReason.kind === "max-tokens") {
     for (const toolCall of calls) {
       appendToolCall(ctx, sessionId, turnId, stepId, toolCall);
+      const message = unexecutedToolResultMessage(toolCall.id);
       ctx.sessions.append({
         type: "tool-call-result",
         sessionId,
         data: {
           turnId,
           stepId,
-          message: unexecutedToolResultMessage(toolCall.id),
+          message,
         },
+      });
+      await turn.output.rejectTool(toolCall.id, {
+        code: "max-tokens",
+        message: "Tool call was not executed because the model response reached its output token limit.",
       });
     }
     return blocked(stepId, "max-tokens", "Model output reached its token limit.");
@@ -59,13 +63,17 @@ export async function acceptResponse(
     appendToolCall(ctx, sessionId, turnId, stepId, toolCall);
     const result = await ctx.tools.execute(toolCall, signal, {
       sessionId,
-      ...(input.toolNames === undefined ? {} : { allowedTools: input.toolNames }),
+      allowedTools: input.toolNames,
+      onStarted: async () => {
+        await turn.output.toolStarted(toolCall.id);
+      },
     });
     ctx.sessions.append({
       type: "tool-call-result",
       sessionId,
       data: { turnId, stepId, message: toolResultMessage(result) },
     });
+    await turn.output.toolResult(result);
     if (result.kind === "failure") {
       ctx.sessions.append({
         type: "error",

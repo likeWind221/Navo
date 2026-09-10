@@ -11,6 +11,7 @@ describe("resolveHostLaunchConfig", () => {
         SKILLWORLD_HOST_MODE: "mock",
         SKILLWORLD_REPO_ROOT: "D:/work/SkillWorld",
         LLM_API_KEY: "secret",
+        EXA_API_KEY: "exa-secret",
       },
     });
 
@@ -21,7 +22,7 @@ describe("resolveHostLaunchConfig", () => {
     ]);
     expect(config.env.ELECTRON_RUN_AS_NODE).toBe("1");
     expect(config.readyMarker).toBe("[mock-kernel-host] ready");
-    expect(config.secrets).toEqual(["secret"]);
+    expect(config.secrets).toEqual(["secret", "exa-secret"]);
   });
 
   it("rejects unknown host modes", () => {
@@ -29,5 +30,18 @@ describe("resolveHostLaunchConfig", () => {
       appPath: ".",
       env: { SKILLWORLD_HOST_MODE: "other" },
     })).toThrow(/must be either real or mock/);
+  });
+
+  it("resolves the repository root when launched from built main output", () => {
+    const config = resolveHostLaunchConfig({
+      appPath: "D:/work/SkillWorld/frontend/out/main",
+      execPath: "D:/apps/electron.exe",
+      env: { SKILLWORLD_HOST_MODE: "mock" },
+    });
+
+    expect(config.args).toEqual([
+      expect.stringMatching(/SkillWorld[\\/]node_modules[\\/]tsx[\\/]dist[\\/]cli\.mjs$/),
+      expect.stringMatching(/SkillWorld[\\/]scripts[\\/]host[\\/]mock\.ts$/),
+    ]);
   });
 });

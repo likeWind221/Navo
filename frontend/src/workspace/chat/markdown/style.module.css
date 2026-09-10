@@ -1,0 +1,31 @@
+.markdown { min-width: 0; max-width: 100%; font-size: 15px; line-height: 1.8; overflow-wrap: anywhere; white-space: normal; }
+.markdown p { margin: 0.65em 0; font-size: inherit; white-space: normal; }
+.markdown > :first-child { margin-top: 0; }
+.markdown > :last-child { margin-bottom: 0; }
+.markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 { margin: 1em 0 0.4em; line-height: 1.4; font-weight: 650; }
+.markdown h1 { font-size: 1.6em; }
+.markdown h2 { font-size: 1.35em; }
+.markdown h3 { font-size: 1.15em; }
+.markdown h4, .markdown h5, .markdown h6 { font-size: 1em; }
+.markdown ul, .markdown ol { margin: 0.65em 0; padding-left: 1.7em; }
+.markdown li > p { margin: 0.2em 0; }
+.markdown li > input { margin-right: 0.5em; }
+.markdown li > input + p { display: inline; }
+.markdown blockquote { margin: 0.75em 0; padding: 0.15em 1em; border-left: 3px solid var(--control-border); color: var(--text-secondary); }
+.markdown a { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 3px; }
+.markdown a:focus-visible, .markdown pre:focus-visible, .tableScroll:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+.markdown code { font: 0.9em/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; background: var(--surface-muted); padding: 0.15em 0.35em; border-radius: 4px; }
+.codeBlock { min-width: 0; margin: 0.8em 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface-muted); }
+.language { padding: 5px 12px; font-size: 11px; color: var(--text-secondary); border-bottom: 1px solid var(--border); }
+.markdown pre { max-width: 100%; margin: 0; padding: 12px; overflow-x: auto; white-space: pre; overflow-wrap: normal; line-height: 1.6; }
+.markdown pre code { padding: 0; border-radius: 0; background: transparent; }
+.tableScroll { max-width: 100%; overflow-x: auto; margin: 0.8em 0; }
+.markdown table { border-collapse: collapse; min-width: 100%; font-size: 0.93em; }
+.markdown th, .markdown td { padding: 7px 12px; border: 1px solid var(--border); min-width: 100px; }
+.markdown th { background: var(--surface-muted); font-weight: 600; }
+.markdown hr { border: 0; border-top: 1px solid var(--border); margin: 1em 0; }
+.mathBlock { display: block; max-width: 100%; overflow-x: auto; overflow-y: hidden; margin: 0.8em 0; padding: 0.25em 0; white-space: nowrap; overflow-wrap: normal; }
+.mathBlock :global(.katex-display) { margin: 0; }
+.mathBlock :global(.katex-display > .katex) { display: block; width: max-content; min-width: 100%; text-align: center; }
+.mathInline { display: inline-block; max-width: 100%; overflow-x: auto; overflow-y: hidden; vertical-align: middle; overflow-wrap: normal; }
+.mathBlock :global(.katex-error), .mathInline :global(.katex-error) { white-space: pre-wrap; overflow-wrap: anywhere; }

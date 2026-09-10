@@ -19,9 +19,10 @@ describe("F3 RPC integration", () => {
       yield { ...scope, type: "turn-completed" };
     });
     router.register(sessionCommandMethod, async function* (input) {
-      const scope = { type: "notification" as const, sessionId: input.sessionId, commandId: input.commandId, id: "notice", message: "ok" };
-      yield { ...scope, status: "running" };
-      yield { ...scope, status: "succeeded" };
+      const scope = { sessionId: input.sessionId, commandId: input.commandId,
+        name: input.name, anchor: { kind: "session" as const } };
+      yield { ...scope, type: "command-started" as const };
+      yield { ...scope, type: "command-completed" as const, summary: "ok" };
     });
     const server = new StreamRpcServer(pair.server, router);
     const serving = server.serve();
@@ -31,8 +32,8 @@ describe("F3 RPC integration", () => {
       expect(await collect(client.stream(agentTurnMethod, input))).toHaveLength(2);
       expect(await collect(client.stream(agentTurnV2Method, input))).toHaveLength(4);
       const notices = await collect(client.stream(sessionCommandMethod, { sessionId: "s", commandId: "c", name: "model", args: "" }));
-      expect(notices.map(n => n.status)).toEqual(["running", "succeeded"]);
-      expect(notices.every(n => !("turnId" in n))).toBe(true);
+      expect(notices.map(n => n.type)).toEqual(["command-started", "command-completed"]);
+      expect(notices.every(n => n.anchor.kind === "session")).toBe(true);
     } finally {
       pair.close();
       await serving;
@@ -72,12 +73,13 @@ describe("F3 RPC integration", () => {
     const router = new StreamRpcRouter();
     const aborted = Promise.withResolvers<void>();
     router.register(sessionCommandMethod, async function* (input, signal) {
-      const scope = { type: "notification" as const, sessionId: input.sessionId, commandId: input.commandId, id: "n", message: "ok" };
-      yield { ...scope, status: "running" };
+      const scope = { sessionId: input.sessionId, commandId: input.commandId,
+        name: input.name, anchor: { kind: "session" as const } };
+      yield { ...scope, type: "command-started" as const };
       if (!signal.aborted) await new Promise<void>(resolve => signal.addEventListener("abort", () => resolve(), { once: true }));
       aborted.resolve();
       // Models a commit racing cancellation; local cancellation is not rollback confirmation.
-      yield { ...scope, status: "succeeded" };
+      yield { ...scope, type: "command-completed" as const, summary: "ok" };
     });
     const server = new StreamRpcServer(pair.server, router);
     const serving = server.serve();
@@ -85,7 +87,7 @@ describe("F3 RPC integration", () => {
     const controller = new AbortController();
     const iterator = client.stream(sessionCommandMethod, { sessionId: "s", commandId: "c", name: "model", args: "" }, { signal: controller.signal });
     try {
-      await expect(iterator.next()).resolves.toMatchObject({ value: { status: "running" } });
+      await expect(iterator.next()).resolves.toMatchObject({ value: { type: "command-started" } });
       controller.abort();
       await expect(iterator.next()).rejects.toMatchObject({ code: "cancelled" });
       await aborted.promise;

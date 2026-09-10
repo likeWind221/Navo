@@ -4,6 +4,8 @@ import type { AgentIpcRenderer } from "../agent.js";
 import { createDesktopAgentApi } from "../agent.js";
 import { DesktopAgentCommandError } from "../../../shared/agent/errors.js";
 import {
+  AGENT_COMMAND_CANCEL_CHANNEL,
+  AGENT_COMMAND_START_CHANNEL,
   AGENT_TURN_CANCEL_CHANNEL,
   AGENT_TURN_START_CHANNEL,
   AGENT_TURN_UPDATE_CHANNEL,
@@ -49,6 +51,34 @@ describe("createDesktopAgentApi", () => {
       name: "DesktopAgentCommandError",
       failure: { code: "turn-in-progress", message: "Agent 正在生成" },
     } satisfies Partial<DesktopAgentCommandError>);
+  });
+
+  it("uses command channels and parses unified events", async () => {
+    const ipc = new FakeIpcRenderer();
+    const api = createDesktopAgentApi(ipc);
+    const listener = vi.fn();
+    const cleanup = api.onEvent(listener);
+
+    await api.startCommand({
+      sessionId: "session-1", commandId: "command-1", name: "hello", args: "",
+    });
+    await api.cancelCommand("command-1");
+    ipc.emit({
+      type: "command-event",
+      event: {
+        type: "command-completed", sessionId: "session-1", commandId: "command-1", name: "hello",
+        anchor: { kind: "session" }, summary: "hello",
+      },
+    });
+    cleanup();
+
+    expect(ipc.invocations).toEqual([
+      [AGENT_COMMAND_START_CHANNEL, {
+        sessionId: "session-1", commandId: "command-1", name: "hello", args: "",
+      }],
+      [AGENT_COMMAND_CANCEL_CHANNEL, "command-1"],
+    ]);
+    expect(listener).toHaveBeenCalledWith(expect.objectContaining({ type: "command-event" }));
   });
 });
 

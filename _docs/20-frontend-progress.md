@@ -9,7 +9,7 @@
 
 F2 阶段已完成，但恢复/重连、多会话、Markdown、工具调用可视化和长期历史仍是后续功能，不在当前默认能力中。
 
-F3.1 已完成共享契约与两端校验：新增 `agent.turn.v2` 的有序内容块及 `session.command.v1` 的独立通知流；尚未注册真实 Host Handler 或接入桌面 UI。取消停止等待不等于后端操作撤销，后续桥接需要保留结果未知状态。详见 [F3.1 开发记录](23-devlog-step-f3-1-public-events.md)。
+F3 已完成：公共事件、后端事件对齐、桌面桥接、助手内容、命令反馈和完整链路均已确认通过；后续 F3.7 接通真实模型思考内容，F3.8 修正滚动条出现时的消息列水平偏移，F3.9 让滚动区贯穿顶部栏以下的窗口高度并调整底部输入框间距，F3.10 接入 GFM Markdown 展示，F3.11 接入 KaTeX 数学公式。F3.10 与 F3.11 的自动验收与人工桌面验收均已完成，F3 阶段无待办步骤；F3 之后暂无已冻结的前端实施阶段，需要根据产品优先级重新规划。
 
 ## 2. 已完成阶段
 
@@ -25,7 +25,11 @@ F3.1 已完成共享契约与两端校验：新增 `agent.turn.v2` 的有序内�
 | F2.5 | ✅ | Renderer 对话 reducer、请求隔离和终态 | `frontend/src/workspace/chat/conversation.ts` |
 | F2.6 | ✅ | 流式消息、Composer、停止按钮和滚动策略 | `frontend/src/workspace` |
 | F2.7 | ✅ | 错误映射、超时/崩溃验收和真实 Qwen 验收 | `frontend/qa-output` |
-| F3.1 | ✅ | 助手内容、独立命令通知、身份绑定与顺序校验 | `rpc/content/stream.ts`、`rpc/command.ts` |
+| F3.1–F3.9 | ✅ | 助手内容、工具展示、独立命令通知、桌面桥接、完整链路验收、思考接入、消息列对齐与全高滚动布局 | `frontend/electron`、`frontend/shared/agent`、`frontend/src/workspace`、`rpc` |
+| F3.10 | ✅ | GFM Markdown 展示、流式阅读、安全外链边界与 Electron QA | `frontend/src/workspace/chat/Markdown.tsx`、`frontend/shared/link.ts`、`frontend/scripts/qa/markdown.ts` |
+| F3.11 | ✅ | 行内/块级数学公式排版、两套语法的流式边界、无效公式与危险命令边界 | `frontend/src/workspace/chat/markdown/**`、`frontend/scripts/qa/markdown.ts` |
+
+F3.10 与 F3.11 的代码、测试、Electron 自动验收和人工桌面验收均已完成，F3 阶段无待办步骤。
 
 详细过程见 [阶段 F1 前端记录](13-devlog-phase-f1-frontend.md) 和 [阶段 F2 合并记录](15-devlog-phase-f2-agent-integration.md)；F2.2 的后端交付证据保留在 [Kernel Host 记录](17-devlog-step-f2-2-kernel-host.md)。
 
@@ -56,9 +60,9 @@ SkillWorld AgentRuntime
 - 当前 requestId/turnId；
 - 可安全展示的错误信息。
 
-Renderer 只接收经过 Main、Preload 和协议校验的 `started`、`text-delta` 与唯一终态，不渲染 Markdown/HTML，不保留后端私有错误详情。
+Renderer 只接收经过 Main、Preload 和协议校验的 `started`、`text-delta` 与唯一终态，不保留后端私有错误详情。助手正文与折叠思考按 GFM Markdown 展示并支持 KaTeX 数学公式；用户输入、工具参数与命令提示保持纯文本，原始 HTML 与远程图片都不进入展示。
 
-Composer 支持 Enter 提交、Shift+Enter 换行和 IME composing 保护；消息列表在用户位于底部附近时自动跟随，用户上移后保留阅读位置。
+Composer 支持 Enter 提交、Shift+Enter 换行和 IME composing 保护；消息列表在用户位于底部附近时自动跟随，用户上移后保留阅读位置。滚动区在左右对称保留滚动条槽位，消息列与输入框保持相同水平中心。
 
 ## 5. 验收证据
 
@@ -72,8 +76,7 @@ Composer 支持 Enter 提交、Shift+Enter 换行和 IME composing 保护；消�
 
 - 暂无重连和断线后的自动恢复；
 - 暂无多窗口/多会话并发；
-- 暂无 Markdown 渲染和工具调用可视化；
-- 暂无长期对话历史和持久化会话列表；
+- 暂无 Markdown 语法高亮、Mermaid 与远程图片，公式缓存与冻结尾部优化未实施；
 - 暂无学习地图画布、Node 内容面板和 Main Agent UI；
 - 真实模型入口仍依赖 Host 环境变量或本机配置，不在 Renderer 提供凭据设置。
 

@@ -1,6 +1,8 @@
 import type { SessionNotification } from "./notification.js";
+import type { CommandEvent } from "./content.js";
 import type { RpcMethod, RpcOutputValidator } from "./protocol.js";
 import { RpcError } from "./errors.js";
+import { parseCommandEvent } from "./content/validation.js";
 import { parseSessionNotification } from "./notification.js";
 import { exactKeys, requireBoundedString, requireRecord } from "./validation.js";
 
@@ -16,10 +18,10 @@ export interface SessionCommandInput {
 
 export const COMMAND_ARGS_MAX_CHARS = 32_768;
 
-export const sessionCommandMethod: RpcMethod<SessionCommandInput, CommandNotification> = Object.freeze({
+export const sessionCommandMethod: RpcMethod<SessionCommandInput, CommandEvent> = Object.freeze({
   name: "session.command.v1",
   parseInput: parseSessionCommandInput,
-  parseOutput: parseCommandNotification,
+  parseOutput: parseCommandEvent,
   createOutputValidator: createCommandOutputValidator,
 });
 
@@ -43,25 +45,29 @@ export function parseCommandNotification(value: unknown): CommandNotification {
   return { ...event, commandId: event.commandId };
 }
 
-export function createCommandOutputValidator(input: SessionCommandInput): RpcOutputValidator<CommandNotification> {
-  const { sessionId, commandId } = input;
-  let id: string | undefined;
-  let running = false;
+export function createCommandOutputValidator(input: SessionCommandInput): RpcOutputValidator<CommandEvent> {
+  const { sessionId, commandId, name } = input;
+  let anchor: CommandEvent["anchor"] | undefined;
+  let started = false;
   let terminal = false;
   let poisoned = false;
   return {
-    parse(value: unknown): CommandNotification {
+    parse(value: unknown): CommandEvent {
       if (poisoned) invalid("Validator is closed after rejection");
       try {
-        const event = parseCommandNotification(value);
+        const event = parseCommandEvent(value);
         if (terminal || event.sessionId !== sessionId || event.commandId !== commandId
-          || (id !== undefined && event.id !== id)) invalid("Command identity or terminal order mismatch");
-        id = event.id;
-        if (event.status === "running") {
-          if (running) invalid("Duplicate running notification");
-          running = true;
+          || event.name !== name || !sameAnchor(anchor, event.anchor)) {
+          invalid("Command identity or terminal order mismatch");
+        }
+        anchor ??= event.anchor;
+        if (event.type === "command-started") {
+          if (started) invalid("Duplicate command start");
+          started = true;
+        } else if (event.type === "command-completed") {
+          if (!started) invalid("Command success requires start");
+          terminal = true;
         } else {
-          if (event.status === "succeeded" && !running) invalid("Command success requires running");
           terminal = true;
         }
         return event;
@@ -77,6 +83,16 @@ export function createCommandOutputValidator(input: SessionCommandInput): RpcOut
       }
     },
   };
+}
+
+function sameAnchor(
+  expected: CommandEvent["anchor"] | undefined,
+  actual: CommandEvent["anchor"],
+): boolean {
+  if (expected === undefined) return true;
+  if (expected.kind !== actual.kind) return false;
+  return expected.kind === "session"
+    || (actual.kind === "turn" && expected.turnId === actual.turnId);
 }
 
 function invalid(message: string): never {

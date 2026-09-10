@@ -17,13 +17,26 @@
     "preview": "electron-vite preview",
     "test": "vitest run",
     "qa:f2-6": "electron out/main/chat.js",
+    "qa:f3-6": "electron out/main/f36.js",
+    "qa:markdown": "electron out/main/markdown.js",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
   },
   "dependencies": {
+    "katex": "0.16.47",
+    "mdast-util-math": "3.0.0",
+    "micromark-extension-math": "3.1.0",
+    "micromark-factory-space": "2.0.1",
+    "micromark-util-character": "2.1.1",
+    "micromark-util-symbol": "2.0.1",
+    "micromark-util-types": "2.0.2",
+    "mdast-util-from-markdown": "2.0.3",
+    "mdast-util-gfm": "3.1.0",
+    "micromark-extension-gfm": "3.0.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@types/mdast": "4.0.4",
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",

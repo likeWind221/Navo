@@ -1,8 +1,10 @@
-import { agentTurnMethod, agentTurnV2Method, StreamRpcRouter, StreamRpcServer } from "../../rpc/index.js";
+import { agentTurnMethod, agentTurnV2Method, sessionCommandMethod, StreamRpcRouter, StreamRpcServer } from "../../rpc/index.js";
 import { createApp } from "../app.js";
 import { QwenChatCompletionsAdapter } from "../llm/adapters/qwen.js";
+import { ExaSearchAdapter } from "../tools/builtins/search/adapters/exa.js";
 import { createAgentTurnHandler } from "./turn.js";
 import { createAgentTurnV2Handler } from "./turn/v2.js";
+import { createSessionCommandHandler } from "./command.js";
 import { resolveKernelHostConfig } from "./config.js";
 import { StdioRpcServerTransport } from "./stdio.js";
 
@@ -10,6 +12,9 @@ export async function runKernelHost(): Promise<void> {
   const config = resolveKernelHostConfig();
   const ctx = await createApp({
     node: { session: { model: config.agent.model } },
+    ...(config.search === undefined
+      ? {}
+      : { tools: { search: { adapter: new ExaSearchAdapter(config.search) } } }),
   });
   const unregister = ctx.llm.registerAdapter(
     config.provider,
@@ -19,6 +24,7 @@ export async function runKernelHost(): Promise<void> {
   const router = new StreamRpcRouter();
   router.register(agentTurnMethod, createAgentTurnHandler(ctx, config.agent));
   router.register(agentTurnV2Method, createAgentTurnV2Handler(ctx, config.agent));
+  router.register(sessionCommandMethod, createSessionCommandHandler(ctx));
   const server = new StreamRpcServer(transport, router);
   const stop = (): void => { void server.dispose(); };
   process.once("SIGINT", stop);

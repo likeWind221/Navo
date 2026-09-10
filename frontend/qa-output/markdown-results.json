@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "narrow": {
+    "historyWidth": 518,
+    "historyScroll": 518,
+    "codeWidth": 460,
+    "codeScroll": 2377,
+    "tableWidth": 462,
+    "tableScroll": 801
+  },
+  "settled": {
+    "formulas": 8,
+    "inline": 3,
+    "display": 4,
+    "errors": 1
+  },
+  "wideMath": {
+    "formulas": 8,
+    "errors": 1,
+    "untrusted": 0,
+    "literalFence": true,
+    "scrolled": 1,
+    "scrolledWidth": 2013,
+    "scrolledClient": 462
+  },
+  "errors": []
+}

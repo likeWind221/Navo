@@ -214,7 +214,7 @@ describe("Kernel Host agent.turn.v2", () => {
     expect(terminal.type).toBe("turn-truncated");
   });
 
-  it("closes each Step and reuses content indexes without forwarding tool calls", async () => {
+  it("forwards rejected tool calls and reuses content indexes across Steps", async () => {
     const toolCallId = createToolCallId("call-1");
     const kit = await createRuntime([
       {
@@ -252,6 +252,10 @@ describe("Kernel Host agent.turn.v2", () => {
     expect(events.map((event) => (event as { type: string }).type)).toEqual([
       "turn-started",
       "step-started",
+      "content-started",
+      "content-delta",
+      "content-completed",
+      "tool-result",
       "step-completed",
       "step-started",
       "content-started",
@@ -260,5 +264,18 @@ describe("Kernel Host agent.turn.v2", () => {
       "step-completed",
       "turn-completed",
     ]);
+    expect(events[2]).toMatchObject({
+      type: "content-started",
+      kind: "tool-call",
+      toolCallId,
+      toolName: "read",
+    });
+    expect(events[3]).toMatchObject({ type: "content-delta", delta: "{}" });
+    expect(events[5]).toMatchObject({
+      type: "tool-result",
+      toolCallId,
+      status: "failed",
+      failure: { code: "tool-not-allowed" },
+    });
   });
 });

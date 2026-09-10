@@ -7,7 +7,7 @@ import { createMessageId, createSessionId, createStepId, createToolCallId,
   createTurnId } from "../../../../src/brand/ids.js";
 import { createAgentTurnV2Handler } from "../../../../src/host/turn/v2.js";
 import { StreamEventQueue } from "../../../../src/host/turn/queue.js";
-import { V2Output } from "../../../../src/host/turn/v2/output.js";
+import { TurnOutput } from "../../../../src/agent/output.js";
 import type { ModelEvent } from "../../../../src/llm/types.js";
 import { createRuntime, disposeRuntimes } from "../../../helpers/runtime.js";
 
@@ -68,33 +68,31 @@ describe("Kernel Host agent.turn.v2 output limits", () => {
   it.each(["completed", "cancelled", "failed"] as const)(
     "reserves all completions for fragmented deltas on %s", async (status) => {
     const queue = new StreamEventQueue<RpcTurnEvent>();
-    const output = new V2Output(queue, "event-session", "event-request");
     const turnId = createTurnId("event-turn");
+    const output = new TurnOutput({ sessionId: "event-session", requestId: "event-request", turnId }, event => queue.push(event));
     const stepId = createStepId("event-step");
     const messageId = createMessageId("event-message");
-    output.write({ type: "turn-started", turnId });
-    output.write({ type: "step-started", turnId, stepId, messageId });
-    output.write({ type: "content-started", turnId, stepId, messageId,
+    await output.start();
+    await output.startStep(stepId, messageId);
+    await output.model({ type: "content-started",
       contentIndex: 0, contentType: "text" });
-    output.write({ type: "content-started", turnId, stepId, messageId,
+    await output.model({ type: "content-started",
       contentIndex: 1, contentType: "reasoning" });
 
     let published = false;
     for (let index = 0; index < CONTENT_MAX_EVENTS - 8; index++) {
-      published = output.write({ type: "content-delta", turnId, stepId, messageId,
+      published = await output.model({ type: "content-delta",
         contentIndex: 0, contentType: "text", delta: "x" });
     }
     expect(published).toBe(true);
-    expect(output.write({ type: "content-delta", turnId, stepId, messageId,
+    expect(await output.model({ type: "content-delta",
       contentIndex: 0, contentType: "text", delta: "x" })).toBe(true);
-    expect(output.write({ type: "content-delta", turnId, stepId, messageId,
+    expect(await output.model({ type: "content-delta",
       contentIndex: 0, contentType: "text", delta: "x" })).toBe(false);
-    expect(output.write({ type: "step-completed", turnId, stepId, messageId,
-      status: "completed" })).toBe(true);
-    expect(output.write({ type: "turn-finished", result: status === "failed"
+    await output.endStep();
+    await output.finish(status === "failed"
       ? { status, turnId, steps: 1, failure: { code: "SERVER", message: "failed" } }
-      : { status, turnId, steps: 1 },
-    })).toBe(true);
+      : { status, turnId, steps: 1 });
     queue.end();
     const validator = createTurnOutputValidator({
       sessionId: "event-session", requestId: "event-request", text: "test",
@@ -113,22 +111,20 @@ describe("Kernel Host agent.turn.v2 output limits", () => {
 
   it("bounds empty Step production without a separate Step limit", async () => {
     const queue = new StreamEventQueue<RpcTurnEvent>();
-    const output = new V2Output(queue, "empty", "empty");
     const turnId = createTurnId("empty");
-    output.write({ type: "turn-started", turnId });
+    const output = new TurnOutput({ sessionId: "empty", requestId: "empty", turnId }, event => queue.push(event));
+    await output.start();
     const steps = (CONTENT_MAX_EVENTS - 2) / 2;
     for (let n = 0; n < steps; n++) {
       const scope = { turnId, stepId: createStepId(String(n)), messageId: createMessageId(String(n)) };
-      output.write({ ...scope, type: "step-started" });
-      output.write({ ...scope, type: "step-completed", status: "continue" });
+      await output.startStep(scope.stepId, scope.messageId);
+      await output.endStep();
     }
-    expect(() => output.write({ type: "step-started", turnId,
-      stepId: createStepId("overflow"), messageId: createMessageId("overflow") }))
-      .toThrow("event limit exceeded");
-    output.write({ type: "turn-finished", result: {
+    await expect(output.startStep("overflow", "overflow")).rejects.toThrow("event limit exceeded");
+    await output.finish({
       status: "failed", turnId, steps: steps + 1,
       failure: { code: "runtime-failed", message: "output rejected" },
-    } });
+    });
     queue.end();
     const validator = createTurnOutputValidator({ sessionId: "empty", requestId: "empty", text: "test" });
     let count = 0;

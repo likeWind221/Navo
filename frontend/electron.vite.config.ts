@@ -10,6 +10,8 @@ export default defineConfig({
         input: {
           index: resolve("electron/main.ts"),
           chat: resolve("scripts/qa/chat.ts"),
+          f36: resolve("scripts/qa/f36.ts"),
+          markdown: resolve("scripts/qa/markdown.ts"),
         },
       },
     },
@@ -18,7 +20,7 @@ export default defineConfig({
     build: {
       externalizeDeps: true,
       rollupOptions: {
-        input: { index: resolve("electron/preload.ts") },
+        input: { index: resolve("electron/preload.ts"), markdown: resolve("scripts/qa/markdown/preload.ts") },
         output: {
           entryFileNames: "[name].js",
           format: "cjs",

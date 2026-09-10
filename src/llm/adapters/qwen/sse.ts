@@ -30,14 +30,14 @@ export async function* translateQwenSse(
     const choice = event.choices?.[0];
     if (choice === undefined) continue;
     const delta = choice.delta;
-    if (typeof delta?.reasoning_content === "string" && delta.reasoning_content.length > 0) {
+    if (typeof delta?.reasoning === "string" && delta.reasoning.length > 0) {
       const content = ensureTextContent(contents, "reasoning");
       if (!content.started) {
         content.started = true;
         yield { type: "content-started", contentIndex: content.contentIndex, contentType: "reasoning" };
       }
       yield { type: "content-delta", contentIndex: content.contentIndex,
-        contentType: "reasoning", delta: delta.reasoning_content };
+        contentType: "reasoning", delta: delta.reasoning };
     }
     if (typeof delta?.content === "string" && delta.content.length > 0) {
       const content = ensureTextContent(contents, "text");
@@ -242,7 +242,7 @@ interface OpenAiStreamEvent {
 interface OpenAiChoice {
   readonly delta?: {
     readonly content?: unknown;
-    readonly reasoning_content?: unknown;
+    readonly reasoning?: unknown;
     readonly tool_calls?: readonly OpenAiToolCallDelta[];
   };
   readonly finish_reason?: unknown;

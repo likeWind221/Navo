@@ -116,6 +116,7 @@ export class ToolService extends Service {
       signal,
       ...(options.sessionId === undefined ? {} : { sessionId: options.sessionId }),
     });
+    await options.onStarted?.();
     let output: ToolOutput;
     try {
       output = await tool.execute(parsed.arguments, context);

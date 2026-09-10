@@ -211,14 +211,25 @@ describe("stdio RPC transport and scripted Mock Host", () => {
 });
 
 describe("Kernel Host trusted configuration", () => {
-  it("defaults to visible-answer mode with a bounded output budget", () => {
+  it("defaults to thinking mode with a bounded output budget", () => {
     const config = resolveKernelHostConfig({});
 
-    expect(config.adapter.enableThinking).toBe(false);
+    expect(config.adapter.enableThinking).toBe(true);
     expect(config.agent.model.maxTokens).toBe(8_192);
+    expect(config.agent.toolNames).toBeUndefined();
+    expect(config.search).toBeUndefined();
+  });
+
+  it("enables web search only when a trusted Exa key is configured", () => {
+    const config = resolveKernelHostConfig({ EXA_API_KEY: "exa-secret" });
+
+    expect(config.search).toEqual({ apiKey: "exa-secret" });
+    expect(config.agent.toolNames).toEqual(["web_search"]);
+    expect(Object.isFrozen(config.agent.toolNames)).toBe(true);
   });
 
   it("validates explicit thinking and output-budget overrides", () => {
+    expect(resolveKernelHostConfig({ LLM_ENABLE_THINKING: "false" }).adapter.enableThinking).toBe(false);
     expect(resolveKernelHostConfig({
       LLM_ENABLE_THINKING: "true",
       LLM_MAX_TOKENS: "4096",
@@ -230,6 +241,8 @@ describe("Kernel Host trusted configuration", () => {
       .toThrow("LLM_ENABLE_THINKING");
     expect(() => resolveKernelHostConfig({ LLM_MAX_TOKENS: "65537" }))
       .toThrow("LLM_MAX_TOKENS");
+    expect(() => resolveKernelHostConfig({ EXA_API_KEY: "not printable\n" }))
+      .toThrow("EXA_API_KEY");
   });
 });
 

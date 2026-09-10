@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseDesktopAgentCommandResult, parseDesktopAgentTurnUpdate } from "../validation.js";
+import { parseDesktopAgentCommandResult, parseDesktopAgentEvent, parseDesktopAgentTurnUpdate } from "../validation.js";
 
 describe("parseDesktopAgentTurnUpdate", () => {
   it("accepts validated Agent events and bridge failures", () => {
@@ -45,5 +45,38 @@ describe("parseDesktopAgentCommandResult", () => {
       failure: { code: "turn-in-progress", message: "Agent 正在生成" },
     });
     expect(() => parseDesktopAgentCommandResult({ type: "accepted", extra: true })).toThrow();
+  });
+});
+
+describe("parseDesktopAgentEvent", () => {
+  it("accepts v2 turn and command events", () => {
+    expect(parseDesktopAgentEvent({
+      type: "turn-event",
+      event: {
+        type: "turn-started", sessionId: "session-1", requestId: "request-1", turnId: "turn-1",
+      },
+    })).toEqual({
+      type: "turn-event",
+      event: {
+        type: "turn-started", sessionId: "session-1", requestId: "request-1", turnId: "turn-1",
+      },
+    });
+    expect(parseDesktopAgentEvent({
+      type: "command-event",
+      event: {
+        type: "command-started", sessionId: "session-1", commandId: "command-1", name: "hello",
+        anchor: { kind: "session" },
+      },
+    })).toMatchObject({ type: "command-event", event: { commandId: "command-1" } });
+  });
+
+  it("rejects command events on the turn branch", () => {
+    expect(() => parseDesktopAgentEvent({
+      type: "turn-event",
+      event: {
+        type: "command-started", sessionId: "session-1", commandId: "command-1", name: "hello",
+        anchor: { kind: "session" },
+      },
+    })).toThrow();
   });
 });

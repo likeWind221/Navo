@@ -1,58 +1,68 @@
 import { describe, expect, it } from "vitest";
-import { COMMAND_ARGS_MAX_CHARS, createCommandOutputValidator, parseSessionCommandInput,
-  parseSessionNotification, parseCommandNotification } from "../index.js";
+import {
+  COMMAND_ARGS_MAX_CHARS,
+  createCommandOutputValidator,
+  parseCommandEvent,
+  parseSessionCommandInput,
+} from "../index.js";
 
 const input = { sessionId: "s", commandId: "c", name: "model", args: "" };
-const notice = { type: "notification", sessionId: "s", commandId: "c", id: "n", message: "working", status: "running" };
+const anchor = { kind: "turn" as const, turnId: "t" };
+const started = { type: "command-started" as const, sessionId: "s", commandId: "c", name: "model", anchor };
+const completed = { ...started, type: "command-completed" as const, summary: "ok" };
 const failure = { code: "unknown-command", message: "Unknown command" };
 
 describe("F3 command contract", () => {
-  it("accepts a standalone command without Turn and updates the same notification", () => {
+  it("accepts a command event sequence with a stable anchor", () => {
     expect(parseSessionCommandInput(input)).toEqual(input);
-    const v = createCommandOutputValidator(input);
-    expect(v.parse(notice)).toEqual(notice);
-    v.parse({ ...notice, status: "succeeded", message: "changed" });
-    expect(() => v.end()).not.toThrow();
-    expect(() => v.parse(notice)).toThrow();
+    expect(parseCommandEvent(started)).toEqual(started);
+    const validator = createCommandOutputValidator(input);
+    expect(validator.parse(started)).toEqual(started);
+    expect(validator.parse(completed)).toEqual(completed);
+    expect(() => validator.end()).not.toThrow();
+    expect(() => validator.parse(started)).toThrow();
   });
 
-  it.each(["failed", "cancelled"])("allows %s before admission and after running", status => {
-    for (const running of [false, true]) {
-      const v = createCommandOutputValidator(input);
-      if (running) v.parse(notice);
-      v.parse({ ...notice, status, failure });
-      expect(() => v.end()).not.toThrow();
+  it("allows failure and cancellation before start or after start", () => {
+    for (const type of ["command-failed", "command-cancelled"] as const) {
+      for (const running of [false, true]) {
+        const validator = createCommandOutputValidator(input);
+        if (running) validator.parse(started);
+        validator.parse(type === "command-failed"
+          ? { ...started, type, failure }
+          : { ...started, type });
+        expect(() => validator.end()).not.toThrow();
+      }
     }
   });
 
-  it.each(["sessionId", "commandId", "id"])("rejects changed %s", key => {
-    const v = createCommandOutputValidator(input);
-    v.parse(notice);
-    expect(() => v.parse({ ...notice, status: "succeeded", [key]: "other" })).toThrow();
-    expect(() => v.end()).toThrow();
-  });
-
-  it("rejects wrong first identity, premature success, repeated running and EOF", () => {
-    expect(() => createCommandOutputValidator(input).parse({ ...notice, commandId: "other" })).toThrow();
-    expect(() => createCommandOutputValidator(input).parse({ ...notice, status: "succeeded" })).toThrow();
-    const v = createCommandOutputValidator(input);
-    v.parse(notice);
-    expect(() => v.parse(notice)).toThrow();
+  it("rejects changed identity, premature success, repeated start and EOF", () => {
+    for (const key of ["sessionId", "commandId", "name"] as const) {
+      const validator = createCommandOutputValidator(input);
+      validator.parse(started);
+      expect(() => validator.parse({ ...completed, [key]: "other" })).toThrow();
+    }
+    const changedAnchor = createCommandOutputValidator(input);
+    changedAnchor.parse(started);
+    expect(() => changedAnchor.parse({ ...completed, anchor: { kind: "session" as const } })).toThrow();
+    expect(() => createCommandOutputValidator(input).parse(completed)).toThrow();
+    const repeated = createCommandOutputValidator(input);
+    repeated.parse(started);
+    expect(() => repeated.parse(started)).toThrow();
     const incomplete = createCommandOutputValidator(input);
-    incomplete.parse(notice);
+    incomplete.parse(started);
     expect(() => incomplete.end()).toThrow();
-    expect(() => incomplete.parse({ ...notice, status: "succeeded" })).toThrow();
   });
 
-  it("enforces safe failures, exact fields and command size and name grammar", () => {
+  it("enforces safe input and command event fields", () => {
     for (const candidate of [
       { ...input, name: "/model" }, { ...input, name: "MODEL" }, { ...input, name: "model x" },
       { ...input, args: "x".repeat(COMMAND_ARGS_MAX_CHARS + 1) }, { ...input, args: [] },
-      { ...input, requestId: "r" }, { ...input, commandId: "" },
+      { ...input, commandId: "" },
     ]) expect(() => parseSessionCommandInput(candidate)).toThrow();
-    expect(parseSessionCommandInput({ ...input, args: "x".repeat(COMMAND_ARGS_MAX_CHARS) }).args.length).toBe(COMMAND_ARGS_MAX_CHARS);
-    expect(() => parseSessionNotification({ ...notice, status: "failed" })).toThrow();
-    expect(() => parseSessionNotification({ ...notice, status: "failed", failure: { ...failure, stack: "private" } })).toThrow();
-    expect(() => parseSessionNotification({ ...notice, message: "x".repeat(4097) })).toThrow();
+    expect(parseSessionCommandInput({ ...input, args: "x".repeat(COMMAND_ARGS_MAX_CHARS) }).args.length)
+      .toBe(COMMAND_ARGS_MAX_CHARS);
+    expect(() => parseCommandEvent({ ...started, args: "unexpected" })).toThrow();
+    expect(() => parseCommandEvent({ ...started, anchor: { kind: "session", turnId: "unexpected" } })).toThrow();
   });
 });

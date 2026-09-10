@@ -118,13 +118,36 @@ describe("AgentRuntime", () => {
     await kit.ctx.agentRuntime.runTurn({
       ...input,
       onEvent(event) {
-        if (event.type === "turn-finished") {
+        if (event.type === "turn-completed") {
           lastPersisted = kit.ctx.sessions.getEvents(input.sessionId).at(-1)?.type;
         }
       },
     });
 
     expect(lastPersisted).toBe("turn-ended");
+  });
+
+  it("fails closed when trusted kernel policy does not select tools", async () => {
+    const call = toolCall("unselected", TEST_TOOL_NAMES.echo, { text: "hidden" });
+    const kit = await createRuntime([
+      modelResponse([call], "tool-calls"),
+      modelResponse([{ type: "text", text: "handled" }]),
+    ]);
+
+    await expect(kit.ctx.agentRuntime.runTurn(turnInput("no-tools")))
+      .resolves.toMatchObject({ status: "completed", steps: 2 });
+
+    expect(kit.adapter.requests.map((request) => request.tools)).toEqual([[], []]);
+    const result = kit.ctx.sessions.getEvents(turnInput("no-tools").sessionId)
+      .find((event) => event.type === "tool-call-result");
+    expect(result?.data.message.content[0])
+      .toMatchObject({ toolCallId: call.id, isError: true });
+    const error = kit.ctx.sessions.getEvents(turnInput("no-tools").sessionId)
+      .find((event) => event.type === "error");
+    expect(error?.data).toMatchObject({
+      source: "tool",
+      failure: { code: "tool-not-allowed" },
+    });
   });
 
   it("feeds the assistant call and tool result into the next request", async () => {
@@ -134,7 +157,10 @@ describe("AgentRuntime", () => {
       modelResponse([{ type: "text", text: "done" }]),
     ]);
 
-    await expect(kit.ctx.agentRuntime.runTurn(turnInput("tool")))
+    await expect(kit.ctx.agentRuntime.runTurn({
+      ...turnInput("tool"),
+      toolNames: [TEST_TOOL_NAMES.echo],
+    }))
       .resolves.toMatchObject({ status: "completed", steps: 2 });
     expect(kit.adapter.requests[1]?.messages.map((message) => message.role))
       .toEqual(["user", "assistant", "user"]);
@@ -154,7 +180,10 @@ describe("AgentRuntime", () => {
       modelResponse([{ type: "text", text: "handled" }]),
     ]);
 
-    await expect(kit.ctx.agentRuntime.runTurn(turnInput("tools")))
+    await expect(kit.ctx.agentRuntime.runTurn({
+      ...turnInput("tools"),
+      toolNames: [TEST_TOOL_NAMES.echo, TEST_TOOL_NAMES.fail],
+    }))
       .resolves.toMatchObject({ status: "completed", steps: 2 });
     const results = kit.ctx.sessions.getEvents(turnInput("tools").sessionId)
       .filter((event) => event.type === "tool-call-result");

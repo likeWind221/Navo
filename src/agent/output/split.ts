@@ -1,4 +1,3 @@
-/** Split a streamed string without cutting a UTF-16 surrogate pair. */
 export function splitDelta(value: string, maxChars: number): readonly string[] {
   if (value.length <= maxChars) return [value];
   const parts: string[] = [];
@@ -14,7 +13,6 @@ export function splitDelta(value: string, maxChars: number): readonly string[] {
   return parts;
 }
 
-/** Return the longest prefix within maxChars without cutting a surrogate pair. */
 export function truncateDelta(value: string, maxChars: number): string {
   if (value.length <= maxChars) return value;
   if (maxChars <= 0) return "";

@@ -3,6 +3,7 @@ import { Context } from "cordis";
 import { createMessageId, createSessionId } from "../../src/brand/ids.js";
 import { AgentRuntime } from "../../src/agent/runtime.js";
 import type { RunTurnInput } from "../../src/agent/types.js";
+import { CommandService } from "../../src/command/service.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import type { ContentBlock, ModelEvent } from "../../src/llm/types.js";
 import { LLMService } from "../../src/llm/service.js";
@@ -27,6 +28,7 @@ export async function createRuntime(
   await ctx.plugin(ToolService);
   await ctx.plugin(TestTools);
   await ctx.plugin(AgentRuntime);
+  await ctx.plugin(CommandService);
   const adapter = new MockLLMAdapter(entries);
   ctx.llm.registerAdapter("mock", adapter);
   return { ctx, adapter };

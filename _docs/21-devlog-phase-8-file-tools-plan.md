@@ -21,3 +21,14 @@
 ## 下一步
 
 按阶段 8.1 从文件工具协议与稳定错误开始，先确定模型 Schema、路径语义、分页结果和错误契约，再实现本地 IO。
+
+## DSH 调研修订
+
+- DSH 在 `deepseek-harness/packages/workspace/workspace/src/types.ts` 中把工作区建模为稳定 ID 与规范化目录路径的记录；`deepseek-harness/packages/core/session/src/index.ts` 中的 `SessionHeader.cwd` 在 Session 创建时固化，多个 Session 可以共享同一个 `cwd`，不按 `sessionId` 自动创建物理子目录。
+- DSH 在 `deepseek-harness/packages/fs/fs/src/{types,index}.ts` 与 `deepseek-harness/packages/fs/fs-local/README.md` 中将 `cwd` 作为相对路径基准，绝对路径不被基准改写，并以不透明的 `FsTarget` 表达稳定目标身份；`deepseek-harness/packages/fs/tool-fs/` 负责模型工具，`deepseek-harness/packages/fs/fs-observation-policy/` 独立负责观察与版本策略。
+- SkillWorld 8.2 吸收共享执行工作区、稳定文件目标、原子修改和目标级并发控制；暂不引入 `ctx.fs`、Provider、独立沙箱后端或版本观察协议，也不把“只允许相对路径”冒充为沙箱边界。沙箱授权留给后续能力。
+- 本节覆盖 [8.1 初版开发记录](22-devlog-step-8-1-file-protocol.md) 中“拒绝绝对路径”的旧决策；该记录保留为历史事实，新的路径语义以本节和后续 8.1 修订为准。
+
+## 下一步修订
+
+8.1 路径语义修订与 8.2.1 工作区定位已完成；下一步实现 8.2.2 有界文本读取与目录发现，随后完成原子修改和共享目标并发验收；8.2 完成后再进入 Read/Find Tool 注册。

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createToolCallId } from "../../src/brand/ids.js";
+import { TEST_TOOL_NAMES } from "../../src/tools/testing.js";
 import {
   assertClosed,
   createRuntime,
@@ -24,6 +25,7 @@ describe("AgentRuntime resilience", () => {
 
     await expect(kit.ctx.agentRuntime.runTurn({
       ...turnInput("limit"),
+      toolNames: [TEST_TOOL_NAMES.echo],
       limits: { maxSteps: 1 },
     })).resolves.toMatchObject({
       status: "blocked",
@@ -194,6 +196,7 @@ describe("AgentRuntime resilience", () => {
     });
     const pending = kit.ctx.agentRuntime.runTurn({
       ...turnInput("toolcancel"),
+      toolNames: ["hold"],
       signal: controller.signal,
     });
 

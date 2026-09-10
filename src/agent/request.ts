@@ -5,9 +5,8 @@ import { collectStream } from "../llm/collect.js";
 import type { FinishReason, GenerateRequest } from "../llm/types.js";
 import { createDeadline } from "./limits.js";
 import type { RetryableAttempt } from "./limits.js";
-import type { ModelCompletion, RunTurnInput, TurnScope } from "./types.js";
+import type { ModelCompletion, TurnScope } from "./types.js";
 
-/** Executes one deadline-bound provider attempt inside an open Agent Step. */
 export async function requestModel(
   ctx: Context,
   turn: TurnScope,
@@ -20,21 +19,11 @@ export async function requestModel(
   const request = buildRequest(ctx, input, deadline.signal);
   appendRequest(ctx, input.sessionId, turnId, stepId, request);
   try {
+    turn.output.beginAttempt();
     let publishedContent = false;
     const collected = await collectStream(ctx.llm.stream(request), async (event) => {
-      switch (event.type) {
-        case "content-started":
-        case "content-completed":
-        case "content-delta":
-          if (input.onEvent !== undefined
-            && await input.onEvent({ ...event, turnId, stepId, messageId }) !== false) {
-            publishedContent = true;
-          }
-          return;
-        case "usage":
-        case "finished":
-          return;
-      }
+      const published = await turn.output.model(event);
+      publishedContent = published || publishedContent;
     });
     if (signal.aborted) return { kind: "cancelled" };
     const finishReason: FinishReason = deadline.timedOut
@@ -52,7 +41,6 @@ export async function requestModel(
     if (finishReason.kind === "error") {
       return {
         kind: "failed",
-        // Missing finish is already non-retryable; retain its shipped v1 code.
         failure: publishedContent && finishReason.failure.code !== "stream-incomplete"
           ? {
               code: "stream-output-interrupted",
@@ -66,8 +54,6 @@ export async function requestModel(
     return {
       kind: "completed",
       value: {
-        // The message id was fixed when the Step started so the v2 stream
-        // can announce it in step-started before any content arrives.
         message: Object.freeze({
           id: messageId,
           role: "assistant",
@@ -84,7 +70,7 @@ export async function requestModel(
 
 function buildRequest(
   ctx: Context,
-  input: RunTurnInput,
+  input: TurnScope["input"],
   signal: AbortSignal,
 ): GenerateRequest {
   return {
@@ -102,7 +88,7 @@ function buildRequest(
 
 function appendRequest(
   ctx: Context,
-  sessionId: RunTurnInput["sessionId"],
+  sessionId: TurnScope["input"]["sessionId"],
   turnId: TurnScope["turnId"],
   stepId: StepId,
   request: GenerateRequest,

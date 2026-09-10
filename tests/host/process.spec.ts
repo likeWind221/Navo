@@ -1,5 +1,14 @@
 import { spawn } from "node:child_process";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
+import {
+  agentTurnV2Method,
+  encodeNdjson,
+  NdjsonDecoder,
+  parseRpcServerFrame,
+  sessionCommandMethod,
+  StreamRpcClient,
+} from "../../rpc/index.js";
+import type { RpcClientFrame, RpcClientTransport } from "../../rpc/index.js";
 
 import { describe, expect, it } from "vitest";
 
@@ -50,7 +59,138 @@ describe("Kernel Host process lifecycle", () => {
     const result = await exitOf(child);
     expect(result.code === 0 || result.signal === "SIGTERM").toBe(true);
   });
+
+  it("serves v2 turns and sidecar commands through the real stdio boundary", async () => {
+    const child = startHost("scripts/host/mock.ts", {
+      SKILLWORLD_MOCK_LLM_MODE: "completed",
+    });
+    const stderr = capture(child.stderr);
+    await waitUntil(() => stderr.value.includes("[mock-kernel-host] ready"));
+    const client = new StreamRpcClient(new ChildRpcTransport(child));
+    const input = { sessionId: "process-session", requestId: "process-request", text: "hello" };
+    try {
+      const turn = await collect(client.stream(agentTurnV2Method, input));
+      const started = turn.find((event) => event.type === "turn-started");
+      expect(turn.map((event) => event.type)).toEqual([
+        "turn-started",
+        "step-started",
+        "content-started",
+        "content-delta",
+        "content-completed",
+        "step-completed",
+        "turn-completed",
+      ]);
+      expect(started?.type === "turn-started" ? started.turnId : undefined).toBeTruthy();
+
+      const command = await collect(client.stream(sessionCommandMethod, {
+        sessionId: input.sessionId,
+        commandId: "process-command",
+        name: "hello",
+        args: "",
+      }));
+      expect(command.map((event) => event.type)).toEqual([
+        "command-started",
+        "command-completed",
+      ]);
+      expect(command[1]).toMatchObject({
+        summary: "hello",
+        anchor: { kind: "turn", turnId: started?.type === "turn-started" ? started.turnId : "" },
+      });
+    } finally {
+      await client.dispose();
+    }
+    await expect(exitOf(child)).resolves.toEqual({ code: 0, signal: null });
+  });
+
+  it("forwards a model failure as one terminal v2 event", async () => {
+    const child = startHost("scripts/host/mock.ts", {
+      SKILLWORLD_MOCK_LLM_MODE: "failed",
+    });
+    const stderr = capture(child.stderr);
+    await waitUntil(() => stderr.value.includes("[mock-kernel-host] ready"));
+    const client = new StreamRpcClient(new ChildRpcTransport(child));
+    try {
+      const events = await collect(client.stream(agentTurnV2Method, {
+        sessionId: "process-session",
+        requestId: "process-request",
+        text: "fail",
+      }));
+      expect(events.at(-1)).toMatchObject({
+        type: "turn-failed",
+        failure: {
+          code: "stream-output-interrupted",
+          message: "Model stream failed after publishing live content.",
+        },
+      });
+      expect(events.filter((event) => event.type === "turn-failed")).toHaveLength(1);
+    } finally {
+      await client.dispose();
+    }
+    await expect(exitOf(child)).resolves.toEqual({ code: 0, signal: null });
+  });
+
+  it("cancels a running v2 turn in the child process", async () => {
+    const child = startHost("scripts/host/mock.ts", {
+      SKILLWORLD_MOCK_LLM_MODE: "hang",
+    });
+    const stderr = capture(child.stderr);
+    await waitUntil(() => stderr.value.includes("[mock-kernel-host] ready"));
+    const client = new StreamRpcClient(new ChildRpcTransport(child));
+    const controller = new AbortController();
+    const iterator = client.stream(agentTurnV2Method, {
+      sessionId: "process-session",
+      requestId: "process-request",
+      text: "wait",
+    }, { signal: controller.signal });
+    try {
+      await expect(iterator.next()).resolves.toMatchObject({
+        value: { type: "turn-started" },
+      });
+      controller.abort();
+      await expect(iterator.next()).rejects.toMatchObject({ code: "cancelled" });
+    } finally {
+      await client.dispose();
+    }
+    await expect(exitOf(child)).resolves.toEqual({ code: 0, signal: null });
+  });
 });
+
+class ChildRpcTransport implements RpcClientTransport {
+  readonly incoming: AsyncIterable<unknown>;
+
+  constructor(private readonly child: ChildProcessWithoutNullStreams) {
+    this.incoming = readFrames(child.stdout);
+  }
+
+  send(frame: RpcClientFrame): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.child.stdin.write(encodeNdjson(frame), "utf8", (error) => {
+        if (error) reject(error);
+        else resolve();
+      });
+    });
+  }
+
+  close(): Promise<void> {
+    if (this.child.stdin.writableEnded) return Promise.resolve();
+    return new Promise<void>((resolve) => this.child.stdin.end(resolve));
+  }
+}
+
+async function* readFrames(stream: NodeJS.ReadableStream): AsyncGenerator<unknown> {
+  const decoder = new NdjsonDecoder(parseRpcServerFrame);
+  for await (const chunk of stream) {
+    const bytes = typeof chunk === "string" ? Buffer.from(chunk) : chunk as Uint8Array;
+    yield* decoder.push(bytes);
+  }
+  yield* decoder.finish();
+}
+
+async function collect<TValue>(stream: AsyncIterable<TValue>): Promise<TValue[]> {
+  const values: TValue[] = [];
+  for await (const value of stream) values.push(value);
+  return values;
+}
 
 function startHost(
   entry: string,

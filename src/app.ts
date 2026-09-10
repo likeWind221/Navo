@@ -2,6 +2,7 @@ import { Context } from "cordis";
 
 import { AgentRuntime } from "./agent/runtime.js";
 import type { AgentRuntimeLimits } from "./agent/types.js";
+import { CommandService } from "./command/service.js";
 import { LLMService } from "./llm/service.js";
 import type { NodePluginConfig } from "./node/plugin.js";
 import { NodePlugin } from "./node/plugin.js";
@@ -27,6 +28,7 @@ export async function SkillWorldApp(
     ctx.plugin(ToolsPlugin, config.tools),
   ]);
   await ctx.plugin(AgentRuntime, config.runtime);
+  await ctx.plugin(CommandService);
   await ctx.plugin(NodePlugin, config.node);
 }
 

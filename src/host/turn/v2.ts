@@ -1,6 +1,6 @@
 import type { Context } from "cordis";
 
-import type { TurnEvent as RpcTurnEvent } from "../../../rpc/content.js";
+import type { AgentTurnV2Event } from "../../../rpc/content.js";
 import type { RpcStreamHandler } from "../../../rpc/stream.js";
 import type { AgentTurnInput } from "../../../rpc/agent.js";
 import {
@@ -11,30 +11,23 @@ import type {
   TurnModelConfig,
 } from "../../agent/types.js";
 import { StreamEventQueue } from "./queue.js";
-import { V2Output } from "./v2/output.js";
 
 export interface AgentTurnV2HandlerConfig {
   readonly model: TurnModelConfig;
   readonly systemPrompt?: string;
+  readonly toolNames?: readonly string[];
 }
 
-/**
- * Binds the public agent.turn.v2 stream to the provider-neutral AgentRuntime.
- * The Runtime stays RPC-agnostic; this handler is the single place that
- * translates its live TurnEvents into the public v2 stream contract,
- * including the character-budget guards that keep every emitted frame valid.
- */
 export function createAgentTurnV2Handler(
   ctx: Context,
   config: AgentTurnV2HandlerConfig,
-): RpcStreamHandler<AgentTurnInput, RpcTurnEvent> {
+): RpcStreamHandler<AgentTurnInput, AgentTurnV2Event> {
   return async function* agentTurnV2(input, signal) {
-    const events = new StreamEventQueue<RpcTurnEvent>();
-    const output = new V2Output(events, input.sessionId, input.requestId);
-    // The v2 stream carries no tool execution events (F3.2.2), so the model
-    // is asked with an empty tool list, matching the current v1 default.
+    const events = new StreamEventQueue<AgentTurnV2Event>();
+    const controller = new AbortController();
     const execution = ctx.agentRuntime.runTurn({
       sessionId: createSessionId(input.sessionId),
+      requestId: input.requestId,
       userMessage: {
         id: createMessageId(input.requestId),
         role: "user",
@@ -43,23 +36,21 @@ export function createAgentTurnV2Handler(
       model: config.model,
       ...(config.systemPrompt === undefined
         ? {} : { systemPrompt: config.systemPrompt }),
-      toolNames: [],
-      signal,
+      ...(config.toolNames === undefined ? {} : { toolNames: config.toolNames }),
+      signal: AbortSignal.any([signal, controller.signal]),
       onEvent(event) {
-        return output.write(event);
+        if ("commandId" in event) return false;
+        events.push(event);
+        return true;
       },
     }).then(
-      () => {
-        events.end();
-      },
-      () => {
-        output.fail();
-        events.end();
-      },
+      () => events.end(),
+      error => events.fail(error),
     );
     try {
       for await (const event of events) yield event;
     } finally {
+      controller.abort();
       await execution;
     }
   };

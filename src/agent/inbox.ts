@@ -2,38 +2,58 @@ import type { SessionId } from "../brand/ids.js";
 import type { RunTurnInput, TurnResult } from "./types.js";
 
 type TurnHandler = () => Promise<TurnResult>;
+type CommandHandler = () => Promise<void>;
 
 interface TurnEnvelope {
+  readonly kind: "turn";
   readonly input: RunTurnInput;
   readonly handle: TurnHandler;
-  readonly resolve: (result: TurnResult) => void;
+  readonly resolve: (result: unknown) => void;
   readonly reject: (error: unknown) => void;
+  readonly cleanup: () => void;
 }
 
-/** Routes each submitted Turn to the single driver that owns its Session. */
+interface CommandEnvelope {
+  readonly kind: "command";
+  readonly handle: CommandHandler;
+  readonly resolve: (result: unknown) => void;
+  readonly reject: (error: unknown) => void;
+  readonly cleanup: () => void;
+}
+
+type WorkEnvelope = TurnEnvelope | CommandEnvelope;
+
+/** Routes submitted work to the single driver that owns its Session. */
 export class AgentInbox {
   private readonly actors = new Map<SessionId, SessionActor>();
 
   send(input: RunTurnInput, handle: TurnHandler): Promise<TurnResult> {
-    let actor = this.actors.get(input.sessionId);
+    return this.actor(input.sessionId).send(input, handle);
+  }
+
+  sendCommand(
+    sessionId: SessionId,
+    handle: CommandHandler,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    return this.actor(sessionId).sendCommand(handle, signal);
+  }
+
+  private actor(sessionId: SessionId): SessionActor {
+    let actor = this.actors.get(sessionId);
     if (!actor) {
-      actor = new SessionActor(
-        input.sessionId,
-        (idleActor) => {
-          if (this.actors.get(input.sessionId) === idleActor) {
-            this.actors.delete(input.sessionId);
-          }
-        },
-      );
-      this.actors.set(input.sessionId, actor);
+      actor = new SessionActor(sessionId, idleActor => {
+        if (this.actors.get(sessionId) === idleActor) this.actors.delete(sessionId);
+      });
+      this.actors.set(sessionId, actor);
     }
-    return actor.send(input, handle);
+    return actor;
   }
 }
 
-/** Minimal single-writer Actor: one FIFO Inbox and one active driver. */
+/** Minimal single-writer Actor with one active driver. */
 class SessionActor {
-  private readonly inbox: TurnEnvelope[] = [];
+  private readonly inbox: WorkEnvelope[] = [];
   private driving = false;
 
   constructor(
@@ -47,11 +67,40 @@ class SessionActor {
     }
     const deferred = Promise.withResolvers<TurnResult>();
     this.inbox.push({
+      kind: "turn",
       input,
       handle,
-      resolve: deferred.resolve,
+      resolve: value => deferred.resolve(value as TurnResult),
       reject: deferred.reject,
+      cleanup: () => undefined,
     });
+    this.wake();
+    return deferred.promise;
+  }
+
+  sendCommand(handle: CommandHandler, signal?: AbortSignal): Promise<void> {
+    if (signal?.aborted === true) return Promise.reject(abortError());
+    const deferred = Promise.withResolvers<void>();
+    let cleanup = (): void => undefined;
+    const envelope: CommandEnvelope = {
+      kind: "command",
+      handle,
+      resolve: value => deferred.resolve(value as void),
+      reject: deferred.reject,
+      cleanup: () => cleanup(),
+    };
+    const onAbort = (): void => {
+      const index = this.inbox.indexOf(envelope);
+      if (index < 0) return;
+      this.inbox.splice(index, 1);
+      envelope.reject(abortError());
+      cleanup();
+    };
+    cleanup = () => signal?.removeEventListener("abort", onAbort);
+    signal?.addEventListener("abort", onAbort, { once: true });
+    const firstTurn = this.inbox.findIndex(item => item.kind === "turn");
+    if (firstTurn < 0) this.inbox.push(envelope);
+    else this.inbox.splice(firstTurn, 0, envelope);
     this.wake();
     return deferred.promise;
   }
@@ -74,7 +123,13 @@ class SessionActor {
         envelope.resolve(await envelope.handle());
       } catch (error: unknown) {
         envelope.reject(error);
+      } finally {
+        envelope.cleanup();
       }
     }
   }
+}
+
+function abortError(): DOMException {
+  return new DOMException("Command was cancelled.", "AbortError");
 }

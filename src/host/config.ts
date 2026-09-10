@@ -1,10 +1,16 @@
 import type { AgentTurnHandlerConfig } from "./turn.js";
 import type { QwenChatAdapterConfig } from "../llm/adapters/qwen.js";
+import { WEB_SEARCH_TOOL_NAME } from "../tools/builtins/search/tool.js";
+
+export interface KernelHostSearchConfig {
+  readonly apiKey: string;
+}
 
 export interface KernelHostConfig {
   readonly provider: "qwen";
   readonly adapter: QwenChatAdapterConfig;
   readonly agent: AgentTurnHandlerConfig;
+  readonly search?: KernelHostSearchConfig;
 }
 
 const DEFAULT_BASE_URL = "http://192.168.99.2:8090/v1";
@@ -24,11 +30,16 @@ export function resolveKernelHostConfig(
     DEFAULT_MAX_TOKENS,
     MAX_OUTPUT_TOKENS,
   );
-  const enableThinking = optionalBoolean("LLM_ENABLE_THINKING", env.LLM_ENABLE_THINKING, false);
+  const enableThinking = optionalBoolean("LLM_ENABLE_THINKING", env.LLM_ENABLE_THINKING, true);
   const apiKey = env.LLM_API_KEY;
   if (apiKey !== undefined && (apiKey.length === 0 || /[\r\n]/.test(apiKey))) {
     throw new TypeError("LLM_API_KEY must be non-empty and must not contain newlines.");
   }
+  const exaApiKey = env.EXA_API_KEY;
+  if (exaApiKey !== undefined && (!exaApiKey.trim() || !/^[\x21-\x7e]+$/.test(exaApiKey.trim()))) {
+    throw new TypeError("EXA_API_KEY must be non-empty printable ASCII.");
+  }
+  const search = exaApiKey === undefined ? undefined : Object.freeze({ apiKey: exaApiKey });
   return Object.freeze({
     provider: "qwen",
     adapter: Object.freeze({
@@ -39,7 +50,9 @@ export function resolveKernelHostConfig(
     agent: Object.freeze({
       model: Object.freeze({ provider: "qwen", model, maxTokens }),
       systemPrompt: "You are SkillWorld, a concise and helpful learning assistant.",
+      ...(search === undefined ? {} : { toolNames: Object.freeze([WEB_SEARCH_TOOL_NAME]) }),
     }),
+    ...(search === undefined ? {} : { search }),
   });
 }
 

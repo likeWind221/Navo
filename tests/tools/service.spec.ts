@@ -101,6 +101,35 @@ describe("ToolService registration and schemas", () => {
 });
 
 describe("ToolService execution results", () => {
+  it("announces execution only after policy and arguments are accepted", async () => {
+    const ctx = await kit.createContext();
+    const order: string[] = [];
+    ctx.tools.register({
+      name: "observed",
+      parameters: {
+        type: "object",
+        properties: { value: { type: "string" } },
+        required: ["value"],
+        additionalProperties: false,
+      },
+      execute: () => {
+        order.push("execute");
+        return "done";
+      },
+    });
+    const options = {
+      allowedTools: ["observed"],
+      onStarted: () => { order.push("started"); },
+    };
+
+    await ctx.tools.execute(toolCall("denied", "missing", {}), signal, options);
+    await ctx.tools.execute(toolCall("invalid", "observed", {}), signal, options);
+    expect(order).toEqual([]);
+
+    await ctx.tools.execute(toolCall("accepted", "observed", { value: "ok" }), signal, options);
+    expect(order).toEqual(["started", "execute"]);
+  });
+
   it("executes echo and preserves the authoritative call id", async () => {
     const ctx = await kit.createContext();
     await ctx.plugin(TestTools);

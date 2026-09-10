@@ -1,56 +1,38 @@
-import type { MessageId, SessionId, StepId, TurnId } from "../brand/ids.js";
+import type { SessionId, TurnId } from "../brand/ids.js";
+import type { TurnEvent } from "../../shared/content.js";
+import type { TurnOutput } from "./output.js";
 import type {
   AssistantMessage,
   FinishReason,
-  ModelEvent,
   TokenUsage,
   UserMessage,
 } from "../llm/types.js";
-import type { Failure, StepEndStatus, TurnEndStatus } from "../session/types.js";
+import type { Failure, TurnEndStatus } from "../session/types.js";
+export type { TurnEvent } from "../../shared/content.js";
 
-/** Ordered live facts emitted by one running Turn. */
-export type TurnEvent =
-  | { readonly type: "turn-started"; readonly turnId: TurnId }
-  | (TurnStepIdentity & { readonly type: "step-started" })
-  | (TurnStepIdentity & Extract<ModelEvent, { readonly contentIndex: number }>)
-  | (TurnStepIdentity & {
-      readonly type: "step-completed";
-      readonly status: StepEndStatus;
-    })
-  | { readonly type: "turn-finished"; readonly result: TurnResult };
-
-/** Public input for one self-contained model-and-tool turn. */
 export interface RunTurnInput {
   readonly sessionId: SessionId;
+  readonly requestId?: string;
   readonly userMessage: UserMessage;
   readonly model: TurnModelConfig;
-  /** Model-visible Turn prefix, recorded in every resulting request snapshot. */
   readonly systemPrompt?: string;
-  /** Exact registered tools visible and executable during this Turn; absent means all. */
   readonly toolNames?: readonly string[];
-  /** Cooperative cancellation for the entire turn; never persisted. */
   readonly signal?: AbortSignal;
-  /** Per-turn overrides to the runtime's configured safety limits. */
   readonly limits?: Partial<AgentRuntimeLimits>;
-  /** Ordered live facts; false means private output. A thrown callback stops execution;
-   * a step-started rejection happens before the model request. Caller abort wins. */
   readonly onEvent?: (event: TurnEvent) => boolean | void | Promise<boolean | void>;
 }
 
-interface TurnStepIdentity {
-  readonly turnId: TurnId;
-  readonly stepId: StepId;
-  readonly messageId: MessageId;
-}
+export type ResolvedRunTurnInput = Omit<RunTurnInput, "toolNames"> & {
+  readonly toolNames: readonly string[];
+};
 
-/** Terminal outcome of one requested turn. */
+
 export type TurnResult =
   | CompletedTurnResult
   | BlockedTurnResult
   | CancelledTurnResult
   | FailedTurnResult;
 
-/** Model route and optional sampling controls owned by a caller. */
 export interface TurnModelConfig {
   readonly provider: string;
   readonly model: string;
@@ -58,25 +40,20 @@ export interface TurnModelConfig {
   readonly maxTokens?: number;
 }
 
-/** Validated safety limits applied by the runtime to one Turn. */
 export interface AgentRuntimeLimits {
-  /** Maximum number of Steps that may start in one Turn. */
   readonly maxSteps: number;
-  /** Total elapsed deadline for each model request attempt. */
   readonly modelTimeoutMs: number;
-  /** Additional attempts after the first request for transient model failures. */
   readonly maxModelRetries: number;
 }
 
-/** Internal immutable facts shared by one Turn's execution modules. */
 export interface TurnScope {
-  readonly input: RunTurnInput;
+  readonly input: ResolvedRunTurnInput;
+  readonly output: TurnOutput;
   readonly turnId: TurnId;
   readonly signal: AbortSignal;
   readonly limits: AgentRuntimeLimits;
 }
 
-/** One accepted model response before Session and tool processing. */
 export interface ModelCompletion {
   readonly message: AssistantMessage;
   readonly finishReason: FinishReason;
@@ -89,7 +66,6 @@ export interface CompletedTurnResult {
   readonly steps: number;
 }
 
-/** The runtime stopped cleanly because it needs an explicit caller decision. */
 export interface BlockedTurnResult {
   readonly status: "blocked";
   readonly turnId: TurnId;
@@ -110,5 +86,4 @@ export interface FailedTurnResult {
   readonly failure: Failure;
 }
 
-/** Keeps the runtime protocol tied to the durable Session terminal vocabulary. */
 export type AgentRuntimeTurnStatus = TurnEndStatus;

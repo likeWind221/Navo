@@ -5,12 +5,12 @@
 .body { display: flex; flex: 1; min-height: 0; }
 .navigation { width: 72px; flex-shrink: 0; border-right: 1px solid var(--border); }
 .workspace { flex: 1; min-width: 0; min-height: 0; }
-.chat { height: 100%; display: flex; flex-direction: column; }
-.history { flex: 1; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; }
+.chat { position: relative; height: 100%; }
+.history { position: absolute; inset: 0; overflow-y: auto; scrollbar-gutter: stable both-edges; }
 .welcome { min-height: 100%; display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 36px 24px 70px; text-align: center; }
 .welcome > p { color: var(--text-secondary); font-size: 13px; letter-spacing: 2px; margin: 0 0 14px; }
 .welcome h1 { font-family: var(--font-heading); font-size: clamp(26px, 3vw, 38px); font-weight: 500; margin: 0; }
-.inputArea { width: min(800px, 100%); margin: 0 auto; padding: 12px 24px 32px; flex-shrink: 0; }
+.inputArea { position: absolute; z-index: 1; right: 50%; bottom: 0; width: min(800px, 100%); padding: 0 24px 32px; background: var(--canvas); transform: translateX(50%); }
 .connection { margin: 0 0 12px; color: var(--text-secondary); font-size: 12px; text-align: center; }
 .composer { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 12px 16px 10px; }
 .composer textarea { display: block; resize: none; width: 100%; border: 0; background: transparent; color: var(--text); font-size: 15px; line-height: 1.8; }
@@ -25,11 +25,41 @@
 .composerFooter .stopButton { background: var(--text-secondary); }
 .composerFooter .stopButton:hover { background: var(--text); }
 .stopIcon { display: block; width: 12px; height: 12px; border-radius: 3px; background: currentColor; }
-.messageColumn { max-width: 800px; margin: 0 auto; padding: 32px 24px; }
+.messageColumn { max-width: 800px; margin: 0 auto; padding: 32px 48px 190px; }
 .message { margin-bottom: 28px; max-width: 90%; }
 .userMessage { margin-left: auto; width: fit-content; padding: 12px 20px; border-radius: 16px 16px 4px 16px; background: var(--surface-muted); }
-.assistantMessage { margin-right: auto; padding: 4px 0; }
-.message p { margin: 0; font-size: 15px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.assistantMessage { width: 100%; max-width: 100%; margin-right: auto; padding: 4px 0; }
+.userMessage > p, .commandMessage > p { margin: 0; font-size: 15px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.contentBlocks { display: grid; gap: 12px; }
+.textBlock { min-width: 0; }
+.reasoningBlock { max-width: 100%; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-muted); color: var(--text-secondary); overflow: hidden; }
+.reasoningBlock summary { cursor: pointer; padding: 9px 12px; color: var(--text); font-size: 12px; font-weight: 600; }
+.reasoningText { padding: 0 12px 11px; color: var(--text-secondary); font-size: 13px !important; line-height: 1.65; }
+.reasoningText > div { font-size: inherit; line-height: inherit; }
+.toolBlock { min-width: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden; }
+.toolHeader { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+.toolLabel { color: var(--text-secondary); font-size: 12px; }
+.toolName { min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+.toolStatus { margin-left: auto; color: var(--text-secondary); font-size: 12px; }
+.toolStatus[data-status="running"] { color: var(--accent-strong); }
+.toolStatus[data-status="succeeded"] { color: #47724b; }
+.toolStatus[data-status="failed"] { color: #a0443f; }
+.toolStatus[data-status="cancelled"] { color: var(--text-secondary); }
+.toolDetails { border-top: 1px solid var(--border); }
+.toolDetails summary { cursor: pointer; padding: 8px 12px; color: var(--text-secondary); font-size: 12px; }
+.toolDetails pre { max-height: 280px; margin: 0; padding: 0 12px 11px; overflow: auto; color: var(--text); font: 12px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.toolDetails p { margin: 0; padding: 0 12px 11px; color: var(--text); font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.toolFailure { color: #a0443f !important; }
+.commandMessage { max-width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-muted); }
+.commandHeader { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: var(--text-secondary); font-size: 12px; }
+.commandLabel { color: var(--text-secondary); }
+.commandName { color: var(--text); font-size: 12px; }
+.commandStatus { margin-left: auto; }
+.commandStatus[data-status="running"] { color: var(--accent-strong); }
+.commandStatus[data-status="succeeded"] { color: #47724b; }
+.commandStatus[data-status="failed"] { color: #a0443f; }
+.commandSummary, .commandFailure { margin-top: 6px !important; font-size: 13px !important; line-height: 1.6; }
+.commandFailure { color: #a0443f; }
 .messageStatus { display: flex; align-items: center; gap: 8px; margin-top: 8px; color: var(--text-secondary); font-size: 12px; }
 .assistantMessage > .messageStatus:first-child { margin-top: 0; }
 .waitingDot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: waitingPulse 1.2s ease-in-out infinite; }
@@ -42,8 +72,8 @@
 }
 @media (max-width: 600px) {
   .topbar { height: 60px; padding: 0 20px; }
-  .inputArea { padding: 10px 16px 18px; }
+  .inputArea { padding: 0 16px 18px; }
   .composer { padding: 10px 12px; }
-  .messageColumn { padding: 20px 16px; }
+  .messageColumn { padding: 20px 28px 170px; }
   .connection { font-size: 11px; }
 }

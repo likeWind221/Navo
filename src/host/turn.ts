@@ -1,34 +1,28 @@
 import type { Context } from "cordis";
-
-import {
-  AGENT_DELTA_MAX_CHARS,
-} from "../../rpc/agent.js";
-import type {
-  AgentTurnEvent,
-  AgentTurnInput,
-} from "../../rpc/agent.js";
+import type { AgentTurnEvent, AgentTurnInput } from "../../rpc/agent.js";
 import type { RpcStreamHandler } from "../../rpc/stream.js";
+import type { TurnLifecycleEvent } from "../../shared/content.js";
 import { createMessageId, createSessionId } from "../brand/ids.js";
-import type { TurnModelConfig, TurnResult } from "../agent/types.js";
-import { splitDelta } from "./turn/split.js";
+import type { TurnModelConfig } from "../agent/types.js";
 import { StreamEventQueue } from "./turn/queue.js";
-import { classifyTurnTerminal } from "./turn/terminal.js";
 
 export interface AgentTurnHandlerConfig {
   readonly model: TurnModelConfig;
   readonly systemPrompt?: string;
+  readonly toolNames?: readonly string[];
 }
 
-/** Bind the public agent.turn stream to the provider-neutral AgentRuntime. */
 export function createAgentTurnHandler(
   ctx: Context,
   config: AgentTurnHandlerConfig,
 ): RpcStreamHandler<AgentTurnInput, AgentTurnEvent> {
   return async function* agentTurn(input, signal) {
     const events = new StreamEventQueue<AgentTurnEvent>();
+    const textContents = new Set<number>();
     let terminated = false;
     const execution = ctx.agentRuntime.runTurn({
       sessionId: createSessionId(input.sessionId),
+      requestId: input.requestId,
       userMessage: {
         id: createMessageId(input.requestId),
         role: "user",
@@ -36,38 +30,37 @@ export function createAgentTurnHandler(
       },
       model: config.model,
       ...(config.systemPrompt === undefined ? {} : { systemPrompt: config.systemPrompt }),
-      toolNames: [],
+      ...(config.toolNames === undefined ? {} : { toolNames: config.toolNames }),
       signal,
       onEvent(event) {
         if (event.type === "turn-started") {
           events.push({ type: "started", turnId: event.turnId });
           return true;
-        } else if (event.type === "content-delta" && event.contentType === "text") {
-          let published = false;
-          for (const part of splitDelta(event.delta, AGENT_DELTA_MAX_CHARS)) {
-            if (part.length > 0) {
-              events.push({ type: "text-delta", text: part });
-              published = true;
-            }
-          }
-          return published;
-        } else if (event.type === "turn-finished") {
+        }
+        if (event.type === "step-started") textContents.clear();
+        if (event.type === "content-started") {
+          if (event.kind === "text") textContents.add(event.contentIndex);
+          else textContents.delete(event.contentIndex);
+        }
+        if (event.type === "content-delta" && textContents.has(event.contentIndex)) {
+          events.push({ type: "text-delta", text: event.delta });
+          return true;
+        }
+        if (event.type === "turn-completed" || event.type === "turn-cancelled"
+          || event.type === "turn-truncated" || event.type === "turn-failed") {
           terminated = true;
-          events.push(terminalEvent(event.result));
+          events.push(terminalEvent(event));
           return true;
         }
         return false;
       },
     }).then(
-      () => {
-        events.end();
-      },
+      () => events.end(),
       () => {
         if (!terminated) {
-          events.push({
-            type: "failed",
-            failure: { code: "runtime-failed", message: "Agent runtime failed.", details: {} },
-          });
+          events.push({ type: "failed", failure: {
+            code: "runtime-failed", message: "Agent runtime failed.", details: {},
+          } });
         }
         events.end();
       },
@@ -80,23 +73,12 @@ export function createAgentTurnHandler(
   };
 }
 
-function terminalEvent(result: TurnResult): AgentTurnEvent {
-  const terminal = classifyTurnTerminal(result);
-  if (terminal === "completed") return { type: "completed" };
-  if (terminal === "cancelled") return { type: "cancelled" };
-  if (terminal === "truncated") return { type: "truncated" };
-  if (!("failure" in result)) {
-    return {
-      type: "failed",
-      failure: { code: "runtime-failed", message: "Agent runtime failed.", details: {} },
-    };
+function terminalEvent(event: Exclude<TurnLifecycleEvent, { type: "turn-started" }>): AgentTurnEvent {
+  if (event.type === "turn-completed") return { type: "completed" };
+  if (event.type === "turn-cancelled") return { type: "cancelled" };
+  if (event.type === "turn-truncated") return { type: "truncated" };
+  if (event.type === "turn-failed") {
+    return { type: "failed", failure: { ...event.failure, details: {} } };
   }
-  return {
-    type: "failed",
-    failure: {
-      code: result.failure.code,
-      message: result.failure.message,
-      details: {},
-    },
-  };
+  throw new Error("Invalid turn terminal.");
 }

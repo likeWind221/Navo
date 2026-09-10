@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 
 import type { KernelHostLaunchConfig } from "./process.js";
 
@@ -13,7 +13,7 @@ export interface ResolveHostLaunchOptions {
 export function resolveHostLaunchConfig(options: ResolveHostLaunchOptions): KernelHostLaunchConfig {
   const env = options.env ?? process.env;
   const mode = parseMode(env.SKILLWORLD_HOST_MODE);
-  const repoRoot = resolve(env.SKILLWORLD_REPO_ROOT ?? resolve(options.appPath, ".."));
+  const repoRoot = resolve(env.SKILLWORLD_REPO_ROOT ?? defaultRepoRoot(options.appPath));
   const tsxCli = resolve(repoRoot, "node_modules/tsx/dist/cli.mjs");
   const entry = resolve(repoRoot, mode === "mock" ? "scripts/host/mock.ts" : "src/host/main.ts");
   return {
@@ -22,8 +22,17 @@ export function resolveHostLaunchConfig(options: ResolveHostLaunchOptions): Kern
     cwd: repoRoot,
     env: { ...env, ELECTRON_RUN_AS_NODE: "1" },
     readyMarker: mode === "mock" ? "[mock-kernel-host] ready" : "[kernel-host] ready",
-    secrets: [env.LLM_API_KEY ?? ""],
+    secrets: [env.LLM_API_KEY ?? "", env.EXA_API_KEY ?? ""],
   };
+}
+
+function defaultRepoRoot(appPath: string): string {
+  const resolvedAppPath = resolve(appPath);
+  if (basename(resolvedAppPath).toLowerCase() === "main"
+    && basename(dirname(resolvedAppPath)).toLowerCase() === "out") {
+    return resolve(resolvedAppPath, "..", "..", "..");
+  }
+  return resolve(resolvedAppPath, "..");
 }
 
 function parseMode(value: string | undefined): KernelHostMode {

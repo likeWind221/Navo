@@ -15,7 +15,7 @@ export function ChatWorkspace(): React.JSX.Element {
     if (history !== null && shouldFollowMessages.current) {
       history.scrollTop = history.scrollHeight;
     }
-  }, [state.messages]);
+  }, [state.messages, state.commands, state.timeline]);
 
   function updateScrollPreference(event: UIEvent<HTMLDivElement>): void {
     const history = event.currentTarget;
@@ -26,7 +26,7 @@ export function ChatWorkspace(): React.JSX.Element {
   return (
     <section className={styles.chat} aria-label="Agent 对话工作区">
       <div className={styles.history} ref={historyRef} onScroll={updateScrollPreference}>
-        <MessageList messages={state.messages} />
+        <MessageList messages={state.messages} commands={state.commands} timeline={state.timeline} />
       </div>
       <div className={styles.inputArea}>
         <Composer onSubmit={send} busy={isBusy} onCancel={cancel} />
