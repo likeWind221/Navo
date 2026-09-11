@@ -18,7 +18,9 @@
     "test": "vitest run",
     "qa:f2-6": "electron out/main/chat.js",
     "qa:f3-6": "electron out/main/f36.js",
+    "qa:icons": "electron scripts/qa/icons.cjs",
     "qa:markdown": "electron out/main/markdown.js",
+    "qa:process": "electron scripts/qa/process.cjs",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
   },
   "dependencies": {

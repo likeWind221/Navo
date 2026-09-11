@@ -1,0 +1,118 @@
+{
+  "desktop": {
+    "entries": [
+      {
+        "label": "手册",
+        "box": [
+          20,
+          20
+        ],
+        "painted": [
+          18,
+          15.7
+        ],
+        "spinning": false
+      },
+      {
+        "label": "向导",
+        "box": [
+          20,
+          20
+        ],
+        "painted": [
+          18,
+          18
+        ],
+        "spinning": false
+      },
+      {
+        "label": "前往",
+        "box": [
+          20,
+          20
+        ],
+        "painted": [
+          14,
+          12
+        ],
+        "spinning": false
+      },
+      {
+        "label": "思考",
+        "box": [
+          20,
+          20
+        ],
+        "painted": [
+          11,
+          10
+        ],
+        "spinning": false
+      },
+      {
+        "label": "工具",
+        "box": [
+          20,
+          20
+        ],
+        "painted": [
+          15.3,
+          15.3
+        ],
+        "spinning": false
+      },
+      {
+        "label": "进行中",
+        "box": [
+          20,
+          20
+        ],
+        "painted": [
+          18,
+          18
+        ],
+        "spinning": true
+      },
+      {
+        "label": "成功",
+        "box": [
+          20,
+          20
+        ],
+        "painted": [
+          13.6,
+          9.2
+        ],
+        "spinning": false
+      },
+      {
+        "label": "失败",
+        "box": [
+          20,
+          20
+        ],
+        "painted": [
+          11.2,
+          11.2
+        ],
+        "spinning": false
+      },
+      {
+        "label": "展开",
+        "box": [
+          20,
+          20
+        ],
+        "painted": [
+          6.4,
+          12.8
+        ],
+        "spinning": false
+      }
+    ],
+    "overflow": false
+  },
+  "narrow": {
+    "overflow": false
+  }
+}

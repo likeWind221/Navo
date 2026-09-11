@@ -19,7 +19,11 @@ export interface AgentConversationModel {
 export function useAgentConversation(
   api: DesktopAgentApi | undefined = window.desktop?.agent,
 ): AgentConversationModel {
-  const [state, dispatch] = useReducer(conversationReducer, initialConversationState);
+  const [state, dispatch] = useReducer(
+    (current: ConversationState, action: ConversationAction) =>
+      conversationReducer(current, action, Date.now()),
+    initialConversationState,
+  );
   const activeRequest = useRef<string | null>(null);
   const activeCommand = useRef<string | null>(null);
   const lastOperation = useRef<"turn" | "command" | null>(null);

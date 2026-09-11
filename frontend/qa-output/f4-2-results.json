@@ -1,0 +1,42 @@
+{
+  "streaming": {
+    "headerLabel": "处理中",
+    "expanded": "true",
+    "bodyVisible": true,
+    "bodyHeight": 176,
+    "chevronTransform": "matrix(0, 1, -1, 0, 0, 0)",
+    "text": "处理中思考过程先读一下目录，再决定下一步。工具调用read已成功参数{\"path\":\"src/app.ts\"}结果读取完成内容",
+    "answerVisible": false,
+    "overflow": false
+  },
+  "streamingAfterClick": {
+    "headerLabel": "处理中",
+    "expanded": "true",
+    "bodyVisible": true,
+    "bodyHeight": 176,
+    "chevronTransform": "matrix(0, 1, -1, 0, 0, 0)",
+    "text": "处理中思考过程先读一下目录，再决定下一步。工具调用read已成功参数{\"path\":\"src/app.ts\"}结果读取完成内容",
+    "answerVisible": false,
+    "overflow": false
+  },
+  "folded": {
+    "headerLabel": "已处理 1s",
+    "expanded": "false",
+    "bodyVisible": false,
+    "bodyHeight": 0,
+    "chevronTransform": "none",
+    "text": "已处理 1s思考过程先读一下目录，再决定下一步。工具调用read已成功参数{\"path\":\"src/app.ts\"}结果读取完成内容最终回答：配置在 src/app.ts。",
+    "answerVisible": true,
+    "overflow": false
+  },
+  "expanded": {
+    "headerLabel": "已处理 1s",
+    "expanded": "true",
+    "bodyVisible": true,
+    "bodyHeight": 176,
+    "chevronTransform": "matrix(0, 1, -1, 0, 0, 0)",
+    "text": "已处理 1s思考过程先读一下目录，再决定下一步。工具调用read已成功参数{\"path\":\"src/app.ts\"}结果读取完成内容最终回答：配置在 src/app.ts。",
+    "answerVisible": true,
+    "overflow": false
+  }
+}

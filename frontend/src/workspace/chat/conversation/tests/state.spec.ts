@@ -8,13 +8,15 @@ import {
 } from "../../conversation.js";
 import type { ConversationState } from "../../conversation.js";
 
+const NOW = 1_700_000_000_000;
+
 describe("conversationReducer", () => {
   it("adds the user message and assistant placeholder atomically", () => {
     const state = submitted();
 
     expect(state.messages).toEqual([
       { id: "user-1", role: "user", text: "你好" },
-      { id: "assistant-1", role: "assistant", text: "", status: "waiting", failure: null },
+      { id: "assistant-1", role: "assistant", text: "", status: "waiting", failure: null, startedAt: NOW, endedAt: null },
     ]);
     expect(state.activeTurn).toEqual({
       requestId: "request-1",
@@ -35,9 +37,26 @@ describe("conversationReducer", () => {
       userMessageId: "user-2",
       assistantMessageId: "assistant-2",
       text: "第二条",
-    });
+    }, NOW);
 
     expect(duplicate).toBe(state);
+  });
+
+  it("records the elapsed time when the turn reaches a terminal state", () => {
+    const started = v2(submitted(), {
+      type: "turn-started", sessionId: "session-1", requestId: "request-1", turnId: "turn-1",
+    });
+    const finished = conversationReducer(started, {
+      type: "agent-event",
+      update: {
+        type: "turn-event",
+        event: {
+          type: "turn-completed", sessionId: "session-1", requestId: "request-1", turnId: "turn-1",
+        },
+      },
+    }, NOW + 12_000);
+
+    expect(finished.messages.at(-1)).toMatchObject({ startedAt: NOW, endedAt: NOW + 12_000 });
   });
 
   it("records the turn id and appends text deltas in order", () => {
@@ -96,7 +115,7 @@ describe("conversationReducer", () => {
       type: "turn-command-failed",
       requestId: "old-request",
       failure: { code: "old", message: "old" },
-    });
+    }, NOW);
     const failed = conversationReducer(stale, {
       type: "turn-update",
       update: {
@@ -104,7 +123,7 @@ describe("conversationReducer", () => {
         requestId: "request-1",
         failure: { code: "connection-closed", message: "连接断开" },
       },
-    });
+    }, NOW);
 
     expect(stale).toBe(state);
     expect(failed.messages.at(-1)).toMatchObject({
@@ -154,14 +173,14 @@ describe("conversationReducer", () => {
         type: "command-started", sessionId: "session-1", commandId: "command-1", name: "hello",
         anchor: { kind: "session" },
       },
-    });
+    }, NOW);
     const completed = conversationReducer(started, {
       type: "command-update",
       event: {
         type: "command-completed", sessionId: "session-1", commandId: "command-1", name: "hello",
         anchor: { kind: "session" }, summary: "hello",
       },
-    });
+    }, NOW);
 
     expect(completed.commands).toEqual([{
       id: "command-command-1",
@@ -217,7 +236,7 @@ function submitted(): ConversationState {
     userMessageId: "user-1",
     assistantMessageId: "assistant-1",
     text: "你好",
-  });
+  }, NOW);
 }
 
 function update(
@@ -228,9 +247,9 @@ function update(
   return conversationReducer(state, {
     type: "turn-update",
     update: { type: "event", requestId, event },
-  });
+  }, NOW);
 }
 
 function v2(state: ConversationState, event: AgentTurnV2Event): ConversationState {
-  return conversationReducer(state, { type: "agent-event", update: { type: "turn-event", event } });
+  return conversationReducer(state, { type: "agent-event", update: { type: "turn-event", event } }, NOW);
 }

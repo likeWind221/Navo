@@ -49,6 +49,8 @@ export interface AssistantConversationMessage {
   readonly text: string;
   readonly status: AssistantMessageStatus;
   readonly failure: DesktopAgentFailure | null;
+  readonly startedAt: number;
+  readonly endedAt: number | null;
   readonly turnId?: string;
   readonly blocks?: readonly AssistantContentBlock[];
 }
@@ -118,23 +120,25 @@ export const initialConversationState: ConversationState = Object.freeze({
 export function conversationReducer(
   state: ConversationState,
   action: ConversationAction,
+  now: number,
 ): ConversationState {
-  if (action.type === "turn-submitted") return submitTurn(state, action);
+  if (action.type === "turn-submitted") return submitTurn(state, action, now);
   if (action.type === "turn-command-failed") {
-    return failActiveTurn(state, action.requestId, action.failure);
+    return failActiveTurn(state, action.requestId, action.failure, now);
   }
-  if (action.type === "agent-event") return applyDesktopEvent(state, action.update);
+  if (action.type === "agent-event") return applyDesktopEvent(state, action.update, now);
   if (action.type === "command-update") return applyCommandEvent(state, action.event);
   if (state.activeTurn?.requestId !== action.update.requestId) return state;
   if (action.update.type === "bridge-error") {
-    return finishTurn(state, "failed", action.update.failure);
+    return finishTurn(state, "failed", action.update.failure, now);
   }
-  return applyAgentEvent(state, action.update.event);
+  return applyAgentEvent(state, action.update.event, now);
 }
 
 function submitTurn(
   state: ConversationState,
   action: Extract<ConversationAction, { readonly type: "turn-submitted" }>,
+  now: number,
 ): ConversationState {
   if (state.activeTurn !== null || action.text.length === 0) return state;
   return {
@@ -147,6 +151,8 @@ function submitTurn(
         text: "",
         status: "waiting",
         failure: null,
+        startedAt: now,
+        endedAt: null,
       },
     ],
     commands: state.commands,
@@ -163,22 +169,30 @@ function submitTurn(
   };
 }
 
-function applyDesktopEvent(state: ConversationState, update: DesktopAgentEvent): ConversationState {
-  if (update.type === "turn-event") return applyTurnV2Event(state, update.event);
-  if (update.type === "turn-error") return failActiveTurn(state, update.requestId, update.failure);
+function applyDesktopEvent(
+  state: ConversationState,
+  update: DesktopAgentEvent,
+  now: number,
+): ConversationState {
+  if (update.type === "turn-event") return applyTurnV2Event(state, update.event, now);
+  if (update.type === "turn-error") return failActiveTurn(state, update.requestId, update.failure, now);
   if (update.type === "command-event") return applyCommandEvent(state, update.event);
   if (update.type === "command-error") {
     return applyCommandFailure(state, update.commandId, update.name, update.failure);
   }
   if (update.type === "event") {
     if (state.activeTurn?.requestId !== update.requestId) return state;
-    return applyAgentEvent(state, update.event);
+    return applyAgentEvent(state, update.event, now);
   }
   if (state.activeTurn?.requestId !== update.requestId) return state;
-  return finishTurn(state, "failed", update.failure);
+  return finishTurn(state, "failed", update.failure, now);
 }
 
-function applyTurnV2Event(state: ConversationState, event: AgentTurnV2Event): ConversationState {
+function applyTurnV2Event(
+  state: ConversationState,
+  event: AgentTurnV2Event,
+  now: number,
+): ConversationState {
   if (state.activeTurn?.requestId !== event.requestId) return state;
   if (event.type !== "turn-started" && state.activeTurn.turnId === null) return state;
   if (event.type !== "turn-started"
@@ -259,16 +273,16 @@ function applyTurnV2Event(state: ConversationState, event: AgentTurnV2Event): Co
     }));
   }
   if (event.type === "turn-failed") {
-    return finishTurnForRequest(state, event.requestId, "failed", toConversationFailure(event.failure));
+    return finishTurnForRequest(state, event.requestId, "failed", toConversationFailure(event.failure), now);
   }
   if (event.type === "turn-completed") {
-    return finishTurnForRequest(state, event.requestId, "completed", null);
+    return finishTurnForRequest(state, event.requestId, "completed", null, now);
   }
   if (event.type === "turn-cancelled") {
-    return finishTurnForRequest(state, event.requestId, "cancelled", null);
+    return finishTurnForRequest(state, event.requestId, "cancelled", null, now);
   }
   if (event.type === "turn-truncated") {
-    return finishTurnForRequest(state, event.requestId, "truncated", null);
+    return finishTurnForRequest(state, event.requestId, "truncated", null, now);
   }
   return state;
 }
@@ -371,7 +385,11 @@ function applyCommandFailure(
   };
 }
 
-function applyAgentEvent(state: ConversationState, event: AgentTurnEvent): ConversationState {
+function applyAgentEvent(
+  state: ConversationState,
+  event: AgentTurnEvent,
+  now: number,
+): ConversationState {
   if (event.type === "started") {
     return { ...state, activeTurn: { ...requireActive(state), turnId: event.turnId } };
   }
@@ -382,25 +400,27 @@ function applyAgentEvent(state: ConversationState, event: AgentTurnEvent): Conve
       status: "streaming",
     }));
   }
-  if (event.type === "failed") return finishTurn(state, "failed", toConversationFailure(event.failure));
-  return finishTurn(state, event.type, null);
+  if (event.type === "failed") return finishTurn(state, "failed", toConversationFailure(event.failure), now);
+  return finishTurn(state, event.type, null, now);
 }
 
 function failActiveTurn(
   state: ConversationState,
   requestId: string,
   failure: DesktopAgentFailure,
+  now: number,
 ): ConversationState {
   if (state.activeTurn?.requestId !== requestId) return state;
-  return finishTurn(state, "failed", failure);
+  return finishTurn(state, "failed", failure, now);
 }
 
 function finishTurn(
   state: ConversationState,
   status: Exclude<AssistantMessageStatus, "waiting" | "streaming">,
   failure: DesktopAgentFailure | null,
+  now: number,
 ): ConversationState {
-  const updated = updateAssistant(state, (message) => ({ ...message, status, failure }));
+  const updated = updateAssistant(state, (message) => ({ ...message, status, failure, endedAt: now }));
   return { ...updated, activeTurn: null };
 }
 
@@ -409,9 +429,10 @@ function finishTurnForRequest(
   requestId: string,
   status: Exclude<AssistantMessageStatus, "waiting" | "streaming">,
   failure: DesktopAgentFailure | null,
+  now: number,
 ): ConversationState {
   if (state.activeTurn?.requestId !== requestId) return state;
-  return finishTurn(state, status, failure);
+  return finishTurn(state, status, failure, now);
 }
 
 function updateAssistantForRequest(

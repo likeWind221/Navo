@@ -30,6 +30,8 @@
 .iconSamples { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 30px; border-top: 1px solid var(--border); padding-top: 24px; }
 .iconSamples > span { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
 .iconSamples small { width: 100%; color: var(--text-secondary); font-size: 11px; }
+.spinning { display: inline-flex; animation: iconSpin 1s linear infinite; }
+@keyframes iconSpin { to { transform: rotate(360deg); } }
 .reading { padding: 20px; border-radius: 12px; background: var(--surface-muted); }
 .readingLabel { display: flex; align-items: center; gap: 8px; color: var(--accent-strong); font-size: 12px; }
 .reading h3 { font-family: var(--font-heading); font-size: 22px; font-weight: 500; line-height: 1.6; margin: 16px 0 12px; }

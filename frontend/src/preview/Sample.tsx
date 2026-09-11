@@ -42,7 +42,10 @@ export default function DesignSample(): React.JSX.Element {
           <div className={styles.row}><span className={styles.badge}>教材 · 示例</span><span className={styles.outlineBadge}>能力未验证</span></div>
           <div className={styles.iconSamples}>
             <span><Icon name="book" /> 手册</span><span><Icon name="guide" /> 向导</span><span><Icon name="arrow" /> 前往</span>
-            <small>自绘 SVG / 统一描边</small>
+            <span><Icon name="brain" /> 思考</span><span><Icon name="tool" /> 工具</span>
+            <span><span className={styles.spinning}><Icon name="loader" /></span> 进行中</span>
+            <span><Icon name="check" /> 成功</span><span><Icon name="close" /> 失败</span><span><Icon name="chevron" /> 展开</span>
+            <small>自绘 SVG / 统一描边 / 颜色继承文字</small>
           </div>
         </section>
 

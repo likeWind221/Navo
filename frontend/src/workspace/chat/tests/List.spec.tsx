@@ -89,6 +89,41 @@ describe("MessageList", () => {
     expect(markup).toContain("没有权限");
   });
 
+  it("folds a finished turn's process into one row while keeping the answer visible", () => {
+    const blocks: readonly AssistantContentBlock[] = [
+      { id: "reasoning", kind: "reasoning", text: "先分析", status: "completed" },
+      { id: "answer", kind: "text", text: "最终回答", status: "completed" },
+    ];
+    const markup = render([{ ...assistant("", "completed"), blocks }]);
+
+    expect(markup).toContain("已处理 4s");
+    expect(markup).toContain('aria-expanded="false"');
+    expect(markup).toMatch(/processBody[^>]*hidden/);
+    expect(markup).toContain("最终回答");
+  });
+
+  it("keeps the process expanded while the turn is still streaming", () => {
+    const blocks: readonly AssistantContentBlock[] = [
+      { id: "reasoning", kind: "reasoning", text: "先分析", status: "completed" },
+      { id: "answer", kind: "text", text: "正在写", status: "streaming" },
+    ];
+    const markup = render([{ ...assistant("", "streaming"), blocks }]);
+
+    expect(markup).toContain('aria-expanded="true"');
+    expect(markup).not.toContain("已处理");
+  });
+
+  it("keeps a tool-only turn expanded instead of folding it into a lone header", () => {
+    const blocks: readonly AssistantContentBlock[] = [{
+      id: "tool", kind: "tool-call", toolCallId: "call-1", toolName: "read", arguments: "{}",
+      status: "succeeded", summary: "读取完成", detail: "", failure: null,
+    }];
+    const markup = render([{ ...assistant("", "completed"), blocks }]);
+
+    expect(markup).toContain('aria-expanded="true"');
+    expect(markup).toContain("读取完成");
+  });
+
   it("renders command notifications at their timeline position", () => {
     const message: readonly ConversationMessage[] = [
       { id: "user-1", role: "user", text: "before" },
@@ -147,5 +182,8 @@ function assistant(
   status: Extract<ConversationMessage, { readonly role: "assistant" }>["status"],
   failure: Extract<ConversationMessage, { readonly role: "assistant" }>["failure"] = null,
 ): AssistantConversationMessage {
-  return { id: `assistant-${status}`, role: "assistant", text, status, failure };
+  return {
+    id: `assistant-${status}`, role: "assistant", text, status, failure,
+    startedAt: 0, endedAt: status === "waiting" || status === "streaming" ? null : 4_000,
+  };
 }

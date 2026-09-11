@@ -32,6 +32,14 @@
 .userMessage > p, .commandMessage > p { margin: 0; font-size: 15px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .contentBlocks { display: grid; gap: 12px; }
 .textBlock { min-width: 0; }
+.processRow { min-width: 0; }
+.processHeader { display: flex; align-items: center; gap: 6px; width: 100%; padding: 2px 0; border: 0; background: transparent; color: var(--text-secondary); font-size: 12px; text-align: left; transition: color var(--duration); }
+.processHeader:hover { color: var(--text); }
+.processHeader svg { width: 14px; height: 14px; flex-shrink: 0; transition: transform var(--duration); }
+.processHeader[aria-expanded="true"] svg { transform: rotate(90deg); }
+.processLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.processBody { display: grid; gap: 12px; margin-top: 10px; }
+.processBody[hidden] { display: none; }
 .reasoningBlock { max-width: 100%; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-muted); color: var(--text-secondary); overflow: hidden; }
 .reasoningBlock summary { cursor: pointer; padding: 9px 12px; color: var(--text); font-size: 12px; font-weight: 600; }
 .reasoningText { padding: 0 12px 11px; color: var(--text-secondary); font-size: 13px !important; line-height: 1.65; }

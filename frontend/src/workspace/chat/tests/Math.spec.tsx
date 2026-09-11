@@ -48,7 +48,7 @@ describe("math parsing", () => {
 
   it.each(["completed", "cancelled", "failed", "truncated"] as const)("renders formulas in retained %s content", (status) => {
     const html = renderToStaticMarkup(<MessageList messages={[{
-      id: "a", role: "assistant", text: "$x$", status, failure: null,
+      id: "a", role: "assistant", text: "$x$", status, failure: null, startedAt: 0, endedAt: 4_000,
       blocks: [
         { id: "r", kind: "reasoning", text: "$r$", status: "streaming" },
         { id: "t", kind: "text", text: "$$x$$", status: "streaming" },
@@ -63,8 +63,8 @@ describe("math parsing", () => {
 
   it("keeps formulas as literal text until the turn ends", () => {
     const blocks = [{ id: "t", kind: "text" as const, text: "$x$", status: "streaming" as const }];
-    const streaming = renderToStaticMarkup(<MessageList messages={[{ id: "a", role: "assistant", text: "", status: "streaming", failure: null, blocks }]} />);
-    const settled = renderToStaticMarkup(<MessageList messages={[{ id: "a", role: "assistant", text: "", status: "completed", failure: null, blocks }]} />);
+    const streaming = renderToStaticMarkup(<MessageList messages={[{ id: "a", role: "assistant", text: "", status: "streaming", failure: null, startedAt: 0, endedAt: null, blocks }]} />);
+    const settled = renderToStaticMarkup(<MessageList messages={[{ id: "a", role: "assistant", text: "", status: "completed", failure: null, startedAt: 0, endedAt: 4_000, blocks }]} />);
     expect(streaming).toContain("$x$");
     expect(streaming).not.toContain("data-math=");
     expect(settled).not.toContain("$x$");
@@ -74,7 +74,7 @@ describe("math parsing", () => {
   it("renders formulas inside legacy assistant text but not user input", () => {
     const html = renderToStaticMarkup(<MessageList messages={[
       { id: "u", role: "user", text: "用户输入 $x$" },
-      { id: "a", role: "assistant", text: "旧版正文 $x$", status: "completed", failure: null },
+      { id: "a", role: "assistant", text: "旧版正文 $x$", status: "completed", failure: null, startedAt: 0, endedAt: 4_000 },
     ]} />);
     expect(html).toContain("用户输入 $x$");
     expect(html).not.toContain("用户输入 <span");
