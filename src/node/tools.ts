@@ -37,7 +37,9 @@ export const NodeContentTools = Object.assign(
           };
           const snapshot = updateOwnedNode(ctx, execution, (nodeId) =>
             ctx.nodes.replaceMaterial(nodeId, input));
-          return `Material updated to revision ${snapshot.content.material!.revision}.`;
+          return {
+            content: `Material updated to revision ${snapshot.content.material!.revision}.`,
+          };
         },
       }));
       registrations.push(ctx.tools.register({
@@ -52,7 +54,9 @@ export const NodeContentTools = Object.assign(
           const snapshot = updateOwnedNode(ctx, execution, (nodeId) =>
             ctx.nodes.replaceExerciseSet(nodeId, input));
           const exerciseSet = snapshot.content.exerciseSet!;
-          return `Exercise set updated to revision ${exerciseSet.revision} with ${exerciseSet.exercises.length} exercises.`;
+          return {
+            content: `Exercise set updated to revision ${exerciseSet.revision} with ${exerciseSet.exercises.length} exercises.`,
+          };
         },
       }));
     } catch (error: unknown) {

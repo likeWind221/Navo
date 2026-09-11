@@ -105,14 +105,14 @@ describe("read text files", () => {
       resolveWorld: () => ({ cwd: root }),
       saveResult: async (result) => { await writeFile(join(root, "result.json"), JSON.stringify(result)); },
     });
-    const output = await tool.execute({ path: "text.txt", maxLines: 1 }, {
+    const result = await tool.execute({ path: "text.txt", maxLines: 1 }, {
       callId: "read-call" as ToolCallId, sessionId: "session" as SessionId, signal,
     });
     const saved = JSON.parse(await readFile(join(root, "result.json"), "utf8")) as ReadResult;
-    expect(output).toBe(formatReadResult(saved));
-    expect(output).toContain("1: hello");
-    expect(output).toContain("startLine=2");
-    expect(output).not.toContain('"lines":');
+    expect(result.content).toBe(formatReadResult(saved));
+    expect(result.content).toContain("1: hello");
+    expect(result.content).toContain("startLine=2");
+    expect(result.content).not.toContain('"lines":');
     await expect(tool.execute({ path: "text.txt" }, { callId: "x" as ToolCallId, signal }))
       .rejects.toMatchObject({ modelMessage: "File tools require an active Session." });
   });

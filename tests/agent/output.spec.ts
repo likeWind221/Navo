@@ -201,7 +201,7 @@ describe("Runtime public events", () => {
     kit.ctx.tools.register({
       name: "large_output",
       parameters: { type: "object", additionalProperties: false },
-      execute: () => full,
+      execute: () => ({ content: full }),
     });
     const input = { ...turnInput("tool-large"), requestId: "tool-large-request" };
     const validator = createTurnOutputValidator({

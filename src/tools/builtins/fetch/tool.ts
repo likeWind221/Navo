@@ -34,7 +34,7 @@ export const FetchTool = Object.assign(
               arguments_ as unknown as FetchRequest,
               signal,
             );
-            return formatFetchOutput(result, outputLimit);
+            return { content: formatFetchOutput(result, outputLimit) };
           } catch (error: unknown) {
             const message = error instanceof FetchError
               ? error.modelMessage

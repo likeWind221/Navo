@@ -191,7 +191,7 @@ describe("AgentRuntime resilience", () => {
       execute: async (_arguments, { signal }) => {
         started.resolve();
         await aborted(signal);
-        return "unreachable";
+        return { content: "unreachable" };
       },
     });
     const pending = kit.ctx.agentRuntime.runTurn({
@@ -258,7 +258,7 @@ describe("AgentRuntime resilience", () => {
       parameters: { type: "object", properties: {}, additionalProperties: false },
       execute: async () => {
         executions += 1;
-        return "unexpected";
+        return { content: "unexpected" };
       },
     });
 

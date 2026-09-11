@@ -47,7 +47,7 @@ describe("SkillWorld application integration", () => {
       modelResponse([{ type: "text", text: "FINAL: closed loop" }]),
     ]);
     const execute = vi.fn(async (arguments_: JsonObject) =>
-      String(arguments_.text));
+      ({ content: String(arguments_.text) }));
     await app.plugin(Object.assign(
       (ctx: Context) => {
         const unregisterAdapter = ctx.llm.registerAdapter("mock", adapter);

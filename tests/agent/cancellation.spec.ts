@@ -21,7 +21,7 @@ describe("ToolService cancellation", () => {
       parameters: { type: "object", properties: {} },
       execute: async () => {
         invoked = true;
-        return "unexpected";
+        return { content: "unexpected" };
       },
     });
     const call = toolCall("pre-aborted", "must_not_run", {});
@@ -70,7 +70,7 @@ describe("ToolService cancellation", () => {
       parameters: { type: "object", properties: {} },
       execute: async () => {
         controller.abort("stop after committed result");
-        return "committed";
+        return { content: "committed" };
       },
     });
     const call = toolCall("commit-then-abort", "commit_then_abort", {});
@@ -125,7 +125,7 @@ describe("ToolService execution binding", () => {
       parameters: { type: "object", properties: {} },
       execute: async () => {
         await gate;
-        return "old";
+        return { content: "old" };
       },
     });
     const pending = ctx.tools.execute(
@@ -136,7 +136,7 @@ describe("ToolService execution binding", () => {
     ctx.tools.register({
       name: "replaceable",
       parameters: { type: "object", properties: {} },
-      execute: async () => "new",
+      execute: async () => ({ content: "new" }),
     });
 
     release?.();

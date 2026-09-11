@@ -25,7 +25,7 @@ export function createReadTool(config: ReadToolConfig): ToolDefinition {
         const result = await readTextFile(world, args as unknown as ReadRequest, execution.signal);
         await config.saveResult(result, execution.sessionId);
         execution.signal.throwIfAborted();
-        return formatReadResult(result);
+        return { content: formatReadResult(result) };
       } catch (error) {
         const failure = classifyReadError(error, execution.signal);
         throw new ToolExecutionError(failure.message, failure.modelMessage, { cause: failure });

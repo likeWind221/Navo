@@ -29,7 +29,7 @@ async function main(): Promise<void> {
         required: ["text"],
         additionalProperties: false,
       },
-      execute: async (arguments_) => String(arguments_.text),
+      execute: async (arguments_) => ({ content: String(arguments_.text) }),
     });
 
     const sessionId = createSessionId("real-agent-step");

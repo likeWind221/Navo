@@ -2,7 +2,6 @@ import type { SessionId, ToolCallId } from "../brand/ids.js";
 import type {
   JsonObject,
   JsonValue,
-  TextContentBlock,
   ToolResultContentBlock,
   ToolSchema,
 } from "../llm/types.js";
@@ -38,12 +37,16 @@ export interface ToolExecutionOptions {
   readonly onStarted?: () => void | Promise<void>;
 }
 
-/** Current minimal model-facing output contract for native tools. */
-export type ToolOutput = string | readonly TextContentBlock[];
+/** Model-facing text plus optional model-invisible structured data. */
+export type ToolOutput = {
+  readonly content: string;
+  readonly artifact?: JsonValue;
+};
 
 export interface ToolExecutionSuccess {
   readonly kind: "success";
   readonly block: ToolResultContentBlock & { readonly isError: false };
+  readonly artifact?: JsonValue;
 }
 
 export interface ToolExecutionFailure {

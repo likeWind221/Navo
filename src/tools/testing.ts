@@ -22,7 +22,7 @@ export const TestTools = Object.assign(
           required: ["text"],
           additionalProperties: false,
         },
-        execute: async (arguments_) => String(arguments_.text),
+        execute: async (arguments_) => ({ content: String(arguments_.text) }),
       }));
       registrations.push(ctx.tools.register({
         name: TEST_TOOL_NAMES.fail,
@@ -54,7 +54,7 @@ export const TestTools = Object.assign(
             throw new TypeError("delayMs must be a non-negative integer.");
           }
           await cancellableDelay(delayMs, signal);
-          return String(arguments_.text);
+          return { content: String(arguments_.text) };
         },
       }));
     } catch (error: unknown) {

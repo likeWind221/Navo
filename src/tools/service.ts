@@ -4,6 +4,7 @@ import type { Context } from "cordis";
 import type { ToolCallId } from "../brand/ids.js";
 import type {
   JsonObject,
+  JsonValue,
   TextContentBlock,
   ToolCallContentBlock,
   ToolSchema,
@@ -176,35 +177,35 @@ function snapshotDefinition(definition: ToolDefinition): RegisteredTool {
   return Object.freeze({ schema, execute: definition.execute });
 }
 
-function normalizeOutput(output: ToolOutput): readonly TextContentBlock[] {
-  if (typeof output === "string") {
-    return Object.freeze([{ type: "text", text: output }]);
-  }
+interface NormalizedOutput {
+  readonly content: readonly TextContentBlock[];
+  readonly artifact?: JsonValue;
+}
 
-  const detached = structuredClone(output) as unknown;
-  if (!Array.isArray(detached)) {
-    throw new TypeError("Tool output must be a string or an array of text blocks.");
+function normalizeOutput(output: ToolOutput): NormalizedOutput {
+  const detached = structuredClone(output);
+  if (!isRecord(detached) || typeof detached.content !== "string") {
+    throw new TypeError("Tool output must provide string content.");
   }
-  for (const [index, block] of detached.entries()) {
-    if (!isRecord(block) || block.type !== "text" || typeof block.text !== "string") {
-      throw new TypeError(`Tool output block at index ${index} must be a text block.`);
-    }
-  }
-  return deepFreeze(detached as TextContentBlock[]);
+  return deepFreeze({
+    content: [{ type: "text", text: detached.content }],
+    ...(detached.artifact === undefined ? {} : { artifact: detached.artifact }),
+  });
 }
 
 function successResult(
   callId: ToolCallId,
-  content: readonly TextContentBlock[],
+  output: NormalizedOutput,
 ): ToolExecutionSuccess {
   return deepFreeze({
     kind: "success",
     block: {
       type: "tool-result",
       toolCallId: callId,
-      content,
+      content: output.content,
       isError: false,
     },
+    ...(output.artifact === undefined ? {} : { artifact: output.artifact }),
   });
 }
 

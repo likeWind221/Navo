@@ -43,7 +43,7 @@ export const SearchTool = Object.assign(
                 signals: [execution.signal, lifecycle.signal],
               },
             );
-            return formatSearchOutput(result);
+            return { content: formatSearchOutput(result) };
           } catch (error: unknown) {
             // Do not copy provider diagnostics or unknown exception text into tool results.
             const message = error instanceof SearchError

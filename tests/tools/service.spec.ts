@@ -40,7 +40,7 @@ describe("ToolService registration and schemas", () => {
       name: "snapshot",
       description: "snapshot test",
       parameters,
-      execute: async () => "ok",
+      execute: async () => ({ content: "ok" }),
     });
     parameters.properties.text.type = "integer";
 
@@ -60,7 +60,7 @@ describe("ToolService registration and schemas", () => {
     const definition = {
       name: "echo",
       parameters: { type: "object", properties: {} },
-      execute: async () => "ok",
+      execute: async () => ({ content: "ok" }),
     } as const;
     ctx.tools.register(definition);
 
@@ -82,13 +82,13 @@ describe("ToolService registration and schemas", () => {
     const first = ctx.tools.register({
       name: "replaceable",
       parameters: { type: "object", properties: {} },
-      execute: async () => "first",
+      execute: async () => ({ content: "first" }),
     });
     first();
     ctx.tools.register({
       name: "replaceable",
       parameters: { type: "object", properties: {} },
-      execute: async () => "second",
+      execute: async () => ({ content: "second" }),
     });
     first();
 
@@ -114,7 +114,7 @@ describe("ToolService execution results", () => {
       },
       execute: () => {
         order.push("execute");
-        return "done";
+        return { content: "done" };
       },
     });
     const options = {
@@ -196,7 +196,7 @@ describe("ToolService execution results", () => {
     ctx.tools.register({
       name: "bad_output",
       parameters: { type: "object", properties: {} },
-      execute: async () => [{ type: "text", text: 7 }] as never,
+      execute: async () => ({ content: 7 }) as never,
     });
 
     const failed = await ctx.tools.execute(
@@ -216,7 +216,7 @@ describe("ToolService execution results", () => {
       kind: "failure",
       failure: {
         code: "tool-failed",
-        message: "Tool output block at index 0 must be a text block.",
+        message: "Tool output must provide string content.",
       },
     });
   });
@@ -234,7 +234,7 @@ describe("ToolService execution results", () => {
       },
       execute: async (arguments_) => {
         received.push(arguments_.value as number);
-        return "accepted";
+        return { content: "accepted" };
       },
     });
 
