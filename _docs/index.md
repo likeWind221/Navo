@@ -33,6 +33,8 @@
 - [8.1 文件工具协议收口](45-devlog-step-8-1-protocol-closure.md)：移除文件工具层独立 `find` 的请求、结果、Schema 和扫描错误文案，保留 `read/write/edit` 契约。
 - [8.2.2 纯文本 Read Tool](46-devlog-read-text.md)：DSH 式混合读取、严格 UTF-8、完整行窗口、JSON 保存出口与纯文本投影。
 - [8.2.1 工作区定位与文件目标](35-devlog-step-8-2-1-path-target.md)：固定执行工作区 `cwd`，归一化相对/绝对路径、符号链接和缺失目标。
+- [8.2.3 Shell Tool](52-devlog-step-8-2-3-shell-tool.md)：执行世界内的有界命令执行、powershell/bash 方言解析、超时与取消的进程树终止、退出码修正与模型投影。
+- [8.2.6 工具结果出口收口](54-devlog-step-8-2-6-tool-output.md)：工具结果出口收为单臂 `{ content, artifact? }`，删除死代码数组臂，现有工具统一对齐且模型文本不变。
 - [Pi Coding Agent 文件探索机制调研](36-devlog-research-pi-read-discovery.md)：确认默认由 `bash` 完成路径发现，`read` 负责已知路径读取，`find/grep/ls` 为可选工具。
 
 ## 前端记录
@@ -60,6 +62,11 @@
 - [F3.9：滚动区与输入框布局](44-devlog-f3-9-scroll-layout.md)：滚动区延伸至窗口底部，输入区域以不透明底部覆盖层遮挡经过的消息。
 - [F3.10：Markdown 消息展示](47-devlog-f3-10-markdown.md)：基于 DSH 的 GFM 语法树到 React 渲染、流式阅读、安全外链与 Electron 自动验收；等待人工确认。
 - [F3.11：数学公式展示](48-devlog-f3-11-math.md)：两套语法区分生成中与结束后、KaTeX 行内/块级公式、无效公式与危险命令边界、宽公式内部滚动及 Electron 自动验收。
+- [ChatGPT / Codex 式过程 UI 开源参考调研](49-devlog-chatgpt-codex-ui-research.md)：ai-elements、assistant-ui、lobehub、openai/codex 的思考/工具/过程折叠实现对比、许可证与可借鉴机制。
+- [F4 过程 UI 实施方案](50-process-ui-design.md)：以 LobeHub 为基准的回合过程分组、折叠状态、流式标题、计时与自绘图标库设计。
+- [F4.1：过程图标库](51-devlog-f4-1-icons.md)：九枚自绘图标、入口与单图标文件的职责划分、预览页演示与 Electron 渲染断言。
+- [图标库选型调研](53-devlog-icon-library-research.md)：reicon 与 lucide 的许可、体量、绘图一致性实测对比，结论为本阶段继续使用自绘图标。
+- [F4.2：回合过程折叠](55-devlog-f4-2-process-fold.md)：过程与最终回答切分、折叠判据、回合起止时间、真实 IPC 桌面验收与三处实现坑。
 
 ## 研究与自动审查
 
