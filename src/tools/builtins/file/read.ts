@@ -5,13 +5,17 @@ import type { SessionId } from "../../../brand/ids.js";
 import { ToolExecutionError } from "../../errors.js";
 import type { ToolDefinition } from "../../types.js";
 import { FileError } from "./errors.js";
-import { resolveFileTarget, type FileExecutionWorld } from "./path.js";
+import type { FileObservationStore } from "./observation.js";
+import { resolveFileTarget, type FileEnvironment } from "./path.js";
 import { buildReadWindow, formatReadResult } from "./read/window.js";
 import { FILE_LIMITS, FILE_TOOL_SCHEMAS, type ReadRequest, type ReadResult } from "./types.js";
 
 export interface ReadToolConfig {
-  readonly resolveWorld: (sessionId: SessionId) => FileExecutionWorld | Promise<FileExecutionWorld>;
+  readonly resolveFileEnvironment: (
+    sessionId: SessionId,
+  ) => FileEnvironment | Promise<FileEnvironment>;
   readonly saveResult: (result: ReadResult, sessionId: SessionId) => void | Promise<void>;
+  readonly observations: FileObservationStore;
 }
 
 export function createReadTool(config: ReadToolConfig): ToolDefinition {
@@ -21,10 +25,15 @@ export function createReadTool(config: ReadToolConfig): ToolDefinition {
       try {
         execution.signal.throwIfAborted();
         if (!execution.sessionId) throw new FileError("session-required", "Read requires a Session.");
-        const world = await config.resolveWorld(execution.sessionId);
-        const result = await readTextFile(world, args as unknown as ReadRequest, execution.signal);
+        const environment = await config.resolveFileEnvironment(execution.sessionId);
+        const result = await readTextFile(
+          environment,
+          args as unknown as ReadRequest,
+          execution.signal,
+        );
         await config.saveResult(result, execution.sessionId);
         execution.signal.throwIfAborted();
+        config.observations.observe(execution.sessionId, result.path);
         return { content: formatReadResult(result) };
       } catch (error) {
         const failure = classifyReadError(error, execution.signal);
@@ -35,7 +44,7 @@ export function createReadTool(config: ReadToolConfig): ToolDefinition {
 }
 
 export async function readTextFile(
-  world: FileExecutionWorld,
+  environment: FileEnvironment,
   request: ReadRequest,
   signal: AbortSignal,
 ): Promise<ReadResult> {
@@ -43,7 +52,7 @@ export async function readTextFile(
   try {
     signal.throwIfAborted();
     const { startLine, maxLines } = validateReadRequest(request);
-    const target = await resolveFileTarget(world, request.path);
+    const target = await resolveFileTarget(environment, request.path);
     signal.throwIfAborted();
     if (!(await stat(target.path)).isFile()) {
       throw new FileError("not-a-file", "Read target is not a regular file.");
@@ -62,7 +71,11 @@ export async function readTextFile(
   }
 }
 
-async function* readChunks(handle: FileHandle, size: number, signal: AbortSignal): AsyncGenerator<Uint8Array> {
+async function* readChunks(
+  handle: FileHandle,
+  size: number,
+  signal: AbortSignal,
+): AsyncGenerator<Uint8Array> {
   const buffer = Buffer.alloc(size < FILE_LIMITS.readStreamMinBytes
     ? Math.max(1, size + 1)
     : 64 * 1024);

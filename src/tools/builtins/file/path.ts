@@ -4,7 +4,7 @@ import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { FileError } from "./errors.js";
 import type { FilePath } from "./types.js";
 
-export interface FileExecutionWorld {
+export interface FileEnvironment {
   readonly cwd: string;
 }
 
@@ -14,13 +14,13 @@ export interface FileTarget {
   readonly exists: boolean;
 }
 
-export async function createFileExecutionWorld(
+export async function createFileEnvironment(
   cwd: string,
-): Promise<FileExecutionWorld> {
+): Promise<FileEnvironment> {
   if (typeof cwd !== "string" || !cwd || cwd.includes("\0") || !isAbsolute(cwd)) {
     throw new FileError(
       "invalid-config",
-      "File execution world cwd must be a non-empty absolute path.",
+      "File environment cwd must be a non-empty absolute path.",
     );
   }
 
@@ -28,29 +28,29 @@ export async function createFileExecutionWorld(
   try {
     canonicalCwd = await realpath(cwd);
   } catch (error: unknown) {
-    throw classifyFileError(error, "File execution world cwd could not be resolved.");
+    throw classifyFileError(error, "File environment cwd could not be resolved.");
   }
 
   try {
     if (!(await stat(canonicalCwd)).isDirectory()) {
       throw new FileError(
         "not-a-directory",
-        "File execution world cwd must be a directory.",
+        "File environment cwd must be a directory.",
       );
     }
   } catch (error: unknown) {
-    throw classifyFileError(error, "File execution world cwd could not be inspected.");
+    throw classifyFileError(error, "File environment cwd could not be inspected.");
   }
 
   return Object.freeze({ cwd: canonicalCwd });
 }
 
 export async function resolveFileTarget(
-  world: FileExecutionWorld,
+  environment: FileEnvironment,
   inputPath: FilePath,
 ): Promise<FileTarget> {
   validateFilePath(inputPath);
-  const candidate = resolve(world.cwd, inputPath);
+  const candidate = resolve(environment.cwd, inputPath);
 
   try {
     return Object.freeze({

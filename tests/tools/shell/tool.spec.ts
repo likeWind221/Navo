@@ -9,7 +9,7 @@ import { createToolTestKit } from "../../helpers/tools.js";
 const kit = createToolTestKit();
 afterEach(() => kit.dispose());
 
-const tool = createShellTool({ resolveWorld: () => ({ cwd: tmpdir() }) });
+const tool = createShellTool({ resolveFileEnvironment: () => ({ cwd: tmpdir() }) });
 const signal = new AbortController().signal;
 
 function run(args: JsonObject, activeSignal: AbortSignal = signal) {

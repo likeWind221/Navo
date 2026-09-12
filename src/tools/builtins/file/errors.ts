@@ -18,7 +18,7 @@ export type FileErrorCode =
   | "invalid-path"
   | "path-not-allowed"
   | "not-found"
-  | "already-exists"
+  | "not-observed"
   | "not-a-file"
   | "not-a-directory"
   | "invalid-text"
@@ -34,10 +34,10 @@ const FILE_MODEL_MESSAGES: Readonly<Record<FileErrorCode, string>> = Object.free
   "invalid-config": "File tool configuration is invalid.",
   "invalid-request": "File tool parameters are invalid. Check the scope, required fields and numeric limits.",
   "session-required": "File tools require an active Session.",
-  "invalid-path": "Use a valid path in the current Session execution world.",
-  "path-not-allowed": "The requested path is not available in the current execution world.",
+  "invalid-path": "Use a valid path in the current Session file environment.",
+  "path-not-allowed": "The requested path is not available in the current file environment.",
   "not-found": "The requested file or directory does not exist.",
-  "already-exists": "The file already exists. Use overwrite explicitly to replace it.",
+  "not-observed": "Read the existing file in this Session before replacing it.",
   "not-a-file": "The requested path is not a regular file.",
   "not-a-directory": "The requested search path is not a directory.",
   "invalid-text": "Only valid UTF-8 text without NUL characters is supported.",

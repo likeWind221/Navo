@@ -2,7 +2,7 @@ import { spawn, spawnSync } from "node:child_process";
 
 import { ShellError } from "./errors.js";
 import { shellInvocation, type ResolvedShellProfile } from "./profile.js";
-import type { FileExecutionWorld } from "../file/path.js";
+import type { FileEnvironment } from "../file/path.js";
 import {
   SHELL_LIMITS,
   type ShellExecSpec,
@@ -15,7 +15,7 @@ const SENSITIVE_ENV_NAME = /KEY|PASSWORD|SECRET|TOKEN/i;
 const TIMED_OUT = new Error("Shell command timed out.");
 
 export async function runShellCommand(
-  world: FileExecutionWorld,
+  environment: FileEnvironment,
   spec: ShellExecSpec,
   signal: AbortSignal,
   profile: ResolvedShellProfile,
@@ -33,7 +33,7 @@ export async function runShellCommand(
     }
 
     const child = spawn(profile.executable, [...shellInvocation(profile.kind, spec.command)], {
-      cwd: world.cwd,
+      cwd: environment.cwd,
       env: { ...scrubbedEnvironment(process.env), ...profile.env },
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,

@@ -135,7 +135,7 @@ describe("edit text files", () => {
 
   it("formats tool success and converts failures to stable model messages", async () => {
     await writeFile(join(root, "text.txt"), "before", "utf8");
-    const tool = createEditTool({ resolveWorld: () => ({ cwd: root }) });
+    const tool = createEditTool({ resolveFileEnvironment: () => ({ cwd: root }) });
     const result = await tool.execute({ path: "text.txt", oldText: "before", newText: "after" }, {
       callId: "edit-call" as ToolCallId,
       sessionId: "session" as SessionId,

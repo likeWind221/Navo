@@ -2,6 +2,7 @@ import { mkdtemp, writeFile, rm, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { FileObservationStore } from "../../../src/tools/builtins/file/observation.js";
 import { createReadTool, readTextFile } from "../../../src/tools/builtins/file/read.js";
 import { buildReadWindow, formatReadResult } from "../../../src/tools/builtins/file/read/window.js";
 import { FILE_LIMITS, type ReadRequest, type ReadResult } from "../../../src/tools/builtins/file/types.js";
@@ -102,7 +103,8 @@ describe("read text files", () => {
   it("saves canonical JSON and produces the same model text after replay", async () => {
     await writeFile(join(root, "text.txt"), "hello\nworld");
     const tool = createReadTool({
-      resolveWorld: () => ({ cwd: root }),
+      resolveFileEnvironment: () => ({ cwd: root }),
+      observations: new FileObservationStore(),
       saveResult: async (result) => { await writeFile(join(root, "result.json"), JSON.stringify(result)); },
     });
     const result = await tool.execute({ path: "text.txt", maxLines: 1 }, {

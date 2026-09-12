@@ -6,17 +6,17 @@ import { describe, expect, it } from "vitest";
 
 import { FileError } from "../../../src/tools/builtins/file/errors.js";
 import {
-  createFileExecutionWorld,
+  createFileEnvironment,
   resolveFileTarget,
 } from "../../../src/tools/builtins/file/path.js";
 
-describe("file execution world path targets", () => {
+describe("file environment path targets", () => {
   it("uses the fixed cwd and normalizes dot segments", async () => {
     const root = await createFixture();
     try {
-      const world = await createFileExecutionWorld(root);
-      const relative = await resolveFileTarget(world, "notes/./nested/../a.txt");
-      const absolute = await resolveFileTarget(world, join(root, "notes", "a.txt"));
+      const environment = await createFileEnvironment(root);
+      const relative = await resolveFileTarget(environment, "notes/./nested/../a.txt");
+      const absolute = await resolveFileTarget(environment, join(root, "notes", "a.txt"));
 
       expect(relative.path).toBe(absolute.path);
       expect(relative.exists).toBe(true);
@@ -26,13 +26,13 @@ describe("file execution world path targets", () => {
     }
   });
 
-  it("gives shared cwd worlds the same target and keeps other cwd paths distinct", async () => {
+  it("gives shared cwd environments the same target and keeps other cwd paths distinct", async () => {
     const firstRoot = await createFixture();
     const secondRoot = await createFixture();
     try {
-      const first = await createFileExecutionWorld(firstRoot);
-      const shared = await createFileExecutionWorld(firstRoot);
-      const second = await createFileExecutionWorld(secondRoot);
+      const first = await createFileEnvironment(firstRoot);
+      const shared = await createFileEnvironment(firstRoot);
+      const second = await createFileEnvironment(secondRoot);
 
       const firstTarget = await resolveFileTarget(first, "notes/a.txt");
       const sharedTarget = await resolveFileTarget(shared, "notes/a.txt");
@@ -53,10 +53,10 @@ describe("file execution world path targets", () => {
     try {
       const alias = join(root, "alias");
       await symlink(join(root, "notes"), alias, process.platform === "win32" ? "junction" : "dir");
-      const world = await createFileExecutionWorld(root);
-      const throughAlias = await resolveFileTarget(world, "alias/a.txt");
-      const direct = await resolveFileTarget(world, "notes/a.txt");
-      const missing = await resolveFileTarget(world, "alias/new.txt");
+      const environment = await createFileEnvironment(root);
+      const throughAlias = await resolveFileTarget(environment, "alias/a.txt");
+      const direct = await resolveFileTarget(environment, "notes/a.txt");
+      const missing = await resolveFileTarget(environment, "alias/new.txt");
 
       expect(throughAlias.path).toBe(direct.path);
       expect(missing.exists).toBe(false);
@@ -67,17 +67,17 @@ describe("file execution world path targets", () => {
   });
 
   it("requires an absolute existing directory and rejects invalid paths", async () => {
-    await expect(createFileExecutionWorld("relative/workspace"))
+    await expect(createFileEnvironment("relative/workspace"))
       .rejects.toMatchObject({ code: "invalid-config" });
 
     const root = await createFixture();
     try {
-      const world = await createFileExecutionWorld(root);
-      await expect(resolveFileTarget(world, ""))
+      const environment = await createFileEnvironment(root);
+      await expect(resolveFileTarget(environment, ""))
         .rejects.toMatchObject({ code: "invalid-path" });
-      await expect(resolveFileTarget(world, "missing/child.txt"))
+      await expect(resolveFileTarget(environment, "missing/child.txt"))
         .rejects.toMatchObject({ code: "not-found" });
-      await expect(createFileExecutionWorld(join(root, "notes", "a.txt")))
+      await expect(createFileEnvironment(join(root, "notes", "a.txt")))
         .rejects.toMatchObject({ code: "not-a-directory" });
     } finally {
       await rm(root, { recursive: true, force: true });

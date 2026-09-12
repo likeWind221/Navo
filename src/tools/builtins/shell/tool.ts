@@ -2,7 +2,7 @@ import type { SessionId } from "../../../brand/ids.js";
 import type { JsonObject } from "../../../llm/types.js";
 import { ToolExecutionError } from "../../errors.js";
 import type { ToolDefinition } from "../../types.js";
-import type { FileExecutionWorld } from "../file/path.js";
+import type { FileEnvironment } from "../file/path.js";
 import { ShellError } from "./errors.js";
 import { runShellCommand } from "./execution.js";
 import { resolveShellProfile } from "./profile.js";
@@ -15,7 +15,7 @@ import {
 } from "./types.js";
 
 export interface ShellToolConfig {
-  readonly resolveWorld: (sessionId: SessionId) => FileExecutionWorld | Promise<FileExecutionWorld>;
+  readonly resolveFileEnvironment: (sessionId: SessionId) => FileEnvironment | Promise<FileEnvironment>;
   readonly kind?: ShellKind;
   readonly path?: string;
 }
@@ -30,8 +30,8 @@ export function createShellTool(config: ShellToolConfig): ToolDefinition {
         if (!execution.sessionId) {
           throw new ShellError("session-required", "Shell requires a Session.");
         }
-        const world = await config.resolveWorld(execution.sessionId);
-        const result = await runShellCommand(world, spec, execution.signal, profile);
+        const environment = await config.resolveFileEnvironment(execution.sessionId);
+        const result = await runShellCommand(environment, spec, execution.signal, profile);
         return { content: formatShellResult(result) };
       } catch (error: unknown) {
         const failure = classifyShellError(error, execution.signal);

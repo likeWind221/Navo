@@ -1,13 +1,12 @@
-import { randomUUID } from "node:crypto";
-import { open, rename, unlink } from "node:fs/promises";
+import { open } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
-import { dirname, join } from "node:path";
 
 import type { SessionId } from "../../../brand/ids.js";
 import { ToolExecutionError } from "../../errors.js";
 import type { ToolDefinition } from "../../types.js";
+import { atomicWriteFile } from "./atomic.js";
 import { FileError } from "./errors.js";
-import { resolveFileTarget, type FileExecutionWorld } from "./path.js";
+import { resolveFileTarget, type FileEnvironment } from "./path.js";
 import {
   FILE_LIMITS,
   FILE_TOOL_SCHEMAS,
@@ -16,7 +15,9 @@ import {
 } from "./types.js";
 
 export interface EditToolConfig {
-  readonly resolveWorld: (sessionId: SessionId) => FileExecutionWorld | Promise<FileExecutionWorld>;
+  readonly resolveFileEnvironment: (
+    sessionId: SessionId,
+  ) => FileEnvironment | Promise<FileEnvironment>;
 }
 
 export function createEditTool(config: EditToolConfig): ToolDefinition {
@@ -26,8 +27,12 @@ export function createEditTool(config: EditToolConfig): ToolDefinition {
       try {
         execution.signal.throwIfAborted();
         if (!execution.sessionId) throw new FileError("session-required", "Edit requires a Session.");
-        const world = await config.resolveWorld(execution.sessionId);
-        const result = await editTextFile(world, args as unknown as EditRequest, execution.signal);
+        const environment = await config.resolveFileEnvironment(execution.sessionId);
+        const result = await editTextFile(
+          environment,
+          args as unknown as EditRequest,
+          execution.signal,
+        );
         return { content: formatEditResult(result) };
       } catch (error: unknown) {
         const failure = classifyEditError(error, execution.signal);
@@ -38,18 +43,14 @@ export function createEditTool(config: EditToolConfig): ToolDefinition {
 }
 
 export async function editTextFile(
-  world: FileExecutionWorld,
+  environment: FileEnvironment,
   request: EditRequest,
   signal: AbortSignal,
 ): Promise<FileMutationResult> {
-  let tempPath: string | undefined;
-  let handle: FileHandle | undefined;
-  let committed = false;
-
   try {
     signal.throwIfAborted();
     validateEditRequest(request);
-    const target = await resolveFileTarget(world, request.path);
+    const target = await resolveFileTarget(environment, request.path);
     signal.throwIfAborted();
     if (!target.exists) throw new FileError("not-found", "Edit target does not exist.");
 
@@ -61,20 +62,7 @@ export async function editTextFile(
       throw new FileError("file-too-large", "Edited file exceeds the file byte limit.");
     }
 
-    tempPath = join(dirname(target.path), `.skillworld-edit-${process.pid}-${randomUUID()}.tmp`);
-    handle = await open(tempPath, "wx", 0o600);
-    await writeAll(handle, encoded, signal);
-    signal.throwIfAborted();
-    await handle.chmod(source.mode & 0o7777);
-    await handle.sync();
-    signal.throwIfAborted();
-    await handle.close();
-    handle = undefined;
-
-    signal.throwIfAborted();
-    await rename(tempPath, target.path);
-    committed = true;
-
+    await atomicWriteFile(target.path, encoded, source.mode, signal, "edit");
     return {
       path: target.path,
       operation: "edit",
@@ -82,17 +70,6 @@ export async function editTextFile(
     };
   } catch (error: unknown) {
     throw classifyEditError(error, signal);
-  } finally {
-    if (handle) {
-      try {
-        await handle.close();
-      } catch {}
-    }
-    if (!committed && tempPath) {
-      try {
-        await unlink(tempPath);
-      } catch {}
-    }
   }
 }
 
@@ -126,18 +103,6 @@ async function readEditSource(
     return { bytes: bytes.subarray(0, total), mode: info.mode };
   } finally {
     await handle?.close();
-  }
-}
-
-async function writeAll(handle: FileHandle, bytes: Uint8Array, signal: AbortSignal): Promise<void> {
-  let offset = 0;
-  while (offset < bytes.byteLength) {
-    signal.throwIfAborted();
-    const length = Math.min(64 * 1024, bytes.byteLength - offset);
-    const result = await handle.write(bytes, offset, length, null);
-    signal.throwIfAborted();
-    if (result.bytesWritten < 1) throw new FileError("io-failed", "Edit staging write made no progress.");
-    offset += result.bytesWritten;
   }
 }
 
