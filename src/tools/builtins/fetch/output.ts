@@ -19,13 +19,14 @@ export function resolveFetchOutputLimit(value: unknown): number {
   return value;
 }
 
+/** Render one complete normalized document before deciding whether to inline or spill it. */
+export function renderFetchDocument(result: FetchResult): string {
+  return `${fetchHeader(result)}${renderFetchBody(result)}`;
+}
+
 /** Render one complete normalized result within the model-facing output budget. */
 export function formatFetchOutput(result: FetchResult, maximum: number): string {
-  const header = `Fetched ${result.url} (HTTP ${result.statusCode})\n\n${NOTICE}\n\n`;
-  const rendered = result.body.kind === "html"
-    ? htmlToMarkdown(result.body.content)
-    : result.body.content;
-  const complete = `${header}${rendered}`;
+  const complete = renderFetchDocument(result);
   if (complete.length > maximum) {
     throw new FetchError(
       "response-too-large",
@@ -33,4 +34,46 @@ export function formatFetchOutput(result: FetchResult, maximum: number): string 
     );
   }
   return complete;
+}
+
+/** Return a bounded preview plus the relative path containing the complete document. */
+export function formatFetchSpillOutput(
+  result: FetchResult,
+  filePath: string,
+  maximum: number,
+): string {
+  const prefix = `${fetchHeader(result)}`
+    + `Full document saved to file_path: ${JSON.stringify(filePath)}\n`
+    + "Use the read tool with this file_path to continue reading the complete document.\n\n"
+    + "Preview:\n";
+  const suffix = "\n\n[Preview truncated. Use read with file_path for the complete document.]";
+  if (prefix.length > maximum) {
+    throw new FetchError(
+      "response-too-large",
+      `Fetch spill metadata exceeds the model output limit of ${maximum} characters.`,
+    );
+  }
+
+  const rendered = renderFetchBody(result);
+  const completeBudget = maximum - prefix.length;
+  if (rendered.length <= completeBudget) return `${prefix}${rendered}`;
+
+  const previewBudget = maximum - prefix.length - suffix.length;
+  if (previewBudget < 0) {
+    throw new FetchError(
+      "response-too-large",
+      `Fetch spill preview cannot fit the model output limit of ${maximum} characters.`,
+    );
+  }
+  return `${prefix}${rendered.slice(0, previewBudget)}${suffix}`;
+}
+
+function fetchHeader(result: FetchResult): string {
+  return `Fetched ${result.url} (HTTP ${result.statusCode})\n\n${NOTICE}\n\n`;
+}
+
+function renderFetchBody(result: FetchResult): string {
+  return result.body.kind === "html"
+    ? htmlToMarkdown(result.body.content)
+    : result.body.content;
 }

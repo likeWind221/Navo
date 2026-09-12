@@ -20,6 +20,7 @@ export type FetchErrorCode =
   | "network-failed"
   | "redirect-blocked"
   | "response-too-large"
+  | "spill-failed"
   | "conversion-failed"
   | "unsupported-content-type"
   | "unsupported-charset"
@@ -36,6 +37,7 @@ const MODEL_MESSAGES: Readonly<Record<FetchErrorCode, string>> = Object.freeze({
   "network-failed": "The web fetch request failed.",
   "redirect-blocked": "The web fetch redirect was not allowed.",
   "response-too-large": "The web response is too large to return as a complete document.",
+  "spill-failed": "The fetched document could not be saved to the current file environment.",
   "conversion-failed": "The web response could not be converted safely.",
   "unsupported-content-type": "The web response type is not supported.",
   "unsupported-charset": "The web response character encoding is not supported.",

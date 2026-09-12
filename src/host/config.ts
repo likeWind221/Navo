@@ -6,11 +6,16 @@ export interface KernelHostSearchConfig {
   readonly apiKey: string;
 }
 
+export interface KernelHostFileConfig {
+  readonly cwd: string;
+}
+
 export interface KernelHostConfig {
   readonly provider: "qwen";
   readonly adapter: QwenChatAdapterConfig;
   readonly agent: AgentTurnHandlerConfig;
   readonly search?: KernelHostSearchConfig;
+  readonly file?: KernelHostFileConfig;
 }
 
 const DEFAULT_BASE_URL = "http://192.168.99.2:8090/v1";
@@ -40,6 +45,13 @@ export function resolveKernelHostConfig(
     throw new TypeError("EXA_API_KEY must be non-empty printable ASCII.");
   }
   const search = exaApiKey === undefined ? undefined : Object.freeze({ apiKey: exaApiKey });
+  const fileCwd = env.SKILLWORLD_FILE_CWD;
+  if (fileCwd !== undefined && !fileCwd.trim()) {
+    throw new TypeError("SKILLWORLD_FILE_CWD must be a non-empty path when provided.");
+  }
+  const file = fileCwd === undefined
+    ? undefined
+    : Object.freeze({ cwd: fileCwd.trim() });
   return Object.freeze({
     provider: "qwen",
     adapter: Object.freeze({
@@ -53,6 +65,7 @@ export function resolveKernelHostConfig(
       ...(search === undefined ? {} : { toolNames: Object.freeze([WEB_SEARCH_TOOL_NAME]) }),
     }),
     ...(search === undefined ? {} : { search }),
+    ...(file === undefined ? {} : { file }),
   });
 }
 

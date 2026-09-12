@@ -13,7 +13,7 @@ export async function atomicWriteFile(
   bytes: Uint8Array,
   mode: number,
   signal: AbortSignal,
-  tempLabel: "edit" | "write",
+  tempLabel: "edit" | "write" | "fetch",
 ): Promise<void> {
   let tempPath: string | undefined;
   let handle: FileHandle | undefined;

@@ -37,6 +37,7 @@
 - [8.2.6 工具结果出口收口](54-devlog-step-8-2-6-tool-output.md)：工具结果出口收为单臂 `{ content, artifact? }`，删除死代码数组臂，现有工具统一对齐且模型文本不变。
 - [8.2.4 Edit Tool](56-devlog-edit-tool.md)：唯一字面替换、重叠匹配拒绝、UTF-8/大小边界与 sibling staging 原子发布。
 - [8.2.5 Write Tool](57-devlog-write-tool.md)：DSH 风格 `path + content`、完整读取观察门禁、共享原子发布与后续版本安全边界。
+- [8.3 Tools 根、Node 白名单与 Fetch spill](58-devlog-step-8-3-tools-fetch-spill.md)：显式 FileEnvironment 能力、四工具组装、超长 Fetch 原子留存、NodeAgent read 白名单与 Host cwd 接入。
 - [Pi Coding Agent 文件探索机制调研](36-devlog-research-pi-read-discovery.md)：确认默认由 `bash` 完成路径发现，`read` 负责已知路径读取，`find/grep/ls` 为可选工具。
 
 ## 前端记录

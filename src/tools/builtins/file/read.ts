@@ -14,7 +14,7 @@ export interface ReadToolConfig {
   readonly resolveFileEnvironment: (
     sessionId: SessionId,
   ) => FileEnvironment | Promise<FileEnvironment>;
-  readonly saveResult: (result: ReadResult, sessionId: SessionId) => void | Promise<void>;
+  readonly saveResult?: (result: ReadResult, sessionId: SessionId) => void | Promise<void>;
   readonly observations: FileObservationStore;
 }
 
@@ -31,9 +31,9 @@ export function createReadTool(config: ReadToolConfig): ToolDefinition {
           args as unknown as ReadRequest,
           execution.signal,
         );
-        await config.saveResult(result, execution.sessionId);
+        await config.saveResult?.(result, execution.sessionId);
         execution.signal.throwIfAborted();
-        config.observations.observe(execution.sessionId, result.path);
+        config.observations.observeRead(execution.sessionId, result);
         return { content: formatReadResult(result) };
       } catch (error) {
         const failure = classifyReadError(error, execution.signal);

@@ -1,20 +1,33 @@
 import { agentTurnMethod, agentTurnV2Method, sessionCommandMethod, StreamRpcRouter, StreamRpcServer } from "../../rpc/index.js";
 import { createApp } from "../app.js";
 import { QwenChatCompletionsAdapter } from "../llm/adapters/qwen.js";
+import { createFileEnvironment } from "../tools/builtins/file/path.js";
 import { ExaSearchAdapter } from "../tools/builtins/search/adapters/exa.js";
-import { createAgentTurnHandler } from "./turn.js";
-import { createAgentTurnV2Handler } from "./turn/v2.js";
+import type { ToolsPluginConfig } from "../tools/plugin.js";
 import { createSessionCommandHandler } from "./command.js";
 import { resolveKernelHostConfig } from "./config.js";
 import { StdioRpcServerTransport } from "./stdio.js";
+import { createAgentTurnHandler } from "./turn.js";
+import { createAgentTurnV2Handler } from "./turn/v2.js";
 
 export async function runKernelHost(): Promise<void> {
   const config = resolveKernelHostConfig();
-  const ctx = await createApp({
-    node: { session: { model: config.agent.model } },
+  const fileEnvironment = config.file === undefined
+    ? undefined
+    : await createFileEnvironment(config.file.cwd);
+  const tools: ToolsPluginConfig = {
     ...(config.search === undefined
       ? {}
-      : { tools: { search: { adapter: new ExaSearchAdapter(config.search) } } }),
+      : { search: { adapter: new ExaSearchAdapter(config.search) } }),
+    ...(fileEnvironment === undefined
+      ? {}
+      : { file: { resolveFileEnvironment: () => fileEnvironment } }),
+  };
+  const ctx = await createApp({
+    node: { session: { model: config.agent.model } },
+    ...(config.search === undefined && fileEnvironment === undefined
+      ? {}
+      : { tools }),
   });
   const unregister = ctx.llm.registerAdapter(
     config.provider,

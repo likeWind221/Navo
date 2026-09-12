@@ -17,7 +17,7 @@ Observation safety: 未完整 read 的 existing file 不能被 Write 盲覆盖
 Atomic safety:       提交前失败/取消不留下半文件
 ```
 
-本步骤不保存文件版本，也不在提交时比较 mtime/hash，因此不解决 `read -> 外部修改 -> write` 的 stale overwrite；并发创建、lost update、目标级锁等统一进入 8.5 文件并发与版本安全收口。
+本步骤不保存文件版本，也不在提交时比较 mtime/hash，因此不解决 `read -> 外部修改 -> write` 的 stale overwrite；并发创建、lost update、目标级锁等统一进入后续 **8.4 文件并发与版本安全收口**。
 
 ## 验收
 
@@ -32,8 +32,8 @@ Atomic safety:       提交前失败/取消不留下半文件
 - 源码与测试中无 `resolveWorld`、`FileExecutionWorld`、`createFileExecutionWorld` 残留；Write Schema 不再接受 `mode`。
 - 本次涉及的生产源码文件均低于项目 300 行限制。
 
-验收过程中发现 GitHub `master` 的 `_docs/backend-plan.md` 仍停留在旧阶段状态，已补充同步：8.2.4/8.2.5 标记完成、当前下一步为 8.3，并新增 8.5 并发与版本安全收口。
+8.3 开发前复核发现远端 `read.ts/write.ts` 仍调用已经不存在的 `observations.observe(...)`；8.3 已将其分别纠正为 `observeRead(...)` 与 `observeWhole(...)`，该问题属于 8.2.5 的接口收口遗漏。
 
 ## 下一步
 
-进入 8.3，将 `read / shell / edit / write` 与共享 FileEnvironment、ObservationStore 正式组装到 Tools 根，并接入 Node 白名单与 Fetch spill；8.5 再统一加入版本观察与并发保护。
+8.3 负责将 `read / shell / edit / write` 与共享 FileEnvironment、ObservationStore 正式组装到 Tools 根并接入 Fetch spill；随后进入 8.4 统一版本观察与并发保护，最后由 8.5 在 Work 模式执行完整工程验收。

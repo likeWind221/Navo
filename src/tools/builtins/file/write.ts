@@ -79,7 +79,7 @@ export async function writeTextFile(
     }
 
     await atomicWriteFile(target.path, encoded, mode, signal, "write");
-    observations.observe(sessionId, target.path);
+    observations.observeWhole(sessionId, target.path);
     return {
       path: target.path,
       operation,

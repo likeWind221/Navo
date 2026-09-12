@@ -9,9 +9,10 @@ import {
   createSessionId,
 } from "../brand/ids.js";
 import type { NodeId, SessionId } from "../brand/ids.js";
+import { FILE_TOOL_SCHEMAS } from "../tools/builtins/file/types.js";
 import { NodeError } from "./errors.js";
-import { createNodeAgentProfile } from "./profile.js";
 import type { NodeSnapshot } from "./model.js";
+import { createNodeAgentProfile } from "./profile.js";
 
 /** Trusted model route used by every Turn dispatched through this service. */
 export interface NodeSessionServiceConfig {
@@ -46,7 +47,7 @@ interface PendingTurn {
 
 /** Node-scoped facade over NodeStore, Profile generation, and AgentRuntime. */
 export class NodeSessionService extends Service {
-  static inject = ["nodes", "agentRuntime"];
+  static inject = ["nodes", "agentRuntime", "tools"];
 
   private readonly model: TurnModelConfig;
   private readonly tails = new Map<SessionId, Promise<void>>();
@@ -139,7 +140,11 @@ export class NodeSessionService extends Service {
         );
       }
       this.active.set(sessionId, pending);
-      const profile = createNodeAgentProfile(node);
+      const profile = createNodeAgentProfile(node, {
+        allowFileRead: this.ctx.tools.schemas().some(
+          (tool) => tool.name === FILE_TOOL_SCHEMAS.read.name,
+        ),
+      });
       const turn = await this.ctx.agentRuntime.runTurn({
         sessionId,
         userMessage: {
