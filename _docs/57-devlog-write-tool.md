@@ -13,7 +13,7 @@
 本步骤保证两层安全：
 
 ```text
-Observation safety: 未 read 的 existing file 不能被 Write 盲覆盖
+Observation safety: 未完整 read 的 existing file 不能被 Write 盲覆盖
 Atomic safety:       提交前失败/取消不留下半文件
 ```
 
@@ -21,7 +21,18 @@ Atomic safety:       提交前失败/取消不留下半文件
 
 ## 验收
 
-独立运行时 smoke 已覆盖：创建、创建后的再次写入、盲覆盖拒绝、分页只读前段仍拒绝覆盖、读完全部分页后允许覆盖、Session 隔离、权限保留、symlink canonical path、预取消无 staging 残留，以及 Edit 抽取 `atomic.ts` 后的回归。当前执行环境为 Node 22，项目要求 Node >=24 且未安装锁定依赖，因此未声称运行完整 Vitest/typecheck；本次涉及模块已通过针对性的严格 TypeScript 类型检查和运行时 smoke。
+2026-09-12 对 8.2.5 做了独立验收。当前执行环境只有 Node 22.16.0，项目要求 Node >=24，且容器无法访问 Node/npm 下载源，因此 Node 24、pnpm 10.33.0 与锁定依赖无法在本环境安装；未声称运行完整 `pnpm test` / `pnpm build`。
+
+在该限制下完成了以下可执行验收：
+
+- 使用 Node 24 的 `@types/node` 与项目 strict 编译选项，对本次涉及的 file/shell 源码做针对性 TypeScript 检查，通过。
+- 对 `path/read/edit/write` 测试文件做针对性 TypeScript 调用边界检查，通过；Vitest 仅以临时声明补足测试 API，不替代真实 Vitest 运行。
+- 将真实源码转译后执行 15 项文件系统行为检查，全部通过：FileEnvironment canonical cwd、创建、创建后再次写入、盲覆盖拒绝、完整 Read 后覆盖、Session 隔离、分页完整观察、乱序分页覆盖合并、空文件观察、权限保留、目录拒绝、非法文本/超限、symlink canonical target、预取消清理、中途分块写取消清理，以及共享 `atomic.ts` 后的 Edit 回归。
+- 中途取消通过临时注入 FileHandle.write 行为，在首个 64 KiB chunk 写完后 abort，确认旧目标内容保持不变且 `.skillworld-write-*` staging 被清理。
+- 源码与测试中无 `resolveWorld`、`FileExecutionWorld`、`createFileExecutionWorld` 残留；Write Schema 不再接受 `mode`。
+- 本次涉及的生产源码文件均低于项目 300 行限制。
+
+验收过程中发现 GitHub `master` 的 `_docs/backend-plan.md` 仍停留在旧阶段状态，已补充同步：8.2.4/8.2.5 标记完成、当前下一步为 8.3，并新增 8.5 并发与版本安全收口。
 
 ## 下一步
 
