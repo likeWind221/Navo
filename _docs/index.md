@@ -4,7 +4,7 @@
 
 - [SkillWorld 简化 PRD](00-skillworld-prd.md)：系统核心定义与产品原则。
 - [后端 Agent 内核开发计划](backend-plan.md)：后端阶段、步骤、状态和验收标准。
-- [前端开发计划](frontend-plan.md)：Electron + React 前端阶段、步骤和验收标准。
+- [前端开发计划](frontend-plan.md)：Electron + React 前端阶段、步骤、状态和验收标准。
 - [后端开发进度总览](19-backend-progress.md)：当前已完成能力、架构、验收和后续阶段。
 - [前端开发进度总览](20-frontend-progress.md)：当前桌面链路、Renderer 状态、QA 和后续边界。
 - [前端信息架构](12-frontend-information-architecture.md)：页面目标、路由、Node 工作区和权限边界。
@@ -25,7 +25,7 @@
 - [版本收口记录](09-devlog-version-closure.md)
 - [阶段 6：Node 学习内容闭环](10-devlog-phase-6-node-learning.md)：整合原 Step 6.1–6.15 的契约、实现、取舍和验收。
 - [阶段 7：Fetch 网页读取与调研闭环（合并记录）](18-devlog-phase-7-fetch.md)
-- [阶段 8：通用文件工具与网页结果留存规划](21-devlog-phase-8-file-tools-plan.md)：Pi 式 read/find/write/edit、Session 工作区与 Fetch spill。
+- [阶段 8：通用文件工具与网页结果留存规划](21-devlog-phase-8-file-tools-plan.md)：Pi 式 read/shell/edit/write、Session 文件环境与 Fetch spill。
 - [F2.2：Backend Kernel Host 与真实模型](17-devlog-step-f2-2-kernel-host.md)：记录 Qwen SSE Adapter、Agent Runtime 实时正文出口、stdio RPC Host、Mock Host 与生命周期验收。
 
 - [8.1：文件工具协议与稳定错误](22-devlog-step-8-1-file-protocol.md)
@@ -35,6 +35,8 @@
 - [8.2.1 工作区定位与文件目标](35-devlog-step-8-2-1-path-target.md)：固定执行工作区 `cwd`，归一化相对/绝对路径、符号链接和缺失目标。
 - [8.2.3 Shell Tool](52-devlog-step-8-2-3-shell-tool.md)：执行世界内的有界命令执行、powershell/bash 方言解析、超时与取消的进程树终止、退出码修正与模型投影。
 - [8.2.6 工具结果出口收口](54-devlog-step-8-2-6-tool-output.md)：工具结果出口收为单臂 `{ content, artifact? }`，删除死代码数组臂，现有工具统一对齐且模型文本不变。
+- [8.2.4 Edit Tool](56-devlog-edit-tool.md)：唯一字面替换、重叠匹配拒绝、UTF-8/大小边界与 sibling staging 原子发布。
+- [8.2.5 Write Tool](57-devlog-write-tool.md)：DSH 风格 `path + content`、完整读取观察门禁、共享原子发布与后续版本安全边界。
 - [Pi Coding Agent 文件探索机制调研](36-devlog-research-pi-read-discovery.md)：确认默认由 `bash` 完成路径发现，`read` 负责已知路径读取，`find/grep/ls` 为可选工具。
 
 ## 前端记录
