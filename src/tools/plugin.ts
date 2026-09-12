@@ -9,6 +9,7 @@ import { FetchTool } from "./builtins/fetch/tool.js";
 import type { FetchCoreConfig } from "./builtins/fetch/validation.js";
 import { createEditTool } from "./builtins/file/edit.js";
 import { FileError } from "./builtins/file/errors.js";
+import { FileMutationCoordinator } from "./builtins/file/lock.js";
 import { FileObservationStore } from "./builtins/file/observation.js";
 import type { FileEnvironment } from "./builtins/file/path.js";
 import { createReadTool } from "./builtins/file/read.js";
@@ -57,7 +58,7 @@ export async function ToolsPlugin(
   await ctx.plugin(SearchTool, config.search);
 
   const file = normalizeFileConfig(config.file);
-  if (file) registerFileTools(ctx, file);
+  const fileRuntime = file ? registerFileTools(ctx, file) : undefined;
 
   const fetch = config.fetch ?? {};
   if (fetch.core !== undefined &&
@@ -76,9 +77,14 @@ export async function ToolsPlugin(
     ...(fetch.maxOutputCharacters === undefined
       ? {}
       : { maxOutputCharacters: fetch.maxOutputCharacters }),
-    ...(file === undefined
+    ...(file === undefined || fileRuntime === undefined
       ? {}
-      : { spill: { resolveFileEnvironment: file.resolveFileEnvironment } }),
+      : {
+          spill: {
+            resolveFileEnvironment: file.resolveFileEnvironment,
+            mutations: fileRuntime.mutations,
+          },
+        }),
   });
 }
 
@@ -90,8 +96,12 @@ function normalizeFileConfig(config: FileToolsConfig | undefined): FileToolsConf
   return config;
 }
 
-function registerFileTools(ctx: Context, config: FileToolsConfig): void {
+function registerFileTools(
+  ctx: Context,
+  config: FileToolsConfig,
+): { readonly mutations: FileMutationCoordinator } {
   const observations = new FileObservationStore();
+  const mutations = new FileMutationCoordinator();
   const definitions: readonly ToolDefinition[] = [
     createReadTool({
       resolveFileEnvironment: config.resolveFileEnvironment,
@@ -101,10 +111,15 @@ function registerFileTools(ctx: Context, config: FileToolsConfig): void {
       resolveFileEnvironment: config.resolveFileEnvironment,
       ...config.shell,
     }),
-    createEditTool({ resolveFileEnvironment: config.resolveFileEnvironment }),
+    createEditTool({
+      resolveFileEnvironment: config.resolveFileEnvironment,
+      observations,
+      mutations,
+    }),
     createWriteTool({
       resolveFileEnvironment: config.resolveFileEnvironment,
       observations,
+      mutations,
     }),
   ];
 
@@ -117,7 +132,9 @@ function registerFileTools(ctx: Context, config: FileToolsConfig): void {
       throw error;
     }
     return () => {
+      observations.clearAll();
       for (const dispose of unregister.reverse()) dispose();
     };
   }, "file.tools");
+  return Object.freeze({ mutations });
 }

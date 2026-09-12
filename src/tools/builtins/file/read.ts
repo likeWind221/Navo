@@ -1,4 +1,4 @@
-import { open, stat } from "node:fs/promises";
+import { open } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 
 import type { SessionId } from "../../../brand/ids.js";
@@ -9,6 +9,7 @@ import type { FileObservationStore } from "./observation.js";
 import { resolveFileTarget, type FileEnvironment } from "./path.js";
 import { buildReadWindow, formatReadResult } from "./read/window.js";
 import { FILE_LIMITS, FILE_TOOL_SCHEMAS, type ReadRequest, type ReadResult } from "./types.js";
+import { fileVersionFromStats, probeFile, type FileVersion } from "./version.js";
 
 export interface ReadToolConfig {
   readonly resolveFileEnvironment: (
@@ -18,6 +19,11 @@ export interface ReadToolConfig {
   readonly observations: FileObservationStore;
 }
 
+interface VersionedRead {
+  readonly result: ReadResult;
+  readonly version: FileVersion;
+}
+
 export function createReadTool(config: ReadToolConfig): ToolDefinition {
   return {
     ...FILE_TOOL_SCHEMAS.read,
@@ -25,15 +31,16 @@ export function createReadTool(config: ReadToolConfig): ToolDefinition {
       try {
         execution.signal.throwIfAborted();
         if (!execution.sessionId) throw new FileError("session-required", "Read requires a Session.");
-        const environment = await config.resolveFileEnvironment(execution.sessionId);
-        const result = await readTextFile(
+        const sessionId = execution.sessionId;
+        const environment = await config.resolveFileEnvironment(sessionId);
+        const { result, version } = await readTextFileWithVersion(
           environment,
           args as unknown as ReadRequest,
           execution.signal,
         );
-        await config.saveResult?.(result, execution.sessionId);
+        await config.saveResult?.(result, sessionId);
         execution.signal.throwIfAborted();
-        config.observations.observeRead(execution.sessionId, result);
+        config.observations.observeRead(sessionId, result, version);
         return { content: formatReadResult(result) };
       } catch (error) {
         const failure = classifyReadError(error, execution.signal);
@@ -48,22 +55,39 @@ export async function readTextFile(
   request: ReadRequest,
   signal: AbortSignal,
 ): Promise<ReadResult> {
+  return (await readTextFileWithVersion(environment, request, signal)).result;
+}
+
+export async function readTextFileWithVersion(
+  environment: FileEnvironment,
+  request: ReadRequest,
+  signal: AbortSignal,
+): Promise<VersionedRead> {
   let handle: FileHandle | undefined;
   try {
     signal.throwIfAborted();
     const { startLine, maxLines } = validateReadRequest(request);
     const target = await resolveFileTarget(environment, request.path);
     signal.throwIfAborted();
-    if (!(await stat(target.path)).isFile()) {
-      throw new FileError("not-a-file", "Read target is not a regular file.");
-    }
-    signal.throwIfAborted();
+    const initial = await probeFile(target.path);
+    if (initial.kind === "absent") throw new FileError("not-found", "Read target is missing.");
+    if (initial.kind === "other") throw new FileError("not-a-file", "Read target is not a regular file.");
     handle = await open(target.path, "r");
-    const info = await handle.stat();
-    if (!info.isFile()) throw new FileError("not-a-file", "Opened target is not a regular file.");
-    return await buildReadWindow(
-      readChunks(handle, info.size, signal), target.path, startLine, maxLines, signal,
+    const before = await handle.stat({ bigint: true });
+    if (!before.isFile()) throw new FileError("not-a-file", "Opened target is not a regular file.");
+    const version = fileVersionFromStats(before);
+    const size = before.size < BigInt(FILE_LIMITS.readStreamMinBytes)
+      ? Number(before.size)
+      : FILE_LIMITS.readStreamMinBytes;
+    const result = await buildReadWindow(
+      readChunks(handle, size, signal), target.path, startLine, maxLines, signal,
     );
+    const after = fileVersionFromStats(await handle.stat({ bigint: true }));
+    const current = await probeFile(target.path);
+    if (after !== version || current.kind !== "file" || current.version !== version) {
+      throw new FileError("stale-version", "Read target changed while it was being observed.");
+    }
+    return { result, version };
   } catch (error) {
     throw classifyReadError(error, signal);
   } finally {

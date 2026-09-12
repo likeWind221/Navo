@@ -1,10 +1,9 @@
-import { stat } from "node:fs/promises";
-
 import type { SessionId } from "../../../brand/ids.js";
 import { ToolExecutionError } from "../../errors.js";
 import type { ToolDefinition } from "../../types.js";
 import { atomicWriteFile } from "./atomic.js";
 import { FileError } from "./errors.js";
+import { FileMutationCoordinator } from "./lock.js";
 import type { FileObservationStore } from "./observation.js";
 import { resolveFileTarget, type FileEnvironment } from "./path.js";
 import {
@@ -13,15 +12,18 @@ import {
   type FileMutationResult,
   type WriteRequest,
 } from "./types.js";
+import { assertFileVersion, probeFile } from "./version.js";
 
 export interface WriteToolConfig {
   readonly resolveFileEnvironment: (
     sessionId: SessionId,
   ) => FileEnvironment | Promise<FileEnvironment>;
   readonly observations: FileObservationStore;
+  readonly mutations?: FileMutationCoordinator;
 }
 
 export function createWriteTool(config: WriteToolConfig): ToolDefinition {
+  const mutations = config.mutations ?? new FileMutationCoordinator();
   return {
     ...FILE_TOOL_SCHEMAS.write,
     async execute(args, execution) {
@@ -35,6 +37,7 @@ export function createWriteTool(config: WriteToolConfig): ToolDefinition {
           execution.sessionId,
           config.observations,
           execution.signal,
+          mutations,
         );
         return { content: formatWriteResult(result) };
       } catch (error: unknown) {
@@ -51,6 +54,7 @@ export async function writeTextFile(
   sessionId: SessionId,
   observations: FileObservationStore,
   signal: AbortSignal,
+  mutations = new FileMutationCoordinator(),
 ): Promise<FileMutationResult> {
   try {
     signal.throwIfAborted();
@@ -62,29 +66,62 @@ export async function writeTextFile(
 
     const target = await resolveFileTarget(environment, request.path);
     signal.throwIfAborted();
+    return await mutations.runTarget(target.path, async () => {
+      const expected = observations.getObservedVersion(sessionId, target.path);
+      const current = await probeFile(target.path);
+      if (current.kind === "other") {
+        throw new FileError("not-a-file", "Write target is not a regular file.");
+      }
 
-    let operation: "create" | "overwrite";
-    let mode: number;
-    if (target.exists) {
-      const info = await stat(target.path);
-      if (!info.isFile()) throw new FileError("not-a-file", "Write target is not a regular file.");
-      if (!observations.hasObserved(sessionId, target.path)) {
+      if (expected !== undefined) {
+        if (current.kind !== "file" || current.version !== expected) {
+          observations.forget(sessionId, target.path);
+          throw new FileError("stale-version", "Observed write target changed before mutation.");
+        }
+        try {
+          const version = await atomicWriteFile(
+            target.path,
+            encoded,
+            current.mode,
+            signal,
+            "write",
+            {
+              kind: "replace",
+              beforeCommit: () => assertFileVersion(target.path, expected),
+            },
+          );
+          observations.observeWhole(sessionId, target.path, version);
+          return {
+            path: target.path,
+            operation: "overwrite" as const,
+            bytesWritten: encoded.byteLength,
+          };
+        } catch (error: unknown) {
+          if (error instanceof FileError && error.code === "stale-version") {
+            observations.forget(sessionId, target.path);
+          }
+          throw error;
+        }
+      }
+
+      if (current.kind === "file") {
         throw new FileError("not-observed", "Existing write target was not observed in this Session.");
       }
-      operation = "overwrite";
-      mode = info.mode & 0o7777;
-    } else {
-      operation = "create";
-      mode = 0o666 & ~process.umask();
-    }
-
-    await atomicWriteFile(target.path, encoded, mode, signal, "write");
-    observations.observeWhole(sessionId, target.path);
-    return {
-      path: target.path,
-      operation,
-      bytesWritten: encoded.byteLength,
-    };
+      const version = await atomicWriteFile(
+        target.path,
+        encoded,
+        0o666 & ~process.umask(),
+        signal,
+        "write",
+        { kind: "create-if-absent" },
+      );
+      observations.observeWhole(sessionId, target.path, version);
+      return {
+        path: target.path,
+        operation: "create" as const,
+        bytesWritten: encoded.byteLength,
+      };
+    });
   } catch (error: unknown) {
     throw classifyWriteError(error, signal);
   }

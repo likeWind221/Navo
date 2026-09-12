@@ -69,6 +69,29 @@ describe("ToolsPlugin file capability", () => {
     )).resolves.toMatchObject({ kind: "success" });
     expect(await readFile(join(root, "existing.txt"), "utf8")).toBe("new");
   });
+
+  it("keeps Shell independent from file observation state", async () => {
+    await writeFile(join(root, "existing.txt"), "old", "utf8");
+    ctx = new Context();
+    await ctx.plugin(ToolsPlugin, {
+      search: { adapter: new MockSearchAdapter([]) },
+      fetch: { core: new MockFetchCore([]) },
+      file: { resolveFileEnvironment: () => ({ cwd: root }) },
+    });
+
+    await expect(ctx.tools.execute(
+      call("read-before-shell", "read", { path: "existing.txt" }), signal, { sessionId },
+    )).resolves.toMatchObject({ kind: "success" });
+    await expect(ctx.tools.execute(
+      call("shell", "shell", { command: "echo ok" }), signal, { sessionId },
+    )).resolves.toMatchObject({ kind: "success" });
+    await expect(ctx.tools.execute(
+      call("write-after-shell", "write", { path: "existing.txt", content: "new" }),
+      signal,
+      { sessionId },
+    )).resolves.toMatchObject({ kind: "success" });
+    expect(await readFile(join(root, "existing.txt"), "utf8")).toBe("new");
+  });
 });
 
 function call(id: string, name: string, args: unknown) {

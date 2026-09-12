@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import type { SessionId } from "../../../brand/ids.js";
 import { atomicWriteFile } from "../file/atomic.js";
+import type { FileMutationCoordinator } from "../file/lock.js";
 import type { FileEnvironment } from "../file/path.js";
 import { resolveFileTarget } from "../file/path.js";
 import { FILE_LIMITS } from "../file/types.js";
@@ -13,6 +14,7 @@ export interface FetchSpillConfig {
   readonly resolveFileEnvironment: (
     sessionId: SessionId,
   ) => FileEnvironment | Promise<FileEnvironment>;
+  readonly mutations?: FileMutationCoordinator;
 }
 
 export function createFetchSpillPath(): string {
@@ -46,13 +48,16 @@ export async function spillFetchDocument(
     if (target.exists) {
       throw new FetchError("spill-failed", "Generated Fetch spill target already exists.");
     }
-    await atomicWriteFile(
+    const work = () => atomicWriteFile(
       target.path,
       bytes,
       0o666 & ~process.umask(),
       signal,
       "fetch",
+      { kind: "create-if-absent" },
     );
+    if (config.mutations) await config.mutations.runTarget(target.path, work);
+    else await work();
   } catch (error: unknown) {
     if (signal.aborted) {
       throw new FetchError("aborted", "Fetch spill cancelled.", { cause: error });

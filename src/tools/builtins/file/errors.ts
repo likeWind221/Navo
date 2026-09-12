@@ -19,6 +19,7 @@ export type FileErrorCode =
   | "path-not-allowed"
   | "not-found"
   | "not-observed"
+  | "stale-version"
   | "not-a-file"
   | "not-a-directory"
   | "invalid-text"
@@ -38,6 +39,7 @@ const FILE_MODEL_MESSAGES: Readonly<Record<FileErrorCode, string>> = Object.free
   "path-not-allowed": "The requested path is not available in the current file environment.",
   "not-found": "The requested file or directory does not exist.",
   "not-observed": "Read the existing file in this Session before replacing it.",
+  "stale-version": "The file changed since it was read. Read it again before modifying it.",
   "not-a-file": "The requested path is not a regular file.",
   "not-a-directory": "The requested search path is not a directory.",
   "invalid-text": "Only valid UTF-8 text without NUL characters is supported.",

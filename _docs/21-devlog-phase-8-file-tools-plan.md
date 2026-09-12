@@ -11,65 +11,97 @@ edit   已有文本的局部精确替换
 write  新建或整文件替换
 ```
 
-模型层不再提供独立 `find`。文件发现交给 `shell`；`read` 只读取已知路径；`edit` 负责 targeted change；`write` 只接收 `path + content`，不让模型选择 create/overwrite。
+模型层不提供独立 `find`。文件发现交给 `shell`；`read` 只读取已知路径；`edit` 负责 targeted change；`write` 只接收 `path + content`，不让模型选择 create/overwrite。
 
 ## 文件环境
 
 代码使用 `FileEnvironment` 表示一次文件工具调用所在的执行环境，目前只固化 `cwd`。宿主通过 `resolveFileEnvironment(sessionId)` 为工具提供该环境；相对路径基于 `cwd`，绝对路径保留当前执行环境语义。Session ID 不自动形成物理目录，也不把“有 cwd”误当成沙箱。
 
-8.3 起文件能力改为宿主显式启用：`ToolsPluginConfig.file` 缺失时不注册 `read/shell/edit/write`，不会把 `process.cwd()` 默认暴露给 Agent；真实 Kernel Host 只有设置 `SKILLWORLD_FILE_CWD` 时才创建并固定文件环境。当前 Host 配置让其内部 Session 共享这一 cwd，未来若宿主需要不同 Session 映射到不同目录，只需替换 resolver，不改变工具 API。
+8.3 起文件能力由宿主显式启用：`ToolsPluginConfig.file` 缺失时不注册 `read/shell/edit/write`，不会默认暴露 `process.cwd()`；Kernel Host 只有设置 `SKILLWORLD_FILE_CWD` 时才创建文件环境。当前 Host 内 Session 共享这一 cwd，未来宿主可以只替换 resolver 来实现不同 Session 到不同工作区的映射。
 
-## Write 的安全边界
+## 8.4：观察与版本安全
 
-8.2.5 对齐 DSH 的职责划分，但只实现本阶段需要的两层安全：
-
-```text
-观察安全：existing file 必须先由同一 Session 完整 read；分页读取需累计覆盖全部行
-原子安全：完整内容先写 sibling staging，fsync + close 后 rename 提交
-```
-
-目标不存在时 `write` 可直接创建；目标已存在时只有当前 Session 已完整观察该 canonical path 才允许覆盖。`read` 的分页结果会累计行区间，只有从第 1 行到 EOF 均被成功读取后才转为“完整观察”；只读任意一页仍返回 `not-observed`。成功的 `write` 已知完整结果，因此直接标记为完整观察，新建文件可在同一 Session 内继续整文件写入。
-
-当前观察记录只表示“该 Session 已完整读过这个 canonical path”，不保存 mtime/hash/version。因此它不解决 `read(V1) -> 外部修改(V2) -> write` 的 stale overwrite；这类并发/版本安全统一进入 8.4。
-
-## 原子修改
-
-`edit`、`write` 与 Fetch spill 共用 `atomic.ts`：
+8.4 将 8.2.5 的“完整观察”升级为“完整观察某一个文件版本”。本地 `FileVersion` 是 opaque freshness token：
 
 ```text
-complete bytes
-    ↓
-sibling temp (wx)
-    ↓
-64 KiB chunk write + AbortSignal
-    ↓
-chmod + fsync + close
-    ↓
-rename  ← commit point
+FileVersion = dev + ino + size + mtimeNs
 ```
 
-提交前失败或取消会清理 staging，原目标保持不变；rename 成功后不再把迟到取消伪报成失败。overwrite 保留已有文件 mode，新建文件与 Fetch spill 使用普通文本文件权限。
+`dev + ino` 描述本地文件对象身份，`size + mtimeNs` 提供低成本 freshness 信号。该 token 用于 optimistic concurrency，不是密码学内容摘要；当前阶段不使用 SHA，也不承诺跨进程原子 CAS。
+
+`read` 在打开文件后取得初始版本，完成文本扫描后再次检查打开句柄和 canonical target；读取期间若文件发生变化则返回 `stale-version`，不会建立 observation。分页读取只累计同一版本的 coverage：若后续分页来自新版本，旧 coverage 会被丢弃，不能把 V1 的前半页和 V2 的后半页拼成完整观察。
+
+```text
+Read V1
+  ↓
+coverage(V1)
+  ↓
+只有 1..EOF 全部来自 V1
+  ↓
+Observation(path, V1)
+```
+
+## Edit / Write 的 optimistic guard
+
+已有文件的模型侧修改必须基于同一 Session 的完整 observation。`edit` 与已有目标的 `write` 在 canonical target 上进入目标级串行区，并比较：
+
+```text
+observedVersion == currentVersion ?
+  ├─ no  → stale-version，丢弃旧 observation，要求重新 read
+  └─ yes → 构造 staging → 提交前再检查版本 → atomic publish
+```
+
+因此两个 Session 即使都观察了 V1，也不能同时静默提交：同目标结构化修改在当前进程内串行，第一个提交后目标成为 V2，第二个进入临界区时会因 stale-version 失败。
+
+`edit` 的 `oldText` 唯一匹配仍保留，但它只负责“改哪里”；版本 guard 负责“是不是还在修改自己读过的那个版本”。
+
+## 新文件的并发创建
+
+目标不存在时不能使用“先 exists 再 rename”的检查，因为检查与提交之间存在 create race。8.4 为 create 路径增加 `create-if-absent` 发布：完整内容先写 sibling staging，随后通过同文件系统 hard-link 提交；若目标已经出现，提交以 `EEXIST` 失败，不覆盖并发创建者。
+
+```text
+staging complete
+  ↓
+link(temp, target)
+  ├─ success → target 原子出现
+  └─ EEXIST  → reject，不覆盖
+```
+
+替换已有文件仍使用 sibling staging + fsync + close + rename；提交前版本 guard 只覆盖当前进程协调与常规外部 stale detection，不宣称提供跨进程 compare-and-swap。
+
+## Shell 边界
+
+Shell 在 8.4 中保持独立执行能力，不加入 FileObservationStore，也不参与 FileMutationCoordinator：
+
+```text
+Structured File Tools             Shell
+read/edit/write                    command execution
+     │                                  │
+observation/version                     │
+atomic mutation                         │
+     └──────── filesystem ──────────────┘
+```
+
+`cat`、`head`、Python `open()` 等 Shell 内读取不会建立受信任 observation；Shell 执行本身也不会因为“可能修改文件”而全局清空 observation。若 Shell、IDE 或其他外部 actor 实际修改了目标，后续结构化 Edit/Write 会通过版本比较得到 `stale-version`。
+
+Shell 能访问哪些文件、是否只读、是否需要 approval/escalation 属于后续 Sandbox 能力，不在 Phase 8 伪装为已实现。
 
 ## Fetch spill
 
-8.3 将 Fetch 的“完整正文”和“模型内联预算”分开：网络层仍必须先得到完整、受硬上限约束的正文；若格式化结果能放进模型预算，则继续直接返回。若超出模型预算且当前 Host 启用了文件环境，则将完整格式化正文原子写到 `web/fetch-*.md`，模型只收到有界 preview、`file_path` 和继续 `read` 的提示。
+8.3 已将 Fetch 的完整正文与模型内联预算分离：超出模型预算且启用了文件环境时，完整格式化正文原子写到 `web/fetch-*.md`，模型只收到有界 preview、`file_path` 和继续 `read` 的提示。
 
-Fetch spill 不调用模型层 `write`，也不会把新文件直接记为 observed；preview 不等于完整读取，Agent 若后续要整文件覆盖该 spill，仍必须先通过 `read` 完整观察。
+8.4 后 Fetch spill 的新文件发布也使用 `create-if-absent`；它不调用模型层 `write`，也不自动建立 observation。Agent 若要修改 spill 文件，仍需先通过 `read` 完整观察。
 
-## 阶段顺序
-
-按“先完成源码，再统一验收”的开发方式，阶段 8 顺序正式调整为：
+## 阶段顺序与状态
 
 ```text
-8.3  Tools 根、Node 白名单与 Fetch spill 接入
-  ↓
-8.4  文件并发与版本安全收口
-  ↓
-8.5  Work 模式最终工程验收
+8.1  文件协议与错误                         ✅
+8.2  read / shell / edit / write            ✅
+8.3  Tools 根、Node 白名单、Fetch spill      ✅
+8.4  文件版本与并发安全                      ✅
+8.5  本地 Node 24 + pnpm 最终工程验收        待执行
 ```
 
-- **8.3**：组装四个文件工具、共享 ObservationStore、显式 Host FileEnvironment、Fetch spill、NodeAgent 仅获得 `read`。
-- **8.4**：统一审查并补齐 Read/Edit/Write/Shell 的并发与版本安全，包括可比较文件版本、stale-version、create-if-absent 提交保护、必要的目标级串行化，以及 Shell/外部修改导致旧观察失效的行为。
-- **8.5**：在 Work 模式/干净 Node 24 + pnpm 环境执行安装、typecheck、全量测试、build、Search→Fetch→spill→Read、文件修改及并发安全场景的最终工程验收。
+8.5 不新增功能，只在干净本地环境执行 `pnpm install --frozen-lockfile`、typecheck、全量测试、build，并验证 Search→Fetch→spill→Read、Read→Edit/Write、stale-version、并发写、并发创建与取消场景。8.5 完成前不宣称 Phase 8 已通过完整工程回归。
 
-8.4 完成前不宣称已解决 lost update 或跨进程竞态；8.5 完成前不宣称 Phase 8 已通过完整工程回归。
+详见 [8.4 文件版本与并发安全开发记录](59-devlog-step-8-4-file-version-concurrency.md)。
