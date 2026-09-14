@@ -2,7 +2,9 @@
 
 ## 产品与计划
 
-- [SkillWorld 简化 PRD](00-skillworld-prd.md)：系统核心定义与产品原则。
+- [Navo PRD](00-navo-prd.md)：当前项目产品定义；核心为 Adaptive Roadmap、Execution、Verification 与 Replanning，Research Workspace 为首个重点应用。
+- [SkillWorld PRD 历史入口](00-skillworld-prd.md)：旧链接兼容入口；原 v0.6 PRD 已归档。
+- [SkillWorld v0.6 PRD 归档](48-legacy-skillworld-prd.md)：Phase 0–8 的原始 Learning-first / DAG 设计历史。
 - [后端 Agent 内核开发计划](backend-plan.md)：后端阶段、步骤、状态和验收标准。
 - [前端开发计划](frontend-plan.md)：Electron + React 前端阶段、步骤、状态和验收标准。
 - [后端开发进度总览](19-backend-progress.md)：当前已完成能力、架构、验收和后续阶段。
@@ -10,7 +12,6 @@
 - [前端信息架构](12-frontend-information-architecture.md)：页面目标、路由、Node 工作区和权限边界。
 - [视觉设计规范](14-visual-design.md)：主题、色板、排版、组件和无障碍要求。
 - [模块分文件架构审核](16-module-file-architecture-review.md)：当前各包文件粒度、保留项与收敛建议。
-
 - [源码目录与命名整理方案](23-structure.md)：后端、RPC、前端的模块目录、单词命名与逐文件映射；已实施。
 
 ## 后端阶段记录
@@ -33,9 +34,7 @@
 - [F0.1：桌面前端骨架](11-devlog-step-f0-1-frontend-scaffold.md)
 - [阶段 F1：前端信息架构与静态工作区收口](13-devlog-phase-f1-frontend.md)：合并记录信息架构、视觉探索、最小样板、对话工作区、Qwen 可行性核实和 Electron 交互验收。
 - [阶段 F2：Electron 接入 Agent 与真实流式对话](15-devlog-phase-f2-agent-integration.md)：整合规划、公共 RPC、Main 生命周期、Preload 安全桥、Renderer 状态、流式 UI、桌面验收与 F3 承接边界；链接保留的 F2.2 后端记录。
-
 - [F3.1：公共事件契约](22-devlog-step-f3-1-public-events.md)：助手有序内容块、独立命令通知流、身份与终态校验、兼容及后端交接。
-
 - [源码目录与命名重构实施记录](24-structure.md)：77 条路径迁移、RPC 与共享契约拆分、用户偏好记忆和 278 项测试及 Electron 验收。
 - [计划功能性描述重写与 F3.2 拆分](25-devlog-plan-functional-rewrite.md)：计划步骤改为功能性目标描述、CLAUDE.md 新增撰写原则、F3.2 拆为四个功能子步骤并确定 /hello 占位命令。
 - [F3.2.1：助手内容事件接通与链路收敛](26-devlog-f3-2-1-assistant-content-events.md)：ModelEvent 单点分叉、StepAccumulator 唯一聚合、TurnEvent 实时路径、超时与残缺工具收敛、全业务事件资源预算及 stdio 坏帧恢复。
@@ -59,10 +58,13 @@
 - [图标库选型调研](46-devlog-icon-library-research.md)：reicon 与 lucide 的许可、体量、绘图一致性实测对比，结论为本阶段继续使用自绘图标。
 - [F4.2：回合过程折叠](47-devlog-f4-2-process-fold.md)：过程与最终回答切分、折叠判据、回合起止时间、真实 IPC 桌面验收与三处实现坑。
 
+## 项目迁移记录
+
+- [Navo 品牌迁移](49-devlog-navo-brand-migration.md)：SkillWorld → Navo 的 package、应用标识、环境变量、IPC、UI 与文档迁移边界。
+
 ## 研究与自动审查
 
 - [F3.7：思考内容修正](38-devlog-f3-7-reasoning.md)：Host 默认启用 thinking，Qwen Adapter 对齐真实 reasoning 字段，记录模型冒烟与展示复验边界。
-
 - [DeepSeek Harness 参考分析](01-deepseek-harness-单对话核心与最小-agent-闭环设计.md)
 - [Codex 提交审查](codex-reviews/)：以“阶段 + 中文标题 + 短 SHA”命名的 post-commit 报告。
 - [F3.2.3 命令调度设计记录](30-devlog-command-scheduling-design.md)：记录命令旁路与排队两种执行路径、会话工作队列及回合锚点的设计方向。
