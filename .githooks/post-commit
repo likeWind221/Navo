@@ -33,7 +33,7 @@ review_prompt="只审查 Git 提交 $commit_sha。忽略工作区中尚未提交
 category 只能使用 bug、security、performance、reliability、code-quality、docs-contract、test-gap、accidental-change。若没有值得处理的发现，返回空 findings，不要用提交摘要、测试过程或优点凑数。
 
 reviewTitle 必须是概括本次提交内容的简短中文标题，不包含 SHA 或阶段名称。
-同时根据本次提交、_docs/00-skillworld-prd.md、_docs/backend-plan.md 和 _docs/frontend-plan.md 判断 developmentStage，使用“阶段 N：阶段名称”格式；如果只涉及某个阶段的修改，优先使用该阶段。"
+同时根据本次提交、_docs/00-navo-prd.md、_docs/backend-plan.md 和 _docs/frontend-plan.md 判断 developmentStage，使用“阶段 N：阶段名称”格式；如果只涉及某个阶段的修改，优先使用该阶段。"
 
 # GUI Git 客户端的 PATH 可能比终端更小；找不到命令时，尝试 Codex Desktop
 # 的版本化安装目录，并选取最新的 codex.exe。
