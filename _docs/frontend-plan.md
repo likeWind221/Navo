@@ -181,7 +181,7 @@ F3 建设命令共用的入口与反馈机制；F3.2 先注册 `/hello` 占位�
 
 ### 范围与目标
 
-以 LobeHub 的过程折叠语义为基准：一次 Agent 回合的思考、工具调用与中间说明属于“过程”，最终回答属于“结果”。生成过程中过程保持可见并说明当前正在做什么；回合结束后过程整体折叠为一行摘要，结果始终独立可见。实施细节见 [F4 过程 UI 实施方案](50-process-ui-design.md)，参考来源见 [过程 UI 开源参考调研](49-devlog-chatgpt-codex-ui-research.md)。
+以 LobeHub 的过程折叠语义为基准：一次 Agent 回合的思考、工具调用与中间说明属于“过程”，最终回答属于“结果”。生成过程中过程保持可见并说明当前正在做什么；回合结束后过程整体折叠为一行摘要，结果始终独立可见。实施细节见 [F4 过程 UI 实施方案](44-process-ui-design.md)，参考来源见 [过程 UI 开源参考调研](43-devlog-chatgpt-codex-ui-research.md)。
 
 沿用 F2/F3 的 Renderer → Preload → Electron Main → Kernel Host 链路，不新增协议，不改后端。
 
@@ -196,14 +196,14 @@ F3 建设命令共用的入口与反馈机制；F3.2 先注册 `/hello` 占位�
 
 ## 4. 当前下一步
 
-当前推进 F4.3 流式过程标题与用时。F4.2 回合过程折叠已交付：回合结束后过程折成一行“已处理 xx s”，可从该行展开，最终回答始终独立可见；见 [F4.2 开发记录](55-devlog-f4-2-process-fold.md)。F4.1 自绘图标与“本阶段不引入图标库”的决定见 [F4.1 开发记录](51-devlog-f4-1-icons.md) 与 [图标库选型调研](53-devlog-icon-library-research.md)。F4.3–F4.4 未开始，实施细节见 [F4 过程 UI 实施方案](50-process-ui-design.md)。
+当前推进 F4.3 流式过程标题与用时。F4.2 回合过程折叠已交付：回合结束后过程折成一行“已处理 xx s”，可从该行展开，最终回答始终独立可见；见 [F4.2 开发记录](47-devlog-f4-2-process-fold.md)。F4.1 自绘图标与“本阶段不引入图标库”的决定见 [F4.1 开发记录](45-devlog-f4-1-icons.md) 与 [图标库选型调研](46-devlog-icon-library-research.md)。F4.3–F4.4 未开始，实施细节见 [F4 过程 UI 实施方案](44-process-ui-design.md)。
 
-F3 阶段已全部收口：F3.10 Markdown 与 F3.11 数学公式的代码、测试、Electron 自动验收与真实模型人工桌面验收均已通过，详见 [F3.11 开发记录](48-devlog-f3-11-math.md) 与 [F3.10 开发记录](47-devlog-f3-10-markdown.md)。F4 之后仍未固化的候选方向有 `/compact`、`/model`、`/clear` 等真实命令，多会话与持久化，以及学习地图与 Node 内容面板。
+F3 阶段已全部收口：F3.10 Markdown 与 F3.11 数学公式的代码、测试、Electron 自动验收与真实模型人工桌面验收均已通过，详见 [F3.11 开发记录](42-devlog-f3-11-math.md) 与 [F3.10 开发记录](41-devlog-f3-10-markdown.md)。F4 之后仍未固化的候选方向有 `/compact`、`/model`、`/clear` 等真实命令，多会话与持久化，以及学习地图与 Node 内容面板。
 
-F3.7 思考内容修正已交由 `backend-plan.md` 实施并完成：真实模型的思考文本已接入既有事件链路，默认启用 thinking。F3.8 已修正滚动条导致的消息列水平偏移；F3.9 让消息滚动区覆盖顶部栏以下的完整窗口高度，并将输入框作为底部覆盖层，移除其顶部外间距。两项布局修正均通过 Electron 几何断言和截图验收；见 [F3.7 开发记录](42-devlog-f3-7-reasoning.md)、[F3.8 开发记录](43-devlog-f3-8-message-alignment.md)与 [F3.9 开发记录](44-devlog-f3-9-scroll-layout.md)。
+F3.7 思考内容修正已交由 `backend-plan.md` 实施并完成：真实模型的思考文本已接入既有事件链路，默认启用 thinking。F3.8 已修正滚动条导致的消息列水平偏移；F3.9 让消息滚动区覆盖顶部栏以下的完整窗口高度，并将输入框作为底部覆盖层，移除其顶部外间距。两项布局修正均通过 Electron 几何断言和截图验收；见 [F3.7 开发记录](38-devlog-f3-7-reasoning.md)、[F3.8 开发记录](39-devlog-f3-8-message-alignment.md)与 [F3.9 开发记录](40-devlog-f3-9-scroll-layout.md)。
 
-**F3.1 公共事件契约已完成**：`agent.turn.v2` 与 `session.command.v1` 已冻结并通过校验测试，F2 入口继续兼容；详见 [F3.1 开发与交接记录](23-devlog-step-f3-1-public-events.md)。**F3.2 后端事件与 RPC 对齐已完成**，具体状态以 [backend-plan.md](backend-plan.md) 为准。**F3.3 桌面桥接与会话状态已完成**，详见 [F3.3 开发记录](37-devlog-f3-3-desktop-bridge-state.md)。**F3.4 助手内容展示已完成**，详见 [F3.4 开发记录](38-devlog-f3-4-assistant-content-display.md)。**F3.5 命令入口与通知展示已完成**，详见 [F3.5 开发记录](39-devlog-f3-5-command-notifications.md)。**F3.6 完整链路验收已完成**，详见 [F3.6 开发记录](40-devlog-f3-6-full-chain-acceptance.md)。F3 之后的前端阶段已由 F4 承接，当前下一步为 F4.1。
+**F3.1 公共事件契约已完成**：`agent.turn.v2` 与 `session.command.v1` 已冻结并通过校验测试，F2 入口继续兼容；详见 [F3.1 开发与交接记录](22-devlog-step-f3-1-public-events.md)。**F3.2 后端事件与 RPC 对齐已完成**，具体状态以 [backend-plan.md](backend-plan.md) 为准。**F3.3 桌面桥接与会话状态已完成**，详见 [F3.3 开发记录](33-devlog-f3-3-desktop-bridge-state.md)。**F3.4 助手内容展示已完成**，详见 [F3.4 开发记录](34-devlog-f3-4-assistant-content-display.md)。**F3.5 命令入口与通知展示已完成**，详见 [F3.5 开发记录](35-devlog-f3-5-command-notifications.md)。**F3.6 完整链路验收已完成**，详见 [F3.6 开发记录](36-devlog-f3-6-full-chain-acceptance.md)。F3 之后的前端阶段已由 F4 承接，当前下一步为 F4.1。
 
 ## 源码目录整理
 
-已按 [目录整理方案](24-structure.md) 完成单词文件命名、子模块目录归位与测试／脚本引用迁移，详见 [实施记录](25-structure.md)。RPC 传输实现位于 `rpc/stream/`，桌面共享契约位于 `frontend/shared/`；本次结构重构未推进后续功能步骤。
+已按 [目录整理方案](23-structure.md) 完成单词文件命名、子模块目录归位与测试／脚本引用迁移，详见 [实施记录](24-structure.md)。RPC 传输实现位于 `rpc/stream/`，桌面共享契约位于 `frontend/shared/`；本次结构重构未推进后续功能步骤。

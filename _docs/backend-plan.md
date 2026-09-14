@@ -165,9 +165,9 @@
 
 ## 5. 当前下一步
 
-桌面跨端链路已完成 F3.2.4：内核能够执行工具与会话命令，Mock Host 已在独立进程中通过 stdio 提供回合与命令流；桌面侧下一步进入 F3.3 前端消费。阶段 8 采用 Pi 式 `read`、`shell`、`edit`、`write` 工具面；8.1 文件工具协议收口已完成，8.2.2 纯文本 Read Tool、8.2.3 Shell Tool 与 8.2.6 工具结果出口收口已完成，8.2.4 Edit Tool 与 8.2.5 Write Tool 已完成，当前下一步进入 8.3 Tools 根、Node 白名单与 Fetch spill 接入。命令架构与验收见 [命令框架开发记录](32-devlog-f3-2-3-command-framework.md) 与 [F3.2.4 开发记录](34-devlog-f3-2-4-mock-host-e2e.md)。
+桌面跨端链路已完成 F3.2.4：内核能够执行工具与会话命令，Mock Host 已在独立进程中通过 stdio 提供回合与命令流；桌面侧下一步进入 F3.3 前端消费。后端阶段 8 已完成：Pi 式 `read`、`shell`、`edit`、`write` 工具面、Tools 根装配、Node 白名单、Fetch spill、文件版本与并发安全均已接通，并通过本地 Node 24 + pnpm 最终工程验收。命令架构与验收见 [命令框架开发记录](31-devlog-f3-2-3-command-framework.md)、[F3.2.4 开发记录](32-devlog-f3-2-4-mock-host-e2e.md) 与 [阶段 8 合并记录](21-devlog-phase-8-file-tools-plan.md)。
 
-阶段 0–7 已完成。`web_fetch` 现作为 Tools 根内置的纯文本工具，由内部 FetchCore 组合安全 HTTP、公共网络策略和有界 HTML→Markdown；NodeAgent 通过白名单执行 Search→Fetch→内容提交，Fetch 结果只进入 SessionLog，NodeEvent 只记录最终教材与题集。阶段 7 专项测试 5 个文件、29 项通过，全项目 28 个测试文件、198 项通过；真实 `https://example.com` 冒烟在当前环境因 `blocked-url` 安全关闭，未绕过 DNS/代理返回的非公网地址。跨端 F2.2 已完成 Kernel Host、Qwen SSE Adapter、agent.turn Handler 和可脚本化 Mock Host。当前后端已完成 **8.1 文件工具协议收口**、**8.2.1 文件环境与文件目标**、**8.2.2 纯文本 Read Tool**、**8.2.3 Shell Tool** 与 **8.2.6 工具结果出口收口**；路径语义已按 DSH 执行环境规则修订，文件发现交给 `shell`，全部工具的结果出口已统一为单臂对象；当前下一步进入 **8.3 Tools 根、Node 白名单与 Fetch spill 接入**，桌面链路 F3.2.4 的 Mock Host 与端到端回归已完成，后续由前端进入 F3.3。
+阶段 0–8 已完成。`web_fetch` 作为 Tools 根内置的纯文本工具，由内部 FetchCore 组合安全 HTTP、公共网络策略和有界 HTML→Markdown；超出内联预算的完整正文可留存到 Session 工作区，再由 `read` 继续读取。NodeAgent 仅通过白名单获得所需工具，文件结构化修改具备完整观察、版本过期拒绝、目标级串行化和并发创建保护。阶段 8 最终验收在 Node v24.14.0、pnpm 10.33.0 下完成依赖安装、类型检查、47 个测试文件共 324 项测试和构建；桌面链路后续仍由前端进入 F3.3。
 
 ## 6. 阶段 7：Fetch 网页读取与调研闭环补齐
 
@@ -200,9 +200,9 @@
 |---|---|---|---|---|
 | ✅ | 8.1 文件工具协议与错误收口 | `src/tools/builtins/file/types.ts`、`src/tools/builtins/file/errors.ts`、`tests/tools/file/protocol.spec.ts` | 让 `read`、`write`、`edit` 拥有自解释的输入和稳定的文件错误，并移除模型层对独立 `find` 的依赖；文件环境中的相对/绝对路径语义继续由已完成的 8.2.1 承担 | 文件工具 Schema 与请求/结果类型一致；模型不能传入 `sessionId` 或工作区根；文件错误不再引导独立 `find`；不执行文件 IO；协议测试通过；`shell` 的输入、进程错误、超时和取消语义留在 8.2.3 |
 | ✅ | 8.2 Pi 式工具实现 | `src/tools/builtins/{file,shell}/**`、`tests/tools/{file,shell}/**` | 让四个工具分别完成已知文件读取、工作区命令探索、精确编辑和完整写入；多个 Session 可共享同一 `cwd` 和文件，工具在共享文件与中断场景下返回明确结果 | 8.2.1–8.2.5 的工具行为均可独立验证；读取和命令输出有界；编辑与写入成功时完整收敛，失败不留下部分结果；不建立 Cordis Service |
-| ⬜ | 8.3 Tools 根、Node 白名单与 Fetch spill 接入 | `src/tools/plugin.ts`、`src/tools/builtins/fetch/{format,tool}.ts`、`src/node/profile.ts` | 让 Tools 根按 Pi 式工具面组装四个工具；Fetch 在完整正文超过内联预算时写入当前 Session `cwd` 下的 `web/` 相对文件并返回预览和 `file_path` | NodeAgent 默认只获得 `read`；拥有同一 `cwd` 的 Session 可按相对路径读取 spill，其他 Session 按自身 `cwd` 解析；教材和题集仍只能通过 Node 领域工具修改；Fetch 不调用模型层 `write` |
-| ⬜ | 8.4 文件工具与调研闭环测试 | `tests/{file-tools,fetch-tool,node-research-integration}.spec.ts` | 覆盖 `cwd` 解析、同一文件环境共享文件、相对/绝对路径、Read 分页、Shell 探索、原子写入、精确编辑、观察门禁、取消、卸载、spill 和 Search→Fetch→Read 闭环 | 同一 `cwd` 的 Session 能访问同一文件；不同 `cwd` 的相对路径不混淆；Shell 输出和 Read 结果有界；盲覆盖被拒绝且原子修改失败不留半成品；离线可复现；完整回归、typecheck 与 build 通过 |
-| ⬜ | 8.5 文件并发与版本安全收口 | `src/tools/builtins/{file,shell}/**`、`tests/tools/file/*concurrency*.spec.ts` | 统一审查 Read、Edit、Write、Shell 参与文件修改时的竞态窗口，引入可比较的文件版本观察、stale 检测、create-if-absent 提交保护和必要的目标级串行化；Shell 作为非结构化副作用入口明确其失效/重读边界 | `read` 记录可比较版本；`write/edit` 基于已观察版本执行 optimistic guard；并发创建不会被静默覆盖；Shell 或外部修改能让旧观察失效而不是被结构化工具覆盖；仍明确不承诺跨主机分布式锁 |
+| ✅ | 8.3 Tools 根、Node 白名单与 Fetch spill 接入 | Tools 根、Fetch 留存、Node 能力与宿主文件环境 | 让四个文件工具通过显式文件环境接入 Tools 根，让 NodeAgent 只获得所需能力，并让超出内联预算的 Fetch 正文可在当前工作区继续读取 | 文件能力未启用时不暴露宿主目录；NodeAgent 默认只获得 `read`；同一工作区可读取 spill；教材和题集仍只能通过领域工具修改 |
+| ✅ | 8.4 文件版本与并发安全收口 | 文件观察、结构化修改、原子发布与并发测试 | 让结构化文件修改基于已观察版本拒绝过期覆盖，并在同进程并发写与并发创建时保留唯一成功结果，同时明确 Shell 与跨进程边界 | `read` 记录可比较版本；`write/edit` 拒绝 stale 观察；并发创建不静默覆盖；Shell 或外部修改使旧观察失效；不承诺跨主机分布式锁 |
+| ✅ | 8.5 Phase 8 最终工程验收 | 后端工程、文件工具与调研闭环测试 | 证明阶段 8 的工具装配、网页留存、文件修改、版本安全、并发与取消能力能在约定本地环境完整协同 | Node 24 + pnpm 环境下依赖安装、类型检查、完整测试和构建通过；关键闭环场景通过；启用文件能力时四个工具可完成装配 |
 
 ### 8.2 实施子步骤
 
@@ -239,7 +239,7 @@
 | ✅ | F3.2.3 会话命令流与 `/hello` | `src/{command,agent,host}/**`、`shared/content.ts`、`rpc/**`、相关测试 | 让前端能够提交会话命令并接收可关联的开始、完成、失败或取消结果；`/hello` 可在当前或最近回合下即时反馈，空会话也有稳定归属 | 命令事件与回合事件共享统一解析和 RPC 帧格式；旁路命令不触发模型；排队命令按会话顺序执行并支持取消；活动回合、最近回合和空会话锚点可验证；类型检查与跨端回归通过 |
 | ✅ | F3.2.4 Mock Host 与端到端回归 | `scripts/host/mock.ts`、`tests/host/process.spec.ts`、相关 RPC 测试 | 让已完成的回合事件与会话命令能力能够在独立 Mock Host 进程中被客户端完整消费，并复现完成、失败、取消、EOF 与进程退出等生命周期 | Mock Host 注册 `agent.turn.v2` 与 `session.command.v1`；stdio 只传合法 RPC 帧且日志留在 stderr；客户端可关联回合/命令身份和终态；取消后不再接收尾事件；旧 `agent.turn` 和既有 Host 生命周期测试保持通过 |
 
-阶段 8.1 原先定义了包含 `find` 的文件工具协议；本步骤已按 Pi 路线移除文件工具层的独立 `find` 请求、结果、Schema 和扫描错误文案，保留 `read`、`write`、`edit` 的输入与结果契约。8.2.1 已建立共享执行工作区的路径目标定位：Session 创建时固化 `cwd`，相对路径以其为基准，绝对路径不被人为改写，Session 不自动隔离为物理子目录；8.2.5 已增加 Session 级“完整读过才能整文件覆盖”的观察门禁和原子发布；分页 Read 会累计覆盖范围，只有完整覆盖文件才授权 Write，但观察记录仍不保存文件版本。8.2.2 Read、8.2.3 Shell、8.2.4 Edit、8.2.5 Write 与 8.2.6 工具结果出口均已完成；下一步进入 8.3。文件版本、stale 检测、并发创建保护和目标级串行化统一留到 8.5 收口。
+阶段 8.1 已按 Pi 路线移除文件工具层的独立 `find`，保留 `read`、`write`、`edit` 的输入与结果契约。8.2 已建立共享执行工作区、Read、Shell、Edit、Write、完整观察门禁和原子发布；8.3 已完成 Tools 根、Node 白名单与 Fetch spill 接入；8.4 已完成文件版本、stale 检测、并发创建保护和目标级串行化；8.5 已修复文件能力装配时缺少 `tools` 注入声明的问题，并完成最终工程验收。阶段 8 不提供沙箱围栏、跨进程或跨主机分布式锁。
 
 ## 源码目录整理
 
@@ -249,6 +249,6 @@
 |---|---|---|---|---|
 | ✅ | F3.7 思考内容修正 | Host 配置、Qwen 适配器及相关测试 | 默认请求模型思考内容，并将真实服务返回的思考文本提供给既有展示链路；允许显式关闭思考 | 真实模型思考和正文均可被适配器接收；既有 v2 事件测试通过；前端人工展示复验独立记录 |
 
-交接见 [F3.7 开发记录](42-devlog-f3-7-reasoning.md)。后端阶段 8 当前下一步不变。
+交接见 [F3.7 开发记录](38-devlog-f3-7-reasoning.md)。后端阶段 8 已完成，后续后端功能等待新的计划步骤。
 
-已按 [目录整理方案](24-structure.md) 完成单词文件命名、子模块目录归位与测试／脚本引用迁移，详见 [实施记录](25-structure.md)。RPC 传输实现位于 `rpc/stream/`，桌面共享契约位于 `frontend/shared/`；本次结构重构未推进后续功能步骤。
+已按 [目录整理方案](23-structure.md) 完成单词文件命名、子模块目录归位与测试／脚本引用迁移，详见 [实施记录](24-structure.md)。RPC 传输实现位于 `rpc/stream/`，桌面共享契约位于 `frontend/shared/`；本次结构重构未推进后续功能步骤。

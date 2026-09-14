@@ -123,18 +123,22 @@ function registerFileTools(
     }),
   ];
 
-  ctx.effect(() => {
-    const unregister: Array<() => void> = [];
-    try {
-      for (const definition of definitions) unregister.push(ctx.tools.register(definition));
-    } catch (error: unknown) {
-      for (const dispose of unregister.reverse()) dispose();
-      throw error;
-    }
-    return () => {
-      observations.clearAll();
-      for (const dispose of unregister.reverse()) dispose();
-    };
-  }, "file.tools");
+  ctx.inject(["tools"], (toolsCtx) => {
+    toolsCtx.effect(() => {
+      const unregister: Array<() => void> = [];
+      try {
+        for (const definition of definitions) {
+          unregister.push(toolsCtx.tools.register(definition));
+        }
+      } catch (error: unknown) {
+        for (const dispose of unregister.reverse()) dispose();
+        throw error;
+      }
+      return () => {
+        observations.clearAll();
+        for (const dispose of unregister.reverse()) dispose();
+      };
+    }, "file.tools");
+  });
   return Object.freeze({ mutations });
 }

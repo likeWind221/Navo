@@ -1,4 +1,6 @@
-# 阶段 8 通用文件工具与网页结果留存规划
+# 阶段 8：通用文件工具与网页结果留存（合并记录）
+
+> 本文整合阶段 8 的规划、调研、Step 8.1–8.5 开发记录与最终验收，以阶段结束时的代码行为为准。早期记录中曾设计独立 `find`、严格 Session 相对路径和模型选择 create/overwrite，这些方案均已被后续实现替代。
 
 ## 当前工具面
 
@@ -99,9 +101,93 @@ Shell 能访问哪些文件、是否只读、是否需要 approval/escalation �
 8.2  read / shell / edit / write            ✅
 8.3  Tools 根、Node 白名单、Fetch spill      ✅
 8.4  文件版本与并发安全                      ✅
-8.5  本地 Node 24 + pnpm 最终工程验收        待执行
+8.5  本地 Node 24 + pnpm 最终工程验收        ✅
 ```
 
-8.5 不新增功能，只在干净本地环境执行 `pnpm install --frozen-lockfile`、typecheck、全量测试、build，并验证 Search→Fetch→spill→Read、Read→Edit/Write、stale-version、并发写、并发创建与取消场景。8.5 完成前不宣称 Phase 8 已通过完整工程回归。
+8.5 已在干净本地环境完成 `pnpm install --frozen-lockfile`、typecheck、全量测试与 build，并验证 Search→Fetch→spill→Read、Read→Edit/Write、stale-version、并发写、并发创建与取消场景。首轮全量测试暴露文件工具注册缺少 `tools` 注入声明，修复后 47 个测试文件共 324 项全部通过。
 
-详见 [8.4 文件版本与并发安全开发记录](59-devlog-step-8-4-file-version-concurrency.md)。
+## 分步交付记录
+
+### 8.1 文件协议与路径语义
+
+8.1 最初定义 `read/find/write/edit` 的 Schema、请求、结果、协议预算和稳定 `FileError`，随后依据 Pi Coding Agent 调研收口为 `read/write/edit`，文件发现交给 `shell`。模型不能传入 `sessionId` 或工作区根；工具 Schema 只承担结构校验，路径定位、大小、文本和条件字段由执行边界校验。
+
+路径契约从“只允许 Session 相对路径”修订为执行环境语义：相对路径基于 Session 固化的 `cwd`，绝对路径保留原语义；Session ID 不形成物理目录。现存目标通过真实路径形成 canonical identity，缺失叶子基于已存在的真实父目录定位；符号链接归一到真实目标。路径解析不是沙箱授权。
+
+`FileError` 将内部 `message/cause` 与固定模型文案分离，不向模型回显绝对路径或底层异常。协议测试验证模型不能伪造 Session 或工作区信息，废弃的 `find` Schema 和提示也已移除。
+
+### 调研结论：Pi 与 DeepSeek Harness
+
+Pi 默认提供 `read/bash/edit/write`，`grep/find/ls` 是可选只读工具；未启用这些可选工具时，Agent 通过 Shell 发现路径，再用 `read` 读取已知文件。阶段 8 因此采用四工具面，不建立独立 `find`。
+
+Read 采用 DeepSeek Harness（DSH）的普通文件预检、大小分流、结构化窗口和独立模型投影，但直接使用 Node 文件句柄，不引入 `ctx.fs`、Provider 或远程文件系统。Shell 采用 DSH 的有界尾部输出、PowerShell 解析、超时/取消分类和进程树终止算法，但不引入 `ctx.shell`、后台作业、Sandbox、approval 或原生 FFI。
+
+文件版本参考 DSH 的高精度 stat token；本项目使用 `dev:ino:size:mtimeNs`，未纳入 `ctimeNs`，也不使用内容 hash。最终装配遵循 Cordis `ctx.inject` 的服务依赖生命周期；由于 `ToolsPlugin` 自己创建 `ToolService`，文件工具只在内部注册边界条件注入 `tools`，而不是让根插件静态依赖自己创建的服务。
+
+### 8.2.1 工作区定位与文件目标
+
+宿主通过 `resolveFileEnvironment(sessionId)` 提供固化、规范化且存在的绝对 `cwd`。相对路径以该目录为基准，绝对路径按执行环境定位；共享同一 `cwd` 的 Session 对同一物理文件得到同一 canonical target，不同 `cwd` 的相对路径互不混淆。
+
+现存符号链接沿真实目标归一化；缺失目标只允许在已存在父目录下形成待创建目标。此层只负责目标身份，不承担文件内容 IO 或权限沙箱。
+
+### 8.2.2 纯文本 Read Tool
+
+`read` 完成普通文件预检、严格 UTF-8 解码、BOM/CRLF 处理、行窗口、结构化结果和模型文本投影。小文件按已知大小读取，大文件按 64 KiB 分块，两条路线共享窗口与预算语义；默认 200 行、最多 1000 行，模型正文连同路径、行号和 continuation 不超过 30,000 个 UTF-16 代码单元。
+
+读取扫描到 EOF 以得到准确总行数并验证全文，只保留目标窗口和有界片段。第一条目标行无法放入预算时返回明确错误，后续行放不下时给出下一次读取位置。严格拒绝非法 UTF-8、NUL 和残缺尾序列；取消贯穿路径解析、文件操作和关闭句柄。
+
+分页结果按同一文件版本累计 coverage，只有从第 1 行到 EOF 全部来自同一版本才建立完整 observation；读取期间目标变化返回 `stale-version`，不建立观察。
+
+### 8.2.3 Shell Tool
+
+`shell` 在 Session `cwd` 中执行命令，参数为必填 `command` 和可选 `timeoutMs`（1–600000，默认 120000）。stdout/stderr 各自保留最后 64,000 字节，结果区分退出码、信号、超时和取消；超时是带标记的命令结果，用户取消收敛为 `cancelled` 工具失败。
+
+Windows 优先 PowerShell 7，再回退 Windows PowerShell；其他平台使用 bash。Windows 通过 `taskkill /T /F` 结束进程树，POSIX 使用独立进程组 `SIGTERM` 后升级 `SIGKILL`。子进程环境剔除名称匹配密钥、密码、Secret 或 Token 的变量。
+
+PowerShell 命令末尾追加换行和 `exit $LASTEXITCODE`，保留原生命令退出码。Windows 不从 PATH 猜测 bash，避免误入 WSL 文件系统命名空间。Shell 不产生可信文件 observation，也不加入结构化文件修改协调器。
+
+### 8.2.4 Edit Tool
+
+`edit` 读取现有普通文本文件，对非空 `oldText` 执行唯一字面替换；不存在、多次或重叠命中均拒绝修改，不做 Unicode 或换行归一化，空 `newText` 表示删除。源文件、请求文本和结果均受严格 UTF-8、NUL、孤立代理项与 5 MiB 边界约束。
+
+修改写入同目录 staging，按 64 KiB 分块检查取消，随后保留权限、`fsync`、关闭句柄并原子发布。最终提交前失败或取消会清理 staging；提交成功后不把迟到取消伪报为失败。
+
+### 8.2.5 Write Tool
+
+`write` 只接收 `path + content`：目标不存在时创建，目标存在时整文件替换，模型不选择 create/overwrite。已有文件必须先由同一 Session 完整 `read`，否则返回 `not-observed`；新建或成功写入后刷新当前 Session 的完整 observation，不同 Session 不共享观察。
+
+Edit 与 Write 共用 sibling staging、分块写入、取消、权限、`fsync`、关闭、原子发布和失败清理。新建目标通过 `create-if-absent` 发布，若并发创建者已经提交则返回冲突，不静默覆盖。
+
+### 8.2.6 工具结果出口
+
+`ToolOutput` 收口为单臂 `{ content: string, artifact?: JsonValue }`。`ToolService` 只校验字符串 `content` 并投影为文本块，成功结果可携带可选 artifact；现有工具统一返回 `{ content }`，不再维护字符串、文本块数组和对象三种等价出口。
+
+`artifact` 在本阶段只定义协议，尚未接入 Session 事件、RPC 或前端消费。脚本不在根 `tsconfig.include` 中，因此相关工具返回形态通过静态扫描同步修正。
+
+### 8.3 Tools 根、Node 白名单与 Fetch spill
+
+文件能力改为宿主显式配置。`ToolsPluginConfig.file` 存在时，四个文件工具共享 FileEnvironment 和 FileObservationStore；缺失时不注册工具，也不默认开放 `process.cwd()`。Kernel Host 只有设置 `SKILLWORLD_FILE_CWD` 才启用该能力。
+
+NodeAgent 根据实际注册状态只增加 `read`，不获得 `shell/edit/write`；教材和题集仍只能由领域工具修改。Fetch 完整正文超过内联预算时，内部原子写入 `web/fetch-*.md`，模型只收到有界 preview、`file_path` 和继续读取提示。spill 创建不自动建立 observation，留存失败与网络失败使用不同错误。
+
+### 8.4 文件版本与并发安全
+
+`FileVersion` 使用 `dev:ino:size:mtimeNs` 作为 opaque freshness token。Read 在打开后和扫描结束后比较句柄与 canonical target；Edit/Write 在目标级串行区比较 observation 与当前版本，写完 staging 后、发布前再次检查。版本不一致时丢弃旧观察并返回 `stale-version`。
+
+同进程内两个 Session 即使都观察了 V1，也只有第一个结构化修改能提交；第二个进入临界区后看到 V2 并失败。并发新建通过 sibling staging 加 hard-link 的 create-if-absent 发布保证只有一个成功。Fetch spill 复用该发布方式。
+
+Shell、IDE 或外部进程若修改目标，下一次结构化写通过版本比较检测 stale；Shell 本身不全局清空 observation。`assertFileVersion()` 与最终 rename 之间仍存在外部进程 TOCTOU，本阶段不承诺跨进程 CAS、分布式锁或远程文件系统版本协议。
+
+### 8.5 最终工程验收与装配修复
+
+验收环境为 Node v24.14.0、pnpm 10.33.0。依赖安装使用 frozen lockfile；阶段 8 专项 13 个测试文件共 89 项通过，覆盖 Search→Fetch→spill→Read、Read→Edit/Write、stale-version、并发写、并发创建与取消。
+
+首轮全量测试发现文件工具注册在未声明依赖的 effect 中读取 `ctx.tools`，Cordis 以 `cannot get property "tools" without inject` 拒绝装配。修复后文件工具通过 `ctx.inject(["tools"], ...)` 等待服务，并让注册、逆序回滚、卸载注销和 observation 清理保持同一生命周期。未修改文件算法、协议或测试断言。
+
+最终 `pnpm typecheck`、47 个测试文件共 324 项测试和 `pnpm build` 全部通过。
+
+## 最终边界与下一步
+
+阶段 8 已正式结束。当前保证同进程结构化文件修改的完整观察、常规 stale detection、目标级串行化、原子替换与并发创建保护；明确不提供文件系统沙箱、Shell approval、跨进程 compare-and-swap、跨主机一致性、远程文件系统协议或图片/二进制 Read。
+
+这些边界不是阶段 8 遗留项；若产品需要，应在新的后端阶段中单独规划。
