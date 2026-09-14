@@ -1,4 +1,5 @@
 import type { AssistantContentBlock } from "../conversation.js";
+import { reasoningSummary, toolProcessLabel } from "../process.js";
 import { Markdown } from "../Markdown.js";
 import styles from "../../style.module.css";
 
@@ -26,7 +27,7 @@ function ReasoningBlock({ block, streaming }: {
 }): React.JSX.Element {
   return (
     <details className={styles.reasoningBlock}>
-      <summary>{streaming ? "思考中" : "思考过程"}</summary>
+      <summary>{streaming ? "思考中" : reasoningSummary(block.text)}</summary>
       <div className={styles.reasoningText}>
         <Markdown text={block.text} streaming={streaming} />
         {streaming && <span className={styles.streamCursor} aria-hidden="true" />}
@@ -42,8 +43,7 @@ function ToolBlock({ block }: {
   return (
     <section className={styles.toolBlock} data-status={block.status} aria-label={`工具调用 ${block.toolName}`}>
       <header className={styles.toolHeader}>
-        <span className={styles.toolLabel}>工具调用</span>
-        <strong className={styles.toolName}>{block.toolName}</strong>
+        <strong className={styles.toolName}>{toolProcessLabel(block.toolName)}</strong>
         <span className={styles.toolStatus} data-status={block.status} role="status">
           {toolStatusText(block.status)}
         </span>
