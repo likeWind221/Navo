@@ -1,0 +1,109 @@
+{
+  "reasoning": {
+    "visible": true,
+    "text": "先检查现有结构。再决定下一步。",
+    "shimmer": "_processShimmer_upbhs_1",
+    "card": false
+  },
+  "transitioning": {
+    "statusLabel": "已处理 2s",
+    "expanded": "true",
+    "boundaryDisabled": false,
+    "bodyVisible": true,
+    "bodyHeight": 133,
+    "chevronTransform": "matrix(0.467979, 0.88374, -0.88374, 0.467979, 0, 0)",
+    "text": "已处理 2s思考过程先检查现有结构。再决定下一步。继续读取增量。执行Shell : pnpm test已完成1sShellok思考过程折叠边界应该放到最终回答之前。执行Shell : pnpm build已完成1sShellok最终回答：F4.4 布局已经完成。",
+    "shellCount": 2,
+    "answerVisible": true,
+    "overflow": false
+  },
+  "geometry": {
+    "right": true,
+    "gap": 2,
+    "lines": 1
+  },
+  "narrow": {
+    "statusLabel": "已处理 2s",
+    "expanded": "true",
+    "boundaryDisabled": false,
+    "bodyVisible": true,
+    "bodyHeight": 267,
+    "chevronTransform": "matrix(0, 1, -1, 0, 0, 0)",
+    "text": "已处理 2s思考过程先检查现有结构。再决定下一步。继续读取增量。执行Shell : pnpm test已完成1sShellok思考过程折叠边界应该放到最终回答之前。执行Shell : pnpm build已完成1sShellok最终回答：F4.4 布局已经完成。",
+    "shellCount": 2,
+    "answerVisible": true,
+    "overflow": false
+  },
+  "streaming": {
+    "statusLabel": "处理中 1s",
+    "expanded": "true",
+    "boundaryDisabled": true,
+    "bodyVisible": true,
+    "bodyHeight": 193,
+    "chevronTransform": "matrix(0, 1, -1, 0, 0, 0)",
+    "text": "处理中 1s思考过程先检查现有结构。再决定下一步。继续读取增量。执行Shell : pnpm test已完成1sShellok思考过程折叠边界应该放到最终回答之前。执行Shell : pnpm build已完成1sShellok",
+    "shellCount": 2,
+    "answerVisible": false,
+    "overflow": false
+  },
+  "streamingLater": {
+    "statusLabel": "处理中 2s",
+    "expanded": "true",
+    "boundaryDisabled": true,
+    "bodyVisible": true,
+    "bodyHeight": 193,
+    "chevronTransform": "matrix(0, 1, -1, 0, 0, 0)",
+    "text": "处理中 2s思考过程先检查现有结构。再决定下一步。继续读取增量。执行Shell : pnpm test已完成1sShellok思考过程折叠边界应该放到最终回答之前。执行Shell : pnpm build已完成1sShellok",
+    "shellCount": 2,
+    "answerVisible": false,
+    "overflow": false
+  },
+  "streamingAfterClick": {
+    "statusLabel": "处理中 2s",
+    "expanded": "true",
+    "boundaryDisabled": true,
+    "bodyVisible": true,
+    "bodyHeight": 193,
+    "chevronTransform": "matrix(0, 1, -1, 0, 0, 0)",
+    "text": "处理中 2s思考过程先检查现有结构。再决定下一步。继续读取增量。执行Shell : pnpm test已完成1sShellok思考过程折叠边界应该放到最终回答之前。执行Shell : pnpm build已完成1sShellok",
+    "shellCount": 2,
+    "answerVisible": false,
+    "overflow": false
+  },
+  "folded": {
+    "statusLabel": "已处理 2s",
+    "expanded": "false",
+    "boundaryDisabled": false,
+    "bodyVisible": false,
+    "bodyHeight": 0,
+    "chevronTransform": "none",
+    "text": "已处理 2s思考过程先检查现有结构。再决定下一步。继续读取增量。执行Shell : pnpm test已完成1sShellok思考过程折叠边界应该放到最终回答之前。执行Shell : pnpm build已完成1sShellok最终回答：F4.4 布局已经完成。",
+    "shellCount": 2,
+    "answerVisible": true,
+    "overflow": false
+  },
+  "foldedLater": {
+    "statusLabel": "已处理 2s",
+    "expanded": "false",
+    "boundaryDisabled": false,
+    "bodyVisible": false,
+    "bodyHeight": 0,
+    "chevronTransform": "none",
+    "text": "已处理 2s思考过程先检查现有结构。再决定下一步。继续读取增量。执行Shell : pnpm test已完成1sShellok思考过程折叠边界应该放到最终回答之前。执行Shell : pnpm build已完成1sShellok最终回答：F4.4 布局已经完成。",
+    "shellCount": 2,
+    "answerVisible": true,
+    "overflow": false
+  },
+  "expanded": {
+    "statusLabel": "已处理 2s",
+    "expanded": "true",
+    "boundaryDisabled": false,
+    "bodyVisible": true,
+    "bodyHeight": 193,
+    "chevronTransform": "matrix(0, 1, -1, 0, 0, 0)",
+    "text": "已处理 2s思考过程先检查现有结构。再决定下一步。继续读取增量。执行Shell : pnpm test已完成1sShellok思考过程折叠边界应该放到最终回答之前。执行Shell : pnpm build已完成1sShellok最终回答：F4.4 布局已经完成。",
+    "shellCount": 2,
+    "answerVisible": true,
+    "overflow": false
+  }
+}

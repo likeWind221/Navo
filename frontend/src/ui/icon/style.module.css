@@ -1,0 +1,3 @@
+.sweep { animation: iconSweep 2.2s linear infinite; }
+@keyframes iconSweep { from { transform: translateX(-24px); } to { transform: translateX(24px); } }
+@media (prefers-reduced-motion: reduce) { .highlight { display: none; } .sweep { animation: none; } }

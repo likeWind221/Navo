@@ -1,24 +1,24 @@
 {
   "hello": {
-    "label": "系统提示",
+    "label": "/hello",
     "status": "succeeded",
     "summary": "hello",
     "failure": ""
   },
   "unknown": {
-    "label": "系统提示",
+    "label": "/unknown",
     "status": "failed",
     "summary": "",
     "failure": "Unknown command 'unknown'."
   },
   "invalidArgs": {
-    "label": "系统提示",
+    "label": "/hello",
     "status": "failed",
     "summary": "",
     "failure": "hello does not accept arguments."
   },
   "concurrentCommand": {
-    "label": "系统提示",
+    "label": "/hello",
     "status": "succeeded",
     "summary": "hello",
     "failure": ""
@@ -34,9 +34,9 @@
     "buttonLabel": "发送消息"
   },
   "alignment": {
-    "assistantLeft": 269.5,
-    "assistantRight": 997.5,
-    "userRight": 997.5,
+    "assistantLeft": 281.5,
+    "assistantRight": 985.5,
+    "userRight": 985.5,
     "composerLeft": 257.5,
     "composerRight": 1009.5,
     "composerTop": 577,

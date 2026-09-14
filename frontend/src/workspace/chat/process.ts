@@ -41,7 +41,7 @@ export function reasoningSummary(text: string): string {
 
 export function toolProcessLabel(toolName: string): string {
   const name = toolName.trim();
-  if (name.toLowerCase() === "shell") return "执行 Shell";
+  if (name.toLowerCase() === "shell") return "执行Shell";
   return `执行 ${name || "工具"}`;
 }
 

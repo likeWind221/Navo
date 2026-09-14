@@ -1,0 +1,19 @@
+.demo { min-height: 100vh; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 36px; }
+.brand { font-size: 16px; font-weight: 650; letter-spacing: 2.5px; }
+.brand span { color: var(--accent); font-size: 24px; }
+.badge { color: var(--text-secondary); font-size: 12px; letter-spacing: 1px; }
+.controls { max-width: 800px; margin: 10px auto 0; padding: 0 48px 14px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.actions button { border: 1px solid var(--border); border-radius: 7px; padding: 6px 10px; background: transparent; color: var(--text); font-size: 12px; }
+.actions button[aria-pressed="true"] { background: var(--surface-muted); border-color: var(--control-border); }
+.controls p { color: var(--text-secondary); font-size: 12px; line-height: 1.7; margin: 12px 0 0; }
+.conversation { min-height: 50vh; }
+.conversation > div { padding-bottom: 20px; }
+.footer { max-width: 800px; margin: 0 auto; padding: 12px 48px 32px; font-size: 11px; color: var(--text-secondary); }
+.motion { display: none; }
+@media (prefers-reduced-motion: reduce) { .motion { display: block; } }
+@media (max-width: 600px) {
+  .topbar { padding: 14px 20px; }
+  .controls, .footer { padding-left: 28px; padding-right: 28px; }
+}

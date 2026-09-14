@@ -45,6 +45,7 @@ export default function DesignSample(): React.JSX.Element {
             <span><Icon name="brain" /> 思考</span><span><Icon name="tool" /> 工具</span>
             <span><span className={styles.spinning}><Icon name="loader" /></span> 进行中</span>
             <span><Icon name="check" /> 成功</span><span><Icon name="close" /> 失败</span><span><Icon name="chevron" /> 展开</span>
+            <span><Icon name="globe" /> 网络</span><span><Icon name="terminal" /> 终端</span><span><Icon name="pen" /> 编辑</span>
             <small>自绘 SVG / 统一描边 / 颜色继承文字</small>
           </div>
         </section>

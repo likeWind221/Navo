@@ -6,6 +6,7 @@ import type {
 } from "./conversation.js";
 import { isTurnLive, shouldFoldProcess, splitTurnContent } from "./process.js";
 import { ProcessRow } from "./process/Row.js";
+import { Activity } from "./process/Activity.js";
 import styles from "../style.module.css";
 import { Markdown } from "./Markdown.js";
 
@@ -105,27 +106,16 @@ function LegacyAssistantText({ message }: { readonly message: AssistantConversat
 }
 
 function CommandMessage({ command }: { readonly command: CommandConversationMessage }): React.JSX.Element {
-  const statusText = commandStatusText(command.status);
   const isRunning = command.status === "running";
   return (
     <article className={`${styles.message} ${styles.commandMessage}`}
       aria-label={`\u7cfb\u7edf\u63d0\u793a ${command.name}`} aria-busy={isRunning}>
-      <div className={styles.commandHeader}>
-        <span className={styles.commandLabel}>{"\u7cfb\u7edf\u63d0\u793a"}</span>
-        <strong className={styles.commandName}>/{command.name}</strong>
-        <span className={styles.commandStatus} data-status={command.status} role="status">{statusText}</span>
-      </div>
+      <Activity label={`/${command.name}`} status={command.status}
+        startedAt={command.startedAt} endedAt={command.endedAt} />
       {command.summary.length > 0 && <p className={styles.commandSummary}>{command.summary}</p>}
       {command.failure !== null && <p className={styles.commandFailure}>{command.failure.message}</p>}
     </article>
   );
-}
-
-function commandStatusText(status: CommandConversationMessage["status"]): string {
-  if (status === "running") return "\u6267\u884c\u4e2d";
-  if (status === "succeeded") return "\u5df2\u5b8c\u6210";
-  if (status === "failed") return "\u5931\u8d25";
-  return "\u5df2\u53d6\u6d88";
 }
 
 function assistantStatusText(

@@ -12,7 +12,7 @@ const mockHost = resolve(repoRoot, "scripts/host/mock.ts");
 
 describe("KernelHostProcess", () => {
   it("starts one Mock Host and routes a complete stream", async () => {
-    const host = createMockHost({ SKILLWORLD_MOCK_TEXT: "测试回复", SKILLWORLD_MOCK_CHUNK_CHARS: "2" });
+    const host = createMockHost({ NAVO_MOCK_TEXT: "测试回复", NAVO_MOCK_CHUNK_CHARS: "2" });
     const first = host.start();
     const second = host.start();
     expect(first).toBe(second);
@@ -32,7 +32,7 @@ describe("KernelHostProcess", () => {
   });
 
   it("propagates cancellation and closes a hanging Host", async () => {
-    const host = createMockHost({ SKILLWORLD_MOCK_MODE: "hang" });
+    const host = createMockHost({ NAVO_MOCK_MODE: "hang" });
     const controller = new AbortController();
     const consume = (async () => {
       for await (const event of host.stream(agentTurnMethod, {
@@ -49,7 +49,7 @@ describe("KernelHostProcess", () => {
   });
 
   it("turns a Host crash into a closed RPC stream", async () => {
-    const host = createMockHost({ SKILLWORLD_MOCK_MODE: "crash" });
+    const host = createMockHost({ NAVO_MOCK_MODE: "crash" });
     const consume = (async () => {
       for await (const _event of host.stream(agentTurnMethod, {
         sessionId: "session-3",

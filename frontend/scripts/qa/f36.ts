@@ -50,7 +50,7 @@ async function main(): Promise<void> {
 
     await submit(window, "/hello");
     const hello = await waitForCommand(window, "hello", "succeeded");
-    assert.equal(hello.label, "\u7cfb\u7edf\u63d0\u793a");
+    assert.equal(hello.label, "/hello");
 
     await submit(window, "/unknown");
     const unknown = await waitForCommand(window, "unknown", "failed");
@@ -116,10 +116,10 @@ async function waitForCommand(
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
     const commands = await window.webContents.executeJavaScript(`(() => [...document.querySelectorAll('[class*="commandMessage"]')]
-      .filter((item) => item.querySelector('[class*="commandName"]')?.textContent?.trim() === ${JSON.stringify(`/${name}`)})
+      .filter((item) => item.querySelector('[class*="activityLabel"]')?.textContent?.trim() === ${JSON.stringify(`/${name}`)})
       .map((item) => ({
-        label: item.querySelector('[class*="commandLabel"]')?.textContent?.trim() ?? '',
-        status: item.querySelector('[class*="commandStatus"]')?.getAttribute('data-status'),
+        label: item.querySelector('[class*="activityLabel"]')?.textContent?.trim() ?? '',
+        status: item.querySelector('[class*="activityRow"]')?.getAttribute('data-status'),
         summary: item.querySelector('[class*="commandSummary"]')?.textContent?.trim() ?? '',
         failure: item.querySelector('[class*="commandFailure"]')?.textContent?.trim() ?? '',
       })) )()`);

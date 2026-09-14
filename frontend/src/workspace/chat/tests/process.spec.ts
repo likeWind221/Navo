@@ -13,7 +13,7 @@ import {
 const reasoning: AssistantContentBlock = { id: "reasoning", kind: "reasoning", text: "先分析", status: "completed" };
 const answer: AssistantContentBlock = { id: "answer", kind: "text", text: "最终回答", status: "completed" };
 const tool: AssistantContentBlock = {
-  id: "tool", kind: "tool-call", toolCallId: "call-1", toolName: "read", arguments: "{}",
+  id: "tool", kind: "tool-call", startedAt: 0, endedAt: 2_000, toolCallId: "call-1", toolName: "read", arguments: "{}",
   status: "succeeded", summary: "读取完成", detail: "", failure: null,
 };
 
@@ -81,8 +81,8 @@ describe("process labels", () => {
   });
 
   it("uses stable execution labels for tools", () => {
-    expect(toolProcessLabel("shell")).toBe("执行 Shell");
-    expect(toolProcessLabel("Shell")).toBe("执行 Shell");
+    expect(toolProcessLabel("shell")).toBe("执行Shell");
+    expect(toolProcessLabel("Shell")).toBe("执行Shell");
     expect(toolProcessLabel("read")).toBe("执行 read");
   });
 });

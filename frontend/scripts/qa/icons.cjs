@@ -8,7 +8,7 @@ const url = process.argv[2] ?? "http://127.0.0.1:5173/?preview=design";
 const outputDirectory = join(process.cwd(), "qa-output");
 app.setPath("userData", join(tmpdir(), `navo-f4-1-qa-${process.pid}`));
 
-const expectedLabels = ["手册", "向导", "前往", "思考", "工具", "进行中", "成功", "失败", "展开"];
+const expectedLabels = ["手册", "向导", "前往", "思考", "工具", "进行中", "成功", "失败", "展开", "网络", "终端", "编辑"];
 
 const readIcons = `(() => {
   const row = document.querySelector('[class*="iconSamples"]');

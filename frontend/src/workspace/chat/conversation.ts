@@ -26,6 +26,8 @@ export interface AssistantReasoningBlock {
 }
 
 export interface AssistantToolBlock {
+  readonly startedAt: number | null;
+  readonly endedAt: number | null;
   readonly id: string;
   readonly kind: "tool-call";
   readonly toolCallId: string;
@@ -56,6 +58,8 @@ export interface AssistantConversationMessage {
 }
 
 export interface CommandConversationMessage {
+  readonly startedAt: number | null;
+  readonly endedAt: number | null;
   readonly id: string;
   readonly role: "system";
   readonly commandId: string;
@@ -127,7 +131,7 @@ export function conversationReducer(
     return failActiveTurn(state, action.requestId, action.failure, now);
   }
   if (action.type === "agent-event") return applyDesktopEvent(state, action.update, now);
-  if (action.type === "command-update") return applyCommandEvent(state, action.event);
+  if (action.type === "command-update") return applyCommandEvent(state, action.event, now);
   if (state.activeTurn?.requestId !== action.update.requestId) return state;
   if (action.update.type === "bridge-error") {
     return finishTurn(state, "failed", action.update.failure, now);
@@ -176,9 +180,9 @@ function applyDesktopEvent(
 ): ConversationState {
   if (update.type === "turn-event") return applyTurnV2Event(state, update.event, now);
   if (update.type === "turn-error") return failActiveTurn(state, update.requestId, update.failure, now);
-  if (update.type === "command-event") return applyCommandEvent(state, update.event);
+  if (update.type === "command-event") return applyCommandEvent(state, update.event, now);
   if (update.type === "command-error") {
-    return applyCommandFailure(state, update.commandId, update.name, update.failure);
+    return applyCommandFailure(state, update.commandId, update.name, update.failure, now);
   }
   if (update.type === "event") {
     if (state.activeTurn?.requestId !== update.requestId) return state;
@@ -248,7 +252,7 @@ function applyTurnV2Event(
       ...message,
       blocks: (message.blocks ?? []).map((block) => (
         block.kind === "tool-call" && block.toolCallId === event.toolCallId
-          ? { ...block, status: "running" } : block
+          ? { ...block, status: "running", startedAt: block.startedAt ?? now } : block
       )),
     }));
   }
@@ -264,6 +268,7 @@ function applyTurnV2Event(
           ? {
               ...block,
               status: event.status,
+              endedAt: now,
               summary: event.summary,
               detail: event.detail,
               failure: "failure" in event ? toConversationFailure(event.failure) : null,
@@ -294,6 +299,8 @@ function createContentBlock(
     return {
       id: contentId(event),
       kind: event.kind,
+      startedAt: null,
+      endedAt: null,
       toolCallId: event.toolCallId,
       toolName: event.toolName,
       arguments: "",
@@ -324,11 +331,13 @@ function findAssistant(state: ConversationState, requestId: string): AssistantCo
   return message?.role === "assistant" ? message : undefined;
 }
 
-function applyCommandEvent(state: ConversationState, event: CommandEvent): ConversationState {
+function applyCommandEvent(state: ConversationState, event: CommandEvent, now: number): ConversationState {
   const existing = state.commands.find((command) => command.commandId === event.commandId);
   if (existing !== undefined && existing.status !== "running") return state;
   const current: CommandConversationMessage = existing ?? {
     id: `command-${event.commandId}`,
+    startedAt: event.type === "command-started" ? now : null,
+    endedAt: null,
     role: "system",
     commandId: event.commandId,
     name: event.name,
@@ -347,8 +356,9 @@ function applyCommandEvent(state: ConversationState, event: CommandEvent): Conve
   return {
     ...state,
     commands: existing === undefined
-      ? [...state.commands, next]
-      : state.commands.map((command) => command.commandId === event.commandId ? next : command),
+      ? [...state.commands, { ...next, endedAt: next.status === "running" ? null : now }]
+      : state.commands.map((command) => command.commandId === event.commandId
+        ? { ...next, endedAt: next.status === "running" ? null : now } : command),
     timeline: existing === undefined
       ? [...state.timeline, { kind: "command", id: next.id }]
       : state.timeline,
@@ -360,11 +370,14 @@ function applyCommandFailure(
   commandId: string,
   name: string,
   failure: DesktopAgentFailure,
+  now: number,
 ): ConversationState {
   const existing = state.commands.find((command) => command.commandId === commandId);
   if (existing !== undefined && existing.status !== "running") return state;
   const next: CommandConversationMessage = existing ?? {
     id: `command-${commandId}`,
+    startedAt: null,
+    endedAt: now,
     role: "system",
     commandId,
     name,
@@ -378,7 +391,7 @@ function applyCommandFailure(
     commands: existing === undefined
       ? [...state.commands, next]
       : state.commands.map((command) => command.commandId === commandId
-        ? { ...command, status: "failed", failure } : command),
+        ? { ...command, status: "failed", failure, endedAt: now } : command),
     timeline: existing === undefined
       ? [...state.timeline, { kind: "command", id: next.id }]
       : state.timeline,
@@ -420,7 +433,15 @@ function finishTurn(
   failure: DesktopAgentFailure | null,
   now: number,
 ): ConversationState {
-  const updated = updateAssistant(state, (message) => ({ ...message, status, failure, endedAt: now }));
+  const updated = updateAssistant(state, (message) => ({
+    ...message, status, failure, endedAt: now,
+    ...(message.blocks === undefined ? {} : {
+      blocks: message.blocks.map((block) => block.kind === "tool-call"
+        && (block.status === "pending" || block.status === "running")
+        ? { ...block, status: status === "failed" ? "failed" as const : "cancelled" as const, endedAt: now }
+        : block),
+    }),
+  }));
   return { ...updated, activeTurn: null };
 }
 

@@ -44,8 +44,8 @@
           20
         ],
         "painted": [
-          11,
-          10
+          19.7,
+          18.9
         ],
         "spinning": false
       },
@@ -106,6 +106,42 @@
         "painted": [
           6.4,
           12.8
+        ],
+        "spinning": false
+      },
+      {
+        "label": "网络",
+        "box": [
+          20,
+          20
+        ],
+        "painted": [
+          18,
+          18
+        ],
+        "spinning": false
+      },
+      {
+        "label": "终端",
+        "box": [
+          20,
+          20
+        ],
+        "painted": [
+          18,
+          16
+        ],
+        "spinning": false
+      },
+      {
+        "label": "编辑",
+        "box": [
+          20,
+          20
+        ],
+        "painted": [
+          17.7,
+          17.7
         ],
         "spinning": false
       }

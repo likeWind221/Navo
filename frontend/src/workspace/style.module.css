@@ -33,46 +33,49 @@
 .contentBlocks { display: grid; gap: 12px; }
 .textBlock { min-width: 0; }
 .processRow { min-width: 0; }
-.processStatus { display: flex; align-items: center; min-height: 22px; padding: 2px 0; color: var(--text-secondary); font-size: 12px; }
-.processLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.processStartBoundary { width: 100%; margin-top: 8px; border-top: 1px solid var(--border); }
-.processBody { display: grid; gap: 12px; margin-top: 10px; }
-.processBody[hidden] { display: none; }
-.processBoundary { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 10px; padding: 2px 0; border: 0; background: transparent; color: var(--text-secondary); }
-.processBoundary::before, .processBoundary::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
-.processBoundary:not(:disabled) { cursor: pointer; }
-.processBoundary:not(:disabled):hover { color: var(--text); }
+.processStatus { display: flex; align-items: center; gap: 5px; min-height: 24px; color: var(--text-secondary); font-size: 12px; }
+.processLabel { min-width: 0; white-space: nowrap; }
+.processStartBoundary { width: 100%; margin-top: 2px; border-top: 1px solid var(--border); }
+.processCollapse { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; transition: grid-template-rows 320ms cubic-bezier(.22, 1, .36, 1), opacity 240ms ease, visibility 320ms; }
+.processCollapse[data-expanded="true"] { grid-template-rows: 1fr; opacity: 1; visibility: visible; }
+.processClip { min-height: 0; overflow: hidden; }
+.processBody { display: grid; gap: 14px; padding-top: 12px; color: var(--text-secondary); font-size: 13px; }
+.processBody .textBlock > div { color: inherit; font-size: inherit; }
+.processBoundary, .resultToggle { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; background: transparent; color: inherit; border-radius: 4px; }
+:is(.processBoundary, .resultToggle):not(:disabled) { cursor: pointer; }
+:is(.processBoundary, .resultToggle):not(:disabled):hover { color: var(--text); background: var(--surface-muted); }
 .processBoundary:disabled { opacity: 1; }
-.processBoundary svg { width: 14px; height: 14px; flex-shrink: 0; transition: transform var(--duration); }
-.processBoundary[aria-expanded="true"] svg { transform: rotate(90deg); }
-.reasoningBlock { max-width: 100%; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-muted); color: var(--text-secondary); overflow: hidden; }
-.reasoningBlock summary { cursor: pointer; padding: 9px 12px; color: var(--text); font-size: 12px; font-weight: 600; }
-.reasoningText { padding: 0 12px 11px; color: var(--text-secondary); font-size: 13px !important; line-height: 1.65; }
-.reasoningText > div { font-size: inherit; line-height: inherit; }
-.toolBlock { min-width: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden; }
-.toolHeader { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
-.toolLabel { color: var(--text-secondary); font-size: 12px; }
-.toolName { min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
-.toolStatus { margin-left: auto; color: var(--text-secondary); font-size: 12px; }
-.toolStatus[data-status="running"] { color: var(--accent-strong); }
-.toolStatus[data-status="succeeded"] { color: #47724b; }
-.toolStatus[data-status="failed"] { color: #a0443f; }
-.toolStatus[data-status="cancelled"] { color: var(--text-secondary); }
-.toolDetails { border-top: 1px solid var(--border); }
-.toolDetails summary { cursor: pointer; padding: 8px 12px; color: var(--text-secondary); font-size: 12px; }
-.toolDetails pre { max-height: 280px; margin: 0; padding: 0 12px 11px; overflow: auto; color: var(--text); font: 12px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
-.toolDetails p { margin: 0; padding: 0 12px 11px; color: var(--text); font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
-.toolFailure { color: #a0443f !important; }
-.commandMessage { max-width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-muted); }
-.commandHeader { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: var(--text-secondary); font-size: 12px; }
-.commandLabel { color: var(--text-secondary); }
-.commandName { color: var(--text); font-size: 12px; }
-.commandStatus { margin-left: auto; }
-.commandStatus[data-status="running"] { color: var(--accent-strong); }
-.commandStatus[data-status="succeeded"] { color: #47724b; }
-.commandStatus[data-status="failed"] { color: #a0443f; }
+.processBoundary svg, .resultToggle svg { width: 14px; height: 14px; transition: transform 320ms cubic-bezier(.22, 1, .36, 1); }
+.processBoundary[aria-expanded="true"] svg, .resultToggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+.processBoundary:focus-visible, .resultToggle:focus-visible { outline: 2px solid var(--control-border); outline-offset: 3px; }
+.reasoningBlock, .toolBlock { min-width: 0; color: var(--text-secondary); }
+.reasoningHeading { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.reasoningLabel { display: inline-block; font-size: 12px; }
+.reasoningText { color: inherit; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.reasoningText > div { color: inherit; font-size: inherit; line-height: inherit; }
+.activityRow { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--text-secondary); font-size: 12px; }
+.activityIcon { color: var(--text-secondary); display: inline-flex; flex-shrink: 0; }
+.activityIcon svg { width: 14px; height: 14px; }
+.activityLabel { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.activityStatus { flex-shrink: 0; margin-left: auto; white-space: nowrap; }
+.resultToggle { flex-shrink: 0; width: 22px; height: 22px; }
+.activityTime { flex-shrink: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.activityRow[data-status="failed"] .activityStatus { color: #a0443f; }
+.activityIcon[data-spinning="true"] { animation: activitySpin 1.5s linear infinite; }
+.processLabel[data-active="true"], .reasoningLabel[data-active="true"], .activityLabel[data-active="true"] { background: linear-gradient(105deg, #948a7e 30%, #33291f 48%, #948a7e 66%); background-size: 240% 100%; background-clip: text; color: transparent; animation: processShimmer 2.2s linear infinite; }
+.toolResult { min-width: 0; margin-top: 6px; border: 1px solid #dddadd; border-radius: 9px; background: #f5f5f5; color: #646469; font-size: 12px; }
+.toolResult header { padding: 5px 9px; }
+.toolCommand { padding: 4px 9px 10px; color: var(--text-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }
+.toolCommand code { font: 12px/1.65 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.toolResult pre { max-height: 240px; overflow: auto; margin: 0; padding: 4px 9px 10px; white-space: pre; font: 12px/1.65 ui-monospace, SFMono-Regular, Consolas, monospace; scrollbar-width: thin; }
+.toolResult footer { padding: 3px 9px 6px; text-align: right; color: #858589; }
+.toolResult p { margin: 0; padding: 4px 9px 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.toolBlock > .toolFailure { margin: 5px 0 0; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.toolFailure, .commandFailure { color: #a0443f; }
+.commandMessage { max-width: 100%; padding: 4px 0; color: var(--text-secondary); }
 .commandSummary, .commandFailure { margin-top: 6px !important; font-size: 13px !important; line-height: 1.6; }
-.commandFailure { color: #a0443f; }
+@keyframes processShimmer { from { background-position: 180% 0; } to { background-position: -60% 0; } }
+@keyframes activitySpin { to { transform: rotate(360deg); } }
 .messageStatus { display: flex; align-items: center; gap: 8px; margin-top: 8px; color: var(--text-secondary); font-size: 12px; }
 .assistantMessage > .messageStatus:first-child { margin-top: 0; }
 .waitingDot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: waitingPulse 1.2s ease-in-out infinite; }
@@ -81,7 +84,8 @@
 @keyframes waitingPulse { 50% { opacity: 0.3; transform: scale(0.75); } }
 @keyframes cursorBlink { 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .waitingDot, .streamCursor { animation: none; }
+  .waitingDot, .streamCursor, .activityIcon, .processLabel[data-active="true"], .reasoningLabel[data-active="true"], .activityLabel[data-active="true"] { animation: none; }
+  .processCollapse, .processBoundary svg, .resultToggle svg { transition: none; }
 }
 @media (max-width: 600px) {
   .topbar { height: 60px; padding: 0 20px; }

@@ -30,29 +30,34 @@ export function ProcessRow({ blocks, folded, message }: {
 
   return (
     <section className={styles.processRow}>
-      <div className={styles.processStatus} role="status">
-        <span className={styles.processLabel}>{processSummary(message, now)}</span>
+      <div className={styles.processStatus}>
+        <span className={styles.processLabel} data-active={live} role="status">{processSummary(message, now)}</span>
+        {hasProcess && (
+          <button
+            type="button"
+            className={styles.processBoundary}
+            aria-expanded={expanded}
+            aria-controls={bodyId}
+            aria-label={expanded ? "折叠处理过程" : "展开处理过程"}
+            disabled={!folded}
+            onClick={() => setUserExpanded((current) => !current)}
+          >
+            <Icon name="chevron" />
+          </button>
+        )}
       </div>
-      {hasProcess && expanded && <div className={styles.processStartBoundary} aria-hidden="true" />}
+      {hasProcess && <div className={styles.processStartBoundary} aria-hidden="true" />}
       {hasProcess && (
-        <div id={bodyId} className={styles.processBody} hidden={!expanded}>
-          {blocks.map((block) => (
-            <AssistantBlock key={block.id} block={block} live={live} />
-          ))}
+        <div id={bodyId} className={styles.processCollapse} data-expanded={expanded}
+          aria-hidden={!expanded} inert={!expanded}>
+          <div className={styles.processClip}>
+            <div className={styles.processBody}>
+              {blocks.map((block) => (
+                <AssistantBlock key={block.id} block={block} live={live} />
+              ))}
+            </div>
+          </div>
         </div>
-      )}
-      {hasProcess && (
-        <button
-          type="button"
-          className={styles.processBoundary}
-          aria-expanded={expanded}
-          aria-controls={bodyId}
-          aria-label={expanded ? "折叠处理过程" : "展开处理过程"}
-          disabled={!folded}
-          onClick={() => setUserExpanded((current) => !current)}
-        >
-          <Icon name="chevron" />
-        </button>
       )}
     </section>
   );

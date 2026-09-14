@@ -1,5 +1,8 @@
+import { useId, useState } from "react";
 import type { AssistantContentBlock } from "../conversation.js";
-import { reasoningSummary, toolProcessLabel } from "../process.js";
+import { Icon } from "../../../ui/Icon.js";
+import { toolPresentation } from "./tool.js";
+import { Activity } from "./Activity.js";
 import { Markdown } from "../Markdown.js";
 import styles from "../../style.module.css";
 
@@ -26,48 +29,44 @@ function ReasoningBlock({ block, streaming }: {
   readonly streaming: boolean;
 }): React.JSX.Element {
   return (
-    <details className={styles.reasoningBlock}>
-      <summary>{streaming ? "思考中" : reasoningSummary(block.text)}</summary>
+    <section className={styles.reasoningBlock} aria-label="思考过程">
+      <div className={styles.reasoningHeading}>
+        <span className={styles.activityIcon} data-icon="brain"><Icon name="brain" active={streaming} /></span>
+        <span className={styles.reasoningLabel} data-active={streaming}>{streaming ? "思考中" : "思考过程"}</span>
+      </div>
       <div className={styles.reasoningText}>
         <Markdown text={block.text} streaming={streaming} />
         {streaming && <span className={styles.streamCursor} aria-hidden="true" />}
       </div>
-    </details>
+    </section>
   );
 }
 
 function ToolBlock({ block }: {
   readonly block: Extract<AssistantContentBlock, { readonly kind: "tool-call" }>;
 }): React.JSX.Element {
-  const hasResult = block.summary.length > 0 || block.detail.length > 0 || block.failure !== null;
+  const [expanded, setExpanded] = useState(false);
+  const bodyId = useId();
+  const view = toolPresentation(block);
   return (
     <section className={styles.toolBlock} data-status={block.status} aria-label={`工具调用 ${block.toolName}`}>
-      <header className={styles.toolHeader}>
-        <strong className={styles.toolName}>{toolProcessLabel(block.toolName)}</strong>
-        <span className={styles.toolStatus} data-status={block.status} role="status">
-          {toolStatusText(block.status)}
-        </span>
-      </header>
-      <details className={styles.toolDetails}>
-        <summary>参数</summary>
-        <pre>{block.arguments || "等待参数"}</pre>
-      </details>
-      {hasResult && (
-        <details className={styles.toolDetails}>
-          <summary>结果</summary>
-          {block.summary.length > 0 && <p>{block.summary}</p>}
-          {block.detail.length > 0 && <pre>{block.detail}</pre>}
-          {block.failure !== null && <p className={styles.toolFailure}>{block.failure.message}</p>}
-        </details>
+      <Activity label={view.label} icon={view.icon} status={block.status}
+        startedAt={block.startedAt} endedAt={block.endedAt}
+        {...(view.result === null ? {} : { disclosure: { expanded, controls: bodyId, onToggle: () => setExpanded(!expanded) } })} />
+      {view.result !== null && (
+        <div id={bodyId} className={styles.processCollapse} data-expanded={expanded} aria-hidden={!expanded} inert={!expanded}>
+          <div className={styles.processClip}>
+            <section className={styles.toolResult} aria-label={view.result.title}>
+              <header>{view.result.title}</header>
+              {view.result.command !== null && <div className={styles.toolCommand}><code>$ {view.result.command}</code></div>}
+              {view.result.text.length > 0 && <pre tabIndex={0} aria-label="工具输出">{view.result.text}</pre>}
+              {block.failure !== null && block.failure.message !== view.result.text && <p className={styles.toolFailure}>{block.failure.message}</p>}
+              {view.result.exitCode !== null && <footer>退出码 {view.result.exitCode}</footer>}
+            </section>
+          </div>
+        </div>
       )}
+      {view.result === null && block.failure !== null && <p className={styles.toolFailure}>{block.failure.message}</p>}
     </section>
   );
-}
-
-function toolStatusText(status: Extract<AssistantContentBlock, { readonly kind: "tool-call" }>["status"]): string {
-  if (status === "pending") return "等待执行";
-  if (status === "running") return "执行中";
-  if (status === "succeeded") return "已成功";
-  if (status === "failed") return "失败";
-  return "已取消";
 }

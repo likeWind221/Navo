@@ -184,6 +184,8 @@ describe("conversationReducer", () => {
 
     expect(completed.commands).toEqual([{
       id: "command-command-1",
+      startedAt: NOW,
+      endedAt: NOW,
       role: "system",
       commandId: "command-1",
       name: "hello",
@@ -227,6 +229,34 @@ describe("conversationReducer", () => {
       }],
     });
   });
+  it("measures command duration from first start and freezes on transport failure", () => {
+    const event = { type: "command-started" as const, sessionId: "s", commandId: "c", name: "hello", anchor: { kind: "session" as const } };
+    let state = conversationReducer(initialConversationState, { type: "command-update", event }, NOW);
+    state = conversationReducer(state, { type: "command-update", event }, NOW + 1_000);
+    state = conversationReducer(state, { type: "agent-event", update: {
+      type: "command-error", commandId: "c", name: "hello", failure: { code: "closed", message: "closed" },
+    } }, NOW + 2_000);
+    expect(state.commands[0]).toMatchObject({ startedAt: NOW, endedAt: NOW + 2_000, status: "failed" });
+    expect(conversationReducer(state, { type: "command-update", event }, NOW + 5_000)).toBe(state);
+  });
+
+  it.each(["turn-cancelled", "turn-failed"] as const)("freezes running tools on %s without a tool result", (type) => {
+    const scope = { sessionId: "session-1", requestId: "request-1", turnId: "turn-1" };
+    const content = { ...scope, stepId: "step-1", messageId: "message-1", contentIndex: 0, toolCallId: "tool-1" };
+    let state = v2(submitted(), { ...scope, type: "turn-started" });
+    state = v2(state, { ...content, type: "content-started", kind: "tool-call", toolName: "shell" });
+    const pending = state.messages.at(-1);
+    expect(pending).toMatchObject({ blocks: [{ startedAt: null, endedAt: null, status: "pending" }] });
+    state = v2(state, { ...content, type: "tool-started" });
+    const event: AgentTurnV2Event = type === "turn-failed"
+      ? { ...scope, type, failure: { code: "model", message: "failure" } }
+      : { ...scope, type };
+    state = conversationReducer(state, { type: "agent-event", update: { type: "turn-event", event } }, NOW + 3_000);
+    expect(state.messages.at(-1)).toMatchObject({ blocks: [{
+      startedAt: NOW, endedAt: NOW + 3_000, status: type === "turn-failed" ? "failed" : "cancelled",
+    }] });
+  });
+
 });
 
 function submitted(): ConversationState {

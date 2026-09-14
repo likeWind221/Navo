@@ -57,7 +57,10 @@
 - [F4.1：过程图标库](45-devlog-f4-1-icons.md)：九枚自绘图标、入口与单图标文件的职责划分、预览页演示与 Electron 渲染断言。
 - [图标库选型调研](46-devlog-icon-library-research.md)：reicon 与 lucide 的许可、体量、绘图一致性实测对比，结论为本阶段继续使用自绘图标。
 - [F4.2：回合过程折叠](47-devlog-f4-2-process-fold.md)：过程与最终回答切分、折叠判据、回合起止时间、真实 IPC 桌面验收与三处实现坑。
-- [F4.3：过程状态栏、顺序过程流与用时](50-devlog-f4-3-process-flow.md)：固定处理状态与实时/冻结用时、reasoning 摘要、Shell 过程标题、最终回答前折叠边界，以及尚待完整依赖环境执行的自动验收。
+- [F4.3：过程状态栏、顺序过程流与用时](50-devlog-f4-3-process-flow.md)：固定处理状态与实时/冻结用时、reasoning 摘要、Shell 过程标题、最终回答前折叠边界，以及后续由 F4.4 补齐的自动验收。
+- [F4 实现汇总](52-devlog-f4-4-text-process.md)：合并文本过程、活动行、工具结果、图标流光与单 HTML 演示实现。
+- [Host 工具列表排查](53-devlog-message-demo-tool-audit.md)：工具配置与模型白名单的只读诊断结论。
+- [F4 验收与收尾](54-devlog-tool-result-rows.md)：自动验证与用户验收通过，阶段正式关闭。
 
 ## 项目迁移记录
 
