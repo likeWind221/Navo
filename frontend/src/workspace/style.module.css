@@ -35,7 +35,8 @@
 .processRow { min-width: 0; }
 .processStatus { display: flex; align-items: center; min-height: 22px; padding: 2px 0; color: var(--text-secondary); font-size: 12px; }
 .processLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.processBody { display: grid; gap: 12px; margin-top: 8px; }
+.processStartBoundary { width: 100%; margin-top: 8px; border-top: 1px solid var(--border); }
+.processBody { display: grid; gap: 12px; margin-top: 10px; }
 .processBody[hidden] { display: none; }
 .processBoundary { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 10px; padding: 2px 0; border: 0; background: transparent; color: var(--text-secondary); }
 .processBoundary::before, .processBoundary::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
