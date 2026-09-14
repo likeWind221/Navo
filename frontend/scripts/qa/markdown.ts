@@ -6,7 +6,7 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import type { DesktopAgentApi, DesktopAgentEvent } from "../../shared/agent.js";
 
 const output = resolve("qa-output");
-app.setPath("userData", join(tmpdir(), `skillworld-markdown-${process.pid}`));
+app.setPath("userData", join(tmpdir(), `navo-markdown-${process.pid}`));
 
 async function main(): Promise<void> {
   await app.whenReady();

@@ -6,7 +6,7 @@ const { app, BrowserWindow } = require("electron");
 
 const url = process.argv[2] ?? "http://127.0.0.1:4173";
 const outputDirectory = join(process.cwd(), "qa-output");
-app.setPath("userData", join(tmpdir(), `skillworld-f1-2-3-qa-${process.pid}`));
+app.setPath("userData", join(tmpdir(), `navo-f1-2-3-qa-${process.pid}`));
 
 function helpers() {
   const pause = () => new Promise((resolve) => setTimeout(resolve, 0));

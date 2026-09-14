@@ -4,10 +4,10 @@ const { join, resolve } = require("node:path");
 const assert = require("node:assert/strict");
 const { app, BrowserWindow, ipcMain } = require("electron");
 
-const START_CHANNEL = "skillworld:agent-turn:start";
-const UPDATE_CHANNEL = "skillworld:agent-turn:update";
+const START_CHANNEL = "navo:agent-turn:start";
+const UPDATE_CHANNEL = "navo:agent-turn:update";
 const outputDirectory = resolve("qa-output");
-app.setPath("userData", join(tmpdir(), `skillworld-f4-2-qa-${process.pid}`));
+app.setPath("userData", join(tmpdir(), `navo-f4-2-qa-${process.pid}`));
 
 const processEvents = (requestId) => {
   const scope = { sessionId: "local-session", requestId, turnId: "qa-turn" };

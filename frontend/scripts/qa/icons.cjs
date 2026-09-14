@@ -6,7 +6,7 @@ const { app, BrowserWindow } = require("electron");
 
 const url = process.argv[2] ?? "http://127.0.0.1:5173/?preview=design";
 const outputDirectory = join(process.cwd(), "qa-output");
-app.setPath("userData", join(tmpdir(), `skillworld-f4-1-qa-${process.pid}`));
+app.setPath("userData", join(tmpdir(), `navo-f4-1-qa-${process.pid}`));
 
 const expectedLabels = ["手册", "向导", "前往", "思考", "工具", "进行中", "成功", "失败", "展开"];
 

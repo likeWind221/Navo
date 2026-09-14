@@ -13,10 +13,10 @@ import { cancelAgentSessionOwner, registerAgentSessionIpc } from "../../electron
 
 const outputDirectory = resolve("qa-output");
 
-process.env.SKILLWORLD_HOST_MODE = "mock";
-process.env.SKILLWORLD_REPO_ROOT = resolve("..");
-process.env.SKILLWORLD_MOCK_LLM_MODE = "hang";
-app.setPath("userData", join(tmpdir(), `skillworld-f3-6-qa-${process.pid}`));
+process.env.NAVO_HOST_MODE = "mock";
+process.env.NAVO_REPO_ROOT = resolve("..");
+process.env.NAVO_MOCK_LLM_MODE = "hang";
+app.setPath("userData", join(tmpdir(), `navo-f3-6-qa-${process.pid}`));
 
 async function main(): Promise<void> {
   await app.whenReady();
