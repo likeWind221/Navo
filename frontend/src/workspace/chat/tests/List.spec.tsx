@@ -34,22 +34,22 @@ describe("MessageList", () => {
     expect(render([failed])).toContain("模型暂不可用");
     expect(render([assistant("部分内容", "truncated")])).toContain("回答已达到长度上限");
   });
+
   it("renders reasoning, tool call and text in block order", () => {
     const message = assistant("", "streaming");
-    if (message.role !== "assistant") throw new Error("Expected assistant message");
     const blocks: readonly AssistantContentBlock[] = [
-      { id: "reasoning", kind: "reasoning", text: "先分析", status: "completed" },
+      { id: "reasoning", kind: "reasoning", text: "先分析。再执行。", status: "completed" },
       {
-        id: "tool", kind: "tool-call", toolCallId: "call-1", toolName: "read",
-        arguments: "{\"path\":\"a.txt\"}", status: "succeeded", summary: "读取完成", detail: "内容",
+        id: "tool", kind: "tool-call", toolCallId: "call-1", toolName: "shell",
+        arguments: "{\"command\":\"pnpm test\"}", status: "succeeded", summary: "执行完成", detail: "ok",
         failure: null,
       },
       { id: "text", kind: "text", text: "最终回答", status: "streaming" },
     ];
     const markup = render([{ ...message, blocks }]);
 
-    expect(markup.indexOf("先分析")).toBeLessThan(markup.indexOf("read"));
-    expect(markup.indexOf("read")).toBeLessThan(markup.indexOf("最终回答"));
+    expect(markup.indexOf("先分析。")).toBeLessThan(markup.indexOf("执行 Shell"));
+    expect(markup.indexOf("执行 Shell")).toBeLessThan(markup.indexOf("最终回答"));
     expect(markup).toContain("参数");
     expect(markup).toContain("结果");
     expect(markup).toContain("已成功");
@@ -89,39 +89,46 @@ describe("MessageList", () => {
     expect(markup).toContain("没有权限");
   });
 
-  it("folds a finished turn's process into one row while keeping the answer visible", () => {
+  it("folds a finished turn above the answer boundary while keeping the answer visible", () => {
     const blocks: readonly AssistantContentBlock[] = [
-      { id: "reasoning", kind: "reasoning", text: "先分析", status: "completed" },
+      { id: "reasoning", kind: "reasoning", text: "先分析。", status: "completed" },
       { id: "answer", kind: "text", text: "最终回答", status: "completed" },
     ];
     const markup = render([{ ...assistant("", "completed"), blocks }]);
 
     expect(markup).toContain("已处理 4s");
+    expect(markup).toContain('aria-label="展开处理过程"');
     expect(markup).toContain('aria-expanded="false"');
     expect(markup).toMatch(/processBody[^>]*hidden/);
+    expect(markup.indexOf("展开处理过程")).toBeLessThan(markup.indexOf("最终回答"));
     expect(markup).toContain("最终回答");
   });
 
-  it("keeps the process expanded while the turn is still streaming", () => {
+  it("keeps the process expanded and the boundary disabled while streaming", () => {
     const blocks: readonly AssistantContentBlock[] = [
-      { id: "reasoning", kind: "reasoning", text: "先分析", status: "completed" },
+      { id: "reasoning", kind: "reasoning", text: "正在分析", status: "streaming" },
       { id: "answer", kind: "text", text: "正在写", status: "streaming" },
     ];
     const markup = render([{ ...assistant("", "streaming"), blocks }]);
 
+    expect(markup).toContain("处理中 ");
+    expect(markup).toContain("思考中");
     expect(markup).toContain('aria-expanded="true"');
+    expect(markup).toMatch(/aria-label="折叠处理过程"[^>]*disabled/);
     expect(markup).not.toContain("已处理");
   });
 
-  it("keeps a tool-only turn expanded instead of folding it into a lone header", () => {
+  it("keeps a tool-only terminal turn expanded instead of folding it into a lone boundary", () => {
     const blocks: readonly AssistantContentBlock[] = [{
-      id: "tool", kind: "tool-call", toolCallId: "call-1", toolName: "read", arguments: "{}",
-      status: "succeeded", summary: "读取完成", detail: "", failure: null,
+      id: "tool", kind: "tool-call", toolCallId: "call-1", toolName: "shell", arguments: "{}",
+      status: "succeeded", summary: "执行完成", detail: "", failure: null,
     }];
     const markup = render([{ ...assistant("", "completed"), blocks }]);
 
+    expect(markup).toContain("已处理 4s");
     expect(markup).toContain('aria-expanded="true"');
-    expect(markup).toContain("读取完成");
+    expect(markup).toMatch(/aria-label="折叠处理过程"[^>]*disabled/);
+    expect(markup).toContain("执行 Shell");
   });
 
   it("renders command notifications at their timeline position", () => {
