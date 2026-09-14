@@ -1,10 +1,11 @@
-# AGENTS.md — SkillWorld 工作约定
+# AGENTS.md — Navo 工作约定
 
 ## 项目一句话
-从 0 手撕一个基于 DAG 的自主规划 Agent 系统（规划 → 执行 → 验证 → 再规划）；技能学习是它的第一个应用。系统核心不绑定学习域。
+从 0 手撕一个面向长程任务的自适应 Agent 框架（规划 → 执行 → 验证 → 再规划）；Research Workspace 是当前首个重点应用。系统核心不绑定研究域。
 
 ## 权威文档
-- **PRD（0 号文档）：** `_docs/00-skillworld-prd.md` — 系统核心定义
+- **PRD（0 号文档）：** `_docs/00-navo-prd.md` — 当前系统核心定义
+- **SkillWorld 历史 PRD：** `_docs/48-legacy-skillworld-prd.md` — Phase 0–8 的原始产品设计归档
 - **后端计划（后端单一事实源）：** `_docs/backend-plan.md` — Agent 内核、领域服务与后端测试
 - **前端计划（前端单一事实源）：** `_docs/frontend-plan.md` — Electron、React 与桌面交互
 - **文档索引：** `_docs/index.md`
@@ -16,7 +17,7 @@
 - 后端 Agent 只写 `_docs/backend-plan.md`、`src/**`、`tests/**`、`scripts/**`、根目录 `package.json`、根目录 `pnpm-lock.yaml` 及明确分配给后端的开发记录，不得修改 `frontend/**`。
 - 前端 Agent 只写 `_docs/frontend-plan.md`、`frontend/**` 及明确分配给前端的开发记录，不得修改 `src/**`、`tests/**`、`scripts/**`、根目录 `package.json` 或根目录 `pnpm-lock.yaml`。
 - 前端依赖只记录在 `frontend/package.json` 与 `frontend/pnpm-lock.yaml`；后端依赖只记录在根包清单与根锁文件。不得把两个工程改成共享 lockfile，也不得从 Renderer 直接导入根目录 `src/**`。
-- `_docs/00-skillworld-prd.md`、`_docs/index.md`、`CLAUDE.md`、`.gitignore` 以及未来共享的 IPC/RPC 契约属于共享控制面；两个 Agent 不得并发修改，必须先指定唯一写入者并串行提交。
+- `_docs/00-navo-prd.md`、`_docs/index.md`、`CLAUDE.md`、`.gitignore` 以及未来共享的 IPC/RPC 契约属于共享控制面；两个 Agent 不得并发修改，必须先指定唯一写入者并串行提交。
 - 跨端需求先分别写入所属计划；只有需要稳定数据交换时才新增共享契约 Step。共享契约必须明确版本、运行时校验、错误、取消和兼容语义，前端不得依赖后端私有 Store、Cordis Context 或内部事件实现。
 
 ### 前后端计划同步
