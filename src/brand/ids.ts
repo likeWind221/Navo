@@ -1,4 +1,4 @@
-const brand: unique symbol = Symbol("SkillWorldIdBrand");
+const brand: unique symbol = Symbol("NavoIdBrand");
 
 export type Brand<TValue, TBrand extends string> = TValue & {
   readonly [brand]: TBrand;

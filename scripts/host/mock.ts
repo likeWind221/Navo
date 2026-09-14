@@ -52,7 +52,7 @@ void main().catch((error: unknown) => {
 });
 
 function createMockLlmAdapter(env: NodeJS.ProcessEnv): MockLLMAdapter {
-  const mode = env.SKILLWORLD_MOCK_LLM_MODE ?? "completed";
+  const mode = env.NAVO_MOCK_LLM_MODE ?? "completed";
   if (mode === "completed") {
     return new MockLLMAdapter([{
       kind: "handler",
@@ -77,7 +77,7 @@ function createMockLlmAdapter(env: NodeJS.ProcessEnv): MockLLMAdapter {
       error: new Error("Mock LLM failure."),
     }]);
   }
-  throw new TypeError("SKILLWORLD_MOCK_LLM_MODE is invalid.");
+  throw new TypeError("NAVO_MOCK_LLM_MODE is invalid.");
 }
 
 function completedEvents(): readonly ModelEvent[] {

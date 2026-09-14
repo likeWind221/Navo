@@ -12,8 +12,8 @@ export interface ResolveHostLaunchOptions {
 
 export function resolveHostLaunchConfig(options: ResolveHostLaunchOptions): KernelHostLaunchConfig {
   const env = options.env ?? process.env;
-  const mode = parseMode(env.SKILLWORLD_HOST_MODE);
-  const repoRoot = resolve(env.SKILLWORLD_REPO_ROOT ?? defaultRepoRoot(options.appPath));
+  const mode = parseMode(env.NAVO_HOST_MODE);
+  const repoRoot = resolve(env.NAVO_REPO_ROOT ?? defaultRepoRoot(options.appPath));
   const tsxCli = resolve(repoRoot, "node_modules/tsx/dist/cli.mjs");
   const entry = resolve(repoRoot, mode === "mock" ? "scripts/host/mock.ts" : "src/host/main.ts");
   return {
@@ -38,5 +38,5 @@ function defaultRepoRoot(appPath: string): string {
 function parseMode(value: string | undefined): KernelHostMode {
   if (value === undefined || value === "real") return "real";
   if (value === "mock") return "mock";
-  throw new Error("SKILLWORLD_HOST_MODE must be either real or mock");
+  throw new Error("NAVO_HOST_MODE must be either real or mock");
 }

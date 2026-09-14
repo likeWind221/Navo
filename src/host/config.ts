@@ -45,9 +45,9 @@ export function resolveKernelHostConfig(
     throw new TypeError("EXA_API_KEY must be non-empty printable ASCII.");
   }
   const search = exaApiKey === undefined ? undefined : Object.freeze({ apiKey: exaApiKey });
-  const fileCwd = env.SKILLWORLD_FILE_CWD;
+  const fileCwd = env.NAVO_FILE_CWD;
   if (fileCwd !== undefined && !fileCwd.trim()) {
-    throw new TypeError("SKILLWORLD_FILE_CWD must be a non-empty path when provided.");
+    throw new TypeError("NAVO_FILE_CWD must be a non-empty path when provided.");
   }
   const file = fileCwd === undefined
     ? undefined
@@ -61,7 +61,7 @@ export function resolveKernelHostConfig(
     }),
     agent: Object.freeze({
       model: Object.freeze({ provider: "qwen", model, maxTokens }),
-      systemPrompt: "You are SkillWorld, a concise and helpful learning assistant.",
+      systemPrompt: "You are Navo, a concise and helpful AI agent.",
       ...(search === undefined ? {} : { toolNames: Object.freeze([WEB_SEARCH_TOOL_NAME]) }),
     }),
     ...(search === undefined ? {} : { search }),
@@ -79,7 +79,6 @@ function boundedInteger(
   if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > maximum) {
     throw new TypeError(`${name} must be an integer from 1 through ${maximum}.`);
   }
-  return parsed;
 }
 
 function optionalBoolean(name: string, value: string | undefined, fallback: boolean): boolean {

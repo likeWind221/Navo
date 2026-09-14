@@ -20,7 +20,7 @@ afterEach(async () => {
   app = undefined;
 });
 
-describe("SkillWorld application integration", () => {
+describe("Navo application integration", () => {
   it("runs a model-tool-model loop and rebuilds its context from Session", async () => {
     app = await createApp({
       node: { session: { model: { provider: "mock", model: "node-test" } } },

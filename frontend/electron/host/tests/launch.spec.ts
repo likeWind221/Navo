@@ -5,11 +5,11 @@ import { resolveHostLaunchConfig } from "../launch.js";
 describe("resolveHostLaunchConfig", () => {
   it("selects the mock command and keeps credentials in the child environment", () => {
     const config = resolveHostLaunchConfig({
-      appPath: "D:/work/SkillWorld/frontend",
+      appPath: "D:/work/Navo/frontend",
       execPath: "D:/apps/electron.exe",
       env: {
-        SKILLWORLD_HOST_MODE: "mock",
-        SKILLWORLD_REPO_ROOT: "D:/work/SkillWorld",
+        NAVO_HOST_MODE: "mock",
+        NAVO_REPO_ROOT: "D:/work/Navo",
         LLM_API_KEY: "secret",
         EXA_API_KEY: "exa-secret",
       },
@@ -28,20 +28,20 @@ describe("resolveHostLaunchConfig", () => {
   it("rejects unknown host modes", () => {
     expect(() => resolveHostLaunchConfig({
       appPath: ".",
-      env: { SKILLWORLD_HOST_MODE: "other" },
+      env: { NAVO_HOST_MODE: "other" },
     })).toThrow(/must be either real or mock/);
   });
 
   it("resolves the repository root when launched from built main output", () => {
     const config = resolveHostLaunchConfig({
-      appPath: "D:/work/SkillWorld/frontend/out/main",
+      appPath: "D:/work/Navo/frontend/out/main",
       execPath: "D:/apps/electron.exe",
-      env: { SKILLWORLD_HOST_MODE: "mock" },
+      env: { NAVO_HOST_MODE: "mock" },
     });
 
     expect(config.args).toEqual([
-      expect.stringMatching(/SkillWorld[\\/]node_modules[\\/]tsx[\\/]dist[\\/]cli\.mjs$/),
-      expect.stringMatching(/SkillWorld[\\/]scripts[\\/]host[\\/]mock\.ts$/),
+      expect.stringMatching(/Navo[\\/]node_modules[\\/]tsx[\\/]dist[\\/]cli\.mjs$/),
+      expect.stringMatching(/Navo[\\/]scripts[\\/]host[\\/]mock\.ts$/),
     ]);
   });
 });

@@ -114,7 +114,7 @@ describe("stdio RPC transport and scripted Mock Host", () => {
     const ended = Promise.withResolvers<void>();
     output.on("data", (chunk: string) => {
       stdout += chunk;
-      if (stdout.includes('"type":"end"')) ended.resolve();
+      if (stdout.includes('\"type\":\"end\"')) ended.resolve();
     });
     const transport = new StdioRpcServerTransport(input, output);
     const router = new StreamRpcRouter();
@@ -156,7 +156,7 @@ describe("stdio RPC transport and scripted Mock Host", () => {
     const ended = Promise.withResolvers<void>();
     output.on("data", (chunk: string) => {
       stdout += chunk;
-      if (stdout.includes('"type":"end"')) ended.resolve();
+      if (stdout.includes('\"type\":\"end\"')) ended.resolve();
     });
     const transport = new StdioRpcServerTransport(
       input,
@@ -205,7 +205,7 @@ describe("stdio RPC transport and scripted Mock Host", () => {
       { type: "started" },
       { type: "failed", failure: { code: "mock-failure" } },
     ]);
-    expect(() => resolveMockAgentTurnConfig({ SKILLWORLD_MOCK_MODE: "wrong" }))
+    expect(() => resolveMockAgentTurnConfig({ NAVO_MOCK_MODE: "wrong" }))
       .toThrow("invalid");
   });
 });

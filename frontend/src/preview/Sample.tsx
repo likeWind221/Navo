@@ -16,7 +16,7 @@ export default function DesignSample(): React.JSX.Element {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <span className={styles.wordmark}>SKILLWORLD <span>/ DESIGN STUDY 01</span></span>
+        <span className={styles.wordmark}>NAVO <span>/ DESIGN STUDY 01</span></span>
         <span className={styles.badge}>视觉样板 · 开发预览</span>
       </header>
       <section className={styles.intro} aria-labelledby="sample-title">

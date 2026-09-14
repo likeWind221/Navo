@@ -49,11 +49,11 @@ export function resolveMockAgentTurnConfig(
   env: NodeJS.ProcessEnv = process.env,
   crash?: () => never,
 ): MockAgentTurnConfig {
-  const mode = env.SKILLWORLD_MOCK_MODE ?? "completed";
-  if (!isMode(mode)) throw new TypeError("SKILLWORLD_MOCK_MODE is invalid.");
-  const chunkChars = positiveInteger(env.SKILLWORLD_MOCK_CHUNK_CHARS, 8);
-  const delayMs = nonNegativeInteger(env.SKILLWORLD_MOCK_DELAY_MS, 0);
-  const text = env.SKILLWORLD_MOCK_TEXT ?? "Mock reply: {{input}}";
+  const mode = env.NAVO_MOCK_MODE ?? "completed";
+  if (!isMode(mode)) throw new TypeError("NAVO_MOCK_MODE is invalid.");
+  const chunkChars = positiveInteger(env.NAVO_MOCK_CHUNK_CHARS, 8);
+  const delayMs = nonNegativeInteger(env.NAVO_MOCK_DELAY_MS, 0);
+  const text = env.NAVO_MOCK_TEXT ?? "Mock reply: {{input}}";
   return Object.freeze({ mode, text, chunkChars, delayMs, ...(crash === undefined ? {} : { crash }) });
 }
 

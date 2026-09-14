@@ -27,9 +27,9 @@ describe("Kernel Host process lifecycle", () => {
 
   it("runs the scripted Mock Host and exposes a deterministic crash for Main supervision", async () => {
     const child = startHost("scripts/host/mock.ts", {
-      SKILLWORLD_MOCK_MODE: "crash",
-      SKILLWORLD_MOCK_TEXT: "before-crash",
-      SKILLWORLD_MOCK_CHUNK_CHARS: "64",
+      NAVO_MOCK_MODE: "crash",
+      NAVO_MOCK_TEXT: "before-crash",
+      NAVO_MOCK_CHUNK_CHARS: "64",
     });
     const stderr = capture(child.stderr);
     const stdout = capture(child.stdout);
@@ -62,7 +62,7 @@ describe("Kernel Host process lifecycle", () => {
 
   it("serves v2 turns and sidecar commands through the real stdio boundary", async () => {
     const child = startHost("scripts/host/mock.ts", {
-      SKILLWORLD_MOCK_LLM_MODE: "completed",
+      NAVO_MOCK_LLM_MODE: "completed",
     });
     const stderr = capture(child.stderr);
     await waitUntil(() => stderr.value.includes("[mock-kernel-host] ready"));
@@ -104,7 +104,7 @@ describe("Kernel Host process lifecycle", () => {
 
   it("forwards a model failure as one terminal v2 event", async () => {
     const child = startHost("scripts/host/mock.ts", {
-      SKILLWORLD_MOCK_LLM_MODE: "failed",
+      NAVO_MOCK_LLM_MODE: "failed",
     });
     const stderr = capture(child.stderr);
     await waitUntil(() => stderr.value.includes("[mock-kernel-host] ready"));
@@ -131,7 +131,7 @@ describe("Kernel Host process lifecycle", () => {
 
   it("cancels a running v2 turn in the child process", async () => {
     const child = startHost("scripts/host/mock.ts", {
-      SKILLWORLD_MOCK_LLM_MODE: "hang",
+      NAVO_MOCK_LLM_MODE: "hang",
     });
     const stderr = capture(child.stderr);
     await waitUntil(() => stderr.value.includes("[mock-kernel-host] ready"));

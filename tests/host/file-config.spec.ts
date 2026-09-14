@@ -8,12 +8,12 @@ describe("Kernel Host file environment config", () => {
   });
 
   it("accepts and trims an explicit file cwd", () => {
-    expect(resolveKernelHostConfig({ SKILLWORLD_FILE_CWD: "  /workspace/project  " }).file)
+    expect(resolveKernelHostConfig({ NAVO_FILE_CWD: "  /workspace/project  " }).file)
       .toEqual({ cwd: "/workspace/project" });
   });
 
   it("rejects a blank explicit file cwd", () => {
-    expect(() => resolveKernelHostConfig({ SKILLWORLD_FILE_CWD: "   " }))
-      .toThrow("SKILLWORLD_FILE_CWD must be a non-empty path when provided.");
+    expect(() => resolveKernelHostConfig({ NAVO_FILE_CWD: "   " }))
+      .toThrow("NAVO_FILE_CWD must be a non-empty path when provided.");
   });
 });

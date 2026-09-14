@@ -8,7 +8,7 @@ export function WorkspaceShell({ children, navigation }: {
   return (
     <div className={styles.shell}>
       <header className={styles.topbar}>
-        <span className={styles.logo} aria-label="SkillWorld">SKILLWORLD<span aria-hidden="true">.</span></span>
+        <span className={styles.logo} aria-label="Navo">NAVO<span aria-hidden="true">.</span></span>
       </header>
       <div className={styles.body}>
         {navigation != null && <nav className={styles.navigation} aria-label="主导航">{navigation}</nav>}

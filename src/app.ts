@@ -11,16 +11,16 @@ import type { ToolsPluginConfig } from "./tools/plugin.js";
 import { ToolsPlugin } from "./tools/plugin.js";
 
 /** Configuration delegated by the application root to its peer plugins. */
-export interface SkillWorldAppConfig {
+export interface NavoAppConfig {
   readonly runtime?: Partial<AgentRuntimeLimits>;
   readonly tools?: ToolsPluginConfig;
   readonly node: NodePluginConfig;
 }
 
 /** Mounts the Session, LLM, Tools, Runtime, and Node roots as peers. */
-export async function SkillWorldApp(
+export async function NavoApp(
   ctx: Context,
-  config: SkillWorldAppConfig,
+  config: NavoAppConfig,
 ): Promise<void> {
   await Promise.all([
     ctx.plugin(SessionStore),
@@ -34,11 +34,11 @@ export async function SkillWorldApp(
 
 /** Creates a ready-to-use application context owned by the caller. */
 export async function createApp(
-  config: SkillWorldAppConfig,
+  config: NavoAppConfig,
 ): Promise<Context> {
   const ctx = new Context();
   try {
-    await ctx.plugin(SkillWorldApp, config);
+    await ctx.plugin(NavoApp, config);
     return ctx;
   } catch (error: unknown) {
     await ctx.fiber.dispose();
