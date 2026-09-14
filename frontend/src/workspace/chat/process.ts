@@ -35,7 +35,7 @@ export function processSummary(message: AssistantConversationMessage, now = mess
 export function reasoningSummary(text: string): string {
   const compact = text.replace(/\s+/g, " ").trim().replace(/^#{1,6}\s*/, "");
   if (compact.length === 0) return "思考过程";
-  const sentence = compact.match(/^.+?[。！？.!?](?:\s|$)/)?.[0] ?? compact;
+  const sentence = compact.match(/^.+?[。！？.!?]/)?.[0] ?? compact;
   return truncateLabel(sentence.trim(), 36);
 }
 
