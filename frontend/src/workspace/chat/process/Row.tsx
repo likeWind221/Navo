@@ -16,21 +16,25 @@ export function ProcessRow({ blocks, folded, summary }: {
 
   return (
     <section className={styles.processRow}>
-      <button
-        type="button"
-        className={styles.processHeader}
-        aria-expanded={expanded}
-        aria-controls={bodyId}
-        onClick={() => setUserExpanded((current) => !current)}
-      >
-        <Icon name="chevron" />
+      <div className={styles.processStatus} role="status">
         <span className={styles.processLabel}>{summary}</span>
-      </button>
+      </div>
       <div id={bodyId} className={styles.processBody} hidden={!expanded}>
         {blocks.map((block) => (
           <AssistantBlock key={block.id} block={block} live={!folded} />
         ))}
       </div>
+      <button
+        type="button"
+        className={styles.processBoundary}
+        aria-expanded={expanded}
+        aria-controls={bodyId}
+        aria-label={expanded ? "折叠处理过程" : "展开处理过程"}
+        disabled={!folded}
+        onClick={() => setUserExpanded((current) => !current)}
+      >
+        <Icon name="chevron" />
+      </button>
     </section>
   );
 }
