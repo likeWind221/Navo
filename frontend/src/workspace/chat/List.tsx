@@ -71,9 +71,7 @@ function AssistantBlocks({ message }: {
   const folded = shouldFoldProcess(content, message.status);
   return (
     <div className={styles.contentBlocks}>
-      {content.process.length > 0 && (
-        <ProcessRow blocks={content.process} folded={folded} message={message} />
-      )}
+      <ProcessRow blocks={content.process} folded={folded} message={message} />
       {content.final !== null && (
         <div className={styles.textBlock}>
           <Markdown text={content.final.text} streaming={live} />
