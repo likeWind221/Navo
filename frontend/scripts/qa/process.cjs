@@ -7,53 +7,66 @@ const { app, BrowserWindow, ipcMain } = require("electron");
 const START_CHANNEL = "navo:agent-turn:start";
 const UPDATE_CHANNEL = "navo:agent-turn:update";
 const outputDirectory = resolve("qa-output");
-app.setPath("userData", join(tmpdir(), `navo-f4-2-qa-${process.pid}`));
+app.setPath("userData", join(tmpdir(), `navo-f4-3-qa-${process.pid}`));
 
 const processEvents = (requestId) => {
   const scope = { sessionId: "local-session", requestId, turnId: "qa-turn" };
-  const step = { ...scope, stepId: "qa-step", messageId: "qa-message" };
+  const stepA = { ...scope, stepId: "qa-step-a", messageId: "qa-message-a" };
+  const stepB = { ...scope, stepId: "qa-step-b", messageId: "qa-message-b" };
   return [
     { ...scope, type: "turn-started" },
-    { ...step, type: "step-started" },
-    { ...step, type: "content-started", contentIndex: 0, kind: "reasoning" },
-    { ...step, type: "content-delta", contentIndex: 0, delta: "先读一下目录，再决定下一步。" },
-    { ...step, type: "content-completed", contentIndex: 0 },
-    { ...step, type: "content-started", contentIndex: 1, kind: "tool-call", toolCallId: "qa-tool", toolName: "read" },
-    { ...step, type: "content-delta", contentIndex: 1, delta: "{\"path\":\"src/app.ts\"}" },
-    { ...step, type: "content-completed", contentIndex: 1 },
-    { ...step, type: "tool-started", contentIndex: 1, toolCallId: "qa-tool" },
-    {
-      ...step, type: "tool-result", contentIndex: 1, toolCallId: "qa-tool",
-      status: "succeeded", summary: "读取完成", detail: "内容",
-    },
+    { ...stepA, type: "step-started" },
+    { ...stepA, type: "content-started", contentIndex: 0, kind: "reasoning" },
+    { ...stepA, type: "content-delta", contentIndex: 0, delta: "先检查现有结构。再决定下一步。" },
+    { ...stepA, type: "content-completed", contentIndex: 0 },
+    { ...stepA, type: "content-started", contentIndex: 1, kind: "tool-call", toolCallId: "qa-tool-a", toolName: "shell" },
+    { ...stepA, type: "content-delta", contentIndex: 1, delta: "{\"command\":\"pnpm test\"}" },
+    { ...stepA, type: "content-completed", contentIndex: 1 },
+    { ...stepA, type: "tool-started", contentIndex: 1, toolCallId: "qa-tool-a" },
+    { ...stepA, type: "tool-result", contentIndex: 1, toolCallId: "qa-tool-a", status: "succeeded", summary: "第一次执行完成", detail: "ok" },
+    { ...stepB, type: "step-started" },
+    { ...stepB, type: "content-started", contentIndex: 0, kind: "reasoning" },
+    { ...stepB, type: "content-delta", contentIndex: 0, delta: "折叠边界应该放到最终回答之前。" },
+    { ...stepB, type: "content-completed", contentIndex: 0 },
+    { ...stepB, type: "content-started", contentIndex: 1, kind: "tool-call", toolCallId: "qa-tool-b", toolName: "shell" },
+    { ...stepB, type: "content-delta", contentIndex: 1, delta: "{\"command\":\"pnpm build\"}" },
+    { ...stepB, type: "content-completed", contentIndex: 1 },
+    { ...stepB, type: "tool-started", contentIndex: 1, toolCallId: "qa-tool-b" },
+    { ...stepB, type: "tool-result", contentIndex: 1, toolCallId: "qa-tool-b", status: "succeeded", summary: "第二次执行完成", detail: "ok" },
   ];
 };
+
 const answerEvents = (requestId) => {
   const scope = { sessionId: "local-session", requestId, turnId: "qa-turn" };
-  const step = { ...scope, stepId: "qa-step", messageId: "qa-message" };
+  const step = { ...scope, stepId: "qa-step-final", messageId: "qa-message-final" };
   return [
-    { ...step, type: "content-started", contentIndex: 2, kind: "text" },
-    { ...step, type: "content-delta", contentIndex: 2, delta: "最终回答：配置在 src/app.ts。" },
-    { ...step, type: "content-completed", contentIndex: 2 },
+    { ...step, type: "step-started" },
+    { ...step, type: "content-started", contentIndex: 0, kind: "text" },
+    { ...step, type: "content-delta", contentIndex: 0, delta: "最终回答：F4.3 布局已经完成。" },
+    { ...step, type: "content-completed", contentIndex: 0 },
     { ...scope, type: "turn-completed" },
   ];
 };
 
 const snapshot = `(() => {
   const article = [...document.querySelectorAll('article[class*="assistantMessage"]')].at(-1);
-  const header = article?.querySelector('[class*="processHeader"]');
+  const status = article?.querySelector('[class*="processStatus"]');
+  const boundary = article?.querySelector('[class*="processBoundary"]');
   const body = article?.querySelector('[class*="processBody"]');
-  const chevron = header?.querySelector('svg');
+  const chevron = boundary?.querySelector('svg');
+  const text = article?.textContent ?? '';
   return {
-    headerLabel: header?.textContent?.trim() ?? '',
-    expanded: header?.getAttribute('aria-expanded') ?? null,
+    statusLabel: status?.textContent?.trim() ?? '',
+    expanded: boundary?.getAttribute('aria-expanded') ?? null,
+    boundaryDisabled: boundary?.disabled ?? null,
     bodyVisible: body ? body.getClientRects().length > 0 : false,
     bodyHeight: body ? Math.round(body.getBoundingClientRect().height) : 0,
     chevronTransform: chevron ? getComputedStyle(chevron).transform : '',
-    text: article?.textContent ?? '',
+    text,
+    shellCount: (text.match(/执行 Shell/g) ?? []).length,
     answerVisible: (() => {
       const node = [...(article?.querySelectorAll('div') ?? [])]
-        .find((item) => item.textContent?.includes('最终回答：配置在 src/app.ts。'));
+        .find((item) => item.textContent?.includes('最终回答：F4.3 布局已经完成。'));
       return node ? node.getClientRects().length > 0 : false;
     })(),
     overflow: article ? article.scrollWidth > article.clientWidth : false,
@@ -74,7 +87,7 @@ const push = async (events, gap = 30) => {
 (async () => {
   await app.whenReady();
   await mkdir(outputDirectory, { recursive: true });
-  await rm(join(outputDirectory, "f4-2-error.txt"), { force: true });
+  await rm(join(outputDirectory, "f4-3-error.txt"), { force: true });
 
   ipcMain.handle(START_CHANNEL, (_event, input) => {
     acceptedRequestId = input.requestId;
@@ -104,48 +117,60 @@ const push = async (events, gap = 30) => {
   await window.webContents.executeJavaScript(`(async () => {
     const textarea = document.querySelector('#chat-input');
     const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
-    setter.call(textarea, '帮我看一下配置在哪里');
+    setter.call(textarea, '帮我验证 F4.3 过程布局');
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
     await new Promise(requestAnimationFrame);
     textarea.form.requestSubmit();
     await new Promise(requestAnimationFrame);
   })()`);
 
-  await waitFor(`document.querySelector('[class*="processHeader"]')?.getAttribute('aria-expanded') === 'true'`);
-  await waitFor(`document.querySelector('article[class*="assistantMessage"]')?.textContent?.includes('读取完成')`);
+  await waitFor(`document.querySelector('[class*="processBoundary"]')?.getAttribute('aria-expanded') === 'true'`);
+  await waitFor(`document.querySelector('article[class*="assistantMessage"]')?.textContent?.includes('第二次执行完成')`);
   const streaming = await window.webContents.executeJavaScript(snapshot);
+  assert.match(streaming.statusLabel, /^处理中 \d+(?:m(?: \d+s)?|s)$/);
   assert.equal(streaming.bodyVisible, true);
-  assert.equal(streaming.headerLabel, "处理中");
-  assert.ok(streaming.text.includes("先读一下目录"));
-  assert.ok(streaming.text.includes("read"));
-  await window.webContents.executeJavaScript(`document.querySelector('[class*="processHeader"]').click()`);
-  await delay(120);
+  assert.equal(streaming.boundaryDisabled, true);
+  assert.equal(streaming.shellCount, 2);
+  assert.ok(streaming.text.includes("先检查现有结构。"));
+  assert.ok(streaming.text.includes("折叠边界应该放到最终回答之前。"));
+  assert.equal(streaming.overflow, false);
+
+  await delay(1_250);
+  const streamingLater = await window.webContents.executeJavaScript(snapshot);
+  assert.notEqual(streamingLater.statusLabel, streaming.statusLabel, "生成中计时应持续更新");
+  await window.webContents.executeJavaScript(`document.querySelector('[class*="processBoundary"]').click()`);
+  await delay(100);
   const streamingAfterClick = await window.webContents.executeJavaScript(snapshot);
   assert.equal(streamingAfterClick.bodyVisible, true, "生成中不允许折叠");
-  await window.webContents.executeJavaScript(`document.querySelector('[class*="processHeader"]').click()`);
-  await delay(120);
-  await writeFile(join(outputDirectory, "f4-2-streaming.png"), (await window.webContents.capturePage()).toPNG());
+  await writeFile(join(outputDirectory, "f4-3-streaming.png"), (await window.webContents.capturePage()).toPNG());
 
   await push(answerEvents(acceptedRequestId));
-  await waitFor(`document.querySelector('[class*="processHeader"]')?.getAttribute('aria-expanded') === 'false'`);
+  await waitFor(`document.querySelector('[class*="processBoundary"]')?.getAttribute('aria-expanded') === 'false'`);
   await delay(250);
   const folded = await window.webContents.executeJavaScript(snapshot);
-  assert.match(folded.headerLabel, /^已处理 \d+s$/);
+  assert.match(folded.statusLabel, /^已处理 \d+(?:m(?: \d+s)?|s)$/);
   assert.equal(folded.bodyVisible, false);
+  assert.equal(folded.boundaryDisabled, false);
   assert.equal(folded.chevronTransform, "none");
   assert.equal(folded.answerVisible, true);
-  await writeFile(join(outputDirectory, "f4-2-folded.png"), (await window.webContents.capturePage()).toPNG());
+  assert.equal(folded.overflow, false);
+  await writeFile(join(outputDirectory, "f4-3-folded.png"), (await window.webContents.capturePage()).toPNG());
 
-  await window.webContents.executeJavaScript(`document.querySelector('[class*="processHeader"]').click()`);
+  await delay(1_100);
+  const foldedLater = await window.webContents.executeJavaScript(snapshot);
+  assert.equal(foldedLater.statusLabel, folded.statusLabel, "终态计时必须冻结");
+
+  await window.webContents.executeJavaScript(`document.querySelector('[class*="processBoundary"]').click()`);
   await delay(250);
   const expanded = await window.webContents.executeJavaScript(snapshot);
   assert.equal(expanded.bodyVisible, true);
   assert.notEqual(expanded.chevronTransform, "none");
   assert.ok(expanded.bodyHeight > 0);
-  await writeFile(join(outputDirectory, "f4-2-expanded.png"), (await window.webContents.capturePage()).toPNG());
+  assert.equal(expanded.answerVisible, true);
+  await writeFile(join(outputDirectory, "f4-3-expanded.png"), (await window.webContents.capturePage()).toPNG());
 
-  const result = { streaming, streamingAfterClick, folded, expanded };
-  await writeFile(join(outputDirectory, "f4-2-results.json"), JSON.stringify(result, null, 2));
+  const result = { streaming, streamingLater, streamingAfterClick, folded, foldedLater, expanded };
+  await writeFile(join(outputDirectory, "f4-3-results.json"), JSON.stringify(result, null, 2));
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   window.destroy();
   app.quit();
@@ -157,7 +182,7 @@ const push = async (events, gap = 30) => {
   } catch {
     process.stderr.write("[page] unavailable\n");
   }
-  await writeFile(join(outputDirectory, "f4-2-error.txt"), String(error?.stack ?? error));
+  await writeFile(join(outputDirectory, "f4-3-error.txt"), String(error?.stack ?? error));
   process.exitCode = 1;
   app.quit();
 });
