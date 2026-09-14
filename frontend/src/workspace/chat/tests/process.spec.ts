@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import type { AssistantContentBlock, AssistantConversationMessage } from "../conversation.js";
-import { formatDuration, processSummary, shouldFoldProcess, splitTurnContent } from "../process.js";
+import {
+  formatDuration,
+  processSummary,
+  reasoningSummary,
+  shouldFoldProcess,
+  splitTurnContent,
+  toolProcessLabel,
+} from "../process.js";
 
 const reasoning: AssistantContentBlock = { id: "reasoning", kind: "reasoning", text: "先分析", status: "completed" };
 const answer: AssistantContentBlock = { id: "answer", kind: "text", text: "最终回答", status: "completed" };
@@ -52,14 +59,31 @@ describe("shouldFoldProcess", () => {
 });
 
 describe("processSummary", () => {
-  it("reports the elapsed time of a finished turn", () => {
-    expect(processSummary(message(1_000, 13_000))).toBe("已处理 12s");
+  it("shows live elapsed time without changing the status title", () => {
+    expect(processSummary(message(1_000, null), 5_000)).toBe("处理中 4s");
+    expect(processSummary(message(1_000, null), 13_000)).toBe("处理中 12s");
+  });
+
+  it("freezes the total time of a finished turn", () => {
+    const finished = message(1_000, 13_000);
+    expect(processSummary(finished, 99_000)).toBe("已处理 12s");
     expect(processSummary(message(0, 60_000))).toBe("已处理 1m");
     expect(processSummary(message(0, 95_000))).toBe("已处理 1m 35s");
   });
+});
 
-  it("reports a running turn without a duration", () => {
-    expect(processSummary(message(1_000, null))).toBe("处理中");
+describe("process labels", () => {
+  it("uses a compact reasoning sentence after streaming finishes", () => {
+    expect(reasoningSummary("## 先检查现有结构。然后继续。" )).toBe("先检查现有结构。");
+    expect(reasoningSummary("   ")).toBe("思考过程");
+    expect(reasoningSummary("这是一段没有标点而且长度明显超过三十六个字符的思考内容用于验证截断行为不会撑坏过程行布局"))
+      .toMatch(/…$/);
+  });
+
+  it("uses stable execution labels for tools", () => {
+    expect(toolProcessLabel("shell")).toBe("执行 Shell");
+    expect(toolProcessLabel("Shell")).toBe("执行 Shell");
+    expect(toolProcessLabel("read")).toBe("执行 read");
   });
 });
 
