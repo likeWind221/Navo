@@ -33,13 +33,17 @@
 .contentBlocks { display: grid; gap: 12px; }
 .textBlock { min-width: 0; }
 .processRow { min-width: 0; }
-.processHeader { display: flex; align-items: center; gap: 6px; width: 100%; padding: 2px 0; border: 0; background: transparent; color: var(--text-secondary); font-size: 12px; text-align: left; transition: color var(--duration); }
-.processHeader:hover { color: var(--text); }
-.processHeader svg { width: 14px; height: 14px; flex-shrink: 0; transition: transform var(--duration); }
-.processHeader[aria-expanded="true"] svg { transform: rotate(90deg); }
+.processStatus { display: flex; align-items: center; min-height: 22px; padding: 2px 0; color: var(--text-secondary); font-size: 12px; }
 .processLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.processBody { display: grid; gap: 12px; margin-top: 10px; }
+.processBody { display: grid; gap: 12px; margin-top: 8px; }
 .processBody[hidden] { display: none; }
+.processBoundary { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 10px; padding: 2px 0; border: 0; background: transparent; color: var(--text-secondary); }
+.processBoundary::before, .processBoundary::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
+.processBoundary:not(:disabled) { cursor: pointer; }
+.processBoundary:not(:disabled):hover { color: var(--text); }
+.processBoundary:disabled { opacity: 1; }
+.processBoundary svg { width: 14px; height: 14px; flex-shrink: 0; transition: transform var(--duration); }
+.processBoundary[aria-expanded="true"] svg { transform: rotate(90deg); }
 .reasoningBlock { max-width: 100%; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-muted); color: var(--text-secondary); overflow: hidden; }
 .reasoningBlock summary { cursor: pointer; padding: 9px 12px; color: var(--text); font-size: 12px; font-weight: 600; }
 .reasoningText { padding: 0 12px 11px; color: var(--text-secondary); font-size: 13px !important; line-height: 1.65; }
