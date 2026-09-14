@@ -14,6 +14,7 @@ export function ProcessRow({ blocks, folded, message }: {
   const [userExpanded, setUserExpanded] = useState(false);
   const [now, setNow] = useState(() => message.endedAt ?? Date.now());
   const live = isTurnLive(message.status);
+  const hasProcess = blocks.length > 0;
   const expanded = !folded || userExpanded;
   const bodyId = useId();
 
@@ -32,22 +33,27 @@ export function ProcessRow({ blocks, folded, message }: {
       <div className={styles.processStatus} role="status">
         <span className={styles.processLabel}>{processSummary(message, now)}</span>
       </div>
-      <div id={bodyId} className={styles.processBody} hidden={!expanded}>
-        {blocks.map((block) => (
-          <AssistantBlock key={block.id} block={block} live={live} />
-        ))}
-      </div>
-      <button
-        type="button"
-        className={styles.processBoundary}
-        aria-expanded={expanded}
-        aria-controls={bodyId}
-        aria-label={expanded ? "折叠处理过程" : "展开处理过程"}
-        disabled={!folded}
-        onClick={() => setUserExpanded((current) => !current)}
-      >
-        <Icon name="chevron" />
-      </button>
+      {hasProcess && expanded && <div className={styles.processStartBoundary} aria-hidden="true" />}
+      {hasProcess && (
+        <div id={bodyId} className={styles.processBody} hidden={!expanded}>
+          {blocks.map((block) => (
+            <AssistantBlock key={block.id} block={block} live={live} />
+          ))}
+        </div>
+      )}
+      {hasProcess && (
+        <button
+          type="button"
+          className={styles.processBoundary}
+          aria-expanded={expanded}
+          aria-controls={bodyId}
+          aria-label={expanded ? "折叠处理过程" : "展开处理过程"}
+          disabled={!folded}
+          onClick={() => setUserExpanded((current) => !current)}
+        >
+          <Icon name="chevron" />
+        </button>
+      )}
     </section>
   );
 }
