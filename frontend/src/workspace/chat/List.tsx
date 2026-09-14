@@ -4,7 +4,7 @@ import type {
   ConversationMessage,
   ConversationTimelineEntry,
 } from "./conversation.js";
-import { isTurnLive, processSummary, shouldFoldProcess, splitTurnContent } from "./process.js";
+import { isTurnLive, shouldFoldProcess, splitTurnContent } from "./process.js";
 import { ProcessRow } from "./process/Row.js";
 import styles from "../style.module.css";
 import { Markdown } from "./Markdown.js";
@@ -72,7 +72,7 @@ function AssistantBlocks({ message }: {
   return (
     <div className={styles.contentBlocks}>
       {content.process.length > 0 && (
-        <ProcessRow blocks={content.process} folded={folded} summary={processSummary(message)} />
+        <ProcessRow blocks={content.process} folded={folded} message={message} />
       )}
       {content.final !== null && (
         <div className={styles.textBlock}>
