@@ -10,6 +10,7 @@ import { MainSessionService } from "./project/session.js";
 import { SessionStore } from "./session/store.js";
 import { ProjectStore } from "./project/store.js";
 import { RoadmapStore } from "./roadmap/store.js";
+import { RoadmapToolsPlugin } from "./tools/builtins/roadmap/plugin.js";
 import type { ToolsPluginConfig } from "./tools/plugin.js";
 import { ToolsPlugin } from "./tools/plugin.js";
 
@@ -34,6 +35,7 @@ export async function NavoApp(
   await ctx.plugin(NodePlugin, config.node);
   await ctx.plugin(MainSessionService, { model: config.node.session.model });
   await ctx.plugin(RoadmapStore);
+  await ctx.plugin(RoadmapToolsPlugin);
 }
 
 export async function createApp(

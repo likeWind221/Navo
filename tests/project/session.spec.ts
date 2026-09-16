@@ -10,9 +10,11 @@ import { NodeStore } from "../../src/node/store.js";
 import { createMainAgentProfile, MAIN_AGENT_TOOL_NAMES } from "../../src/project/profile.js";
 import { MainSessionService } from "../../src/project/session.js";
 import { ProjectStore } from "../../src/project/store.js";
+import { RoadmapStore } from "../../src/roadmap/store.js";
 import { SessionStore } from "../../src/session/store.js";
 import { MockFetchCore } from "../../src/tools/builtins/fetch/mock.js";
 import { FetchTool } from "../../src/tools/builtins/fetch/tool.js";
+import { RoadmapToolsPlugin } from "../../src/tools/builtins/roadmap/plugin.js";
 import { MockSearchAdapter } from "../../src/tools/builtins/search/adapters/mock.js";
 import { SearchTool } from "../../src/tools/builtins/search/tool.js";
 import { ToolService } from "../../src/tools/service.js";
@@ -36,6 +38,8 @@ async function createKit(entries: ConstructorParameters<typeof MockLLMAdapter>[0
   await ctx.plugin(NodeStore);
   await ctx.plugin(SearchTool, { adapter: new MockSearchAdapter([]) });
   await ctx.plugin(FetchTool, { core: new MockFetchCore([]) });
+  await ctx.plugin(RoadmapStore);
+  await ctx.plugin(RoadmapToolsPlugin);
   const adapter = new MockLLMAdapter(entries);
   ctx.llm.registerAdapter("mock", adapter);
   await ctx.plugin(MainSessionService, {
