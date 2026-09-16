@@ -8,6 +8,7 @@ import {
   createSessionId,
   createToolCallId,
 } from "../../src/brand/ids.js";
+import type { ProjectId } from "../../src/brand/ids.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import { LLMService } from "../../src/llm/service.js";
 import type { ToolCallContentBlock } from "../../src/llm/types.js";
@@ -37,7 +38,7 @@ async function createBindingContext(): Promise<Context> {
   return ctx;
 }
 
-async function createRuntimeContext(entries: ConstructorParameters<typeof MockLLMAdapter>[0]) {
+async function createRuntimeContext(): Promise<Context> {
   const ctx = new Context();
   contexts.add(ctx);
   await ctx.plugin(SessionStore);
@@ -46,12 +47,10 @@ async function createRuntimeContext(entries: ConstructorParameters<typeof MockLL
   await ctx.plugin(AgentRuntime);
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
-  const adapter = new MockLLMAdapter(entries);
-  ctx.llm.registerAdapter("mock", adapter);
-  return { ctx, adapter };
+  return ctx;
 }
 
-function createWorkNode(ctx: Context, projectId: ReturnType<typeof createProjectId>, title: string) {
+function createWorkNode(ctx: Context, projectId: ProjectId, title: string) {
   const created = ctx.nodes.create({
     projectId,
     objective: {
@@ -70,6 +69,25 @@ function toolCall(projectId: string): ToolCallContentBlock {
     name: "project_admin_probe",
     arguments: JSON.stringify({ projectId }),
   };
+}
+
+function registerMainOnlyProbe(ctx: Context, authorized: ReturnType<typeof vi.fn>) {
+  return ctx.tools.register({
+    name: "project_admin_probe",
+    description: "Test-only Main Agent capability.",
+    parameters: {
+      type: "object",
+      properties: { projectId: { type: "string" } },
+      required: ["projectId"],
+      additionalProperties: false,
+    },
+    execute(arguments_, execution) {
+      const claimedProjectId = createProjectId(String(arguments_.projectId));
+      requireMainBinding(ctx, execution.sessionId!, claimedProjectId);
+      authorized(claimedProjectId);
+      return { content: "authorized" };
+    },
+  });
 }
 
 describe("trusted Agent bindings", () => {
@@ -106,37 +124,18 @@ describe("trusted Agent bindings", () => {
   });
 
   it("blocks a Node Session from a Main-only tool even when the tool is exposed by mistake", async () => {
-    const call = toolCall("placeholder");
-    const { ctx, adapter } = await createRuntimeContext([
-      modelResponse([call], "tool-calls"),
-      modelResponse([{ type: "text", text: "handled denial" }]),
-    ]);
+    const ctx = await createRuntimeContext();
     const project = ctx.projects.create({ goal: "Protected Project" });
     const node = createWorkNode(ctx, project.id, "Node work");
     const nodeSession = createSessionId("bound-node-session");
     ctx.nodes.bindSession(node.node.id, nodeSession);
-    const authorized = vi.fn();
-    const unregister = ctx.tools.register({
-      name: "project_admin_probe",
-      description: "Test-only Main Agent capability.",
-      parameters: {
-        type: "object",
-        properties: { projectId: { type: "string" } },
-        required: ["projectId"],
-        additionalProperties: false,
-      },
-      execute(arguments_, execution) {
-        const claimedProjectId = createProjectId(String(arguments_.projectId));
-        requireMainBinding(ctx, execution.sessionId!, claimedProjectId);
-        authorized(claimedProjectId);
-        return { content: "authorized" };
-      },
-    });
-    const forged = toolCall(project.id);
-    adapter.entries.splice(0, adapter.entries.length,
-      modelResponse([forged], "tool-calls"),
+    const adapter = new MockLLMAdapter([
+      modelResponse([toolCall(project.id)], "tool-calls"),
       modelResponse([{ type: "text", text: "handled denial" }]),
-    );
+    ]);
+    ctx.llm.registerAdapter("mock", adapter);
+    const authorized = vi.fn();
+    const unregister = registerMainOnlyProbe(ctx, authorized);
 
     const result = await ctx.agentRuntime.runTurn({
       sessionId: nodeSession,
@@ -164,34 +163,15 @@ describe("trusted Agent bindings", () => {
   });
 
   it("allows the owning Main Session through the same trusted tool boundary", async () => {
-    const projectId = "placeholder";
-    const { ctx } = await createRuntimeContext([
-      modelResponse([toolCall(projectId)], "tool-calls"),
-      modelResponse([{ type: "text", text: "done" }]),
-    ]);
+    const ctx = await createRuntimeContext();
     const project = ctx.projects.create({ goal: "Main Project" });
-    const authorized = vi.fn();
-    const unregister = ctx.tools.register({
-      name: "project_admin_probe",
-      description: "Test-only Main Agent capability.",
-      parameters: {
-        type: "object",
-        properties: { projectId: { type: "string" } },
-        required: ["projectId"],
-        additionalProperties: false,
-      },
-      execute(arguments_, execution) {
-        const claimedProjectId = createProjectId(String(arguments_.projectId));
-        requireMainBinding(ctx, execution.sessionId!, claimedProjectId);
-        authorized(claimedProjectId);
-        return { content: "authorized" };
-      },
-    });
     const adapter = new MockLLMAdapter([
       modelResponse([toolCall(project.id)], "tool-calls"),
       modelResponse([{ type: "text", text: "done" }]),
     ]);
-    ctx.llm.registerAdapter("main-mock", adapter);
+    ctx.llm.registerAdapter("mock", adapter);
+    const authorized = vi.fn();
+    const unregister = registerMainOnlyProbe(ctx, authorized);
 
     const result = await ctx.agentRuntime.runTurn({
       sessionId: project.mainSessionId,
@@ -200,7 +180,7 @@ describe("trusted Agent bindings", () => {
         role: "user",
         content: [{ type: "text", text: "Use the admin tool" }],
       },
-      model: { provider: "main-mock", model: "binding-test" },
+      model: { provider: "mock", model: "binding-test" },
       toolNames: ["project_admin_probe"],
     });
 
