@@ -24,8 +24,14 @@ export function createNodeAgentProfile(
   options: NodeAgentProfileOptions = {},
 ): NodeAgentProfile {
   if (snapshot.node.kind !== "work") throw new NodeError("invalid-state", "Control nodes have no Agent profile.");
-  const project = isProjectSnapshot(projectOrOptions) ? projectOrOptions : undefined;
-  const resolvedOptions = project === undefined ? projectOrOptions : options;
+  let project: ProjectSnapshot | undefined;
+  let resolvedOptions: NodeAgentProfileOptions;
+  if (isProjectSnapshot(projectOrOptions)) {
+    project = projectOrOptions;
+    resolvedOptions = options;
+  } else {
+    resolvedOptions = projectOrOptions;
+  }
   if (project !== undefined && snapshot.node.projectId !== project.id) {
     throw new NodeError("project-unavailable", "Node profile requires its owning Project.");
   }
