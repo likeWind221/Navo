@@ -58,7 +58,7 @@ export class MainSessionService extends Service {
       model: this.model,
       systemPrompt: profile.systemPrompt,
       toolNames: profile.toolNames,
-      signal: input.signal,
+      ...(input.signal === undefined ? {} : { signal: input.signal }),
     });
     return Object.freeze({
       projectId: binding.projectId,
