@@ -44,7 +44,7 @@ interface PendingTurn {
 }
 
 export class NodeSessionService extends Service {
-  static inject = ["nodes", "agentRuntime", "tools"];
+  static inject = ["nodes", "projects", "agentRuntime", "tools"];
 
   private readonly model: TurnModelConfig;
 
@@ -168,7 +168,10 @@ export class NodeSessionService extends Service {
   private bindNewSession(nodeId: NodeId): SessionId {
     let sessionId: SessionId;
     do sessionId = createSessionId(randomUUID());
-    while (this.ctx.nodes.getBySession(sessionId) !== undefined);
+    while (
+      this.ctx.nodes.getBySession(sessionId) !== undefined
+      || this.ctx.projects.getByMainSession(sessionId) !== undefined
+    );
     return this.ctx.nodes.bindSession(nodeId, sessionId).sessionId!;
   }
 
