@@ -40,7 +40,7 @@ describe("read_roadmap", () => {
       { sessionId: project.mainSessionId, allowedTools: [READ_ROADMAP_TOOL_NAME] },
     );
 
-    expect(result.kind).toBe("success");
+    if (result.kind !== "success") throw new Error("read_roadmap unexpectedly failed");
     expect(result.block.content).toEqual([{
       type: "text",
       text: "Roadmap is empty.\nNo roadmap has been created for this Project.",
@@ -83,7 +83,7 @@ describe("read_roadmap", () => {
       { sessionId: project.mainSessionId, allowedTools: [READ_ROADMAP_TOOL_NAME] },
     );
 
-    expect(result.kind).toBe("success");
+    if (result.kind !== "success") throw new Error("read_roadmap unexpectedly failed");
     const text = result.block.content[0]?.type === "text" ? result.block.content[0].text : "";
     expect(text).toContain("Roadmap version: 1");
     expect(text).toContain(`${research.node.id} -> ${build.node.id}`);
@@ -139,8 +139,8 @@ describe("read_roadmap", () => {
       { sessionId: nodeSession, allowedTools: [READ_ROADMAP_TOOL_NAME] },
     );
 
-    expect(result.kind).toBe("failure");
-    expect(result.failure?.code).toBe("tool-failed");
+    if (result.kind !== "failure") throw new Error("Node Session unexpectedly read the Roadmap");
+    expect(result.failure.code).toBe("tool-failed");
     expect(JSON.stringify(result.block.content)).toContain("available only to the Main Agent");
   });
 });
