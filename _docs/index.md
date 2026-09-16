@@ -80,7 +80,7 @@
 
 - [F3.7：思考内容修正](38-devlog-f3-7-reasoning.md)：Host 默认启用 thinking，Qwen Adapter 对齐真实 reasoning 字段，记录模型冒烟与展示复验边界。
 - [DeepSeek Harness 参考分析](01-deepseek-harness-单对话核心与最小-agent-闭环设计.md)
-- [Codex 提交审查](codex-reviews/)：以“阶段 + 中文标题 + 短 SHA”命名的 post-commit 报告。
+- [Codex 提交审查](codex-reviews/)：历史 post-commit 审查报告（以“阶段 + 中文标题 + 短 SHA”命名）归档；post-commit 审查钩子（`.githooks/`）已移除，后续提交不再生成新报告。
 - [F3.2.3 命令调度设计记录](30-devlog-command-scheduling-design.md)：记录命令旁路与排队两种执行路径、会话工作队列及回合锚点的设计方向。
 
 - [F5.1 工作区布局与导航](60-devlog-f5-1-workspace.md)：侧栏双视图、顶部标签、状态保留与滑动过渡。
