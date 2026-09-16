@@ -9,6 +9,7 @@ import {
   createSessionId,
 } from "../brand/ids.js";
 import type { NodeId, SessionId } from "../brand/ids.js";
+import { requireNodeProjectBinding } from "../project/binding.js";
 import { FILE_TOOL_SCHEMAS } from "../tools/builtins/file/types.js";
 import { NodeError } from "./errors.js";
 import type { NodeSnapshot } from "./model.js";
@@ -44,7 +45,6 @@ interface PendingTurn {
 
 export class NodeSessionService extends Service {
   static inject = ["nodes", "agentRuntime", "tools"];
-
 
   private readonly model: TurnModelConfig;
 
@@ -130,16 +130,17 @@ export class NodeSessionService extends Service {
         );
       }
       const node = this.ctx.nodes.requireState(pending.nodeId, "idle");
-      if (node.sessionId !== sessionId) {
-        throw new NodeError(
-          "invalid-event-stream",
-          `Node '${pending.nodeId}' no longer owns Session '${sessionId}'.`,
-        );
-      }
+      requireNodeProjectBinding(
+        this.ctx,
+        sessionId,
+        node.node.projectId,
+        pending.nodeId,
+      );
+      const project = this.ctx.projects.get(node.node.projectId)!;
       const current = this.ctx.nodes.beginWork(pending.nodeId);
       working = true;
       this.active.set(sessionId, pending);
-      const profile = createNodeAgentProfile(current, {
+      const profile = createNodeAgentProfile(current, project, {
         allowFileRead: this.ctx.tools.schemas().some(
           (tool) => tool.name === FILE_TOOL_SCHEMAS.read.name,
         ),
