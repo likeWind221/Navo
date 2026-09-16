@@ -26,6 +26,7 @@
 - [Node 状态模型复审](63-devlog-node-state-review.md)：取消成员/替换状态，节点属性归位，统一依赖派生状态，并取消循环步骤。
 - [F9.3：状态模型修复](64-devlog-node-state-repair.md)：五态 Node、事件解锁、路线批变更、历史重建与只读节点地图。
 - [F9.4：Agent Profile 与 Binding](65-devlog-agent-profile-binding.md)：Main / Node Profile、可信 Session Binding、归档拒绝与角色/项目越权防护，含本机完整验证结果。
+- [CI 与 PR 流程接入](66-devlog-ci-pr-flow.md)：GitHub Actions 的 typecheck/test 门禁、Step 分支与 squash 合并约定，以及 CI 暴露的平台测试问题。
 
 - [阶段 0：工程骨架](02-阶段-0-工程骨架开发记录.md)
 - [阶段 1：核心协议](03-devlog-phase-1-core-protocol.md)
