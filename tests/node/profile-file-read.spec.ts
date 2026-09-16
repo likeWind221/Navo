@@ -26,8 +26,8 @@ describe("NodeAgent file capability", () => {
       },
     });
 
-    const withoutFiles = createNodeAgentProfile(node, project);
-    const withRead = createNodeAgentProfile(node, project, { allowFileRead: true });
+    const withoutFiles = createNodeAgentProfile(node);
+    const withRead = createNodeAgentProfile(node, { allowFileRead: true });
 
     expect(withoutFiles.toolNames).not.toContain("read");
     expect(withRead.toolNames).toContain("read");
