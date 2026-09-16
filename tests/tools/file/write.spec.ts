@@ -15,7 +15,7 @@ const signal = new AbortController().signal;
 const sessionA = "session-a" as SessionId;
 const sessionB = "session-b" as SessionId;
 
-beforeEach(async () => { root = await mkdtemp(join(tmpdir(), "skillworld-write-")); });
+beforeEach(async () => { root = await realpath(await mkdtemp(join(tmpdir(), "skillworld-write-"))); });
 afterEach(async () => { await rm(root, { recursive: true, force: true }); });
 
 function tools(observations = new FileObservationStore()) {

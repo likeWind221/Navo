@@ -11,7 +11,7 @@ import { FILE_LIMITS, type EditRequest } from "../../../src/tools/builtins/file/
 let root: string;
 const signal = new AbortController().signal;
 
-beforeEach(async () => { root = await mkdtemp(join(tmpdir(), "skillworld-edit-")); });
+beforeEach(async () => { root = await realpath(await mkdtemp(join(tmpdir(), "skillworld-edit-"))); });
 afterEach(async () => { await rm(root, { recursive: true, force: true }); });
 
 async function edit(content: string | Uint8Array, request: Partial<EditRequest>) {
