@@ -147,7 +147,7 @@ Node A --------X--------> Node B
 | ✅ | F9.3.3 节点地图查询 | Roadmap 查询与领域集成 | 让调用方直接获取节点属性、已提交状态和依赖边以重建地图 | 无 Board 或成员状态；查询不修改节点；数据包含节点与路线版本，前端可据此重建地图 |
 | 🔄 | F9.4 Agent Profile 与 Binding | Project / Node Agent 角色边界 | 让 Main Agent 与 Node Agent 在同一 AgentRuntime 上获得不同角色、上下文和能力，同时由可信作用域约束实际可访问资源 | Main / Node 不新增独立 Runtime；Profile 不是唯一安全边界；Node 无法通过伪造输入访问其他 Node 或 Project 管理能力 |
 | ⬜ | F9.5 Main Agent Planning 与 Roadmap Mutation | Main Agent / Roadmap | 让 Main Agent 能基于 Goal 和项目现状提出 Roadmap 创建或修改方案，并由确定性边界决定方案能否成为新的项目事实 | 插入、跳过、连接调整、重排等变更可验证、可拒绝、可记录；陈旧版本或非法关系不能静默覆盖当前 Roadmap |
-| ⬜ | F9.6 Project Mailbox 与协调 | Project 消息与 Node 报告 | 让 Node Agent 可以向 Main Agent 报告完成、阻塞和协调请求，让 Main Agent 可以向指定 Node 下发协调指令，同时禁止 Node 之间直接通信 | Node 报告先落为可记录事实再被 Main 处理；不存在 Node-to-Node 通道；消息身份和所属 Project 可追溯 |
+| ⬜ | F9.6 Project Mailbox 与协调 | Project 消息与 Node 报告 | 让 Node Agent 可以向 Main Agent 报告完成、阻塞和协调请求，让 Main Agent 可以向指定 Node 下发指令，同时禁止 Node 之间直接通信 | Node 报告先落为可记录事实再被 Main 处理；不存在 Node-to-Node 通道；消息身份和所属 Project 可追溯 |
 | ⬜ | F9.7 ProjectRuntime 长期编排 | Project 执行生命周期 | 让 Project 能依据当前 Roadmap 和 Main Agent 决策启动、暂停、继续和收敛多个 Node 执行，并正确处理跨 Node 并行和恢复 | 同一 Node 不发生隐式并发 Turn；独立 Node 可并行；取消、失败和恢复不会产生递归 Agent 调用或悬挂任务 |
 | ⬜ | F9.8 长程 Core 集成验收 | 后端集成测试与阶段记录 | 用一个完整长程场景证明 Project、Roadmap、Main Agent、多个 Node Agent、阻塞协调和 Roadmap Mutation 可以共同工作 | Goal -> Roadmap -> 多 Node -> 并行 -> Block -> Main 协调 -> Mutation -> 继续执行的完整链路可重复验证；不以完整 Verification 作为完成条件 |
 | ⏸️ | F9.9 Public Project / Roadmap Contract Handoff | Host / RPC / 桌面共享控制面 | 在 Core 稳定后，为桌面端提供只读 Project / Roadmap 状态和必要事件，使 Roadmap 可以成为真实可视化项目看板 | 开始此 Step 前必须停止修改并向用户报告；前后端共同确认版本、校验、取消与兼容语义后才能修改共享契约 |
@@ -177,7 +177,6 @@ Phase 9 明确不做：
 | Phase 12 | 系统如何与研究者长期共同演进？ | Research Memory、长期反馈与 Human-AI Co-evolution |
 
 Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Phase 9 同时恢复为独立产品主线。
-
 ## 9. 当前下一步
 
 F9.4 的实现已在 `phase9-f9.4-agent-binding` 分支完成：Main / Node Profile 与 Session 均继续复用唯一 AgentRuntime；可信 Binding 从 ProjectStore / NodeStore 的 Session 所有权动态派生，并在角色入口和工具授权边界校验。实现与测试设计记录见 [65：F9.4 Agent Profile 与 Binding](65-devlog-agent-profile-binding.md)。
