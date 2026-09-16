@@ -1,6 +1,7 @@
 import type { Context } from "cordis";
 
 import type { JsonObject } from "../../../llm/types.js";
+import type { NodeSnapshot } from "../../../node/model.js";
 import { AgentBindingError, requireMainBinding } from "../../../project/binding.js";
 import { ToolExecutionError } from "../../errors.js";
 import type { ToolDefinition } from "../../types.js";
@@ -35,7 +36,7 @@ export function createReadRoadmapTool(ctx: Context): ToolDefinition {
               roadmap,
               roadmap.graph.topologicalOrder
                 .map((nodeId) => ctx.nodes.get(nodeId))
-                .filter((value) => value !== undefined),
+                .filter((value): value is NodeSnapshot => value !== undefined),
             );
         return {
           content: formatAgentRoadmapView(view),
