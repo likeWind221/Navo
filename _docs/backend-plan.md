@@ -75,7 +75,33 @@ Node 的报告、阻塞和协调请求应先成为 Project 可记录事实，再
 ## 3. 开发方式
 
 - 后端 Agent 只修改 `_docs/backend-plan.md`、`src/**`、`tests/**`、`scripts/**`、根 `package.json`、根 `pnpm-lock.yaml` 及明确分配给后端的开发记录；不修改 `frontend/**`。
-- 严格执行“一个 Step -> 人工审查 -> 确认后继续”。未经确认，不提前实现后续 Step。
+- 每个 Step 都从最新 `master` 创建独立分支；Agent 完成开发后创建指向 `master` 的 PR，不直接向 `master` 提交功能改动。
+- PR 以 GitHub CI 作为唯一合并 gate，固定执行 `pnpm install --frozen-lockfile`、`pnpm typecheck`、`pnpm test`。
+- CI 失败时由 Agent 在同一 PR 分支修复并触发 CI 重跑；CI 全部通过后直接 Merge 到 `master`，不再设置单独的 Human Review / 人工审查 gate。
+- 只有当前 Step 的 PR 已通过 CI 并合入 `master` 后，才开始下一 Step。
+
+```text
+Agent 开发
+   |
+   v
+创建 PR
+   |
+   v
+GitHub CI
+├── pnpm install
+├── pnpm typecheck
+└── pnpm test
+   |
+   +-- FAIL --> Agent 修复 --> CI 重跑
+   |
+   +-- PASS
+        |
+        v
+      Merge
+        |
+        v
+      master
+```
 - 计划只写功能目标与可验收结果；模块划分、协议字段、算法和文件级实现取舍写入对应开发记录。
 - Phase 9 优先确定可重放、可测试和权限明确的 Core，再接入真实 LLM 主规划行为。
 - `AgentRuntime`、`ToolService`、`SessionStore` 继续保持通用命名，不为 Multi-Agent 新增重复 Runtime。
