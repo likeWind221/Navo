@@ -18,6 +18,7 @@ import {
   requireNodeProjectBinding,
   resolveAgentBinding,
 } from "../../src/project/binding.js";
+import type { AgentBindingErrorCode } from "../../src/project/binding.js";
 import { ProjectStore } from "../../src/project/store.js";
 import { SessionStore } from "../../src/session/store.js";
 import { ToolService } from "../../src/tools/service.js";
@@ -71,7 +72,10 @@ function toolCall(projectId: string): ToolCallContentBlock {
   };
 }
 
-function registerMainOnlyProbe(ctx: Context, authorized: ReturnType<typeof vi.fn>) {
+function registerMainOnlyProbe(
+  ctx: Context,
+  authorized: (projectId: ProjectId) => unknown,
+) {
   return ctx.tools.register({
     name: "project_admin_probe",
     description: "Test-only Main Agent capability.",
@@ -83,11 +87,24 @@ function registerMainOnlyProbe(ctx: Context, authorized: ReturnType<typeof vi.fn
     },
     execute(arguments_, execution) {
       const claimedProjectId = createProjectId(String(arguments_.projectId));
-      requireMainBinding(ctx, execution.sessionId!, claimedProjectId);
+      requireMainBinding(ctx, execution.sessionId, claimedProjectId);
       authorized(claimedProjectId);
       return { content: "authorized" };
     },
   });
+}
+
+function expectBindingError(
+  action: () => unknown,
+  code: AgentBindingErrorCode,
+): void {
+  try {
+    action();
+  } catch (error: unknown) {
+    expect(error).toMatchObject({ code });
+    return;
+  }
+  throw new Error(`Expected AgentBindingError '${code}'.`);
 }
 
 describe("trusted Agent bindings", () => {
@@ -113,14 +130,22 @@ describe("trusted Agent bindings", () => {
     });
     expect(resolveAgentBinding(ctx, createSessionId("unowned"))).toBeUndefined();
 
-    expect(() => requireMainBinding(ctx, nodeSession, first.id))
-      .toThrow(expect.objectContaining({ code: "binding-role-mismatch" }));
-    expect(() => requireMainBinding(ctx, first.mainSessionId, second.id))
-      .toThrow(expect.objectContaining({ code: "binding-project-mismatch" }));
-    expect(() => requireNodeProjectBinding(ctx, nodeSession, first.id, nodeB.node.id))
-      .toThrow(expect.objectContaining({ code: "binding-node-mismatch" }));
-    expect(() => requireNodeProjectBinding(ctx, nodeSession, second.id, nodeA.node.id))
-      .toThrow(expect.objectContaining({ code: "binding-project-mismatch" }));
+    expectBindingError(
+      () => requireMainBinding(ctx, nodeSession, first.id),
+      "binding-role-mismatch",
+    );
+    expectBindingError(
+      () => requireMainBinding(ctx, first.mainSessionId, second.id),
+      "binding-project-mismatch",
+    );
+    expectBindingError(
+      () => requireNodeProjectBinding(ctx, nodeSession, first.id, nodeB.node.id),
+      "binding-node-mismatch",
+    );
+    expectBindingError(
+      () => requireNodeProjectBinding(ctx, nodeSession, second.id, nodeA.node.id),
+      "binding-project-mismatch",
+    );
   });
 
   it("blocks a Node Session from a Main-only tool even when the tool is exposed by mistake", async () => {
