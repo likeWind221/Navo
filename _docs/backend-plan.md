@@ -146,7 +146,11 @@ Node A --------X--------> Node B
 | ✅ | F9.3.2 路线变更与历史重建 | Roadmap 内存状态与变更 | 让调用方创建、查询、插入、调整关系、重排和增删路线节点，并能新增节点接续后续阶段、查看历史 | 整批变更全部成功或不生效，新建节点失败不留孤立节点；旧版本不能覆盖新版本；同一历史重建同一状态；complete/skip 后依赖满足的节点同步 unlock |
 | ✅ | F9.3.3 节点地图查询 | Roadmap 查询与领域集成 | 让调用方直接获取节点属性、已提交状态和依赖边以重建地图 | 无 Board 或成员状态；查询不修改节点；数据包含节点与路线版本，前端可据此重建地图 |
 | 🔄 | F9.4 Agent Profile 与 Binding | Project / Node Agent 角色边界 | 让 Main Agent 与 Node Agent 在同一 AgentRuntime 上获得不同角色、上下文和能力，同时由可信作用域约束实际可访问资源 | Main / Node 不新增独立 Runtime；Profile 不是唯一安全边界；Node 无法通过伪造输入访问其他 Node 或 Project 管理能力 |
-| ⬜ | F9.5 Main Agent Planning 与 Roadmap Mutation | Main Agent / Roadmap | 让 Main Agent 能基于 Goal 和项目现状提出 Roadmap 创建或修改方案，并由确定性边界决定方案能否成为新的项目事实 | 插入、跳过、连接调整、重排等变更可验证、可拒绝、可记录；陈旧版本或非法关系不能静默覆盖当前 Roadmap |
+| 🔄 | F9.5 Main Agent Planning 与 Roadmap Mutation | Main Agent / Roadmap | 让 Main Agent 通过受约束的内置工具读取、创建与增量修改 Roadmap，并由确定性边界决定方案能否成为新的项目事实 | Roadmap / Node 读取清晰且不泄露私有 Session；创建与增量修改可验证、可拒绝、可记录；Main Agent 不控制 Node lifecycle 终态 |
+| 🔄 | F9.5a `read_roadmap` | Main Agent Roadmap 读取能力 | 让 Main Agent 通过可信 Project Binding 读取空或已有 Roadmap，并获得最简 dependency map、Node 摘要与只读 status | 空 Roadmap 正常返回 empty；已有 Roadmap 按拓扑顺序输出 version、依赖和 Node 摘要；Node Session 直接调用仍被拒绝；待本地 typecheck/test |
+| ⬜ | F9.5b `read_node` | Main Agent Node 详情读取能力 | 让 Main Agent 在读取整体 Roadmap 后按 NodeId 进一步读取单个 Node 的完整规划详情，而不访问 Node 私有 Session | 只能读取当前 Project 的 Node；NodeId 是引用而不是授权；不暴露私有 Session / tool history |
+| ⬜ | F9.5c `write_roadmap` | Main Agent 初始规划能力 | 让 Main Agent 为尚无 Roadmap 的 Project 创建初始 Node 分布、required/optional 与依赖关系 | 已有 Roadmap 时拒绝覆盖；Node identity 由可信规划层生成；候选 DAG 完整验证后一次提交 |
+| ⬜ | F9.5d `modify_roadmap` | Main Agent 动态重规划能力 | 让 Main Agent 基于当前 version 对已有 Roadmap 做结构化增量修改 | stale version、非法引用和非法关系被拒绝且旧状态不变；Main Agent 只能修改规划结构，不能 complete/skip Node |
 | ⬜ | F9.6 Project Mailbox 与协调 | Project 消息与 Node 报告 | 让 Node Agent 可以向 Main Agent 报告完成、阻塞和协调请求，让 Main Agent 可以向指定 Node 下发指令，同时禁止 Node 之间直接通信 | Node 报告先落为可记录事实再被 Main 处理；不存在 Node-to-Node 通道；消息身份和所属 Project 可追溯 |
 | ⬜ | F9.7 ProjectRuntime 长期编排 | Project 执行生命周期 | 让 Project 能依据当前 Roadmap 和 Main Agent 决策启动、暂停、继续和收敛多个 Node 执行，并正确处理跨 Node 并行和恢复 | 同一 Node 不发生隐式并发 Turn；独立 Node 可并行；取消、失败和恢复不会产生递归 Agent 调用或悬挂任务 |
 | ⬜ | F9.8 长程 Core 集成验收 | 后端集成测试与阶段记录 | 用一个完整长程场景证明 Project、Roadmap、Main Agent、多个 Node Agent、阻塞协调和 Roadmap Mutation 可以共同工作 | Goal -> Roadmap -> 多 Node -> 并行 -> Block -> Main 协调 -> Mutation -> 继续执行的完整链路可重复验证；不以完整 Verification 作为完成条件 |
@@ -182,13 +186,15 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Pha
 
 F9.4 的实现已在 `phase9-f9.4-agent-binding` 分支完成：Main / Node Profile 与 Session 均继续复用唯一 AgentRuntime；可信 Binding 从 ProjectStore / NodeStore 的 Session 所有权动态派生，并在角色入口和工具授权边界校验。实现与测试设计记录见 [65：F9.4 Agent Profile 与 Binding](65-devlog-agent-profile-binding.md)。
 
-由于当前云端执行环境无法拉取仓库依赖并实际运行 `pnpm typecheck` / `pnpm test`，F9.4 在计划中暂保留为 🔄，等待正常开发环境完成完整验证后再标记 ✅。**验证通过后的下一步是 F9.5 Main Agent Planning 与 Roadmap Mutation。**循环步骤已取消，数据库持久化仍放到 F10。
+F9.5 已拆为 Roadmap / Node 读取、初始规划与动态修改四个子步骤。F9.5a `read_roadmap` 已在 `phase9-f9.5a-read-roadmap` 分支完成代码实现：Roadmap tools 作为 `src/tools/builtins/roadmap/` 内置 capability 注册，仅 Main Profile 暴露，并在 Tool 内再次使用 trusted Main Binding；空 Roadmap 正常返回 empty，已有 Roadmap 返回面向 Agent 的 version、dependency map 和 Node 摘要。实现记录见 [66：F9.5a Main Agent read_roadmap](66-devlog-main-agent-read-roadmap.md)。
+
+由于当前云端执行环境无法拉取仓库依赖并实际运行 `pnpm typecheck` / `pnpm test`，F9.4 与 F9.5a 均暂保留为 🔄，等待正常开发环境统一验证。**F9.5a 人工审查通过后的下一小步是 F9.5b `read_node`**；随后再进入 `write_roadmap` 与 `modify_roadmap`。数据库持久化仍放到 F10。
 
 F9.1 与 F9.2 已完成，记录见 [55：Project 与通用 Node 领域](55-devlog-project-node-domain.md)。整个 Phase 9 先使用内存状态；原临时数据库子步骤已撤销，F9.3 已按节点状态、路线与解锁、地图查询三个子步骤完成。F10 统一实施项目、节点、路线图、会话、消息及工具记录的数据库持久化与启动恢复。原 F10 Evidence/Verification 目标保留，待持久化之后重新排期。调研与拆分方案见 [56：内存与持久化阶段划分](56-devlog-persistence-plan.md)。
 
-F9.3.1 的结构规则沿用 [57：路线结构与关系表达](57-devlog-roadmap-graph.md) 并按 [63：F9.3 修复方案](63-devlog-node-state-review.md) 收敛；状态、路线变更、历史重建和地图查询修复见 [64：F9.3 状态模型修复](64-devlog-node-state-repair.md)。F9.4 已建立 Main / Node 的可信 Session Binding 与 Profile 边界；Main Agent 的 Roadmap 创建/修改工具仍由 F9.5 实现，前端仍需在 F9.9 串行接入只读契约。
+F9.3.1 的结构规则沿用 [57：路线结构与关系表达](57-devlog-roadmap-graph.md) 并按 [63：F9.3 修复方案](63-devlog-node-state-review.md) 收敛；状态、路线变更、历史重建和地图查询修复见 [64：F9.3 状态模型修复](64-devlog-node-state-repair.md)。F9.4 已建立 Main / Node 的可信 Session Binding 与 Profile 边界；F9.5 开始以 built-in Tools 消费该 Binding。Main Agent 只拥有规划读取/修改能力，不拥有 Node `completing` / `skipped` 等人工终态裁决权；`locked` / `idle` 继续由 Roadmap 依赖自动计算。
 
-Node 当前状态约定：新建 locked，解锁后 idle，实际执行时 working，回合结束回到 idle；人工可将 idle 确认为 completing，或将 locked/idle 确认为 skipped；两种终态均满足后续依赖。RoadmapStore 在同一批 Node 事件中追加 node-unlocked，手动 unlock 不能绕过必选祖先；没有路线的独立 Node 仍可使用 NodeStore 原有生命周期。人工确认 UI/RPC 尚未接入；Main / Node 身份与资源作用域已由 F9.4 建立，Roadmap 管理授权将在 F9.5 的实际工具边界继续消费该 Binding。
+Node 当前状态约定：新建 locked，解锁后 idle，实际执行时 working，回合结束回到 idle；人工可将 idle 确认为 completing，或将 locked/idle 确认为 skipped；两种终态均满足后续依赖。RoadmapStore 在同一批 Node 事件中追加 node-unlocked，手动 unlock 不能绕过必选祖先；没有路线的独立 Node 仍可使用 NodeStore 原有生命周期。人工确认 UI/RPC 尚未接入；前端仍需在 F9.9 串行接入只读契约。
 ## 10. 后端维护记录：桌面工具可用性排查（2026-09-14）
 
 - 做了什么：按用户要求排查现有工具注册与桌面模型可见性，修复配置 Exa 后普通桌面回合仅能看到 `web_search` 的问题。修改 `src/host/config.ts`、`tests/host/turn.spec.ts`，新增 `tests/host/tools.spec.ts`。属于既有能力修复，不推进 Phase 9 Step。
