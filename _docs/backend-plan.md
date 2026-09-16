@@ -126,7 +126,7 @@ Project
   |             AgentRuntime                       |
   |                  |                             |
   |            planning / directives               |
-  |                  |
+  |                  |                             |
   +--> Node A <------+---- reports ----> Main -----+
   |     Node Profile + Node Binding + Session
   |
