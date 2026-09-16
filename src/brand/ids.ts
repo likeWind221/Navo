@@ -11,12 +11,17 @@ export type ToolCallId = Brand<string, "ToolCallId">;
 export type TurnId = Brand<string, "TurnId">;
 export type StepId = Brand<string, "StepId">;
 export type NodeId = Brand<string, "NodeId">;
+export type ProjectId = Brand<string, "ProjectId">;
 export type ExerciseId = Brand<string, "ExerciseId">;
 
 function assertIdValue(value: string, idName: string): void {
   if (value.length === 0) {
     throw new TypeError(`${idName} must not be empty`);
   }
+}
+
+export function createProjectId(value: string): ProjectId {
+  return makeId<ProjectId>(value, "ProjectId");
 }
 
 function makeId<TId extends Brand<string, string>>(

@@ -1,135 +1,131 @@
-import type { ExerciseId, NodeId } from "../brand/ids.js";
+import type { NodeId } from "../brand/ids.js";
 import { NodeError } from "./errors.js";
 import type { NodeEvent } from "./events.js";
-import type {
-  ExerciseSet,
-  MaterialDocument,
-  Node,
-  NodeSnapshot,
-} from "./model.js";
+import type { NodeSnapshot, NodeStatus } from "./model.js";
 
-/** Strictly reconstruct one Node from its complete committed event stream. */
-export function projectNode(
-  nodeId: NodeId,
-  events: readonly NodeEvent[],
-): NodeSnapshot | undefined {
-  let node: Node | undefined;
-  let sessionId: NodeSnapshot["sessionId"];
-  let material: MaterialDocument | undefined;
-  let exerciseSet: ExerciseSet | undefined;
-  let revision = 0;
-
+export function projectNode(nodeId: NodeId, events: readonly NodeEvent[]): NodeSnapshot | undefined {
+  let snapshot: NodeSnapshot | undefined;
+  const ids = new Set<string>();
   for (const event of events) {
-    if (event.nodeId !== nodeId) {
-      invalid(`Node event '${event.id}' belongs to a different Node.`);
+    if (!event || event.version !== 2 || event.nodeId !== nodeId) invalid("Invalid Node event identity or version.");
+    text(event.id);
+    text(event.nodeId);
+    if (ids.has(event.id)) invalid("Duplicate Node event ID.");
+    ids.add(event.id);
+    if (!Number.isSafeInteger(event.revision) || event.revision !== (snapshot?.revision ?? 0) + 1) {
+      invalid("Node revisions must be contiguous.");
     }
-    if (!Number.isSafeInteger(event.revision) || event.revision !== revision + 1) {
-      invalid(`Node '${nodeId}' revision ${event.revision} is not contiguous.`);
+    if (typeof event.timestamp !== "string" || !Number.isFinite(Date.parse(event.timestamp))) {
+      invalid("Invalid Node event timestamp.");
     }
-
+    if (!event.data || typeof event.data !== "object" || Array.isArray(event.data)) invalid("Invalid Node event data.");
     switch (event.type) {
-      case "node-created":
-        if (node !== undefined || revision !== 0) {
-          invalid(`Node '${nodeId}' was created more than once or after another event.`);
+      case "node-created": {
+        if (snapshot) invalid("Node was already created.");
+        text(event.data.projectId);
+        requirement(event.data.requirement ?? "required");
+        const objective = event.data.objective;
+        if (!objective || typeof objective !== "object") invalid("Node objective is required.");
+        text(objective.title);
+        text(objective.description);
+        if (!Array.isArray(objective.acceptanceCriteria) || objective.acceptanceCriteria.length === 0) {
+          invalid("Node acceptance criteria are required.");
         }
-        node = {
-          id: nodeId,
-          capability: event.data.capability,
-          sources: event.data.sources,
+        objective.acceptanceCriteria.forEach(text);
+        snapshot = {
+          node: { id: nodeId, projectId: event.data.projectId, kind: "work", objective, requirement: event.data.requirement ?? "required" },
+          revision: event.revision,
+          status: "locked",
         };
         break;
+      }
+      case "control-created": {
+        if (snapshot) invalid("Node was already created.");
+        text(event.data.projectId);
+        requirement(event.data.requirement ?? "required");
+        text(event.data.title);
+        if (!["start", "end", "checkpoint"].includes(event.data.purpose)) invalid("Invalid control purpose.");
+        snapshot = {
+          node: { id: nodeId, projectId: event.data.projectId, kind: "control", purpose: event.data.purpose, title: event.data.title, requirement: event.data.requirement ?? "required" },
+          revision: event.revision, status: "locked",
+        };
+        break;
+      }
       case "session-bound":
-        if (node === undefined) {
-          invalid(`Node '${nodeId}' bound a Session before it was created.`);
-        }
-        if (sessionId !== undefined) {
-          invalid(`Node '${nodeId}' bound more than one Session.`);
-        }
-        sessionId = event.data.sessionId;
+        requireStatus(snapshot, "idle");
+        if (snapshot!.node.kind !== "work") invalid("Control nodes cannot bind Sessions.");
+        if (snapshot!.sessionId !== undefined) invalid("Node already owns a Session.");
+        text(event.data.sessionId);
+        snapshot = { ...snapshot!, sessionId: event.data.sessionId };
         break;
-      case "material-replaced":
-        requireContentOwner(nodeId, node, sessionId);
-        assertContentRevision("material", material?.revision, event.data.material.revision);
-        material = event.data.material;
+      case "node-unlocked":
+        requireStatus(snapshot, "locked");
+        text(event.data.reason);
+        snapshot = { ...snapshot!, status: "idle" };
         break;
-      case "exercise-set-replaced":
-        requireContentOwner(nodeId, node, sessionId);
-        assertContentRevision(
-          "exercise set",
-          exerciseSet?.revision,
-          event.data.exerciseSet.revision,
-        );
-        assertUniqueExercises(event.data.exerciseSet);
-        exerciseSet = event.data.exerciseSet;
+      case "node-locked":
+        requireStatus(snapshot, "idle");
+        text(event.data.reason);
+        snapshot = { ...snapshot!, status: "locked" };
+        break;
+      case "work-started":
+        requireStatus(snapshot, "idle");
+        if (snapshot!.node.kind !== "work") invalid("Control nodes cannot execute.");
+        if (snapshot!.sessionId === undefined) invalid("Working Node requires a Session.");
+        snapshot = { ...snapshot!, status: "working" };
+        break;
+      case "work-ended":
+        requireStatus(snapshot, "working");
+        snapshot = { ...snapshot!, status: "idle" };
+        break;
+      case "completion-confirmed":
+      case "node-skipped":
+        if (event.type === "node-skipped" && snapshot?.status === "locked") {
+          requireStatus(snapshot, "locked");
+        } else requireStatus(snapshot, "idle");
+        text(event.data.confirmedBy);
+        text(event.data.reason);
+        if (event.data.reviewedRevision !== snapshot!.revision) invalid("Confirmation refers to a stale Node revision.");
+        snapshot = { ...snapshot!, status: event.type === "node-skipped" ? "skipped" : "completing", confirmation: event.data };
+        break;
+      case "requirement-changed":
+        if (!snapshot) invalid("Node must exist.");
+        requirement(event.data.requirement);
+        text(event.data.reason);
+        if (event.data.reviewedRevision !== snapshot.revision) invalid("Requirement change refers to a stale revision.");
+        snapshot = { ...snapshot, node: { ...snapshot.node, requirement: event.data.requirement } };
         break;
       default:
-        exhaustive(event);
+        invalid("Unsupported Node event type.");
     }
-    revision = event.revision;
+    snapshot = { ...snapshot!, revision: event.revision };
   }
-
-  if (node === undefined) {
-    if (events.length !== 0) invalid(`Node '${nodeId}' has no creation event.`);
-    return undefined;
-  }
-  return immutable({
-    node,
-    revision,
-    content: {
-      ...(material === undefined ? {} : { material }),
-      ...(exerciseSet === undefined ? {} : { exerciseSet }),
-    },
-    ...(sessionId === undefined ? {} : { sessionId }),
-  });
+  return snapshot === undefined ? undefined : immutable(snapshot);
 }
 
-function requireContentOwner(
-  nodeId: NodeId,
-  node: Node | undefined,
-  sessionId: NodeSnapshot["sessionId"],
-): void {
-  if (node === undefined || sessionId === undefined) {
-    invalid(`Node '${nodeId}' changed content before creation and Session binding.`);
+export function immutable<T>(value: T): T {
+  const copy = structuredClone(value);
+  function freeze(item: unknown): void {
+    if (item === null || typeof item !== "object" || Object.isFrozen(item)) return;
+    Object.values(item).forEach(freeze);
+    Object.freeze(item);
   }
+  freeze(copy);
+  return copy;
 }
 
-function assertContentRevision(
-  name: string,
-  current: number | undefined,
-  candidate: number,
-): void {
-  const expected = (current ?? 0) + 1;
-  if (!Number.isSafeInteger(candidate) || candidate !== expected) {
-    invalid(`${name} revision ${candidate} is not contiguous; expected ${expected}.`);
-  }
+function requireStatus(snapshot: NodeSnapshot | undefined, expected: NodeStatus): void {
+  if (snapshot?.status !== expected) invalid("Node must be " + expected + " for this event.");
 }
 
-function assertUniqueExercises(exerciseSet: ExerciseSet): void {
-  const ids = new Set<ExerciseId>();
-  for (const exercise of exerciseSet.exercises) {
-    if (ids.has(exercise.id)) invalid(`Exercise '${exercise.id}' appears more than once.`);
-    ids.add(exercise.id);
-  }
+function text(value: unknown): void {
+  if (typeof value !== "string" || !value.trim()) invalid("Node fields must contain non-empty text.");
 }
 
 function invalid(message: string): never {
   throw new NodeError("invalid-event-stream", message);
 }
 
-function exhaustive(value: never): never {
-  throw new NodeError(
-    "invalid-event-stream",
-    `Unsupported Node event '${String((value as NodeEvent).type)}'.`,
-  );
-}
-
-function immutable<TValue>(value: TValue): TValue {
-  return deepFreeze(structuredClone(value));
-}
-
-function deepFreeze<TValue>(value: TValue, seen = new Set<object>()): TValue {
-  if (value === null || typeof value !== "object" || seen.has(value)) return value;
-  seen.add(value);
-  for (const child of Object.values(value)) deepFreeze(child, seen);
-  return Object.freeze(value) as TValue;
+function requirement(value: unknown): void {
+  if (value !== "required" && value !== "optional") invalid("Invalid Node requirement.");
 }

@@ -216,7 +216,7 @@ describe("Kernel Host trusted configuration", () => {
 
     expect(config.adapter.enableThinking).toBe(true);
     expect(config.agent.model.maxTokens).toBe(8_192);
-    expect(config.agent.toolNames).toBeUndefined();
+    expect(config.agent.toolNames).toEqual(["web_fetch", "read", "shell", "edit", "write"]);
     expect(config.search).toBeUndefined();
   });
 
@@ -224,7 +224,7 @@ describe("Kernel Host trusted configuration", () => {
     const config = resolveKernelHostConfig({ EXA_API_KEY: "exa-secret" });
 
     expect(config.search).toEqual({ apiKey: "exa-secret" });
-    expect(config.agent.toolNames).toEqual(["web_search"]);
+    expect(config.agent.toolNames).toEqual(["web_search", "web_fetch", "read", "shell", "edit", "write"]);
     expect(Object.isFrozen(config.agent.toolNames)).toBe(true);
   });
 

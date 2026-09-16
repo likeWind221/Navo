@@ -1,241 +1,114 @@
 import { Context } from "cordis";
 import { afterEach, describe, expect, it } from "vitest";
-
-import {
-  createEventId,
-  createNodeId,
-  createSessionId,
-} from "../../src/brand/ids.js";
-import { NodeError } from "../../src/node/errors.js";
-import type {
-  NodeCreatedEvent,
-  NodeEvent,
-  SessionBoundEvent,
-} from "../../src/node/events.js";
-import { projectNode } from "../../src/node/projector.js";
+import { createNodeId, createProjectId, createSessionId } from "../../src/brand/ids.js";
+import { ProjectStore } from "../../src/project/store.js";
 import { NodeStore } from "../../src/node/store.js";
+import { projectNode } from "../../src/node/projector.js";
+import type { NodeEvent } from "../../src/node/events.js";
 
-const contexts = new Set<Context>();
+const contexts: Context[] = [];
+afterEach(async () => { await Promise.all(contexts.splice(0).map(ctx => ctx.fiber.dispose())); });
 
-function createContext(): Context {
+async function kit() {
   const ctx = new Context();
-  contexts.add(ctx);
-  return ctx;
+  contexts.push(ctx);
+  await ctx.plugin(ProjectStore);
+  await ctx.plugin(NodeStore);
+  const project = ctx.projects.create({ goal: "Research" });
+  const objective = { title: "Sources", description: "Inspect sources", acceptanceCriteria: ["Cite primary sources"] };
+  return { ctx, project, objective };
 }
 
-afterEach(async () => {
-  await Promise.all([...contexts].map((ctx) => ctx.fiber.dispose()));
-  contexts.clear();
-});
-
-describe("NodeStore", () => {
-  it("creates an immutable revision-one Node detached from its input", async () => {
-    const ctx = createContext();
-    await ctx.plugin(NodeStore);
-    const criterion = "Explain a generic constraint";
-    const capability = {
-      title: "TypeScript generics",
-      description: "Use generic types safely",
-      successCriteria: [criterion],
-    };
-    const source = { reference: "https://example.test/generics", label: "Guide" };
-
-    const snapshot = ctx.nodes.create({ capability, sources: [source] });
-    capability.successCriteria[0] = "mutated";
-    source.label = "mutated";
-
-    expect(snapshot.revision).toBe(1);
-    expect(snapshot.sessionId).toBeUndefined();
-    expect(snapshot.node.capability.successCriteria).toEqual([criterion]);
-    expect(snapshot.node.sources[0]?.label).toBe("Guide");
-    expect(snapshot.node.id).toMatch(/^[0-9a-f-]{36}$/i);
-    expect(Object.isFrozen(snapshot)).toBe(true);
-    expect(Object.isFrozen(snapshot.node.capability.successCriteria)).toBe(true);
-    expect(ctx.nodes.getEvents(snapshot.node.id)).toHaveLength(1);
+describe("generic Project Nodes", () => {
+  it("creates immutable locked Nodes with independent project ownership", async () => {
+    const { ctx, project, objective } = await kit();
+    const node = ctx.nodes.create({ projectId: project.id, objective });
+    if (node.node.kind !== "work") throw new Error("Expected a work node");
+    objective.acceptanceCriteria.push("Changed");
+    expect(node.status).toBe("locked");
+    expect(node.node.objective.acceptanceCriteria).toEqual(["Cite primary sources"]);
+    expect(Object.isFrozen(node.node.objective.acceptanceCriteria)).toBe(true);
+    expect(ctx.nodes.getByProject(project.id)).toEqual([node]);
+    expect(ctx.nodes.getByProject(createProjectId("other"))).toEqual([]);
+    expect(() => ctx.nodes.create({ projectId: createProjectId("missing"), objective }))
+      .toThrow(expect.objectContaining({ code: "project-unavailable" }));
+    expect(() => ctx.nodes.create({ projectId: project.id, objective: { ...objective, title: " " } }))
+      .toThrow(expect.objectContaining({ code: "invalid-event-stream" }));
+    expect(ctx.nodes.getByProject(project.id)).toHaveLength(1);
   });
 
-  it("returns undefined for unknown Node and empty event history", async () => {
-    const ctx = createContext();
-    await ctx.plugin(NodeStore);
-    const missing = createNodeId("missing-node");
-
-    expect(ctx.nodes.get(missing)).toBeUndefined();
-    expect(ctx.nodes.getEvents(missing)).toEqual([]);
+  it("preserves unique Node sessions and rejects Main sessions", async () => {
+    const { ctx, project, objective } = await kit();
+    const a = ctx.nodes.create({ projectId: project.id, objective }).node.id;
+    const b = ctx.nodes.create({ projectId: project.id, objective }).node.id;
+    const session = createSessionId("session");
+    ctx.nodes.unlock(a, "Ready");
+    ctx.nodes.unlock(b, "Ready");
+    expect(() => ctx.nodes.bindSession(a, project.mainSessionId))
+      .toThrow(expect.objectContaining({ code: "session-already-bound" }));
+    ctx.nodes.bindSession(a, session);
+    expect(ctx.nodes.getBySession(session)?.node.id).toBe(a);
+    expect(() => ctx.nodes.bindSession(b, session)).toThrow(expect.objectContaining({ code: "session-already-bound" }));
+    expect(() => ctx.nodes.bindSession(a, createSessionId("another")))
+      .toThrow(expect.objectContaining({ code: "node-already-bound" }));
   });
 
-  it("binds one Session and supports reverse lookup", async () => {
-    const ctx = createContext();
-    await ctx.plugin(NodeStore);
-    const created = ctx.nodes.create({ capability: capability() });
-    const sessionId = createSessionId("node-session");
-
-    const bound = ctx.nodes.bindSession(created.node.id, sessionId);
-
-    expect(bound).toMatchObject({ revision: 2, sessionId });
-    expect(ctx.nodes.getBySession(sessionId)?.node.id).toBe(created.node.id);
-    expect(ctx.nodes.getEvents(created.node.id).map((event) => event.type))
-      .toEqual(["node-created", "session-bound"]);
-  });
-
-  it("rejects rebinding a Node and sharing a Session across Nodes", async () => {
-    const ctx = createContext();
-    await ctx.plugin(NodeStore);
-    const first = ctx.nodes.create({ capability: capability("First") });
-    const second = ctx.nodes.create({ capability: capability("Second") });
-    const sessionId = createSessionId("exclusive-session");
-    ctx.nodes.bindSession(first.node.id, sessionId);
-
-    expect(() => ctx.nodes.bindSession(first.node.id, createSessionId("other")))
-      .toThrow(expect.objectContaining({
-        name: "NodeError",
-        code: "node-already-bound",
-      }));
-    expect(() => ctx.nodes.bindSession(second.node.id, sessionId))
-      .toThrow(expect.objectContaining({
-        name: "NodeError",
-        code: "session-already-bound",
-      }));
-    expect(ctx.nodes.getEvents(first.node.id)).toHaveLength(2);
-    expect(ctx.nodes.getEvents(second.node.id)).toHaveLength(1);
-  });
-
-  it("rejects binding an unknown Node with a classified error", async () => {
-    const ctx = createContext();
-    await ctx.plugin(NodeStore);
-
-    expect(() => ctx.nodes.bindSession(
-      createNodeId("unknown"),
-      createSessionId("unused"),
-    )).toThrow(expect.objectContaining({
-      name: "NodeError",
-      code: "node-not-found",
-    }));
-  });
-
-  it("publishes only committed events and isolates observer failures", async () => {
-    const ctx = createContext();
-    await ctx.plugin(NodeStore);
-    const observed: string[] = [];
-    let committedBeforePublish = false;
-
-    ctx.on("node/event", (event) => {
-      observed.push("healthy");
-      committedBeforePublish = ctx.nodes.getEvents(event.nodeId).at(-1) === event;
+  it("requires explicit versioned human confirmation for the terminal state", async () => {
+    const { ctx, project, objective } = await kit();
+    const id = ctx.nodes.create({ projectId: project.id, objective }).node.id;
+    expect(() => ctx.nodes.beginWork(id)).toThrow(expect.objectContaining({ code: "invalid-state" }));
+    ctx.nodes.unlock(id, "Ready");
+    ctx.nodes.bindSession(id, createSessionId("main-work"));
+    const idle = ctx.nodes.get(id)!;
+    ctx.nodes.beginWork(id);
+    expect(() => ctx.nodes.confirmCompletion(id, { confirmedBy: "reviewer", reason: "OK", reviewedRevision: idle.revision }))
+      .toThrow(expect.objectContaining({ code: "invalid-state" }));
+    expect(() => ctx.nodes.lock(id, "Lock")).toThrow(expect.objectContaining({ code: "invalid-state" }));
+    const ended = ctx.nodes.endWork(id);
+    expect(ended.status).toBe("idle");
+    expect(() => ctx.nodes.confirmCompletion(id, { confirmedBy: "reviewer", reason: "OK", reviewedRevision: idle.revision }))
+      .toThrow(expect.objectContaining({ code: "stale-revision" }));
+    const complete = ctx.nodes.confirmCompletion(id, {
+      confirmedBy: "reviewer", reason: "Sources inspected", reviewedRevision: ended.revision,
     });
-    ctx.on("node/event", () => {
-      observed.push("throwing");
-      throw new Error("observer failed");
-    });
-    ctx.on("node/event", async () => {
-      observed.push("rejecting");
-      throw new Error("async observer failed");
-    });
-
-    let snapshot: ReturnType<NodeStore["create"]> | undefined;
-    expect(() => {
-      snapshot = ctx.nodes.create({ capability: capability() });
-    }).not.toThrow();
-
-    expect(committedBeforePublish).toBe(true);
-    expect(observed).toEqual(["healthy", "throwing", "rejecting"]);
-    expect(ctx.nodes.getEvents(snapshot!.node.id)).toHaveLength(1);
-    await Promise.resolve();
-    await Promise.resolve();
+    expect(complete).toMatchObject({ status: "completing", confirmation: { confirmedBy: "reviewer" } });
+    expect(() => ctx.nodes.beginWork(id)).toThrow(expect.objectContaining({ code: "invalid-state" }));
+    expect(() => ctx.nodes.unlock(id, "Again")).toThrow(expect.objectContaining({ code: "invalid-state" }));
+    expect(projectNode(id, JSON.parse(JSON.stringify(ctx.nodes.getEvents(id))))).toEqual(complete);
   });
 
-  it("returns immutable event arrays and committed event values", async () => {
-    const ctx = createContext();
-    await ctx.plugin(NodeStore);
-    const snapshot = ctx.nodes.create({ capability: capability() });
-    const events = ctx.nodes.getEvents(snapshot.node.id);
-
-    expect(Object.isFrozen(events)).toBe(true);
-    expect(Object.isFrozen(events[0])).toBe(true);
-    expect(Object.isFrozen(events[0]?.data)).toBe(true);
-    expect(() => (events as NodeEvent[]).push(events[0]!)).toThrow(TypeError);
-    expect(ctx.nodes.getEvents(snapshot.node.id)).toHaveLength(1);
+  it("supports relocking and allows work cleanup after project archival", async () => {
+    const { ctx, project, objective } = await kit();
+    const id = ctx.nodes.create({ projectId: project.id, objective }).node.id;
+    ctx.nodes.unlock(id, "Ready");
+    ctx.nodes.lock(id, "Dependency unavailable");
+    expect(ctx.nodes.get(id)?.status).toBe("locked");
+    ctx.nodes.unlock(id, "Available");
+    ctx.nodes.bindSession(id, createSessionId("work"));
+    ctx.nodes.beginWork(id);
+    ctx.projects.archive(project.id, "Pause project");
+    expect(ctx.nodes.endWork(id).status).toBe("idle");
+    expect(() => ctx.nodes.beginWork(id)).toThrow(expect.objectContaining({ code: "project-unavailable" }));
   });
 
-  it("registers and releases the Cordis service", async () => {
-    const ctx = createContext();
-    const fiber = await ctx.plugin(NodeStore);
-
-    expect(ctx.nodes).toBeInstanceOf(NodeStore);
-    await fiber.dispose();
-    expect(Reflect.get(ctx, "nodes")).toBeUndefined();
+  it("rejects invalid histories and does not commit rejected operations", async () => {
+    const { ctx, project, objective } = await kit();
+    const id = ctx.nodes.create({ projectId: project.id, objective }).node.id;
+    const before = ctx.nodes.getEvents(id);
+    expect(() => ctx.nodes.unlock(id, " ")).toThrow();
+    expect(ctx.nodes.getEvents(id)).toBe(before);
+    const created = before[0]!;
+    const bad = [
+      { ...created, version: 1 }, { ...created, revision: 2 },
+      { ...created, nodeId: "other" }, { ...created, timestamp: "invalid" },
+      { ...created, type: "material-replaced" }, { ...created, data: null },
+    ];
+    for (const event of bad) expect(() => projectNode(id, [event as NodeEvent])).toThrow();
+    expect(() => projectNode(id, [created, { ...created, revision: 2 }])).toThrow();
+    expect(() => projectNode(id, [created, {
+      ...created, id: "next" as never, revision: 2, type: "completion-confirmed",
+      data: { confirmedBy: "reviewer", reason: "OK", reviewedRevision: 1 },
+    }])).toThrow();
+    expect(projectNode(createNodeId("missing"), [])).toBeUndefined();
   });
 });
-
-describe("projectNode", () => {
-  it("reconstructs a valid Node and returns undefined for no events", () => {
-    const nodeId = createNodeId("node-valid");
-    const sessionId = createSessionId("session-valid");
-    const snapshot = projectNode(nodeId, [created(nodeId), bound(nodeId, sessionId)]);
-
-    expect(snapshot).toMatchObject({ revision: 2, sessionId });
-    expect(snapshot?.node.capability.title).toBe("Capability");
-    expect(projectNode(nodeId, [])).toBeUndefined();
-  });
-
-  it.each(invalidStreams())("rejects $name", ({ nodeId, events }) => {
-    expect(() => projectNode(nodeId, events)).toThrow(expect.objectContaining({
-      name: "NodeError",
-      code: "invalid-event-stream",
-    } satisfies Partial<NodeError>));
-  });
-});
-
-function capability(title = "Capability") {
-  return {
-    title,
-    description: "A verifiable capability",
-    successCriteria: ["Demonstrate it"],
-  };
-}
-
-function created(nodeId: ReturnType<typeof createNodeId>, revision = 1): NodeCreatedEvent {
-  return {
-    id: createEventId(`created-${nodeId}-${revision}`),
-    nodeId,
-    revision,
-    timestamp: "2026-01-01T00:00:00.000Z",
-    type: "node-created",
-    data: { capability: capability(), sources: [] },
-  };
-}
-
-function bound(
-  nodeId: ReturnType<typeof createNodeId>,
-  sessionId: ReturnType<typeof createSessionId>,
-  revision = 2,
-): SessionBoundEvent {
-  return {
-    id: createEventId(`bound-${nodeId}-${revision}`),
-    nodeId,
-    revision,
-    timestamp: "2026-01-01T00:00:01.000Z",
-    type: "session-bound",
-    data: { sessionId },
-  };
-}
-
-function invalidStreams(): readonly {
-  name: string;
-  nodeId: ReturnType<typeof createNodeId>;
-  events: readonly NodeEvent[];
-}[] {
-  const nodeId = createNodeId("node-invalid");
-  const other = createNodeId("node-other");
-  const session = createSessionId("session-invalid");
-  return [
-    { name: "an event owned by another Node", nodeId, events: [created(other)] },
-    { name: "a skipped revision", nodeId, events: [created(nodeId, 2)] },
-    { name: "Session binding before creation", nodeId, events: [bound(nodeId, session, 1)] },
-    { name: "duplicate creation", nodeId, events: [created(nodeId), created(nodeId, 2)] },
-    {
-      name: "duplicate Session binding",
-      nodeId,
-      events: [created(nodeId), bound(nodeId, session), bound(nodeId, createSessionId("second"), 3)],
-    },
-  ];
-}

@@ -92,7 +92,7 @@ export const FILE_TOOL_SCHEMAS: Readonly<Record<"read" | "write" | "edit", ToolS
   },
   write: {
     name: "write",
-    description: "Atomically create a UTF-8 text file or completely replace an existing regular file in the current Session file environment. Existing files must have been read successfully in the same Session first; use edit for targeted changes. Relative paths use the Session cwd; absolute paths are allowed. Does not modify Node teaching content or exercises.",
+    description: "Atomically create a UTF-8 text file or completely replace an existing regular file in the current Session file environment. Existing files must have been read successfully in the same Session first; use edit for targeted changes. Relative paths use the Session cwd; absolute paths are allowed. Does not change Node lifecycle state.",
     parameters: {
       type: "object",
       properties: {

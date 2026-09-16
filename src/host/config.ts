@@ -1,6 +1,8 @@
 import type { AgentTurnHandlerConfig } from "./turn.js";
 import type { QwenChatAdapterConfig } from "../llm/adapters/qwen.js";
 import { WEB_SEARCH_TOOL_NAME } from "../tools/builtins/search/tool.js";
+import { WEB_FETCH_TOOL_NAME } from "../tools/builtins/fetch/tool.js";
+import { FILE_TOOL_SCHEMAS } from "../tools/builtins/file/types.js";
 
 export interface KernelHostSearchConfig {
   readonly apiKey: string;
@@ -49,9 +51,7 @@ export function resolveKernelHostConfig(
   if (fileCwd !== undefined && !fileCwd.trim()) {
     throw new TypeError("NAVO_FILE_CWD must be a non-empty path when provided.");
   }
-  const file = fileCwd === undefined
-    ? undefined
-    : Object.freeze({ cwd: fileCwd.trim() });
+  const file = Object.freeze({ cwd: fileCwd?.trim() ?? process.cwd() });
   return Object.freeze({
     provider: "qwen",
     adapter: Object.freeze({
@@ -62,10 +62,17 @@ export function resolveKernelHostConfig(
     agent: Object.freeze({
       model: Object.freeze({ provider: "qwen", model, maxTokens }),
       systemPrompt: "You are Navo, a concise and helpful AI agent.",
-      ...(search === undefined ? {} : { toolNames: Object.freeze([WEB_SEARCH_TOOL_NAME]) }),
+      toolNames: Object.freeze([
+        ...(search === undefined ? [] : [WEB_SEARCH_TOOL_NAME]),
+        WEB_FETCH_TOOL_NAME,
+        FILE_TOOL_SCHEMAS.read.name,
+        "shell",
+        FILE_TOOL_SCHEMAS.edit.name,
+        FILE_TOOL_SCHEMAS.write.name,
+      ]),
     }),
     ...(search === undefined ? {} : { search }),
-    ...(file === undefined ? {} : { file }),
+    file,
   });
 }
 
@@ -79,6 +86,7 @@ function boundedInteger(
   if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > maximum) {
     throw new TypeError(`${name} must be an integer from 1 through ${maximum}.`);
   }
+  return parsed;
 }
 
 function optionalBoolean(name: string, value: string | undefined, fallback: boolean): boolean {

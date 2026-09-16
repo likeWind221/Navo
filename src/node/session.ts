@@ -14,19 +14,16 @@ import { NodeError } from "./errors.js";
 import type { NodeSnapshot } from "./model.js";
 import { createNodeAgentProfile } from "./profile.js";
 
-/** Trusted model route used by every Turn dispatched through this service. */
 export interface NodeSessionServiceConfig {
   readonly model: TurnModelConfig;
 }
 
-/** One learner message addressed to a specific capability Node. */
 export interface NodeSessionMessageInput {
   readonly nodeId: NodeId;
   readonly text: string;
   readonly signal?: AbortSignal;
 }
 
-/** Public result retaining both domain/session identity and the generic Turn result. */
 export interface NodeSessionTurnResult {
   readonly nodeId: NodeId;
   readonly sessionId: SessionId;
@@ -45,14 +42,18 @@ interface PendingTurn {
   readonly signal: AbortSignal;
 }
 
-/** Node-scoped facade over NodeStore, Profile generation, and AgentRuntime. */
 export class NodeSessionService extends Service {
   static inject = ["nodes", "agentRuntime", "tools"];
 
+
   private readonly model: TurnModelConfig;
+
   private readonly tails = new Map<SessionId, Promise<void>>();
+
   private readonly active = new Map<SessionId, PendingTurn>();
+
   private readonly controllers = new Set<AbortController>();
+
   private unavailable = false;
 
   constructor(ctx: Context, config: NodeSessionServiceConfig) {
@@ -64,27 +65,24 @@ export class NodeSessionService extends Service {
     }, "nodeSessions.lifecycle");
   }
 
-  /** Create the Node's sole Session when absent, otherwise resume it, then enqueue a Turn. */
-  startLearning(input: NodeSessionMessageInput): Promise<NodeSessionTurnResult> {
+  start(input: NodeSessionMessageInput): Promise<NodeSessionTurnResult> {
     requireMessageText(input.text);
-    const node = this.requireNode(input.nodeId);
+    const node = this.ctx.nodes.requireState(input.nodeId, "idle", "working");
     const sessionId = node.sessionId ?? this.bindNewSession(input.nodeId);
     return this.dispatch(input, sessionId);
   }
 
-  /** Enqueue a Turn only when the Node already owns a Session. */
   sendMessage(input: NodeSessionMessageInput): Promise<NodeSessionTurnResult> {
     const node = this.requireNode(input.nodeId);
     if (node.sessionId === undefined) {
       throw new NodeError(
         "node-session-required",
-        `Node '${input.nodeId}' has not started a learning Session.`,
+        `Node '${input.nodeId}' has not started a Session.`,
       );
     }
     return this.dispatch(input, node.sessionId);
   }
 
-  /** Cooperatively cancel only the currently executing Turn for this Node. */
   stop(nodeId: NodeId): boolean {
     const node = this.requireNode(nodeId);
     if (node.sessionId === undefined) return false;
@@ -94,7 +92,6 @@ export class NodeSessionService extends Service {
     return true;
   }
 
-  /** Admit one immutable message into the Node's transient FIFO execution chain. */
   private dispatch(
     input: NodeSessionMessageInput,
     sessionId: SessionId,
@@ -119,12 +116,12 @@ export class NodeSessionService extends Service {
     return result;
   }
 
-  /** Refresh the Node Profile at execution time and delegate one Turn to AgentRuntime. */
   private async runQueued(
     sessionId: SessionId,
     text: string,
     pending: PendingTurn,
   ): Promise<NodeSessionTurnResult> {
+    let working = false;
     try {
       if (this.unavailable) {
         throw new NodeError(
@@ -132,15 +129,17 @@ export class NodeSessionService extends Service {
           "NodeSession Service was disposed before the queued Turn started.",
         );
       }
-      const node = this.requireNode(pending.nodeId);
+      const node = this.ctx.nodes.requireState(pending.nodeId, "idle");
       if (node.sessionId !== sessionId) {
         throw new NodeError(
           "invalid-event-stream",
           `Node '${pending.nodeId}' no longer owns Session '${sessionId}'.`,
         );
       }
+      const current = this.ctx.nodes.beginWork(pending.nodeId);
+      working = true;
       this.active.set(sessionId, pending);
-      const profile = createNodeAgentProfile(node, {
+      const profile = createNodeAgentProfile(current, {
         allowFileRead: this.ctx.tools.schemas().some(
           (tool) => tool.name === FILE_TOOL_SCHEMAS.read.name,
         ),
@@ -159,12 +158,12 @@ export class NodeSessionService extends Service {
       });
       return Object.freeze({ nodeId: pending.nodeId, sessionId, turn });
     } finally {
+      if (working) this.ctx.nodes.endWork(pending.nodeId);
       if (this.active.get(sessionId) === pending) this.active.delete(sessionId);
       this.controllers.delete(pending.controller);
     }
   }
 
-  /** Bind a collision-free generated Session identity through NodeStore. */
   private bindNewSession(nodeId: NodeId): SessionId {
     let sessionId: SessionId;
     do sessionId = createSessionId(randomUUID());
@@ -172,7 +171,6 @@ export class NodeSessionService extends Service {
     return this.ctx.nodes.bindSession(nodeId, sessionId).sessionId!;
   }
 
-  /** Resolve the current authoritative Node or throw its stable domain error. */
   private requireNode(nodeId: NodeId): NodeSnapshot {
     const node = this.ctx.nodes.get(nodeId);
     if (node !== undefined) return node;
@@ -180,7 +178,6 @@ export class NodeSessionService extends Service {
   }
 }
 
-/** Snapshot and validate the trusted model route without retaining caller state. */
 function snapshotModel(value: TurnModelConfig | undefined): TurnModelConfig {
   if (value === undefined || typeof value.provider !== "string" || !value.provider.trim()
       || typeof value.model !== "string" || !value.model.trim()) {
@@ -189,7 +186,6 @@ function snapshotModel(value: TurnModelConfig | undefined): TurnModelConfig {
   return Object.freeze(structuredClone(value));
 }
 
-/** Reject blank/non-string learner messages before binding or queue admission. */
 function requireMessageText(value: unknown): string {
   if (typeof value !== "string" || !value.trim()) {
     throw new NodeError("invalid-message", "NodeSession message text must not be blank.");

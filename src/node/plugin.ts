@@ -3,7 +3,6 @@ import type { Context } from "cordis";
 import type { NodeSessionServiceConfig } from "./session.js";
 import { NodeSessionService } from "./session.js";
 import { NodeStore } from "./store.js";
-import { NodeContentTools } from "./tools.js";
 
 /** Configuration owned by the Node domain root. */
 export interface NodePluginConfig {
@@ -17,8 +16,7 @@ export const NodePlugin = Object.assign(
     config: NodePluginConfig,
   ): Promise<void> {
     await ctx.plugin(NodeStore);
-    await ctx.plugin(NodeContentTools);
     await ctx.plugin(NodeSessionService, config.session);
   },
-  { inject: ["agentRuntime", "tools"] },
+  { inject: ["agentRuntime", "tools", "projects"] },
 );

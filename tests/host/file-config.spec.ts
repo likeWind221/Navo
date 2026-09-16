@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { resolveKernelHostConfig } from "../../src/host/config.js";
 
 describe("Kernel Host file environment config", () => {
-  it("keeps file tools disabled unless the host explicitly supplies a cwd", () => {
-    expect(resolveKernelHostConfig({}).file).toBeUndefined();
+  it("enables file tools in the host working directory by default", () => {
+    expect(resolveKernelHostConfig({}).file).toEqual({ cwd: process.cwd() });
   });
 
   it("accepts and trims an explicit file cwd", () => {

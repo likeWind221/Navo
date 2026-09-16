@@ -1,249 +1,185 @@
 import { randomUUID } from "node:crypto";
-
 import { Service } from "cordis";
-import type { Context, Logger } from "cordis";
-
-import {
-  createEventId,
-  createExerciseId,
-  createNodeId,
-} from "../brand/ids.js";
-import type { ExerciseId, NodeId, SessionId } from "../brand/ids.js";
+import type { Context } from "cordis";
+import { createNodeId } from "../brand/ids.js";
+import type { NodeId, ProjectId, SessionId } from "../brand/ids.js";
 import { NodeError } from "./errors.js";
-import type { NodeEvent } from "./events.js";
-import type {
-  CapabilityTarget,
-  Exercise,
-  MaterialDocument,
-  NodeSnapshot,
-  SourceReference,
-} from "./model.js";
+import type { NodeEvent, NodeEventDraft } from "./events.js";
+import type { ControlPurpose, NodeConfirmation, NodeObjective, NodeRequirement, NodeSnapshot, NodeStatus } from "./model.js";
 import { projectNode } from "./projector.js";
+import { NodeBatch } from "./batch.js";
 
-/** Input accepted when the Node domain creates an identity. */
-export interface CreateNodeInput {
-  readonly capability: CapabilityTarget;
-  readonly sources?: readonly SourceReference[];
-}
+const emptyHistory: readonly NodeEvent[] = Object.freeze([]);
 
-export interface ReplaceMaterialInput {
-  readonly text: string;
-  readonly sources?: readonly SourceReference[];
-}
-
-export interface ReplaceExerciseSetInput {
-  readonly exercises: readonly ExerciseInput[];
-}
-
-export interface ExerciseInput {
-  readonly id?: ExerciseId;
-  readonly prompt: string;
-  readonly referenceAnswer: string;
-}
-
-/** An event before the Store assigns identity, revision, and commit time. */
-export type NodeEventDraft<TEvent extends NodeEvent = NodeEvent> =
-  TEvent extends NodeEvent
-    ? Omit<TEvent, "id" | "revision" | "timestamp">
-    : never;
-
-declare module "cordis" {
-  interface Context {
-    nodes: NodeStore;
-  }
-
-  interface Events {
-    "node/event": (event: NodeEvent) => void;
-  }
-}
-
-/** In-memory Node event store and strict current-state projection. */
 export class NodeStore extends Service {
-  private readonly events = new Map<NodeId, NodeEvent[]>();
-  private readonly logger: Logger;
+  static inject = ["projects"];
+  private readonly events = new Map<NodeId, readonly NodeEvent[]>();
+  private coordinator: ((drafts: readonly NodeEventDraft[]) => void) | undefined;
 
-  constructor(ctx: Context) {
-    super(ctx, "nodes");
-    this.logger = ctx.logger("node");
+  constructor(ctx: Context) { super(ctx, "nodes"); }
+
+  coordinate(handler: (drafts: readonly NodeEventDraft[]) => void): () => void {
+    if (this.coordinator) throw new NodeError("invalid-state", "Node coordinator already installed.");
+    this.coordinator = handler;
+    return () => { this.coordinator = () => { throw new NodeError("project-unavailable", "Node coordinator is unavailable."); }; };
   }
 
   create(input: CreateNodeInput): NodeSnapshot {
-    const nodeId = this.nextNodeId();
-    this.append({
-      type: "node-created",
-      nodeId,
-      data: {
-        capability: input.capability,
-        sources: input.sources ?? [],
-      },
-    });
-    return this.require(nodeId);
+    return this.createBatch([{ nodeId: createNodeId(randomUUID()), input }])[0]!;
   }
 
-  get(nodeId: NodeId): NodeSnapshot | undefined {
-    return projectNode(nodeId, this.events.get(nodeId) ?? []);
+  creation({ nodeId, input }: NewNodeInput): NodeEventDraft {
+    const requirement = input.requirement ?? "required";
+    if (input.kind !== undefined && input.kind !== "work" && input.kind !== "control") {
+      throw new NodeError("invalid-state", "Invalid Node kind.");
+    }
+    return input.kind === "control"
+      ? { type: "control-created", nodeId, data: { projectId: input.projectId, requirement, purpose: input.purpose, title: input.title } }
+      : { type: "node-created", nodeId, data: { projectId: input.projectId, requirement, objective: input.objective } };
   }
+
+  createBatch(inputs: readonly NewNodeInput[]): readonly NodeSnapshot[] {
+    this.dispatch(inputs.map(input => this.creation(input)));
+    return Object.freeze(inputs.map(input => this.get(input.nodeId)!));
+  }
+
+  prepare(drafts: readonly NodeEventDraft[]): NodeBatch {
+    const batch = new NodeBatch(id => this.getEvents(id));
+    for (const draft of drafts) {
+      const projectId = draft.type === "node-created" || draft.type === "control-created"
+        ? draft.data.projectId : batch.get(draft.nodeId)?.node.projectId;
+      if (!projectId) throw new NodeError("node-not-found", "Node was not found.");
+      if (draft.type !== "work-ended") this.requireProject(projectId);
+      batch.add(draft);
+    }
+    return batch;
+  }
+
+  commit(batch: NodeBatch): void {
+    batch.commit((id, history) => this.events.set(id, history), event => this.notify(event));
+  }
+
+  restore(nodeId: NodeId, history: readonly NodeEvent[]): NodeSnapshot {
+    if (this.events.has(nodeId)) throw new NodeError("invalid-state", "Cannot overwrite a Node.");
+    const snapshot = projectNode(nodeId, history);
+    if (!snapshot || !this.ctx.projects.get(snapshot.node.projectId)) throw new NodeError("project-unavailable", "Restore requires an existing project and history.");
+    if (snapshot.sessionId && (this.getBySession(snapshot.sessionId) || this.ctx.projects.getByMainSession(snapshot.sessionId))) {
+      throw new NodeError("session-already-bound", "Session already belongs to another owner.");
+    }
+    const copy = structuredClone(history);
+    const freeze = (value: unknown): void => {
+      if (!value || typeof value !== "object") return;
+      Object.values(value).forEach(freeze);
+      Object.freeze(value);
+    };
+    freeze(copy);
+    this.events.set(nodeId, copy);
+    return snapshot;
+  }
+
+  get(nodeId: NodeId): NodeSnapshot | undefined { return projectNode(nodeId, this.getEvents(nodeId)); }
 
   getBySession(sessionId: SessionId): NodeSnapshot | undefined {
-    for (const nodeId of this.events.keys()) {
-      const snapshot = this.get(nodeId);
-      if (snapshot?.sessionId === sessionId) return snapshot;
+    for (const id of this.events.keys()) {
+      const node = this.get(id)!;
+      if (node.sessionId === sessionId) return node;
     }
     return undefined;
   }
 
-  getEvents(nodeId: NodeId): readonly NodeEvent[] {
-    return Object.freeze([...(this.events.get(nodeId) ?? [])]);
+  getByProject(projectId: ProjectId): readonly NodeSnapshot[] {
+    return Object.freeze([...this.events.keys()].map(id => this.get(id)!).filter(snapshot => snapshot.node.projectId === projectId));
   }
+
+  getEvents(nodeId: NodeId): readonly NodeEvent[] { return this.events.get(nodeId) ?? emptyHistory; }
 
   bindSession(nodeId: NodeId, sessionId: SessionId): NodeSnapshot {
-    const current = this.require(nodeId);
-    if (current.sessionId !== undefined) {
-      throw new NodeError(
-        "node-already-bound",
-        `Node '${nodeId}' is already bound to Session '${current.sessionId}'.`,
-      );
+    const current = this.requireState(nodeId, "idle");
+    if (current.node.kind !== "work") throw new NodeError("invalid-state", "Control nodes cannot bind Sessions.");
+    if (current.sessionId !== undefined) throw new NodeError("node-already-bound", "Node already owns a Session.");
+    if (this.getBySession(sessionId) || this.ctx.projects.getByMainSession(sessionId)) throw new NodeError("session-already-bound", "Session already has an owner.");
+    return this.append({ type: "session-bound", nodeId, data: { sessionId } });
+  }
+
+  unlock(nodeId: NodeId, reason: string): NodeSnapshot {
+    this.requireState(nodeId, "locked");
+    return this.append({ type: "node-unlocked", nodeId, data: { reason } });
+  }
+
+  lock(nodeId: NodeId, reason: string): NodeSnapshot {
+    this.requireState(nodeId, "idle");
+    return this.append({ type: "node-locked", nodeId, data: { reason } });
+  }
+
+  beginWork(nodeId: NodeId): NodeSnapshot {
+    if (this.requireState(nodeId, "idle").node.kind !== "work") throw new NodeError("invalid-state", "Control nodes cannot execute.");
+    return this.append({ type: "work-started", nodeId, data: {} });
+  }
+
+  endWork(nodeId: NodeId): NodeSnapshot {
+    return this.append({ type: "work-ended", nodeId, data: {} });
+  }
+
+  confirmCompletion(nodeId: NodeId, confirmation: NodeConfirmation): NodeSnapshot {
+    this.review(nodeId, confirmation, "idle");
+    return this.append({ type: "completion-confirmed", nodeId, data: confirmation });
+  }
+
+  skip(nodeId: NodeId, confirmation: NodeConfirmation): NodeSnapshot {
+    this.review(nodeId, confirmation, "locked", "idle");
+    return this.append({ type: "node-skipped", nodeId, data: confirmation });
+  }
+
+  setRequirement(nodeId: NodeId, requirement: NodeRequirement, reviewedRevision: number, reason: string): NodeSnapshot {
+    const node = this.requireState(nodeId, "locked", "idle", "working", "completing", "skipped");
+    if (node.revision !== reviewedRevision) throw new NodeError("stale-revision", "Review current Node before editing.");
+    return this.append({ type: "requirement-changed", nodeId, data: { requirement, reviewedRevision, reason } });
+  }
+
+  requireState(nodeId: NodeId, ...states: readonly NodeStatus[]): NodeSnapshot {
+    const node = this.get(nodeId);
+    if (!node) throw new NodeError("node-not-found", "Node was not found.");
+    this.requireProject(node.node.projectId);
+    if (!states.includes(node.status)) throw new NodeError("invalid-state", "Node is " + node.status + ".");
+    return node;
+  }
+
+  private review(nodeId: NodeId, confirmation: NodeConfirmation, ...states: NodeStatus[]): void {
+    if (this.requireState(nodeId, ...states).revision !== confirmation.reviewedRevision) {
+      throw new NodeError("stale-revision", "Review the current Node revision.");
     }
-    const owner = this.getBySession(sessionId);
-    if (owner !== undefined) {
-      throw new NodeError(
-        "session-already-bound",
-        `Session '${sessionId}' is already bound to Node '${owner.node.id}'.`,
-      );
-    }
-    this.append({ type: "session-bound", nodeId, data: { sessionId } });
-    return this.require(nodeId);
   }
 
-  replaceMaterial(nodeId: NodeId, input: ReplaceMaterialInput): NodeSnapshot {
-    const current = this.requireBound(nodeId);
-    const text = requiredText(input.text, "material text");
-    const sources = (input.sources ?? []).map((source, index) => ({
-      reference: requiredText(source.reference, `material source ${index + 1}`),
-      ...(source.label === undefined
-        ? {}
-        : { label: requiredText(source.label, `material source ${index + 1} label`) }),
-    }));
-    const material: MaterialDocument = {
-      revision: (current.content.material?.revision ?? 0) + 1,
-      text,
-      sources,
-    };
-    this.append({ type: "material-replaced", nodeId, data: { material } });
-    return this.require(nodeId);
+  private requireProject(projectId: ProjectId): void {
+    if (this.ctx.projects.get(projectId)?.status !== "active") throw new NodeError("project-unavailable", "Node requires an active Project.");
   }
 
-  replaceExerciseSet(
-    nodeId: NodeId,
-    input: ReplaceExerciseSetInput,
-  ): NodeSnapshot {
-    const current = this.requireBound(nodeId);
-    if (input.exercises.length === 0) {
-      throw new NodeError("invalid-content", "Exercise set must not be empty.");
-    }
-    const used = new Set<ExerciseId>();
-    const exercises: Exercise[] = input.exercises.map((exercise, index) => {
-      const id = exercise.id ?? this.nextExerciseId(used);
-      if (used.has(id)) {
-        throw new NodeError("invalid-content", `Exercise '${id}' is duplicated.`);
-      }
-      used.add(id);
-      return {
-        id,
-        prompt: requiredText(exercise.prompt, `exercise ${index + 1} prompt`),
-        referenceAnswer: requiredText(
-          exercise.referenceAnswer,
-          `exercise ${index + 1} reference answer`,
-        ),
-      };
-    });
-    this.append({
-      type: "exercise-set-replaced",
-      nodeId,
-      data: {
-        exerciseSet: {
-          revision: (current.content.exerciseSet?.revision ?? 0) + 1,
-          exercises,
-        },
-      },
-    });
-    return this.require(nodeId);
+  private dispatch(drafts: readonly NodeEventDraft[]): void {
+    if (this.coordinator) this.coordinator(drafts);
+    else this.commit(this.prepare(drafts));
   }
 
-  private require(nodeId: NodeId): NodeSnapshot {
-    const snapshot = this.get(nodeId);
-    if (snapshot === undefined) {
-      throw new NodeError("node-not-found", `Node '${nodeId}' was not found.`);
-    }
-    return snapshot;
+  private append(draft: NodeEventDraft): NodeSnapshot {
+    this.dispatch([draft]);
+    return this.get(draft.nodeId)!;
   }
 
-  private requireBound(nodeId: NodeId): NodeSnapshot {
-    const snapshot = this.require(nodeId);
-    if (snapshot.sessionId === undefined) {
-      throw new NodeError(
-        "node-session-required",
-        `Node '${nodeId}' must bind a Session before content can change.`,
-      );
-    }
-    return snapshot;
-  }
-
-  private append(draft: NodeEventDraft): NodeEvent {
-    const events = this.events.get(draft.nodeId) ?? [];
-    const event = immutable({
-      ...draft,
-      id: createEventId(randomUUID()),
-      revision: events.length + 1,
-      timestamp: new Date().toISOString(),
-    }) as NodeEvent;
-    projectNode(event.nodeId, [...events, event]);
-    if (!this.events.has(event.nodeId)) this.events.set(event.nodeId, events);
-    events.push(event);
-    this.publish(event);
-    return event;
-  }
-
-  private nextNodeId(): NodeId {
-    let nodeId: NodeId;
-    do nodeId = createNodeId(randomUUID());
-    while (this.events.has(nodeId));
-    return nodeId;
-  }
-
-  private nextExerciseId(used: ReadonlySet<ExerciseId>): ExerciseId {
-    let id: ExerciseId;
-    do id = createExerciseId(randomUUID());
-    while (used.has(id));
-    return id;
-  }
-
-  private publish(event: NodeEvent): void {
-    void this.ctx.parallel("node/event", event).catch((error: unknown) => {
-      this.logger.warn(
-        "node/event observers failed for %s:%d: %o",
-        event.nodeId,
-        event.revision,
-        error,
-      );
+  private notify(event: NodeEvent): void {
+    queueMicrotask(() => {
+      void this.ctx.parallel("node/event", event).catch((error: unknown) => {
+        this.ctx.logger("node").warn("Node event observer failed: %o", error);
+      });
     });
   }
 }
 
-function requiredText(value: string, name: string): string {
-  if (value.trim().length === 0) {
-    throw new NodeError("invalid-content", `${name} must not be empty.`);
-  }
-  return value;
-}
+export type CreateNodeInput = { readonly projectId: ProjectId; readonly requirement?: NodeRequirement } & (
+  | { readonly kind?: "work"; readonly objective: NodeObjective }
+  | { readonly kind: "control"; readonly purpose: ControlPurpose; readonly title: string }
+);
+export interface NewNodeInput { readonly nodeId: NodeId; readonly input: CreateNodeInput; }
 
-function immutable<TValue>(value: TValue): TValue {
-  return deepFreeze(structuredClone(value));
-}
-
-function deepFreeze<TValue>(value: TValue, seen = new Set<object>()): TValue {
-  if (value === null || typeof value !== "object" || seen.has(value)) return value;
-  seen.add(value);
-  for (const child of Object.values(value)) deepFreeze(child, seen);
-  return Object.freeze(value) as TValue;
+declare module "cordis" {
+  interface Context { nodes: NodeStore; }
+  interface Events { "node/event": (event: NodeEvent) => void; }
 }

@@ -2,6 +2,7 @@ import { Context } from "cordis";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createNodeAgentProfile } from "../../src/node/profile.js";
+import { ProjectStore } from "../../src/project/store.js";
 import { NodeStore } from "../../src/node/store.js";
 
 let ctx: Context | undefined;
@@ -13,12 +14,14 @@ afterEach(async () => {
 describe("NodeAgent file capability", () => {
   it("adds only read when the host file capability is available", async () => {
     ctx = new Context();
+    await ctx.plugin(ProjectStore);
     await ctx.plugin(NodeStore);
     const node = ctx.nodes.create({
-      capability: {
+      projectId: ctx.projects.create({ goal: "Research" }).id,
+      objective: {
         title: "Read long source",
         description: "Use fetched source material",
-        successCriteria: ["Explain the source"],
+        acceptanceCriteria: ["Explain the source"],
       },
     });
 

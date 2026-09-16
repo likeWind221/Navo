@@ -1,5 +1,5 @@
 import { Context } from "cordis";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AgentRuntime } from "../../src/agent/runtime.js";
 import { createNodeId, createToolCallId } from "../../src/brand/ids.js";
@@ -9,7 +9,7 @@ import type { ContentBlock, GenerateRequest, ToolCallContentBlock } from "../../
 import { createNodeAgentProfile, NODE_AGENT_TOOL_NAMES } from "../../src/node/profile.js";
 import { NodeSessionService } from "../../src/node/session.js";
 import { NodeStore } from "../../src/node/store.js";
-import { NODE_CONTENT_TOOL_NAMES, NodeContentTools } from "../../src/node/tools.js";
+import { ProjectStore } from "../../src/project/store.js";
 import { SessionStore } from "../../src/session/store.js";
 import { MockFetchCore } from "../../src/tools/builtins/fetch/mock.js";
 import { FetchTool } from "../../src/tools/builtins/fetch/tool.js";
@@ -32,8 +32,9 @@ async function createKit(entries: ConstructorParameters<typeof MockLLMAdapter>[0
   await ctx.plugin(LLMService);
   await ctx.plugin(ToolService);
   await ctx.plugin(AgentRuntime);
+  await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
-  await ctx.plugin(NodeContentTools);
+
   await ctx.plugin(SearchTool, { adapter: new MockSearchAdapter([]) });
   await ctx.plugin(FetchTool, { core: new MockFetchCore([]) });
   const adapter = new MockLLMAdapter(entries);
@@ -45,13 +46,15 @@ async function createKit(entries: ConstructorParameters<typeof MockLLMAdapter>[0
 }
 
 function createNode(ctx: Context, title = "Capability") {
-  return ctx.nodes.create({
-    capability: {
+  const node = ctx.nodes.create({
+    projectId: ctx.projects.create({ goal: title }).id,
+    objective: {
       title,
       description: `Learn ${title}`,
-      successCriteria: [`Demonstrate ${title}`],
+      acceptanceCriteria: [`Demonstrate ${title}`],
     },
   });
+  return ctx.nodes.unlock(node.node.id, 'Ready');
 }
 
 function response(block: ContentBlock, finish: "stop" | "tool-calls" = "stop") {
@@ -85,16 +88,26 @@ async function flushUntil(condition: () => boolean): Promise<void> {
 }
 
 describe("NodeSessionService identity and context", () => {
+  it("rejects control nodes before session creation or model execution", async () => {
+    const { ctx, adapter } = await createKit([]);
+    const projectId = ctx.projects.create({ goal: "Project" }).id;
+    const id = ctx.nodes.create({ projectId, kind: "control", purpose: "start", title: "Start" }).node.id;
+    ctx.nodes.unlock(id, "Ready");
+    expect(() => ctx.nodeSessions.start({ nodeId: id, text: "Execute" }))
+      .toThrow(expect.objectContaining({ code: "invalid-state" }));
+    expect(ctx.nodes.get(id)?.sessionId).toBeUndefined();
+    expect(adapter.requests).toHaveLength(0);
+  });
   it("creates one Session, reuses it, and retains multi-Turn history", async () => {
     const { ctx, adapter } = await createKit([textResponse("first"), textResponse("second")]);
     const node = createNode(ctx);
 
-    const first = await ctx.nodeSessions.startLearning({ nodeId: node.node.id, text: "start" });
-    const second = await ctx.nodeSessions.startLearning({ nodeId: node.node.id, text: "continue" });
+    const first = await ctx.nodeSessions.start({ nodeId: node.node.id, text: "start" });
+    const second = await ctx.nodeSessions.start({ nodeId: node.node.id, text: "continue" });
 
     expect(second.sessionId).toBe(first.sessionId);
     expect(ctx.nodes.getEvents(node.node.id).map((event) => event.type))
-      .toEqual(["node-created", "session-bound"]);
+      .toEqual(["node-created", "node-unlocked", "session-bound", "work-started", "work-ended", "work-started", "work-ended"]);
     expect(adapter.requests[1]?.messages.map((message) => message.role))
       .toEqual(["system", "user", "assistant", "user"]);
     expect(adapter.requests[1]?.messages.flatMap((message) => message.content)
@@ -117,37 +130,14 @@ describe("NodeSessionService identity and context", () => {
     expect(profile.systemPrompt).not.toContain("sessionId");
   });
 
-  it("refreshes material and exercises after structured tool updates", async () => {
-    const material = call("material", NODE_CONTENT_TOOL_NAMES.replaceMaterial, {
-      text: "Fresh material", sources: [{ reference: "https://source.test" }],
-    });
-    const exercises = call("exercises", NODE_CONTENT_TOOL_NAMES.replaceExerciseSet, {
-      exercises: [{ prompt: "Fresh question", referenceAnswer: "Private answer" }],
-    });
-    const { ctx, adapter } = await createKit([
-      response(material, "tool-calls"), response(exercises, "tool-calls"),
-      textResponse("content ready"), textResponse("followup"),
-    ]);
-    const node = createNode(ctx);
-
-    await ctx.nodeSessions.startLearning({ nodeId: node.node.id, text: "create content" });
-    await ctx.nodeSessions.sendMessage({ nodeId: node.node.id, text: "use latest" });
-
-    const profile = systemText(adapter.requests[3]!);
-    expect(profile).toContain("Fresh material");
-    expect(profile).toContain("Fresh question");
-    expect(profile).toContain("Private answer");
-    expect(ctx.nodes.get(node.node.id)?.revision).toBe(4);
-  });
-
   it("keeps different Nodes on isolated Sessions and Profiles", async () => {
     const { ctx, adapter } = await createKit([textResponse("A"), textResponse("B")]);
     const first = createNode(ctx, "Alpha-only");
     const second = createNode(ctx, "Beta-only");
 
     const [a, b] = await Promise.all([
-      ctx.nodeSessions.startLearning({ nodeId: first.node.id, text: "alpha" }),
-      ctx.nodeSessions.startLearning({ nodeId: second.node.id, text: "beta" }),
+      ctx.nodeSessions.start({ nodeId: first.node.id, text: "alpha" }),
+      ctx.nodeSessions.start({ nodeId: second.node.id, text: "beta" }),
     ]);
 
     expect(a.sessionId).not.toBe(b.sessionId);
@@ -162,17 +152,39 @@ describe("NodeSessionService identity and context", () => {
     const { ctx } = await createKit([]);
     const node = createNode(ctx);
 
-    expect(() => ctx.nodeSessions.startLearning({ nodeId: node.node.id, text: " " }))
+    expect(() => ctx.nodeSessions.start({ nodeId: node.node.id, text: " " }))
       .toThrow(expect.objectContaining({ code: "invalid-message" }));
     expect(() => ctx.nodeSessions.sendMessage({ nodeId: node.node.id, text: "hello" }))
       .toThrow(expect.objectContaining({ code: "node-session-required" }));
-    expect(() => ctx.nodeSessions.startLearning({ nodeId: createNodeId("missing"), text: "hello" }))
+    expect(() => ctx.nodeSessions.start({ nodeId: createNodeId("missing"), text: "hello" }))
       .toThrow(expect.objectContaining({ code: "node-not-found" }));
-    expect(ctx.nodes.getEvents(node.node.id)).toHaveLength(1);
+    expect(ctx.nodes.getEvents(node.node.id)).toHaveLength(2);
   });
 });
 
 describe("NodeSessionService scheduling and lifecycle", () => {
+  it.each(["locked", "completing", "archived"])("rechecks %s before executing queued work", async state => {
+    const { ctx, adapter } = await createKit([]);
+    const node = createNode(ctx);
+    const pending = ctx.nodeSessions.start({ nodeId: node.node.id, text: "Queued" });
+    if (state === "locked") ctx.nodes.lock(node.node.id, "Wait");
+    else if (state === "archived") ctx.projects.archive(node.node.projectId, "Pause");
+    else ctx.nodes.confirmCompletion(node.node.id, {
+      confirmedBy: "reviewer", reason: "Checked", reviewedRevision: ctx.nodes.get(node.node.id)!.revision,
+    });
+    await expect(pending).rejects.toMatchObject({ code: state === "archived" ? "project-unavailable" : "invalid-state" });
+    expect(adapter.requests).toHaveLength(0);
+  });
+
+  it("leaves working state even when Runtime rejects unexpectedly", async () => {
+    const { ctx } = await createKit([]);
+    const node = createNode(ctx);
+    vi.spyOn(ctx.agentRuntime, "runTurn").mockRejectedValueOnce(new Error("runtime rejection"));
+    await expect(ctx.nodeSessions.start({ nodeId: node.node.id, text: "Work" })).rejects.toThrow("runtime rejection");
+    expect(ctx.nodes.get(node.node.id)?.status).toBe("idle");
+    expect(ctx.nodeSessions.stop(node.node.id)).toBe(false);
+  });
+
   it("runs same-Node messages FIFO", async () => {
     const started = Promise.withResolvers<void>();
     const release = Promise.withResolvers<void>();
@@ -186,13 +198,15 @@ describe("NodeSessionService scheduling and lifecycle", () => {
     ]);
     const node = createNode(ctx);
 
-    const first = ctx.nodeSessions.startLearning({ nodeId: node.node.id, text: "first" });
+    const first = ctx.nodeSessions.start({ nodeId: node.node.id, text: "first" });
     await started.promise;
+    expect(ctx.nodes.get(node.node.id)?.status).toBe("working");
     const second = ctx.nodeSessions.sendMessage({ nodeId: node.node.id, text: "second" });
     await Promise.resolve();
     expect(adapter.requests).toHaveLength(1);
     release.resolve();
     await Promise.all([first, second]);
+    expect(ctx.nodes.get(node.node.id)?.status).toBe("idle");
 
     expect(adapter.requests.map((request) => request.messages.at(-1)?.content[0]))
       .toEqual([{ type: "text", text: "first" }, { type: "text", text: "second" }]);
@@ -201,13 +215,14 @@ describe("NodeSessionService scheduling and lifecycle", () => {
   it("cancels only the active Turn and continues queued work", async () => {
     const { ctx, adapter } = await createKit([{ kind: "hang" }, textResponse("survived")]);
     const node = createNode(ctx);
-    const first = ctx.nodeSessions.startLearning({ nodeId: node.node.id, text: "cancel me" });
+    const first = ctx.nodeSessions.start({ nodeId: node.node.id, text: "cancel me" });
     await flushUntil(() => adapter.requests.length === 1);
     const second = ctx.nodeSessions.sendMessage({ nodeId: node.node.id, text: "keep me" });
 
     expect(ctx.nodeSessions.stop(node.node.id)).toBe(true);
     await expect(first).resolves.toMatchObject({ turn: { status: "cancelled" } });
     await expect(second).resolves.toMatchObject({ turn: { status: "completed" } });
+    expect(ctx.nodes.get(node.node.id)?.status).toBe("idle");
     expect(ctx.nodeSessions.stop(node.node.id)).toBe(false);
     expect(adapter.requests).toHaveLength(2);
   });
@@ -216,10 +231,10 @@ describe("NodeSessionService scheduling and lifecycle", () => {
     const { ctx, adapter } = await createKit([{ kind: "hang" }, textResponse("B done")]);
     const a = createNode(ctx, "A");
     const b = createNode(ctx, "B");
-    const blocked = ctx.nodeSessions.startLearning({ nodeId: a.node.id, text: "block A" });
+    const blocked = ctx.nodeSessions.start({ nodeId: a.node.id, text: "block A" });
     await flushUntil(() => adapter.requests.length === 1);
 
-    await expect(ctx.nodeSessions.startLearning({ nodeId: b.node.id, text: "run B" }))
+    await expect(ctx.nodeSessions.start({ nodeId: b.node.id, text: "run B" }))
       .resolves.toMatchObject({ turn: { status: "completed" } });
     expect(ctx.nodeSessions.stop(a.node.id)).toBe(true);
     await expect(blocked).resolves.toMatchObject({ turn: { status: "cancelled" } });
@@ -232,9 +247,10 @@ describe("NodeSessionService scheduling and lifecycle", () => {
     }]);
     const node = createNode(ctx);
 
-    const result = await ctx.nodeSessions.startLearning({ nodeId: node.node.id, text: "fail" });
+    const result = await ctx.nodeSessions.start({ nodeId: node.node.id, text: "fail" });
 
     expect(result.turn).toMatchObject({ status: "failed", failure: { code: "MODEL" } });
+    expect(ctx.nodes.get(node.node.id)?.status).toBe("idle");
     const types = ctx.sessions.getEvents(result.sessionId).map((event) => event.type);
     expect(types[0]).toBe("turn-started");
     expect(types.at(-1)).toBe("turn-ended");
@@ -245,7 +261,7 @@ describe("NodeSessionService scheduling and lifecycle", () => {
   it("cancels active work and rejects queued work when unloaded", async () => {
     const { ctx, adapter, serviceFiber } = await createKit([{ kind: "hang" }]);
     const node = createNode(ctx);
-    const active = ctx.nodeSessions.startLearning({ nodeId: node.node.id, text: "active" });
+    const active = ctx.nodeSessions.start({ nodeId: node.node.id, text: "active" });
     await flushUntil(() => adapter.requests.length === 1);
     const queued = ctx.nodeSessions.sendMessage({ nodeId: node.node.id, text: "queued" });
 

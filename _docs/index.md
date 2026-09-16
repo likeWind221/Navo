@@ -16,6 +16,16 @@
 
 ## 后端阶段记录
 
+- [内存路线图与数据库持久化阶段划分](56-devlog-persistence-plan.md)：区分重建、落盘和恢复；F9.3 完成内存路线图，F10 统一实施数据库持久化；附 Codex/Pi 存储调研与数据库选型。
+
+- [F9.1–F9.2：Project 与通用 Node 领域](55-devlog-project-node-domain.md)：项目身份与事件恢复、通用节点、四态生命周期和人工完成确认。
+- [F9.3.1：路线结构与关系表达](57-devlog-roadmap-graph.md)：节点级必选/可选、有向连接、汇合前置与结构校验。
+- [F9.3.1：节点图设计复审](58-devlog-roadmap-review.md)：删除路径组约束，用通用节点与边表达分叉/汇合，保留穿过可选节点的必选祖先。
+- [F9.3.1–F9.3.2：控制节点与路线服务](59-devlog-roadmap-store.md)：人工控制点、内存批量编辑、跨 Store 创建提交、运行保护与历史重建。
+- [F9.3.3：进度看板与执行资格](61-devlog-roadmap-board.md)：实时状态投影、工作/人工动作资格、具体阻塞原因与分类进度。
+- [Node 状态模型复审](63-devlog-node-state-review.md)：取消成员/替换状态，节点属性归位，统一依赖派生状态，并取消循环步骤。
+- [F9.3：状态模型修复](64-devlog-node-state-repair.md)：五态 Node、事件解锁、路线批变更、历史重建与只读节点地图。
+
 - [阶段 0：工程骨架](02-阶段-0-工程骨架开发记录.md)
 - [阶段 1：核心协议](03-devlog-phase-1-core-protocol.md)
 - [阶段 2：SessionLog 与消息投影](04-devlog-phase-2-session-log.md)
@@ -72,3 +82,7 @@
 - [DeepSeek Harness 参考分析](01-deepseek-harness-单对话核心与最小-agent-闭环设计.md)
 - [Codex 提交审查](codex-reviews/)：以“阶段 + 中文标题 + 短 SHA”命名的 post-commit 报告。
 - [F3.2.3 命令调度设计记录](30-devlog-command-scheduling-design.md)：记录命令旁路与排队两种执行路径、会话工作队列及回合锚点的设计方向。
+
+- [F5.1 工作区布局与导航](60-devlog-f5-1-workspace.md)：侧栏双视图、顶部标签、状态保留与滑动过渡。
+
+- [F5.2 真实项目入口接入核对](62-devlog-f5-2-project-handoff.md)：公共项目接口缺口、领域字段边界与后端交接目标。

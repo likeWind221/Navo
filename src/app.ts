@@ -7,6 +7,8 @@ import { LLMService } from "./llm/service.js";
 import type { NodePluginConfig } from "./node/plugin.js";
 import { NodePlugin } from "./node/plugin.js";
 import { SessionStore } from "./session/store.js";
+import { ProjectStore } from "./project/store.js";
+import { RoadmapStore } from "./roadmap/store.js";
 import type { ToolsPluginConfig } from "./tools/plugin.js";
 import { ToolsPlugin } from "./tools/plugin.js";
 
@@ -24,12 +26,14 @@ export async function NavoApp(
 ): Promise<void> {
   await Promise.all([
     ctx.plugin(SessionStore),
+    ctx.plugin(ProjectStore),
     ctx.plugin(LLMService),
     ctx.plugin(ToolsPlugin, config.tools),
   ]);
   await ctx.plugin(AgentRuntime, config.runtime);
   await ctx.plugin(CommandService);
   await ctx.plugin(NodePlugin, config.node);
+  await ctx.plugin(RoadmapStore);
 }
 
 /** Creates a ready-to-use application context owned by the caller. */

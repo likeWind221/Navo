@@ -1,49 +1,24 @@
-import type { EventId, NodeId, SessionId } from "../brand/ids.js";
-import type {
-  CapabilityTarget,
-  ExerciseSet,
-  MaterialDocument,
-  SourceReference,
-} from "./model.js";
+import type { EventId, NodeId, ProjectId, SessionId } from "../brand/ids.js";
+import type { ControlPurpose, NodeConfirmation, NodeObjective, NodeRequirement } from "./model.js";
 
-/** Every committed fact in one Node's current domain history. */
 export type NodeEvent =
-  | NodeCreatedEvent
-  | SessionBoundEvent
-  | MaterialReplacedEvent
-  | ExerciseSetReplacedEvent;
+  | NodeEventRecord<"node-created", { readonly projectId: ProjectId; readonly objective: NodeObjective; readonly requirement?: NodeRequirement }>
+  | NodeEventRecord<"control-created", { readonly projectId: ProjectId; readonly purpose: ControlPurpose; readonly title: string; readonly requirement?: NodeRequirement }>
+  | NodeEventRecord<"session-bound", { readonly sessionId: SessionId }>
+  | NodeEventRecord<"node-unlocked" | "node-locked", { readonly reason: string }>
+  | NodeEventRecord<"work-started" | "work-ended", Record<string, never>>
+  | NodeEventRecord<"completion-confirmed" | "node-skipped", NodeConfirmation>
+  | NodeEventRecord<"requirement-changed", { readonly requirement: NodeRequirement; readonly reason: string; readonly reviewedRevision: number }>;
 
-/** A committed, ordered fact scoped to one Node. */
+export type NodeEventDraft<T extends NodeEvent = NodeEvent> = T extends NodeEvent
+  ? Omit<T, "version" | "id" | "revision" | "timestamp"> : never;
+
 export interface NodeEventRecord<TType extends string, TData> {
+  readonly version: 2;
   readonly id: EventId;
   readonly nodeId: NodeId;
   readonly revision: number;
-  /** ISO 8601 timestamp. */
   readonly timestamp: string;
   readonly type: TType;
   readonly data: TData;
 }
-
-export type NodeCreatedEvent = NodeEventRecord<
-  "node-created",
-  {
-    readonly capability: CapabilityTarget;
-    readonly sources: readonly SourceReference[];
-  }
->;
-
-/** Binds the Node's sole conversational Session without copying its log. */
-export type SessionBoundEvent = NodeEventRecord<
-  "session-bound",
-  { readonly sessionId: SessionId }
->;
-
-export type MaterialReplacedEvent = NodeEventRecord<
-  "material-replaced",
-  { readonly material: MaterialDocument }
->;
-
-export type ExerciseSetReplacedEvent = NodeEventRecord<
-  "exercise-set-replaced",
-  { readonly exerciseSet: ExerciseSet }
->;

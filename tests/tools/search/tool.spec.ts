@@ -6,6 +6,7 @@ import { AgentRuntime } from "../../../src/agent/runtime.js";
 import { MockLLMAdapter } from "../../../src/llm/adapters/mock.js";
 import { LLMService } from "../../../src/llm/service.js";
 import type { ToolCallContentBlock } from "../../../src/llm/types.js";
+import { ProjectStore } from "../../../src/project/store.js";
 import { NodeStore } from "../../../src/node/store.js";
 import { SessionStore } from "../../../src/session/store.js";
 import { MockSearchAdapter } from "../../../src/tools/builtins/search/adapters/mock.js";
@@ -34,6 +35,7 @@ async function createRuntime(adapter: SearchAdapter, entries: ConstructorParamet
   await ctx.plugin(SessionStore);
   await ctx.plugin(LLMService);
   await ctx.plugin(ToolService);
+  await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
   await ctx.plugin(SearchTool, { adapter });
   await ctx.plugin(AgentRuntime);
@@ -198,10 +200,11 @@ describe("web_search Runtime closed loop", () => {
       response({ type: "text", text: "Used the cited source." }, "stop"),
     ]);
     const node = ctx.nodes.create({
-      capability: {
+      projectId: ctx.projects.create({ goal: "Research" }).id,
+      objective: {
         title: "DAG planning",
         description: "Plan with dependencies",
-        successCriteria: ["Create a valid graph"],
+        acceptanceCriteria: ["Create a valid graph"],
       },
     });
     const before = ctx.nodes.getEvents(node.node.id);
