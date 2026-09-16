@@ -45,12 +45,14 @@
 
 ## Step 分支与合并（必须遵守）
 
-- 每个 Step 使用独立分支开发，分支名沿用 `phase<阶段>-<step>-<短名>`（如 `phase9-f9.4-agent-binding`）；不得直接在 `master` 上开发 Step 代码。
+- 每个 Step 使用独立分支开发，分支名沿用 `phase<阶段>-<step>-<短名>`（如 `phase9-f9.5a-read-roadmap`）；不得直接在 `master` 上开发 Step 代码。
 - 新 Step 分支从最新 `master` 起。前一 Step 若已以 squash 合入，其分支 tip 不再位于 `master` 历史上，新分支须基于 squash 后的 `master`（必要时先 `rebase master`）。
-- Step 验收通过后以 **squash** 方式合入 `master`：一个 Step 对应一条提交，标题与 Step 对应（如 `feat: 完成 F9.4 Agent Profile 与 Binding`），细粒度开发提交保留在功能分支中。
-- 合入前必须完成该 Step 计划要求的完整验证（至少 `pnpm typecheck` 与 `pnpm test`），并把验证结果写入开发记录；未验证不得标记 `✅` 或合入。
-- 合并与推送属于共享控制面操作，必须串行执行。推送前确认本地 `master` 与远端一致，推送后核对 `git status` 干净；合并前向用户报告验证结果并确认，除非用户已明确授权连续执行。
-- 合并后功能分支默认保留以便追溯；删除本地或远端分支需用户明确确认。
+- Step 收口走 PR：推送分支后用 `gh pr create --base master --head <分支>` 开 PR，PR 标题与 Step 对应，描述写明本 Step 的改动与验证结果。
+- PR 触发 GitHub Actions CI（`.github/workflows/ci.yml` 运行 `pnpm typecheck` 与 `pnpm test`）。CI 绿灯是通过条件，绿灯后用 `gh pr merge --squash --delete-branch` 合并：一个 Step 对应一条 `master` 提交，源分支自动删除。
+- 本机与 CI 双重验证：本地合入前仍必须完成完整验证并把结果写入开发记录；本机或 CI 任一未通过不得合并、不得标记 `✅`。
+- CI 失败时先修分支再推送，不得绕过检查，不得用 `--admin` 或临时关闭 CI 强行合并。
+- 合并与推送属于共享控制面操作，必须串行执行；推送前确认本地 `master` 与远端一致，推送后核对 `git status` 干净；合并前向用户报告验证结果并确认，除非用户已明确授权连续执行。
+- 私有免费仓库的 branch protection 不生效，CI 目前是约定门禁；仓库转公开或升级套餐后应把 CI 设为合并的必需检查。
 - 纯治理或文档变更不属于 Step，可直接在 `master` 上以 `docs:` / `chore:` 单独提交并串行推送。涉及代码的既有能力修复虽然不占 Step 编号，仍须先走完整验证再推送。
 
 ## 计划撰写原则（必须遵守）
