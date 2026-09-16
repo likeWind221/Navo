@@ -126,7 +126,7 @@ Project
   |             AgentRuntime                       |
   |                  |                             |
   |            planning / directives               |
-  |                  |                             |
+  |                  |
   +--> Node A <------+---- reports ----> Main -----+
   |     Node Profile + Node Binding + Session
   |
@@ -177,6 +177,7 @@ Phase 9 明确不做：
 | Phase 12 | 系统如何与研究者长期共同演进？ | Research Memory、长期反馈与 Human-AI Co-evolution |
 
 Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Phase 9 同时恢复为独立产品主线。
+
 ## 9. 当前下一步
 
 F9.4 的实现已在 `phase9-f9.4-agent-binding` 分支完成：Main / Node Profile 与 Session 均继续复用唯一 AgentRuntime；可信 Binding 从 ProjectStore / NodeStore 的 Session 所有权动态派生，并在角色入口和工具授权边界校验。实现与测试设计记录见 [65：F9.4 Agent Profile 与 Binding](65-devlog-agent-profile-binding.md)。
