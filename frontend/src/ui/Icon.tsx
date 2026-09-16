@@ -1,54 +1,38 @@
-import { Arrow } from "./icon/Arrow.js";
-import { Book } from "./icon/Book.js";
-import { Brain } from "./icon/Brain.js";
-import { Check } from "./icon/Check.js";
-import { Chevron } from "./icon/Chevron.js";
-import { Close } from "./icon/Close.js";
-import { Guide } from "./icon/Guide.js";
-import { Loader } from "./icon/Loader.js";
-import { Tool } from "./icon/Tool.js";
-import { Globe } from "./icon/Globe.js";
-import { Terminal } from "./icon/Terminal.js";
-import { Pen } from "./icon/Pen.js";
+import { useId } from "react";
+import { ArrowRight } from "reicon-react/icons/ArrowRight";
+import { BookOpen } from "reicon-react/icons/BookOpen";
+import { Compass } from "reicon-react/icons/Compass";
+import { Loader } from "reicon-react/icons/Loader";
+import { Check } from "reicon-react/icons/Check";
+import { X } from "reicon-react/icons/X";
+import { ChevronRight } from "reicon-react/icons/ChevronRight";
+import { Globe } from "reicon-react/icons/Globe";
+import { TerminalSquare } from "reicon-react/icons/TerminalSquare";
+import { Pen } from "reicon-react/icons/Pen";
+import { Folder } from "reicon-react/icons/Folder";
+import { Chat } from "reicon-react/icons/Chat";
+import { Plus } from "reicon-react/icons/Plus";
+import { Gear } from "reicon-react/icons/Gear";
+import { SidebarLeft } from "reicon-react/icons/SidebarLeft";
+import { Stop } from "reicon-react/icons/Stop";
+import { Brain } from "./icon/Brain";
+import { Tool } from "./icon/Tool";
+import styles from "./icon/style.module.css";
 
-export type IconName =
-  | "arrow"
-  | "book"
-  | "guide"
-  | "brain"
-  | "tool"
-  | "loader"
-  | "check"
-  | "close"
-  | "globe"
-  | "terminal"
-  | "pen"
-  | "chevron";
-
-const shapes: Record<IconName, () => React.JSX.Element> = {
-  arrow: Arrow,
-  book: Book,
-  guide: Guide,
-  brain: Brain,
-  tool: Tool,
-  loader: Loader,
-  check: Check,
-  close: Close,
-  chevron: Chevron,
-  globe: Globe,
-  terminal: Terminal,
-  pen: Pen,
-};
+const shapes = { arrow: ArrowRight, book: BookOpen, guide: Compass, loader: Loader, check: Check, close: X, chevron: ChevronRight, globe: Globe, terminal: TerminalSquare, pen: Pen, folder: Folder, chat: Chat, plus: Plus, settings: Gear, sidebar: SidebarLeft, stop: Stop };
+export type IconName = keyof typeof shapes | "brain" | "tool";
 
 export function Icon({ name, active = false }: { readonly name: IconName; readonly active?: boolean }): React.JSX.Element {
-  const Shape = shapes[name];
+  const Custom = name === "brain" ? Brain : name === "tool" ? Tool : null;
+  const Library = name !== "brain" && name !== "tool" ? shapes[name] : null;
+  const shape = Custom ? <Custom /> : Library ? <Library size={24} strokeWidth={1.75} stroke="none" /> : null;
   const id = useId();
   const maskId = `${id}-mask`;
   const gradientId = `${id}-gradient`;
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-      <Shape />
+      {shape}
       {active && <>
         <defs>
           <linearGradient id={gradientId}>
@@ -57,7 +41,7 @@ export function Icon({ name, active = false }: { readonly name: IconName; readon
             <stop offset="66%" stopColor="#948a7e" />
           </linearGradient>
           <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-            <g stroke="white"><Shape /></g>
+            <g stroke="white" color="white">{shape}</g>
           </mask>
         </defs>
         <g mask={`url(#${maskId})`} className={styles.highlight}>
@@ -67,5 +51,3 @@ export function Icon({ name, active = false }: { readonly name: IconName; readon
     </svg>
   );
 }
-import { useId } from "react";
-import styles from "./icon/style.module.css";

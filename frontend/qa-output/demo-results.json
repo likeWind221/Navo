@@ -2,7 +2,7 @@
   "active": {
     "text": "NAVO.\n消息体验 · MOCK\n重播完整过程\n停留执行中\n查看完成结果\n增强高亮已启用\n\n正在持续展示工具与通知的运行态。点“重播”查看思考吐字，点“完成”体验折叠。\n\n请检索 Adaptive Roadmap 的相关资料，检查本地演示项目，并整理一份简短结论。\n\n处理中 20s\n思考过程\n\n先把任务拆成两部分：查找相关研究，再检查项目结构。检索结果只作为线索，我会核对来源后再形成结论。\n\n执行 web_search\n已完成\n6s\n\n已找到相关资料。接下来检查项目中的示例文件，确认规划与验证是否分开组织。\n\n执行 web_fetch\n已完成\n1s\n执行 read\n已完成\n1s\n执行 edit\n已完成\n1s\n执行 write\n已完成\n1s\n思考过程\n\n搜索结果指出，任务完成需要独立证据。现在查看示例目录和测试结果，再区分已有能力与下一步要补充的内容。\n\n执行Shell : pnpm test --run --reporter=verbose --project=navo-demo --testNamePattern=roadmap-validation-and-evidence-linking\n执行中\n2s\n/hello\n执行中\n1s\n\n会话通知与工具使用相同的状态行，独立于回合过程。\n\n全部为演示数据，不发送模型请求，不执行 Shell 或文件操作。默认使用当前生产组件与高亮样式。",
     "activeCount": 3,
-    "animation": "_processShimmer_1gp19_1",
+    "animation": "_processShimmer_1hri5_1",
     "position": "180% 0px",
     "iconTransform": "matrix(1, 0, 0, 1, -24, 0)",
     "iconMasks": 2,
@@ -14,8 +14,8 @@
   "activeLater": {
     "text": "NAVO.\n消息体验 · MOCK\n重播完整过程\n停留执行中\n查看完成结果\n增强高亮已启用\n\n正在持续展示工具与通知的运行态。点“重播”查看思考吐字，点“完成”体验折叠。\n\n请检索 Adaptive Roadmap 的相关资料，检查本地演示项目，并整理一份简短结论。\n\n处理中 20s\n思考过程\n\n先把任务拆成两部分：查找相关研究，再检查项目结构。检索结果只作为线索，我会核对来源后再形成结论。\n\n执行 web_search\n已完成\n6s\n\n已找到相关资料。接下来检查项目中的示例文件，确认规划与验证是否分开组织。\n\n执行 web_fetch\n已完成\n1s\n执行 read\n已完成\n1s\n执行 edit\n已完成\n1s\n执行 write\n已完成\n1s\n思考过程\n\n搜索结果指出，任务完成需要独立证据。现在查看示例目录和测试结果，再区分已有能力与下一步要补充的内容。\n\n执行Shell : pnpm test --run --reporter=verbose --project=navo-demo --testNamePattern=roadmap-validation-and-evidence-linking\n执行中\n2s\n/hello\n执行中\n1s\n\n会话通知与工具使用相同的状态行，独立于回合过程。\n\n全部为演示数据，不发送模型请求，不执行 Shell 或文件操作。默认使用当前生产组件与高亮样式。",
     "activeCount": 3,
-    "animation": "_processShimmer_1gp19_1",
-    "position": "124.553% 0px",
+    "animation": "_processShimmer_1hri5_1",
+    "position": "124.552% 0px",
     "iconTransform": "matrix(1, 0, 0, 1, -12.9105, 0)",
     "iconMasks": 2,
     "reducedMotion": false,

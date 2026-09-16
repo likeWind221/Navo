@@ -34,7 +34,7 @@ export function Composer({ onSubmit, busy, onCancel }: {
         <button type={busy ? "button" : "submit"} onClick={busy ? onCancel : undefined}
           disabled={!busy && !draft.trim()} className={busy ? styles.stopButton : undefined}
           aria-label={busy ? "停止生成" : "发送消息"} title={busy ? "停止当前 Agent 回复" : "发送给 Agent"}>
-          {busy ? <span className={styles.stopIcon} aria-hidden="true" /> : <Icon name="arrow" />}
+          {busy ? <Icon name="stop" /> : <Icon name="arrow" />}
         </button>
       </div>
     </form>
