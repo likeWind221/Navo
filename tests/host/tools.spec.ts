@@ -6,6 +6,7 @@ import { createAgentTurnV2Handler } from "../../src/host/turn/v2.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 
 import { createFileEnvironment } from "../../src/tools/builtins/file/path.js";
+import { READ_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/read.js";
 import { ExaSearchAdapter } from "../../src/tools/builtins/search/adapters/exa.js";
 import { modelResponse } from "../helpers/runtime.js";
 
@@ -34,6 +35,7 @@ describe("desktop Host tool availability", () => {
       expect(registered).toEqual([
         "web_search", "web_fetch",
         "read", "shell", "edit", "write",
+        READ_ROADMAP_TOOL_NAME,
       ].sort());
       const adapter = new MockLLMAdapter([
         modelResponse([{
@@ -54,6 +56,7 @@ describe("desktop Host tool availability", () => {
         expect.objectContaining({ type: "tool-result", status: "succeeded", detail: expect.stringContaining('"name": "navo"') }),
       ]));
       expect(adapter.requests[0]?.tools?.map(tool => tool.name).sort()).toEqual([...expected].sort());
+      expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(READ_ROADMAP_TOOL_NAME);
       expect(events.at(-1)).toMatchObject({ type: "turn-completed" });
     } finally {
       await ctx.fiber.dispose();
