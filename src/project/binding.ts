@@ -63,20 +63,20 @@ export function resolveAgentBinding(
 
 export function requireMainBinding(
   ctx: Context,
-  sessionId: SessionId,
+  sessionId: SessionId | undefined,
   projectId?: ProjectId,
 ): MainAgentBinding {
   const binding = requireBinding(ctx, sessionId);
   if (binding.kind !== "main") {
     throw new AgentBindingError(
       "binding-role-mismatch",
-      `Session '${sessionId}' is not a Main Agent Session.`,
+      `Session '${binding.sessionId}' is not a Main Agent Session.`,
     );
   }
   if (projectId !== undefined && binding.projectId !== projectId) {
     throw new AgentBindingError(
       "binding-project-mismatch",
-      `Session '${sessionId}' is not bound to Project '${projectId}'.`,
+      `Session '${binding.sessionId}' is not bound to Project '${projectId}'.`,
     );
   }
   return binding;
@@ -84,20 +84,20 @@ export function requireMainBinding(
 
 export function requireNodeBinding(
   ctx: Context,
-  sessionId: SessionId,
+  sessionId: SessionId | undefined,
   nodeId?: NodeId,
 ): NodeAgentBinding {
   const binding = requireBinding(ctx, sessionId);
   if (binding.kind !== "node") {
     throw new AgentBindingError(
       "binding-role-mismatch",
-      `Session '${sessionId}' is not a Node Agent Session.`,
+      `Session '${binding.sessionId}' is not a Node Agent Session.`,
     );
   }
   if (nodeId !== undefined && binding.nodeId !== nodeId) {
     throw new AgentBindingError(
       "binding-node-mismatch",
-      `Session '${sessionId}' is not bound to Node '${nodeId}'.`,
+      `Session '${binding.sessionId}' is not bound to Node '${nodeId}'.`,
     );
   }
   return binding;
@@ -105,7 +105,7 @@ export function requireNodeBinding(
 
 export function requireNodeProjectBinding(
   ctx: Context,
-  sessionId: SessionId,
+  sessionId: SessionId | undefined,
   projectId: ProjectId,
   nodeId?: NodeId,
 ): NodeAgentBinding {
@@ -113,13 +113,22 @@ export function requireNodeProjectBinding(
   if (binding.projectId !== projectId) {
     throw new AgentBindingError(
       "binding-project-mismatch",
-      `Session '${sessionId}' is not bound to Project '${projectId}'.`,
+      `Session '${binding.sessionId}' is not bound to Project '${projectId}'.`,
     );
   }
   return binding;
 }
 
-function requireBinding(ctx: Context, sessionId: SessionId): AgentBinding {
+function requireBinding(
+  ctx: Context,
+  sessionId: SessionId | undefined,
+): AgentBinding {
+  if (sessionId === undefined) {
+    throw new AgentBindingError(
+      "binding-not-found",
+      "Agent capability requires a trusted Session identity.",
+    );
+  }
   const binding = resolveAgentBinding(ctx, sessionId);
   if (binding === undefined) {
     throw new AgentBindingError(
