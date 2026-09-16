@@ -145,7 +145,7 @@ Node A --------X--------> Node B
 | ✅ | F9.3.1 路线结构与关系表达 | Roadmap 结构与规则 | 让项目能表达工作节点、人工开始/结束/确认节点、必选/可选节点、分叉与汇合，并识别非法关系 | 控制节点无需 Agent 会话且只能人工完成；能表达菱形路线；Node 属性表达必选/可选；无效引用、重复边和结构环被拒绝；循环不在本阶段实现 |
 | ✅ | F9.3.2 路线变更与历史重建 | Roadmap 内存状态与变更 | 让调用方创建、查询、插入、调整关系、重排和增删路线节点，并能新增节点接续后续阶段、查看历史 | 整批变更全部成功或不生效，新建节点失败不留孤立节点；旧版本不能覆盖新版本；同一历史重建同一状态；complete/skip 后依赖满足的节点同步 unlock |
 | ✅ | F9.3.3 节点地图查询 | Roadmap 查询与领域集成 | 让调用方直接获取节点属性、已提交状态和依赖边以重建地图 | 无 Board 或成员状态；查询不修改节点；数据包含节点与路线版本，前端可据此重建地图 |
-| ⬜ | F9.4 Agent Profile 与 Binding | Project / Node Agent 角色边界 | 让 Main Agent 与 Node Agent 在同一 AgentRuntime 上获得不同角色、上下文和能力，同时由可信作用域约束实际可访问资源 | Main / Node 不新增独立 Runtime；Profile 不是唯一安全边界；Node 无法通过伪造输入访问其他 Node 或 Project 管理能力 |
+| ✅ | F9.4 Agent Profile 与 Binding | Project / Node Agent 角色边界 | 让 Main Agent 与 Node Agent 在同一 AgentRuntime 上获得不同角色、上下文和能力，同时由可信作用域约束实际可访问资源 | Main / Node 不新增独立 Runtime；Profile 不是唯一安全边界；Node 无法通过伪造输入访问其他 Node 或 Project 管理能力 |
 | ⬜ | F9.5 Main Agent Planning 与 Roadmap Mutation | Main Agent / Roadmap | 让 Main Agent 能基于 Goal 和项目现状提出 Roadmap 创建或修改方案，并由确定性边界决定方案能否成为新的项目事实 | 插入、跳过、连接调整、重排等变更可验证、可拒绝、可记录；陈旧版本或非法关系不能静默覆盖当前 Roadmap |
 | ⬜ | F9.6 Project Mailbox 与协调 | Project 消息与 Node 报告 | 让 Node Agent 可以向 Main Agent 报告完成、阻塞和协调请求，让 Main Agent 可以向指定 Node 下发指令，同时禁止 Node 之间直接通信 | Node 报告先落为可记录事实再被 Main 处理；不存在 Node-to-Node 通道；消息身份和所属 Project 可追溯 |
 | ⬜ | F9.7 ProjectRuntime 长期编排 | Project 执行生命周期 | 让 Project 能依据当前 Roadmap 和 Main Agent 决策启动、暂停、继续和收敛多个 Node 执行，并正确处理跨 Node 并行和恢复 | 同一 Node 不发生隐式并发 Turn；独立 Node 可并行；取消、失败和恢复不会产生递归 Agent 调用或悬挂任务 |
@@ -180,15 +180,15 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Pha
 
 ## 9. 当前下一步
 
-最新设计要求（2026-09-15）：required/optional 归 Node 属性；五态均由事件维护，依赖满足时通过 unlock 事件由 locked 进入 idle；人工 completing/skipped 均解锁后续。删除成员状态、替换机制、Board 和循环。F9.3.1–F9.3.3 已按该模型完成，记录见 [64：F9.3 状态模型修复](64-devlog-node-state-repair.md)。
+F9.4 的实现已在 `phase9-f9.4-agent-binding` 分支完成：Main / Node Profile 与 Session 均继续复用唯一 AgentRuntime；可信 Binding 从 ProjectStore / NodeStore 的 Session 所有权动态派生，并在角色入口和工具授权边界校验。实现与测试设计记录见 [65：F9.4 Agent Profile 与 Binding](65-devlog-agent-profile-binding.md)。
 
-**下一步：进入 F9.4；循环步骤已取消，数据库持久化仍放到 F10。**
+本机开发环境已补跑完整验证：`pnpm typecheck` 通过，`pnpm test` 全量 54 个测试文件、359 项测试通过，F9.4 定向测试 5 个文件、22 项测试通过，因此 F9.4 标记为 ✅。**下一步是 F9.5 Main Agent Planning 与 Roadmap Mutation。**循环步骤已取消，数据库持久化仍放到 F10。
 
-F9.1 与 F9.2 已完成，记录见 [55：Project 与通用 Node 领域](55-devlog-project-node-domain.md)。整个 Phase 9 先使用内存状态；原临时数据库子步骤已撤销，当前 F9.3.1 编号用于路线结构设计。F9.3 按节点状态、路线与解锁、地图查询三个子步骤实施；旧版本已交付，现需按最新 Node 属性、事件解锁与地图查询要求修订，完成后继续 F9.4–F9.9。F10 统一实施项目、节点、路线图、会话、消息及工具记录的数据库持久化与启动恢复。原 F10 Evidence/Verification 目标保留，待持久化之后重新排期。调研与拆分方案见 [56：内存与持久化阶段划分](56-devlog-persistence-plan.md)。
+F9.1 与 F9.2 已完成，记录见 [55：Project 与通用 Node 领域](55-devlog-project-node-domain.md)。整个 Phase 9 先使用内存状态；原临时数据库子步骤已撤销，F9.3 已按节点状态、路线与解锁、地图查询三个子步骤完成。F10 统一实施项目、节点、路线图、会话、消息及工具记录的数据库持久化与启动恢复。原 F10 Evidence/Verification 目标保留，待持久化之后重新排期。调研与拆分方案见 [56：内存与持久化阶段划分](56-devlog-persistence-plan.md)。
 
-F9.3.1 的结构规则沿用 [57：路线结构与关系表达](57-devlog-roadmap-graph.md) 并按 [63：F9.3 修复方案](63-devlog-node-state-review.md) 收敛；本次状态、路线变更、历史重建和地图查询修复见 [64：F9.3 状态模型修复](64-devlog-node-state-repair.md)。工具、公共 RPC 与实际执行门槛尚未接入，前端仍需在 F9.9 串行接入只读契约。
+F9.3.1 的结构规则沿用 [57：路线结构与关系表达](57-devlog-roadmap-graph.md) 并按 [63：F9.3 修复方案](63-devlog-node-state-review.md) 收敛；状态、路线变更、历史重建和地图查询修复见 [64：F9.3 状态模型修复](64-devlog-node-state-repair.md)。F9.4 已建立 Main / Node 的可信 Session Binding 与 Profile 边界；Main Agent 的 Roadmap 创建/修改工具仍由 F9.5 实现，前端仍需在 F9.9 串行接入只读契约。
 
-Node 当前状态约定：新建 locked，解锁后 idle，实际执行时 working，回合结束回到 idle；人工可将 idle 确认为 completing，或将 locked/idle 确认为 skipped；两种终态均满足后续依赖。RoadmapStore 在同一批 Node 事件中追加 node-unlocked，手动 unlock 不能绕过必选祖先；没有路线的独立 Node 仍可使用 NodeStore 原有生命周期。人工确认 UI/RPC 尚未接入，完整 Main/Node 授权仍由 F9.4 与后续跨端步骤落实。
+Node 当前状态约定：新建 locked，解锁后 idle，实际执行时 working，回合结束回到 idle；人工可将 idle 确认为 completing，或将 locked/idle 确认为 skipped；两种终态均满足后续依赖。RoadmapStore 在同一批 Node 事件中追加 node-unlocked，手动 unlock 不能绕过必选祖先；没有路线的独立 Node 仍可使用 NodeStore 原有生命周期。人工确认 UI/RPC 尚未接入；Main / Node 身份与资源作用域已由 F9.4 建立，Roadmap 管理授权将在 F9.5 的实际工具边界继续消费该 Binding。
 ## 10. 后端维护记录：桌面工具可用性排查（2026-09-14）
 
 - 做了什么：按用户要求排查现有工具注册与桌面模型可见性，修复配置 Exa 后普通桌面回合仅能看到 `web_search` 的问题。修改 `src/host/config.ts`、`tests/host/turn.spec.ts`，新增 `tests/host/tools.spec.ts`。属于既有能力修复，不推进 Phase 9 Step。

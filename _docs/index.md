@@ -25,6 +25,7 @@
 - [F9.3.3：进度看板与执行资格](61-devlog-roadmap-board.md)：实时状态投影、工作/人工动作资格、具体阻塞原因与分类进度。
 - [Node 状态模型复审](63-devlog-node-state-review.md)：取消成员/替换状态，节点属性归位，统一依赖派生状态，并取消循环步骤。
 - [F9.3：状态模型修复](64-devlog-node-state-repair.md)：五态 Node、事件解锁、路线批变更、历史重建与只读节点地图。
+- [F9.4：Agent Profile 与 Binding](65-devlog-agent-profile-binding.md)：Main / Node Profile、可信 Session Binding、归档拒绝与角色/项目越权防护，含本机完整验证结果。
 
 - [阶段 0：工程骨架](02-阶段-0-工程骨架开发记录.md)
 - [阶段 1：核心协议](03-devlog-phase-1-core-protocol.md)

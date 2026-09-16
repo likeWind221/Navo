@@ -8,5 +8,7 @@ export class ProjectError extends Error {
 export type ProjectErrorCode =
   | "project-not-found"
   | "project-already-exists"
+  | "project-unavailable"
   | "session-already-owned"
+  | "invalid-message"
   | "invalid-event-stream";

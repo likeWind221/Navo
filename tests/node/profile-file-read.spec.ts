@@ -16,8 +16,9 @@ describe("NodeAgent file capability", () => {
     ctx = new Context();
     await ctx.plugin(ProjectStore);
     await ctx.plugin(NodeStore);
+    const project = ctx.projects.create({ goal: "Research" });
     const node = ctx.nodes.create({
-      projectId: ctx.projects.create({ goal: "Research" }).id,
+      projectId: project.id,
       objective: {
         title: "Read long source",
         description: "Use fetched source material",
