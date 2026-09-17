@@ -32,3 +32,24 @@ export interface AgentRoadmapControlNode extends AgentRoadmapNodeBase {
   readonly kind: "control";
   readonly control: ControlPurpose;
 }
+
+export type AgentNodeView = AgentWorkNodeView | AgentControlNodeView;
+
+interface AgentNodeViewBase {
+  readonly id: string;
+  readonly version: number;
+  readonly title: string;
+  readonly required: boolean;
+  readonly status: NodeStatus;
+}
+
+export interface AgentWorkNodeView extends AgentNodeViewBase {
+  readonly kind: "work";
+  readonly task: string;
+  readonly done_when: readonly string[];
+}
+
+export interface AgentControlNodeView extends AgentNodeViewBase {
+  readonly kind: "control";
+  readonly control: ControlPurpose;
+}
