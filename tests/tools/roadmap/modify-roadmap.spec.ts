@@ -2,6 +2,7 @@ import { Context } from "cordis";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createSessionId } from "../../../src/brand/ids.js";
+import type { SessionId } from "../../../src/brand/ids.js";
 import { NodeStore } from "../../../src/node/store.js";
 import { ProjectStore } from "../../../src/project/store.js";
 import { RoadmapStore } from "../../../src/roadmap/store.js";
@@ -59,7 +60,7 @@ async function createRoadmap() {
   return { ctx, project, designId: design.node.id, buildId: build.node.id };
 }
 
-async function execute(ctx: Context, sessionId: string, arguments_: Record<string, unknown>) {
+async function execute(ctx: Context, sessionId: SessionId, arguments_: Record<string, unknown>) {
   return ctx.tools.execute(
     toolCall("modify-roadmap", MODIFY_ROADMAP_TOOL_NAME, arguments_),
     signal,
