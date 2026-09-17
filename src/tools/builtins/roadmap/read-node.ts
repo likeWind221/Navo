@@ -18,7 +18,6 @@ const readNodeSchema: JsonObject = {
   properties: {
     node_id: {
       type: "string",
-      minLength: 1,
     },
   },
   required: ["node_id"],
@@ -34,7 +33,14 @@ export function createReadNodeTool(ctx: Context): ToolDefinition {
       try {
         execution.signal.throwIfAborted();
         const binding = requireMainBinding(ctx, execution.sessionId);
-        const nodeId = createNodeId(String(arguments_.node_id));
+        const nodeIdValue = arguments_.node_id;
+        if (typeof nodeIdValue !== "string" || nodeIdValue.length === 0) {
+          throw new ToolExecutionError(
+            "read_node requires a non-empty node_id.",
+            "node_id must be a non-empty Node ID.",
+          );
+        }
+        const nodeId = createNodeId(nodeIdValue);
         const snapshot = ctx.nodes.get(nodeId);
         if (snapshot === undefined || snapshot.node.projectId !== binding.projectId) {
           throw new ToolExecutionError(
