@@ -24,7 +24,7 @@ interface AgentRoadmapNodeBase {
 
 export interface AgentRoadmapWorkNode extends AgentRoadmapNodeBase {
   readonly kind: "work";
-  readonly task: string;
+  readonly goal: string;
   readonly done_when: readonly string[];
 }
 
@@ -45,7 +45,7 @@ interface AgentNodeViewBase {
 
 export interface AgentWorkNodeView extends AgentNodeViewBase {
   readonly kind: "work";
-  readonly task: string;
+  readonly goal: string;
   readonly done_when: readonly string[];
 }
 

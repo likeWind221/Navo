@@ -42,7 +42,7 @@ export function createAgentRoadmapView(
     return Object.freeze({
       ...base,
       kind: "work" as const,
-      task: snapshot.node.objective.description,
+      goal: snapshot.node.objective.description,
       done_when: Object.freeze([...snapshot.node.objective.acceptanceCriteria]),
     });
   });
@@ -71,7 +71,7 @@ export function createAgentNodeView(snapshot: NodeSnapshot): AgentNodeView {
   return Object.freeze({
     ...base,
     kind: "work" as const,
-    task: snapshot.node.objective.description,
+    goal: snapshot.node.objective.description,
     done_when: Object.freeze([...snapshot.node.objective.acceptanceCriteria]),
   });
 }
@@ -98,7 +98,7 @@ export function formatAgentRoadmapView(view: AgentRoadmapView): string {
       lines.push(`Control: ${node.control}`);
       continue;
     }
-    lines.push(`Task: ${inline(node.task)}`, "Done when:");
+    lines.push(`Goal: ${inline(node.goal)}`, "Done when:");
     lines.push(...(node.done_when.length > 0
       ? node.done_when.map((criterion) => `- ${inline(criterion)}`)
       : ["- none"]));
@@ -119,7 +119,7 @@ export function formatAgentNodeView(view: AgentNodeView): string {
   if (view.kind === "control") {
     lines.push(`Control: ${view.control}`);
   } else {
-    lines.push(`Task: ${inline(view.task)}`, "Done when:");
+    lines.push(`Goal: ${inline(view.goal)}`, "Done when:");
     lines.push(...(view.done_when.length > 0
       ? view.done_when.map((criterion) => `- ${inline(criterion)}`)
       : ["- none"]));
@@ -142,7 +142,7 @@ export function agentRoadmapArtifact(view: AgentRoadmapView): JsonObject {
       : {
           ...base,
           kind: "work",
-          task: node.task,
+          goal: node.goal,
           done_when: [...node.done_when],
         };
   });
@@ -160,7 +160,7 @@ export function agentNodeArtifact(view: AgentNodeView): JsonObject {
   };
   return view.kind === "control"
     ? { ...base, control: view.control }
-    : { ...base, task: view.task, done_when: [...view.done_when] };
+    : { ...base, goal: view.goal, done_when: [...view.done_when] };
 }
 
 function inline(value: string): string {

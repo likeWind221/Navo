@@ -12,6 +12,7 @@ import type { JsonObject, ToolCallContentBlock } from "../../src/llm/types.js";
 import { NODE_AGENT_TOOL_NAMES } from "../../src/node/profile.js";
 import { READ_NODE_TOOL_NAME } from "../../src/tools/builtins/roadmap/read-node.js";
 import { READ_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/read.js";
+import { WRITE_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/write-roadmap.js";
 import { MockSearchAdapter } from "../../src/tools/builtins/search/adapters/mock.js";
 import { modelResponse } from "../helpers/runtime.js";
 
@@ -29,7 +30,7 @@ describe("Navo application integration", () => {
       tools: { search: { adapter: new MockSearchAdapter([]) } },
     });
     expect(app.tools.schemas().map((tool) => tool.name).sort())
-      .toEqual([...NODE_AGENT_TOOL_NAMES, READ_ROADMAP_TOOL_NAME, READ_NODE_TOOL_NAME].sort());
+      .toEqual([...NODE_AGENT_TOOL_NAMES, READ_ROADMAP_TOOL_NAME, READ_NODE_TOOL_NAME, WRITE_ROADMAP_TOOL_NAME].sort());
     expect(app.nodes).toBeDefined();
     expect(app.nodeSessions).toBeDefined();
     const sessionId = createSessionId("integration-loop");

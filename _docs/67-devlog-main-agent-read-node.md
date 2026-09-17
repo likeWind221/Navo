@@ -32,7 +32,7 @@ Agent Node View
 
 `node_id` 是模型提供的资源选择参数，但 Project 身份不是模型参数。工具必须先由可信 Session 解析 Main Binding，再验证读取到的 Node 属于同一 Project。缺失 Node 与其他 Project 的 Node 对模型使用同一“当前 Project 中不存在”结果，避免跨 Project 信息泄露。
 
-模型可见 Node view 暴露 `id`、`version`、标题、kind、required、只读 status；work Node 额外暴露 task 与 done_when，control Node 暴露 control purpose。内部 `NodeSnapshot.sessionId` 与 `confirmation` 不进入文本或 artifact。
+模型可见 Node view 暴露 `id`、`version`、标题、kind、required、只读 status；work Node 额外暴露 goal 与 done_when，control Node 暴露 control purpose。内部 `NodeSnapshot.sessionId` 与 `confirmation` 不进入文本或 artifact。
 
 ## 文件变化
 
