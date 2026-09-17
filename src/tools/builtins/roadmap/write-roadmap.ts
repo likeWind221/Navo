@@ -138,9 +138,23 @@ export function createWriteRoadmapTool(ctx: Context): ToolDefinition {
           newNodes,
         });
         const view = createAgentRoadmapView(snapshot, ctx.nodes.getByProject(binding.projectId));
+        const createdNodes: JsonObject = Object.fromEntries(
+          proposal.nodes.map((node) => [node.key, String(ids.get(node.key)!)]),
+        );
+        const mapping = proposal.nodes.map((node) => `- ${node.key} -> ${ids.get(node.key)!}`);
         return {
-          content: `Roadmap created successfully.\n\n${formatAgentRoadmapView(view)}`,
-          artifact: agentRoadmapArtifact(view),
+          content: [
+            "Roadmap created successfully.",
+            "",
+            "Created Node mapping:",
+            ...mapping,
+            "",
+            formatAgentRoadmapView(view),
+          ].join("\n"),
+          artifact: {
+            ...agentRoadmapArtifact(view),
+            created_nodes: createdNodes,
+          },
         };
       } catch (error: unknown) {
         if (error instanceof ToolExecutionError) throw error;
