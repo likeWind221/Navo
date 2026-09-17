@@ -8,6 +8,7 @@ import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import { createFileEnvironment } from "../../src/tools/builtins/file/path.js";
 import { READ_NODE_TOOL_NAME } from "../../src/tools/builtins/roadmap/read-node.js";
 import { READ_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/read.js";
+import { WRITE_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/write-roadmap.js";
 import { ExaSearchAdapter } from "../../src/tools/builtins/search/adapters/exa.js";
 import { modelResponse } from "../helpers/runtime.js";
 
@@ -36,7 +37,7 @@ describe("desktop Host tool availability", () => {
       expect(registered).toEqual([
         "web_search", "web_fetch",
         "read", "shell", "edit", "write",
-        READ_ROADMAP_TOOL_NAME, READ_NODE_TOOL_NAME,
+        READ_ROADMAP_TOOL_NAME, READ_NODE_TOOL_NAME, WRITE_ROADMAP_TOOL_NAME,
       ].sort());
       const adapter = new MockLLMAdapter([
         modelResponse([{
@@ -59,6 +60,7 @@ describe("desktop Host tool availability", () => {
       expect(adapter.requests[0]?.tools?.map(tool => tool.name).sort()).toEqual([...expected].sort());
       expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(READ_ROADMAP_TOOL_NAME);
       expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(READ_NODE_TOOL_NAME);
+      expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(WRITE_ROADMAP_TOOL_NAME);
       expect(events.at(-1)).toMatchObject({ type: "turn-completed" });
     } finally {
       await ctx.fiber.dispose();
