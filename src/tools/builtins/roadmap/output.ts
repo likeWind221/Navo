@@ -2,6 +2,7 @@ import type { JsonObject, JsonValue } from "../../../llm/types.js";
 import type { NodeSnapshot } from "../../../node/model.js";
 import type { RoadmapSnapshot } from "../../../roadmap/model.js";
 import type {
+  AgentNodeView,
   AgentRoadmapNode,
   AgentRoadmapView,
   EmptyAgentRoadmapView,
@@ -52,6 +53,29 @@ export function createAgentRoadmapView(
   });
 }
 
+export function createAgentNodeView(snapshot: NodeSnapshot): AgentNodeView {
+  const base = {
+    id: String(snapshot.node.id),
+    version: snapshot.revision,
+    title: snapshot.node.kind === "work" ? snapshot.node.objective.title : snapshot.node.title,
+    required: snapshot.node.requirement === "required",
+    status: snapshot.status,
+  } as const;
+  if (snapshot.node.kind === "control") {
+    return Object.freeze({
+      ...base,
+      kind: "control" as const,
+      control: snapshot.node.purpose,
+    });
+  }
+  return Object.freeze({
+    ...base,
+    kind: "work" as const,
+    task: snapshot.node.objective.description,
+    done_when: Object.freeze([...snapshot.node.objective.acceptanceCriteria]),
+  });
+}
+
 export function formatAgentRoadmapView(view: AgentRoadmapView): string {
   if (view.state === "empty") {
     return "Roadmap is empty.\nNo roadmap has been created for this Project.";
@@ -83,6 +107,26 @@ export function formatAgentRoadmapView(view: AgentRoadmapView): string {
   return lines.join("\n");
 }
 
+export function formatAgentNodeView(view: AgentNodeView): string {
+  const lines = [
+    `Node: ${view.id}`,
+    `version: ${view.version}`,
+    `title: ${inline(view.title)}`,
+    `kind: ${view.kind}`,
+    `required: ${view.required ? "yes" : "no"}`,
+    `status: ${view.status}`,
+  ];
+  if (view.kind === "control") {
+    lines.push(`Control: ${view.control}`);
+  } else {
+    lines.push(`Task: ${inline(view.task)}`, "Done when:");
+    lines.push(...(view.done_when.length > 0
+      ? view.done_when.map((criterion) => `- ${inline(criterion)}`)
+      : ["- none"]));
+  }
+  return lines.join("\n");
+}
+
 export function agentRoadmapArtifact(view: AgentRoadmapView): JsonObject {
   if (view.state === "empty") return { state: "empty" };
   const nodes: JsonValue[] = view.nodes.map((node) => {
@@ -103,6 +147,20 @@ export function agentRoadmapArtifact(view: AgentRoadmapView): JsonObject {
         };
   });
   return { state: "ready", version: view.version, nodes };
+}
+
+export function agentNodeArtifact(view: AgentNodeView): JsonObject {
+  const base: JsonObject = {
+    id: view.id,
+    version: view.version,
+    title: view.title,
+    kind: view.kind,
+    required: view.required,
+    status: view.status,
+  };
+  return view.kind === "control"
+    ? { ...base, control: view.control }
+    : { ...base, task: view.task, done_when: [...view.done_when] };
 }
 
 function inline(value: string): string {
