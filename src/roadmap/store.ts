@@ -3,8 +3,8 @@ import { Service } from "cordis";
 import type { Context } from "cordis";
 import { createEventId } from "../brand/ids.js";
 import type { NodeId, ProjectId } from "../brand/ids.js";
-import type { NodeEventDraft } from "../node/events.js";
-import type { NodeSnapshot } from "../node/model.js";
+import type { NodeDefinitionChange, NodeEventDraft } from "../node/events.js";
+import type { NodeRequirement, NodeSnapshot } from "../node/model.js";
 import { buildRoadmapGraph } from "./graph.js";
 import { RoadmapError } from "./errors.js";
 import { freezeRoadmapEvent } from "./events.js";
@@ -43,17 +43,31 @@ export class RoadmapStore extends Service {
     if (!current) throw new RoadmapError("not-found", "Roadmap does not exist");
     if (current.revision !== input.baseRevision) throw new RoadmapError("stale-revision", "Read the current roadmap before editing");
     if (this.ctx.projects.get(input.projectId)?.status !== "active") throw new RoadmapError("project-unavailable", "Editing requires an active project");
+
     const event = freezeRoadmapEvent({ ...this.header(input.projectId, input.baseRevision, input.reason), type: "roadmap-changed", changes: input.changes });
     const history = Object.freeze([...this.getEvents(input.projectId), event]);
     const newNodeEvents = (input.newNodes ?? []).map(value => this.ctx.nodes.creation(value));
-    const batch = this.ctx.nodes.prepare(newNodeEvents);
-    const catalog = new Map(this.ctx.nodes.getByProject(input.projectId).map(value => [value.node.id, value.node]));
-    for (const event of newNodeEvents) catalog.set(event.nodeId, batch.get(event.nodeId)!.node);
-    const snapshot = projectRoadmap(input.projectId, history, [...catalog.values()]);
-    if (!snapshot) throw new RoadmapError("invalid-reference", "Every roadmap node must exist");
+    const nodeUpdateEvents = (input.nodeUpdates ?? []).map(value => this.ctx.nodes.definitionChange({
+      nodeId: value.nodeId,
+      definition: value.definition,
+      requirement: value.requirement,
+      reviewedRevision: value.reviewedRevision,
+      reason: input.reason,
+    }));
+    const drafts = [...newNodeEvents, ...nodeUpdateEvents];
+    const batch = this.ctx.nodes.prepare(drafts);
+
     const currentNodes = new Map(this.ctx.nodes.getByProject(input.projectId).map(value => [value.node.id, value]));
     const candidateNodes = new Map(currentNodes);
-    for (const event of newNodeEvents) candidateNodes.set(event.nodeId, batch.get(event.nodeId)!);
+    for (const draft of drafts) candidateNodes.set(draft.nodeId, batch.get(draft.nodeId)!);
+
+    const snapshot = projectRoadmap(
+      input.projectId,
+      history,
+      [...candidateNodes.values()].map(value => value.node),
+    );
+    if (!snapshot) throw new RoadmapError("invalid-reference", "Every roadmap node must exist");
+
     for (const currentNode of currentNodes.values()) {
       if (currentNode.status !== "working") continue;
       const relation = snapshot.graph.relations.find(value => value.nodeId === currentNode.node.id);
@@ -67,6 +81,7 @@ export class RoadmapStore extends Service {
         batch.add({ type: "node-locked", nodeId: relation.nodeId, data: { reason: "Roadmap dependencies changed" } });
       }
     }
+
     this.ctx.nodes.commit(batch);
     this.commitHistory(input.projectId, history, snapshot);
     this.unlockReady(input.projectId);
@@ -172,7 +187,20 @@ export interface RoadmapMap {
   readonly nodes: readonly NodeSnapshot[]; readonly edges: readonly { readonly from: NodeId; readonly to: NodeId }[];
 }
 export interface CreateRoadmapInput { readonly definition: RoadmapDefinition; readonly reason: string; readonly newNodes?: readonly { readonly nodeId: NodeId; readonly input: import("../node/store.js").CreateNodeInput }[]; }
-export interface ChangeRoadmapInput { readonly projectId: ProjectId; readonly baseRevision: number; readonly reason: string; readonly changes: readonly RoadmapChange[]; readonly newNodes?: readonly { readonly nodeId: NodeId; readonly input: import("../node/store.js").CreateNodeInput }[]; }
+export interface RoadmapNodeDefinitionUpdate {
+  readonly nodeId: NodeId;
+  readonly reviewedRevision: number;
+  readonly requirement: NodeRequirement;
+  readonly definition: NodeDefinitionChange;
+}
+export interface ChangeRoadmapInput {
+  readonly projectId: ProjectId;
+  readonly baseRevision: number;
+  readonly reason: string;
+  readonly changes: readonly RoadmapChange[];
+  readonly newNodes?: readonly { readonly nodeId: NodeId; readonly input: import("../node/store.js").CreateNodeInput }[];
+  readonly nodeUpdates?: readonly RoadmapNodeDefinitionUpdate[];
+}
 
 function freeze<T>(value: T): T {
   const copy = structuredClone(value);
