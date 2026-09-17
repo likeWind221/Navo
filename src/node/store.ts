@@ -39,6 +39,13 @@ export class NodeStore extends Service {
   }
 
   definitionChange(input: DefinitionChangeInput): NodeEventDraft {
+    const current = this.requireState(input.nodeId, "locked", "idle");
+    if (current.revision !== input.reviewedRevision) {
+      throw new NodeError("stale-revision", "Review current Node before editing.");
+    }
+    if (current.node.kind !== input.definition.kind) {
+      throw new NodeError("invalid-state", "Node kind cannot change.");
+    }
     return {
       type: "definition-changed",
       nodeId: input.nodeId,
