@@ -203,7 +203,7 @@ Project
 | ✅ | F9.4 Agent Profile 与 Binding | Project / Node Agent 角色边界 | 让 Main Agent 与 Node Agent 在同一 AgentRuntime 上获得不同角色、上下文和能力，同时由可信作用域约束实际可访问资源 | Main / Node 不新增独立 Runtime；Profile 不是唯一安全边界；Node 无法通过伪造输入访问其他 Node 或 Project 管理能力 |
 | ✅ | F9.5 Main Agent Planning 与 Roadmap Mutation | Main Agent / Roadmap | 让 Main Agent 能基于 Goal 和项目现状读取、创建和修改 Roadmap，并由确定性边界决定方案能否成为新的项目事实 | `read_roadmap`、`read_node`、`write_roadmap`、`modify_roadmap` 完成；陈旧版本、非法关系和跨 Project 访问被拒绝；Main 不拥有 Human completion / skip 权限 |
 | 🔄 | F9.6 Project Communication 与 Artifact Handoff | Project 消息、资产与跨 Node 协调 | 让 Node 把结果、阻塞、资产和 Project 级请求交回 Main，让 Main 按显式事实协调后续 Node，同时保持 Node 隔离和 Human 执行 Gate | 消息与资产来源可追溯；不存在 Node-to-Node 通道；Asset 通过引用交接；任何 handoff 都不自动启动 Node |
-| ⬜ | F9.6a Project Mailbox Domain | Project 消息领域 | 建立可重放的 ProjectMessage / Mailbox history，并在领域层限制合法路由为 Node->Main 与 Main->Node | sender / recipient / Project 归属可验证；跨 Project、伪造 sender、Node-to-Node 被拒绝；append message 不触发 AgentRuntime |
+| ✅ | F9.6a Project Mailbox Domain | Project 消息领域 | 建立可重放的 ProjectMessage / Mailbox history，并在领域层限制合法路由为 Node->Main 与 Main->Node | `postFromNode` / `postFromMain` 已形成单向写入边界；Project / work Node 归属、历史连续性和合法路由可验证；跨 Project、control Node、Node-to-Node replay 被拒绝；append message 不依赖或触发 AgentRuntime |
 | ⬜ | F9.6b Project Asset Registry 与 Artifact Handoff | Project 资产领域 | 把 Node 产物注册为带来源的 Project Asset Reference，并允许 Main 为当前 Project Node 分配资产引用 | Asset 有稳定 ID、来源 Node / version 和资源引用；跨 Project 引用被拒绝；资产内容不经 Main Session 复制；分配不启动 Node |
 | ⬜ | F9.6c Node -> Main Reporting 与 Escalation | Node Agent 协作能力 | 让 Node 以受限工具报告 result、blocker、coordination_request、planning_request，并可附加 Project Asset 引用 | sender / Project / Node 身份来自可信 Binding；Node 不直接指定并联系其他 Node；planning_request 不赋予 Node Roadmap mutation 权限；result 不自动完成 Node |
 | ⬜ | F9.6d Main -> Node Directive 与 Asset Assignment | Main Agent 协调能力 | 让 Main 向当前 Project 的指定 Node 留下 directive，并关联必要 Asset Reference，供 Node 后续人工启动的 Turn 使用 | 目标 Node 与 Asset 都必须属于当前 Project；Main 不能通过该能力递归运行 Node；Node 仅在后续 Human 启动后消费输入 |
@@ -248,7 +248,9 @@ F9.5 已完成并收口：Main Agent 通过 `read_roadmap`、`read_node`、`writ
 
 F9.6 重新定义为 **Project Communication 与 Artifact Handoff**。设计见 [71：F9.6 Project Communication 与 Artifact Handoff](71-devlog-f9.6-project-communication-design.md)。核心约束是：Main 是唯一跨 Node 协调者；Node 默认只拥有局部上下文；Node 产物注册为 Project Asset Reference；Node 中出现 Roadmap 修改要求时只能升级为 `planning_request` 或由用户前往 Main 讨论；任何消息、资产分配和依赖满足都不能自动启动另一个 Node。
 
-**当前下一步唯一指向 F9.6a Project Mailbox Domain。** 该 Step 只建立可重放的 Project 消息事实和领域级合法路由，不接 Agent 工具、不接 Asset、不触发 Runtime，也不修改 Host / RPC / frontend。
+F9.6a 已完成：`MailboxStore` 已建立 Project 级 append-only message history，正常写入只暴露 `postFromNode` / `postFromMain` 两个方向明确的入口；跨 Project、control Node、非法 replay route 和不连续历史会被拒绝，且 Mailbox 不依赖 AgentRuntime。实现记录见 [72：F9.6a Project Mailbox Domain](72-devlog-f9.6a-project-mailbox.md)。可信 Session -> Node/Main 身份派生仍按计划留到 F9.6c / F9.6d。
+
+**当前下一步唯一指向 F9.6b Project Asset Registry 与 Artifact Handoff。** 该 Step 只建立带来源追踪的 Project Asset Reference 与资产分配事实，不接 Agent report/directive 工具，也绝不因 Asset 到位自动启动 Node。
 
 F9.1 与 F9.2 已完成，记录见 [55：Project 与通用 Node 领域](55-devlog-project-node-domain.md)。整个 Phase 9 先使用内存状态；F10 统一实施项目、节点、路线图、会话、消息、Project Asset 及工具记录的数据库持久化与启动恢复。调研与拆分方案见 [56：内存与持久化阶段划分](56-devlog-persistence-plan.md)。
 
