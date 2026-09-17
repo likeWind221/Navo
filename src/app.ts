@@ -4,6 +4,7 @@ import { AgentRuntime } from "./agent/runtime.js";
 import type { AgentRuntimeLimits } from "./agent/types.js";
 import { CommandService } from "./command/service.js";
 import { LLMService } from "./llm/service.js";
+import { MailboxStore } from "./mailbox/store.js";
 import type { NodePluginConfig } from "./node/plugin.js";
 import { NodePlugin } from "./node/plugin.js";
 import { MainSessionService } from "./project/session.js";
@@ -33,6 +34,7 @@ export async function NavoApp(
   await ctx.plugin(AgentRuntime, config.runtime);
   await ctx.plugin(CommandService);
   await ctx.plugin(NodePlugin, config.node);
+  await ctx.plugin(MailboxStore);
   await ctx.plugin(MainSessionService, { model: config.node.session.model });
   await ctx.plugin(RoadmapStore);
   await ctx.plugin(RoadmapToolsPlugin);
