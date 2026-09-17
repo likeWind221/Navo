@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Context } from "cordis";
 
 import { createNodeId } from "../../../brand/ids.js";
-import type { NodeId } from "../../../brand/ids.js";
+import type { NodeId, ProjectId } from "../../../brand/ids.js";
 import type { JsonObject, JsonValue } from "../../../llm/types.js";
 import { NodeError } from "../../../node/errors.js";
 import type { ControlPurpose } from "../../../node/model.js";
@@ -250,7 +250,7 @@ function parseNode(value: JsonValue, index: number): ProposalNode {
   throw invalidProposal(`${prefix}.kind must be work or control.`);
 }
 
-function toCreateNodeInput(projectId: Parameters<typeof createNodeInputProject>[0], node: ProposalNode): CreateNodeInput {
+function toCreateNodeInput(projectId: ProjectId, node: ProposalNode): CreateNodeInput {
   const requirement = node.required ? "required" : "optional";
   if (node.kind === "control") {
     return {
@@ -270,10 +270,6 @@ function toCreateNodeInput(projectId: Parameters<typeof createNodeInputProject>[
       acceptanceCriteria: node.doneWhen,
     },
   };
-}
-
-function createNodeInputProject(projectId: CreateNodeInput["projectId"]): CreateNodeInput["projectId"] {
-  return projectId;
 }
 
 function nonEmptyString(value: JsonValue | undefined, path: string): string {
