@@ -60,7 +60,7 @@ describe("read_node", () => {
     expect(text).toContain("kind: work");
     expect(text).toContain("required: no");
     expect(text).toContain("status: idle");
-    expect(text).toContain("Task: Implement the first backend prototype.");
+    expect(text).toContain("Goal: Implement the first backend prototype.");
     expect(text).toContain("Done when:\n- Prototype runs\n- Integration path is documented");
     expect(result.artifact).toEqual({
       id: String(node.node.id),
@@ -69,7 +69,7 @@ describe("read_node", () => {
       kind: "work",
       required: false,
       status: "idle",
-      task: "Implement the first backend prototype.",
+      goal: "Implement the first backend prototype.",
       done_when: ["Prototype runs", "Integration path is documented"],
     });
     expect(JSON.stringify(result.artifact)).not.toContain("sessionId");
