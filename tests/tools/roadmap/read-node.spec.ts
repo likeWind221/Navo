@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createSessionId } from "../../../src/brand/ids.js";
 import { NodeStore } from "../../../src/node/store.js";
 import { ProjectStore } from "../../../src/project/store.js";
+import { RoadmapStore } from "../../../src/roadmap/store.js";
 import { RoadmapToolsPlugin } from "../../../src/tools/builtins/roadmap/plugin.js";
 import { READ_NODE_TOOL_NAME } from "../../../src/tools/builtins/roadmap/read-node.js";
 import { ToolService } from "../../../src/tools/service.js";
@@ -23,6 +24,7 @@ async function createContext(): Promise<Context> {
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
   await ctx.plugin(ToolService);
+  await ctx.plugin(RoadmapStore);
   await ctx.plugin(RoadmapToolsPlugin);
   return ctx;
 }
@@ -42,7 +44,7 @@ describe("read_node", () => {
     });
     const node = ctx.nodes.unlock(created.node.id, "Ready");
     const nodeSession = createSessionId("private-node-session");
-    ctx.nodes.bindSession(node.node.id, nodeSession);
+    const current = ctx.nodes.bindSession(node.node.id, nodeSession);
 
     const result = await ctx.tools.execute(
       toolCall("read-node", READ_NODE_TOOL_NAME, { node_id: String(node.node.id) }),
@@ -53,7 +55,7 @@ describe("read_node", () => {
     if (result.kind !== "success") throw new Error("read_node unexpectedly failed");
     const text = result.block.content[0]?.type === "text" ? result.block.content[0].text : "";
     expect(text).toContain(`Node: ${node.node.id}`);
-    expect(text).toContain("version: 3");
+    expect(text).toContain(`version: ${current.revision}`);
     expect(text).toContain("title: Build prototype");
     expect(text).toContain("kind: work");
     expect(text).toContain("required: no");
@@ -62,7 +64,7 @@ describe("read_node", () => {
     expect(text).toContain("Done when:\n- Prototype runs\n- Integration path is documented");
     expect(result.artifact).toEqual({
       id: String(node.node.id),
-      version: 3,
+      version: current.revision,
       title: "Build prototype",
       kind: "work",
       required: false,
@@ -93,7 +95,7 @@ describe("read_node", () => {
     if (result.kind !== "success") throw new Error("read_node unexpectedly failed");
     expect(result.artifact).toEqual({
       id: String(node.node.id),
-      version: 1,
+      version: node.revision,
       title: "Architecture review",
       kind: "control",
       required: true,
