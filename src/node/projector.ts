@@ -1,7 +1,7 @@
 import type { NodeId } from "../brand/ids.js";
 import { NodeError } from "./errors.js";
-import type { NodeEvent } from "./events.js";
-import type { NodeSnapshot, NodeStatus } from "./model.js";
+import type { NodeDefinitionChange, NodeEvent } from "./events.js";
+import type { NodeObjective, NodeSnapshot, NodeStatus } from "./model.js";
 
 export function projectNode(nodeId: NodeId, events: readonly NodeEvent[]): NodeSnapshot | undefined {
   let snapshot: NodeSnapshot | undefined;
@@ -24,16 +24,9 @@ export function projectNode(nodeId: NodeId, events: readonly NodeEvent[]): NodeS
         if (snapshot) invalid("Node was already created.");
         text(event.data.projectId);
         requirement(event.data.requirement ?? "required");
-        const objective = event.data.objective;
-        if (!objective || typeof objective !== "object") invalid("Node objective is required.");
-        text(objective.title);
-        text(objective.description);
-        if (!Array.isArray(objective.acceptanceCriteria) || objective.acceptanceCriteria.length === 0) {
-          invalid("Node acceptance criteria are required.");
-        }
-        objective.acceptanceCriteria.forEach(text);
+        objective(event.data.objective);
         snapshot = {
-          node: { id: nodeId, projectId: event.data.projectId, kind: "work", objective, requirement: event.data.requirement ?? "required" },
+          node: { id: nodeId, projectId: event.data.projectId, kind: "work", objective: event.data.objective, requirement: event.data.requirement ?? "required" },
           revision: event.revision,
           status: "locked",
         };
@@ -44,11 +37,44 @@ export function projectNode(nodeId: NodeId, events: readonly NodeEvent[]): NodeS
         text(event.data.projectId);
         requirement(event.data.requirement ?? "required");
         text(event.data.title);
-        if (!["start", "end", "checkpoint"].includes(event.data.purpose)) invalid("Invalid control purpose.");
+        controlPurpose(event.data.purpose);
         snapshot = {
           node: { id: nodeId, projectId: event.data.projectId, kind: "control", purpose: event.data.purpose, title: event.data.title, requirement: event.data.requirement ?? "required" },
           revision: event.revision, status: "locked",
         };
+        break;
+      }
+      case "definition-changed": {
+        if (!snapshot) invalid("Node must exist before its definition can change.");
+        if (snapshot.status !== "locked" && snapshot.status !== "idle") {
+          invalid("Node definition can change only while locked or idle.");
+        }
+        if (event.data.reviewedRevision !== snapshot.revision) invalid("Definition change refers to a stale Node revision.");
+        text(event.data.reason);
+        requirement(event.data.requirement);
+        validateDefinitionChange(snapshot, event.data.definition);
+        snapshot = event.data.definition.kind === "work"
+          ? {
+              ...snapshot,
+              node: {
+                id: snapshot.node.id,
+                projectId: snapshot.node.projectId,
+                kind: "work",
+                objective: event.data.definition.objective,
+                requirement: event.data.requirement,
+              },
+            }
+          : {
+              ...snapshot,
+              node: {
+                id: snapshot.node.id,
+                projectId: snapshot.node.projectId,
+                kind: "control",
+                purpose: event.data.definition.purpose,
+                title: event.data.definition.title,
+                requirement: event.data.requirement,
+              },
+            };
         break;
       }
       case "session-bound":
@@ -112,6 +138,30 @@ export function immutable<T>(value: T): T {
   }
   freeze(copy);
   return copy;
+}
+
+function validateDefinitionChange(snapshot: NodeSnapshot, definition: NodeDefinitionChange): void {
+  if (definition.kind !== snapshot.node.kind) invalid("Node kind cannot change.");
+  if (definition.kind === "work") {
+    objective(definition.objective);
+    return;
+  }
+  text(definition.title);
+  controlPurpose(definition.purpose);
+}
+
+function objective(value: NodeObjective): void {
+  if (!value || typeof value !== "object") invalid("Node objective is required.");
+  text(value.title);
+  text(value.description);
+  if (!Array.isArray(value.acceptanceCriteria) || value.acceptanceCriteria.length === 0) {
+    invalid("Node acceptance criteria are required.");
+  }
+  value.acceptanceCriteria.forEach(text);
+}
+
+function controlPurpose(value: unknown): void {
+  if (value !== "start" && value !== "end" && value !== "checkpoint") invalid("Invalid control purpose.");
 }
 
 function requireStatus(snapshot: NodeSnapshot | undefined, expected: NodeStatus): void {
