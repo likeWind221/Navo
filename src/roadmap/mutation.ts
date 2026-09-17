@@ -37,6 +37,9 @@ export function applyRoadmapChanges(current: RoadmapSnapshot, changes: readonly 
         nodes = nodes.filter(id => id !== change.nodeId);
         edges = edges.filter(edge => edge.from !== change.nodeId && edge.to !== change.nodeId);
         break;
+      case "update-node":
+        position(change.nodeId);
+        break;
       default: throw new RoadmapError("invalid-structure", "Unknown roadmap change");
     }
   }
