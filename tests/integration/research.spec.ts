@@ -4,6 +4,7 @@ import { createApp } from "../../src/app.js";
 import { createToolCallId } from "../../src/brand/ids.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import { MockFetchCore } from "../../src/tools/builtins/fetch/mock.js";
+import { MODIFY_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/modify-roadmap.js";
 import { READ_NODE_TOOL_NAME } from "../../src/tools/builtins/roadmap/read-node.js";
 import { READ_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/read.js";
 import { WRITE_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/write-roadmap.js";
@@ -47,12 +48,13 @@ describe("generic Node research loop", () => {
     expect(JSON.stringify(adapter.requests[2]?.messages)).toContain("Verified source details");
     expect(JSON.stringify(adapter.requests[3]?.messages)).toContain("not allowed");
     expect(app.tools.schemas().map(tool => tool.name).sort())
-      .toEqual(["web_fetch", "web_search", READ_ROADMAP_TOOL_NAME, READ_NODE_TOOL_NAME, WRITE_ROADMAP_TOOL_NAME].sort());
+      .toEqual(["web_fetch", "web_search", READ_ROADMAP_TOOL_NAME, READ_NODE_TOOL_NAME, WRITE_ROADMAP_TOOL_NAME, MODIFY_ROADMAP_TOOL_NAME].sort());
     expect(adapter.requests[0]?.tools?.map(tool => tool.name).sort())
       .toEqual(["web_fetch", "web_search"]);
     expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(READ_ROADMAP_TOOL_NAME);
     expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(READ_NODE_TOOL_NAME);
     expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(WRITE_ROADMAP_TOOL_NAME);
+    expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(MODIFY_ROADMAP_TOOL_NAME);
     const ready = app.nodes.get(node.node.id)!;
     expect(ready.status).toBe("idle");
     expect(ready.confirmation).toBeUndefined();
