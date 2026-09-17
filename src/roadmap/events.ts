@@ -10,7 +10,8 @@ export type RoadmapChange =
   | { readonly type: "insert"; readonly nodeId: NodeId; readonly index?: number }
   | { readonly type: "connect" | "disconnect"; readonly edge: RoadmapEdge }
   | { readonly type: "reorder"; readonly nodeIds: readonly NodeId[] }
-  | { readonly type: "remove"; readonly nodeId: NodeId };
+  | { readonly type: "remove"; readonly nodeId: NodeId }
+  | { readonly type: "update-node"; readonly nodeId: NodeId };
 
 interface RoadmapEventHeader {
   readonly version: 1;
