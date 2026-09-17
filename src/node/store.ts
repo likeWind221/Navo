@@ -4,7 +4,7 @@ import type { Context } from "cordis";
 import { createNodeId } from "../brand/ids.js";
 import type { NodeId, ProjectId, SessionId } from "../brand/ids.js";
 import { NodeError } from "./errors.js";
-import type { NodeEvent, NodeEventDraft } from "./events.js";
+import type { NodeDefinitionChange, NodeEvent, NodeEventDraft } from "./events.js";
 import type { ControlPurpose, NodeConfirmation, NodeObjective, NodeRequirement, NodeSnapshot, NodeStatus } from "./model.js";
 import { projectNode } from "./projector.js";
 import { NodeBatch } from "./batch.js";
@@ -36,6 +36,19 @@ export class NodeStore extends Service {
     return input.kind === "control"
       ? { type: "control-created", nodeId, data: { projectId: input.projectId, requirement, purpose: input.purpose, title: input.title } }
       : { type: "node-created", nodeId, data: { projectId: input.projectId, requirement, objective: input.objective } };
+  }
+
+  definitionChange(input: DefinitionChangeInput): NodeEventDraft {
+    return {
+      type: "definition-changed",
+      nodeId: input.nodeId,
+      data: {
+        definition: input.definition,
+        requirement: input.requirement,
+        reason: input.reason,
+        reviewedRevision: input.reviewedRevision,
+      },
+    };
   }
 
   createBatch(inputs: readonly NewNodeInput[]): readonly NodeSnapshot[] {
@@ -178,6 +191,13 @@ export type CreateNodeInput = { readonly projectId: ProjectId; readonly requirem
   | { readonly kind: "control"; readonly purpose: ControlPurpose; readonly title: string }
 );
 export interface NewNodeInput { readonly nodeId: NodeId; readonly input: CreateNodeInput; }
+export interface DefinitionChangeInput {
+  readonly nodeId: NodeId;
+  readonly definition: NodeDefinitionChange;
+  readonly requirement: NodeRequirement;
+  readonly reviewedRevision: number;
+  readonly reason: string;
+}
 
 declare module "cordis" {
   interface Context { nodes: NodeStore; }
