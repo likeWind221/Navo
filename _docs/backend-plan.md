@@ -165,7 +165,7 @@ GitHub CI
 
 ## 6. Phase 9（F9）：Project-Oriented Multi-Agent Roadmap Runtime
 
-**阶段目标：** 让 Navo 能把一个长期 Goal 作为 Project 持续管理：Main Agent 维护可视化 Roadmap，多个隔离 Node Agent 分别推进节点；Node 的报告、阻塞和资产回到 Main Agent 协调；Main 可以安全修改 Roadmap并为后续 Node 准备输入，但每个 Node 的真实执行仍由 Human 明确启动。
+**阶段目标：** 让 Navo 能把一个长期 Goal 作为 Project 持续管理：Main Agent 维护可视化 Roadmap，多个隔离 Node Agent 分别推进节点；Node 的报告、阻塞和资产回到 Main Agent 协调；Main 可以安全修改 Roadmap 并为后续 Node 准备输入，但每个 Node 的真实执行仍由 Human 明确启动。
 
 **阶段验收场景：** 创建 Project 与 Goal；Main Agent 形成多 Node Roadmap；Human 启动 Node A，Node A 完成网络调研并注册 Project Asset、向 Main 报告结果；Main 将 Asset Reference 分配给 Node B；Node B 具备执行条件但不自动运行；Human 明确启动 Node B 后继续工作；若 Node 在工作中遇到阻塞或收到 Roadmap 修改要求，只能向 Main 报告 / escalation，不能直接联系其他 Node 或自行修改 Project Roadmap。
 
@@ -208,7 +208,7 @@ Project
 | ⬜ | F9.6c Node -> Main Reporting 与 Escalation | Node Agent 协作能力 | 让 Node 以受限工具报告 result、blocker、coordination_request、planning_request，并可附加 Project Asset 引用 | sender / Project / Node 身份来自可信 Binding；Node 不直接指定并联系其他 Node；planning_request 不赋予 Node Roadmap mutation 权限；result 不自动完成 Node |
 | ⬜ | F9.6d Main -> Node Directive 与 Asset Assignment | Main Agent 协调能力 | 让 Main 向当前 Project 的指定 Node 留下 directive，并关联必要 Asset Reference，供 Node 后续人工启动的 Turn 使用 | 目标 Node 与 Asset 都必须属于当前 Project；Main 不能通过该能力递归运行 Node；Node 仅在后续 Human 启动后消费输入 |
 | ⬜ | F9.6e Communication Integration 与 Human Gate | F9.6 集成验收 | 用“Node A 调研 -> Asset -> Main -> Node B”的完整链路验证 Mailbox、资产交接、planning escalation 与人工启动边界 | Node B 在收到 directive / Asset 后保持未执行；Human 启动后才产生 Turn；Node A 无法直接联系 Node B；Roadmap 修改请求只能升级到 Main |
-| ⬜ | F9.7 Human-Controlled ProjectRuntime | Project 执行生命周期 | 让 Project 根据当前 Roadmap、Human 操作和 Main 协调结果维护 ready / running / paused / recovered 执行状态，同时继续复用单一 AgentRuntime | 依赖满足、消息或 Asset 到位都不自动启动 Node；每个 Node Turn 由 Human 明确启动；同一 Node 无隐式并发 Turn；取消、失败和恢复不产生递归 Agent 调用或悬挂任务 |
+| ⬜ | F9.7 Human-Controlled ProjectRuntime | Project 执行生命周期 | 让 Project 根据当前 Roadmap、Human 操作和 Main 协调结果判断 Node 是否具备执行条件、是否正在执行以及是否等待人工动作，同时继续复用单一 AgentRuntime | 依赖满足、消息或 Asset 到位都不自动启动 Node；每个 Node Turn 由 Human 明确启动；不新增与 locked/idle/working/completing/skipped 平行的第二套 Node 状态机；同一 Node 无隐式并发 Turn；取消、失败和恢复不产生递归 Agent 调用或悬挂任务 |
 | ⬜ | F9.8 长程 Core 集成验收 | 后端集成测试与阶段记录 | 用一个完整 Human-in-the-loop 长程场景证明 Project、Roadmap、Main Agent、多个 Node Agent、资产交接、阻塞协调和 Roadmap Mutation 可以共同工作 | Goal -> Roadmap -> Human start -> Node report / Asset -> Main 协调 -> Human start next Node -> Mutation -> 继续执行的完整链路可重复验证 |
 | ⏸️ | F9.9 Public Project / Roadmap Contract Handoff | Host / RPC / 桌面共享控制面 | 在 Core 稳定后，为桌面端提供 Project / Roadmap / Mailbox / Asset 的必要只读状态和 Human 操作入口 | 开始此 Step 前必须停止修改并向用户报告；前后端共同确认版本、人工 Gate、消息 / 资产引用、取消与兼容语义后才能修改共享契约 |
 
@@ -254,7 +254,7 @@ F9.1 与 F9.2 已完成，记录见 [55：Project 与通用 Node 领域](55-devl
 
 F9.3.1 的结构规则沿用 [57：路线结构与关系表达](57-devlog-roadmap-graph.md) 并按 [63：F9.3 修复方案](63-devlog-node-state-review.md) 收敛；状态、路线变更、历史重建和地图查询修复见 [64：F9.3 状态模型修复](64-devlog-node-state-repair.md)。F9.4 已建立 Main / Node 的可信 Session Binding 与 Profile 边界；F9.5 已完成 Main Agent Roadmap 规划工具闭环。
 
-Node 当前状态约定：新建 locked，解锁后 idle，实际执行时 working，回合结束回到 idle；人工可将 idle 确认为 completing，或将 locked/idle 确认为 skipped；两种终态均满足后续依赖。RoadmapStore 在同一批 Node 事件中追加 node-unlocked，手动 unlock 不能绕过必选祖先；没有路线的独立 Node 仍可使用 NodeStore 原有生命周期。F9.6 / F9.7 继续遵守 Human Gate：Node 即使 ready，也必须由用户明确启动 Turn。
+Node 当前状态约定：新建 locked，解锁后 idle，实际执行时 working，回合结束回到 idle；人工可将 idle 确认为 completing，或将 locked/idle 确认为 skipped；两种终态均满足后续依赖。RoadmapStore 在同一批 Node 事件中追加 node-unlocked，手动 unlock 不能绕过必选祖先；没有路线的独立 Node 仍可使用 NodeStore 原有生命周期。F9.6 / F9.7 继续遵守 Human Gate：Node 即使具备执行条件，也必须由用户明确启动 Turn。
 
 ## 10. 后端维护记录：桌面工具可用性排查（2026-09-14）
 
