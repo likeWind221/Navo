@@ -45,7 +45,8 @@ describe("Project Workspace foundation", () => {
 
     expect(repeated).toEqual(firstWorkspace);
     expect(firstWorkspace.root).not.toBe(secondWorkspace.root);
-    const canonicalRoot = await realpath(root);\n    expect(firstWorkspace.root.startsWith(join(canonicalRoot, "projects"))).toBe(true);
+    const canonicalRoot = await realpath(root);
+    expect(firstWorkspace.root.startsWith(join(canonicalRoot, "projects"))).toBe(true);
     expect((await stat(firstWorkspace.assetsRoot)).isDirectory()).toBe(true);
     expect((await stat(firstWorkspace.nodesRoot)).isDirectory()).toBe(true);
     expect(await ctx.projectWorkspaces.get(first.id)).toEqual(firstWorkspace);
