@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -45,7 +45,7 @@ describe("Project Workspace foundation", () => {
 
     expect(repeated).toEqual(firstWorkspace);
     expect(firstWorkspace.root).not.toBe(secondWorkspace.root);
-    expect(firstWorkspace.root.startsWith(join(root, "projects"))).toBe(true);
+    const canonicalRoot = await realpath(root);\n    expect(firstWorkspace.root.startsWith(join(canonicalRoot, "projects"))).toBe(true);
     expect((await stat(firstWorkspace.assetsRoot)).isDirectory()).toBe(true);
     expect((await stat(firstWorkspace.nodesRoot)).isDirectory()).toBe(true);
     expect(await ctx.projectWorkspaces.get(first.id)).toEqual(firstWorkspace);
