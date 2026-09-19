@@ -215,14 +215,14 @@ Project
 | ✅ | F9.5 Main Agent Planning 与 Roadmap Mutation | Main Agent / Roadmap | 让 Main Agent 能基于 Goal 和项目现状读取、创建和修改 Roadmap，并由确定性边界决定方案能否成为新的项目事实 | `read_roadmap`、`read_node`、`write_roadmap`、`modify_roadmap` 完成；陈旧版本、非法关系和跨 Project 访问被拒绝；Main 不拥有 Human completion / skip 权限 |
 | 🔄 | F9.6 Project Workspace 与 Resource Handoff | Project 消息、工作空间、资源与跨 Node 协调 | 建立每 Project 独立 Workspace，把 Node 产物注册为可追溯 Resource，并通过 Main 完成跨 Node 资源交接，同时保持 Node 隔离和 Human 执行 Gate | Workspace 隔离成立；Resource 来源可追溯且通过引用交接；不存在 Node-to-Node 通道；任何 handoff 都不自动启动 Node |
 | ✅ | F9.6a Project Mailbox Domain | Project 消息领域 | 建立可重放的 ProjectMessage / Mailbox history，并在领域层限制合法路由为 Node->Main 与 Main->Node | `postFromNode` / `postFromMain` 已形成方向明确的写入边界；Project / work Node 归属、历史连续性和合法路由可验证；跨 Project、control Node、Node-to-Node replay 被拒绝；append message 不依赖或触发 AgentRuntime |
-| ⬜ | F9.6b Project Workspace Foundation | Project 文件工作空间 | 为每个 Project 建立独立 Workspace 根目录与安全路径解析，作为 Node 文件和后续 Resource 的物理承载层 | 不同 Project Workspace 互相隔离；资源路径以 Project 内相对引用表达；路径逃逸被拒绝；不引入数据库、Registry 或 Agent Tool |
+| ✅ | F9.6b Project Workspace Foundation | Project 文件工作空间 | 为每个 Project 建立独立 Workspace 根目录与安全路径解析，作为 Node 文件和后续 Resource 的物理承载层 | 不同 Project Workspace 互相隔离；资源路径以 Project 内相对引用表达；路径逃逸被拒绝；不引入数据库、Registry 或 Agent Tool |
 | ⬜ | F9.6c Project Resource Registry | Project 资源领域 | 为 Workspace 中的重要产物建立内存 Resource Registry，记录稳定 ID、来源、描述和资源引用，不复制实际内容 | Resource 可 create/get/list by Project；来源 Node 必须属于当前 Project；跨 Project 引用被拒绝；Registry 在 F9 只驻内存，F10 再统一持久化 |
 | ⬜ | F9.6d Node Reporting 与 Resource Capability | Node Agent 协作能力 | 让 Node 通过可信 Binding 注册 Resource、按需读取当前可见 Resource，并向 Main 报告 result、blocker、coordination_request、planning_request | projectId / sourceNodeId 来自 Session Binding 而非模型参数；Node 不能读取未分配或跨 Project Resource；report 不直接联系其他 Node，也不自动完成 Node |
 | ⬜ | F9.6e Main Resource Handoff 与 Node Resource Context | Main Agent 协调 / Node 启动上下文 | Main 通过 Resource Reference 把资源提供给指定 Node；Node 后续 Turn 启动时持续看到可用 Resource metadata，需要内容时按需读取 | 不新增 Directive 事实源；任务变化继续使用 `modify_roadmap`；Node 上下文只注入 Resource ID / title / description 等元数据，不默认注入完整内容；当前阶段不实现动态 reload 或 RAG |
 | ⬜ | F9.6f Integration 与 Human Gate | F9.6 集成验收 | 用“Node A 产出文件 -> register Resource -> report Main -> Main handoff -> Human start Node B -> Node B 使用 Resource”的完整链路验证 | Node B 在 Resource 到位后保持未执行；Human 启动后才产生 Turn；Node A 无法直接联系 Node B；Roadmap 修改请求只能升级到 Main；完整链路不依赖自动 Scheduler |
-| ⬜ | F9.7 Human-Controlled ProjectRuntime | Project 执行生命周期 | 让 Project 根据当前 Roadmap、Human 操作和 Main 协调结果判断 Node 是否具备执行条件、是否正在执行以及是否等待人工动作，同时继续复用单一 AgentRuntime | 依赖满足、消息或 Asset 到位都不自动启动 Node；每个 Node Turn 由 Human 明确启动；不新增与 locked/idle/working/completing/skipped 平行的第二套 Node 状态机；同一 Node 无隐式并发 Turn；取消、失败和恢复不产生递归 Agent 调用或悬挂任务 |
-| ⬜ | F9.8 长程 Core 集成验收 | 后端集成测试与阶段记录 | 用一个完整 Human-in-the-loop 长程场景证明 Project、Roadmap、Main Agent、多个 Node Agent、资产交接、阻塞协调和 Roadmap Mutation 可以共同工作 | Goal -> Roadmap -> Human start -> Node report / Asset -> Main 协调 -> Human start next Node -> Mutation -> 继续执行的完整链路可重复验证 |
-| ⏸️ | F9.9 Public Project / Roadmap Contract Handoff | Host / RPC / 桌面共享控制面 | 在 Core 稳定后，为桌面端提供 Project / Roadmap / Mailbox / Asset 的必要只读状态和 Human 操作入口 | 开始此 Step 前必须停止修改并向用户报告；前后端共同确认版本、人工 Gate、消息 / 资产引用、取消与兼容语义后才能修改共享契约 |
+| ⬜ | F9.7 Human-Controlled ProjectRuntime | Project 执行生命周期 | 让 Project 根据当前 Roadmap、Human 操作和 Main 协调结果判断 Node 是否具备执行条件、是否正在执行以及是否等待人工动作，同时继续复用单一 AgentRuntime | 依赖满足、消息或 Resource 到位都不自动启动 Node；每个 Node Turn 由 Human 明确启动；不新增与 locked/idle/working/completing/skipped 平行的第二套 Node 状态机；同一 Node 无隐式并发 Turn；取消、失败和恢复不产生递归 Agent 调用或悬挂任务 |
+| ⬜ | F9.8 长程 Core 集成验收 | 后端集成测试与阶段记录 | 用一个完整 Human-in-the-loop 长程场景证明 Project、Roadmap、Main Agent、多个 Node Agent、资产交接、阻塞协调和 Roadmap Mutation 可以共同工作 | Goal -> Roadmap -> Human start -> Node report / Resource -> Main 协调 -> Human start next Node -> Mutation -> 继续执行的完整链路可重复验证 |
+| ⏸️ | F9.9 Public Project / Roadmap Contract Handoff | Host / RPC / 桌面共享控制面 | 在 Core 稳定后，为桌面端提供 Project / Roadmap / Mailbox / Asset 的必要只读状态和 Human 操作入口 | 开始此 Step 前必须停止修改并向用户报告；前后端共同确认版本、人工 Gate、消息 / Resource 引用、取消与兼容语义后才能修改共享契约 |
 
 ## 7. Phase 9 关键边界
 
@@ -240,7 +240,7 @@ Phase 9 明确不做：
 - 不在 Phase 9 完整实现 Evidence、Verifier、评分器或“任务真的完成”的最终判定；
 - F9.6 不加入 RAG、向量检索、动态 Skill / Tool / Resource reload、Claim-Evidence Graph 或长期 Research Memory；
 - 不在 F9.9 之前改动 Host / RPC / 前端共享 Project 协议；
-- Phase 9 不加入数据库或自动落盘；本阶段所说的恢复只指给定历史后的内存重建，不是进程重启恢复；
+- Phase 9 不为 Project / Node / Roadmap / Mailbox / Resource Registry 元数据加入数据库持久化；Project Workspace 从 F9.6b 起承载真实文件，本阶段所说的领域状态恢复仍只指给定历史后的内存重建，不是进程重启恢复；
 - F9.6 只借鉴显式 Message / Artifact 的 A2A 思想，不实现标准 A2A 的 Agent Card、网络发现或跨服务 Transport。
 
 ## 8. 后续阶段
@@ -262,7 +262,9 @@ F9.6 现重新定义为 **Project Workspace 与 Resource Handoff**。设计见 [
 
 F9.6a 已完成：`MailboxStore` 已建立 Project 级 append-only message history，正常写入暴露 `postFromNode` / `postFromMain` 两个方向明确的入口；跨 Project、control Node、非法 replay route 和不连续历史会被拒绝，且 Mailbox 不依赖 AgentRuntime。后续产品链路主要使用 Node -> Main report；不再新增 Directive 作为第二套任务事实源，Main 对 Node 任务的调整继续使用 Roadmap mutation。
 
-**当前下一步唯一指向 F9.6b Project Workspace Foundation。** 该 Step 只建立每 Project 独立 Workspace、目录生命周期与安全相对路径解析；不建立 Resource Registry，不接 Agent Tool，不做 Context Builder、动态 reload 或 RAG。F9.6c 再建立内存 Resource Registry，F9.6d/e 再分别接入 Node 能力与 Main handoff / Node resource metadata 上下文。
+F9.6b 已完成：新增独立的 Project Workspace 领域层，在显式可信根目录下按 Project 创建隔离物理空间，并预留 `assets/` 与 `nodes/`；Project-relative ref 使用跨平台相对路径表达，解析时同时拒绝绝对路径、dot/parent segment、反斜杠形式和经真实路径 / symlink 产生的边界逃逸。Project ID 不直接作为目录名，而映射为稳定安全目录键；Workspace 可 create/get/resolve/cleanup。该能力只在 `NavoApp` 收到显式 Workspace root 时挂载，F9.6b 没有修改 Host / RPC / frontend，也没有创建 Resource Registry 或 Agent Tool。实现与验收见 [73：F9.6b Project Workspace Foundation](73-devlog-f9.6b-project-workspace.md)。
+
+**当前下一步唯一指向 F9.6c Project Resource Registry。** 下一步只为 Workspace 中的重要产物建立内存 Resource 身份、来源与相对 ref，不提前接入 Node Agent tool、Main handoff、Context Builder、动态 reload 或 RAG。
 
 F9.1 与 F9.2 已完成，记录见 [55：Project 与通用 Node 领域](55-devlog-project-node-domain.md)。整个 Phase 9 的 Project / Roadmap / Mailbox / Resource Registry 元数据继续保持内存状态；Project Workspace 从 F9.6b 开始作为实际文件承载层存在。F10 再统一实施项目状态与 Registry 元数据的数据库持久化、启动恢复和中断处理。调研与拆分方案见 [56：内存与持久化阶段划分](56-devlog-persistence-plan.md)。
 

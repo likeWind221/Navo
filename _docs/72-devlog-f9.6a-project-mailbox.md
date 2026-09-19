@@ -144,10 +144,11 @@ Project
 但还没有：
 
 ```text
-Project Asset Registry    <- F9.6b
-Node report_to_main       <- F9.6c
-Main directive / assign   <- F9.6d
-Communication integration <- F9.6e
+Project Workspace        <- F9.6b
+Resource Registry         <- F9.6c
+Node report / resource    <- F9.6d
+Main resource handoff     <- F9.6e
+Integration / Human Gate  <- F9.6f
 ```
 
-**下一步是 F9.6b Project Asset Registry 与 Artifact Handoff。**
+**F9.6a 完成后的下一步后来按 2026-09-19 的 F9.6 重规划收敛为 F9.6b Project Workspace Foundation；当前权威拆分以 `71` 与 `backend-plan.md` 为准。**

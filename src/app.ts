@@ -14,11 +14,14 @@ import { RoadmapStore } from "./roadmap/store.js";
 import { RoadmapToolsPlugin } from "./tools/builtins/roadmap/plugin.js";
 import type { ToolsPluginConfig } from "./tools/plugin.js";
 import { ToolsPlugin } from "./tools/plugin.js";
+import type { ProjectWorkspaceConfig } from "./workspace/store.js";
+import { ProjectWorkspaceStore } from "./workspace/store.js";
 
 export interface NavoAppConfig {
   readonly runtime?: Partial<AgentRuntimeLimits>;
   readonly tools?: ToolsPluginConfig;
   readonly node: NodePluginConfig;
+  readonly workspace?: ProjectWorkspaceConfig;
 }
 
 export async function NavoApp(
@@ -35,6 +38,9 @@ export async function NavoApp(
   await ctx.plugin(CommandService);
   await ctx.plugin(NodePlugin, config.node);
   await ctx.plugin(MailboxStore);
+  if (config.workspace !== undefined) {
+    await ctx.plugin(ProjectWorkspaceStore, config.workspace);
+  }
   await ctx.plugin(MainSessionService, { model: config.node.session.model });
   await ctx.plugin(RoadmapStore);
   await ctx.plugin(RoadmapToolsPlugin);
