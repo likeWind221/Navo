@@ -45,6 +45,10 @@ export class ResourceStore extends Service {
       );
     }
 
+    // Filesystem resolution is asynchronous. Re-check the mutable Project gate
+    // before committing the registration fact.
+    this.requireActiveProject(input.projectId);
+
     let resourceId: ResourceId;
     do resourceId = createResourceId(randomUUID());
     while (this.byId.has(resourceId));
