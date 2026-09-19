@@ -13,7 +13,7 @@ import { ProjectStore } from "./project/store.js";
 import { RoadmapStore } from "./roadmap/store.js";
 import { RoadmapToolsPlugin } from "./tools/builtins/roadmap/plugin.js";
 import type { ToolsPluginConfig } from "./tools/plugin.js";
-import { ToolsPlugin } from "./tools/plugin.js";
+import { ToolsPlugin } from "./tools/plugin.js";\nimport type { ProjectWorkspaceConfig } from "./workspace/store.js";\nimport { ProjectWorkspaceStore } from "./workspace/store.js";
 
 export interface NavoAppConfig {
   readonly runtime?: Partial<AgentRuntimeLimits>;
