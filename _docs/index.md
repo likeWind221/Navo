@@ -30,6 +30,7 @@
 - [F9.6 Project Workspace 与 Resource Handoff 设计](71-devlog-f9.6-project-communication-design.md)：F9.6 重规划后的 Workspace、Resource Registry、Node reporting 与 Main handoff 总体边界。
 - [F9.6a：Project Mailbox Domain](72-devlog-f9.6a-project-mailbox.md)：Project 级消息事实、合法 Main/Node 路由、归属校验与 replay 边界。
 - [F9.6b：Project Workspace Foundation](73-devlog-f9.6b-project-workspace.md)：每 Project 独立物理 Workspace、portable relative ref、安全路径 containment 与 symlink escape 验收。
+- [F9.6c：Project Resource Registry](74-devlog-f9.6c-project-resource-registry.md)：Project 级 Resource 身份、source Node provenance、Workspace-relative ref、原子 replay 与跨 Project 隔离。
 
 - [阶段 0：工程骨架](02-阶段-0-工程骨架开发记录.md)
 - [阶段 1：核心协议](03-devlog-phase-1-core-protocol.md)
