@@ -68,16 +68,26 @@ Node A ---> Project Mailbox ---> Main Agent ---> Project Mailbox ---> Node B
 
 Node 的报告、阻塞、协调请求和 Project 级 Planning Request 应先成为 Project 可记录事实，再由 Main Agent 后续处理；不在一次工具调用中递归同步触发另一 Agent，以避免隐藏调用链和循环协调。
 
-### Project Asset 是跨 Node 复用产物的一级事实
+### Project Workspace 与 Resource Registry 承载跨 Node 产物
 
-Node 在工作中产生的调研报告、文件、结构化数据和其他后续可复用产物，不通过复制聊天内容在 Agent Session 之间传递，而注册为 Project Asset / Artifact Reference。Asset 保留来源 Node、来源版本和资源引用；Main 负责按引用将必要资产分配给后续 Node。
+每个 Project 拥有独立 Workspace，Node 产生的文件和后续可复用产物首先落在当前 Project 的工作空间内。Resource Registry 不复制文件内容，而为重要产物保存稳定 Resource ID、来源 Node、描述和相对 Workspace 引用。
 
 ```text
-Node A ---> Project Asset Registry <--- Main ---> Node B
-             source + reference
+Project
+  |
+  +--> Workspace
+  |      +--> assets/
+  |      +--> nodes/
+  |
+  +--> Resource Registry (F9: in-memory)
+             |
+             +--> resource_id
+             +--> source_node_id
+             +--> description
+             +--> relative reference
 ```
 
-Asset 到位只代表后续 Node 具备输入条件，不会自动启动 Node。
+Main 负责决定哪些 Resource Reference 对后续 Node 可见。Node 启动时只需要持续知道可用资源的元数据，真正内容按需读取；Resource 到位仍不会自动启动 Node。通用 Context Builder、动态 reload 与 RAG 不在 F9.6 实现。
 
 ### Human 是 Node 执行的最终 Gate
 
@@ -165,9 +175,9 @@ GitHub CI
 
 ## 6. Phase 9（F9）：Project-Oriented Multi-Agent Roadmap Runtime
 
-**阶段目标：** 让 Navo 能把一个长期 Goal 作为 Project 持续管理：Main Agent 维护可视化 Roadmap，多个隔离 Node Agent 分别推进节点；Node 的报告、阻塞和资产回到 Main Agent 协调；Main 可以安全修改 Roadmap 并为后续 Node 准备输入，但每个 Node 的真实执行仍由 Human 明确启动。
+**阶段目标：** 让 Navo 能把一个长期 Goal 作为 Project 持续管理：Main Agent 维护可视化 Roadmap，多个隔离 Node Agent 分别推进节点；每个 Project 拥有独立 Workspace，Node 的报告、阻塞和 Resource 回到 Project / Main 协调；Main 可以安全修改 Roadmap 并为后续 Node 准备可发现资源，但每个 Node 的真实执行仍由 Human 明确启动。
 
-**阶段验收场景：** 创建 Project 与 Goal；Main Agent 形成多 Node Roadmap；Human 启动 Node A，Node A 完成网络调研并注册 Project Asset、向 Main 报告结果；Main 将 Asset Reference 分配给 Node B；Node B 具备执行条件但不自动运行；Human 明确启动 Node B 后继续工作；若 Node 在工作中遇到阻塞或收到 Roadmap 修改要求，只能向 Main 报告 / escalation，不能直接联系其他 Node 或自行修改 Project Roadmap。
+**阶段验收场景：** 创建 Project 与 Goal；Main Agent 形成多 Node Roadmap；Human 启动 Node A，Node A 在当前 Project Workspace 中生成调研产物、注册 Resource 并向 Main 报告结果；Main 将该 Resource Reference 提供给 Node B；Node B 后续启动时能够持续看到资源元数据并按需读取内容，但不会因为 Resource 到位自动运行；若 Node 在工作中遇到阻塞或 Roadmap 修改要求，只能向 Main 报告 / escalation，不能直接联系其他 Node 或自行修改 Project Roadmap。
 
 ```text
 Project
@@ -180,8 +190,9 @@ Project
   |                  v                               |
   |             AgentRuntime                         |
   |                                                  |
-  +--> Project Mailbox <---- reports / directives ---+
-  +--> Project Assets  <---- refs / assignments -----+
+  +--> Project Mailbox <--------- Node reports -------+
+  +--> Project Workspace <------- actual files --------+
+  +--> Resource Registry <------- metadata / refs -----+
   |
   +--> Node A --------X--------> Node B
   |     Node Profile             Node Profile
@@ -202,12 +213,13 @@ Project
 | ✅ | F9.3.3 节点地图查询 | Roadmap 查询与领域集成 | 让调用方直接获取节点属性、已提交状态和依赖边以重建地图 | 无 Board 或成员状态；查询不修改节点；数据包含节点与路线版本，前端可据此重建地图 |
 | ✅ | F9.4 Agent Profile 与 Binding | Project / Node Agent 角色边界 | 让 Main Agent 与 Node Agent 在同一 AgentRuntime 上获得不同角色、上下文和能力，同时由可信作用域约束实际可访问资源 | Main / Node 不新增独立 Runtime；Profile 不是唯一安全边界；Node 无法通过伪造输入访问其他 Node 或 Project 管理能力 |
 | ✅ | F9.5 Main Agent Planning 与 Roadmap Mutation | Main Agent / Roadmap | 让 Main Agent 能基于 Goal 和项目现状读取、创建和修改 Roadmap，并由确定性边界决定方案能否成为新的项目事实 | `read_roadmap`、`read_node`、`write_roadmap`、`modify_roadmap` 完成；陈旧版本、非法关系和跨 Project 访问被拒绝；Main 不拥有 Human completion / skip 权限 |
-| 🔄 | F9.6 Project Communication 与 Artifact Handoff | Project 消息、资产与跨 Node 协调 | 让 Node 把结果、阻塞、资产和 Project 级请求交回 Main，让 Main 按显式事实协调后续 Node，同时保持 Node 隔离和 Human 执行 Gate | 消息与资产来源可追溯；不存在 Node-to-Node 通道；Asset 通过引用交接；任何 handoff 都不自动启动 Node |
-| ✅ | F9.6a Project Mailbox Domain | Project 消息领域 | 建立可重放的 ProjectMessage / Mailbox history，并在领域层限制合法路由为 Node->Main 与 Main->Node | `postFromNode` / `postFromMain` 已形成单向写入边界；Project / work Node 归属、历史连续性和合法路由可验证；跨 Project、control Node、Node-to-Node replay 被拒绝；append message 不依赖或触发 AgentRuntime |
-| ⬜ | F9.6b Project Asset Registry 与 Artifact Handoff | Project 资产领域 | 把 Node 产物注册为带来源的 Project Asset Reference，并允许 Main 为当前 Project Node 分配资产引用 | Asset 有稳定 ID、来源 Node / version 和资源引用；跨 Project 引用被拒绝；资产内容不经 Main Session 复制；分配不启动 Node |
-| ⬜ | F9.6c Node -> Main Reporting 与 Escalation | Node Agent 协作能力 | 让 Node 以受限工具报告 result、blocker、coordination_request、planning_request，并可附加 Project Asset 引用 | sender / Project / Node 身份来自可信 Binding；Node 不直接指定并联系其他 Node；planning_request 不赋予 Node Roadmap mutation 权限；result 不自动完成 Node |
-| ⬜ | F9.6d Main -> Node Directive 与 Asset Assignment | Main Agent 协调能力 | 让 Main 向当前 Project 的指定 Node 留下 directive，并关联必要 Asset Reference，供 Node 后续人工启动的 Turn 使用 | 目标 Node 与 Asset 都必须属于当前 Project；Main 不能通过该能力递归运行 Node；Node 仅在后续 Human 启动后消费输入 |
-| ⬜ | F9.6e Communication Integration 与 Human Gate | F9.6 集成验收 | 用“Node A 调研 -> Asset -> Main -> Node B”的完整链路验证 Mailbox、资产交接、planning escalation 与人工启动边界 | Node B 在收到 directive / Asset 后保持未执行；Human 启动后才产生 Turn；Node A 无法直接联系 Node B；Roadmap 修改请求只能升级到 Main |
+| 🔄 | F9.6 Project Workspace 与 Resource Handoff | Project 消息、工作空间、资源与跨 Node 协调 | 建立每 Project 独立 Workspace，把 Node 产物注册为可追溯 Resource，并通过 Main 完成跨 Node 资源交接，同时保持 Node 隔离和 Human 执行 Gate | Workspace 隔离成立；Resource 来源可追溯且通过引用交接；不存在 Node-to-Node 通道；任何 handoff 都不自动启动 Node |
+| ✅ | F9.6a Project Mailbox Domain | Project 消息领域 | 建立可重放的 ProjectMessage / Mailbox history，并在领域层限制合法路由为 Node->Main 与 Main->Node | `postFromNode` / `postFromMain` 已形成方向明确的写入边界；Project / work Node 归属、历史连续性和合法路由可验证；跨 Project、control Node、Node-to-Node replay 被拒绝；append message 不依赖或触发 AgentRuntime |
+| ⬜ | F9.6b Project Workspace Foundation | Project 文件工作空间 | 为每个 Project 建立独立 Workspace 根目录与安全路径解析，作为 Node 文件和后续 Resource 的物理承载层 | 不同 Project Workspace 互相隔离；资源路径以 Project 内相对引用表达；路径逃逸被拒绝；不引入数据库、Registry 或 Agent Tool |
+| ⬜ | F9.6c Project Resource Registry | Project 资源领域 | 为 Workspace 中的重要产物建立内存 Resource Registry，记录稳定 ID、来源、描述和资源引用，不复制实际内容 | Resource 可 create/get/list by Project；来源 Node 必须属于当前 Project；跨 Project 引用被拒绝；Registry 在 F9 只驻内存，F10 再统一持久化 |
+| ⬜ | F9.6d Node Reporting 与 Resource Capability | Node Agent 协作能力 | 让 Node 通过可信 Binding 注册 Resource、按需读取当前可见 Resource，并向 Main 报告 result、blocker、coordination_request、planning_request | projectId / sourceNodeId 来自 Session Binding 而非模型参数；Node 不能读取未分配或跨 Project Resource；report 不直接联系其他 Node，也不自动完成 Node |
+| ⬜ | F9.6e Main Resource Handoff 与 Node Resource Context | Main Agent 协调 / Node 启动上下文 | Main 通过 Resource Reference 把资源提供给指定 Node；Node 后续 Turn 启动时持续看到可用 Resource metadata，需要内容时按需读取 | 不新增 Directive 事实源；任务变化继续使用 `modify_roadmap`；Node 上下文只注入 Resource ID / title / description 等元数据，不默认注入完整内容；当前阶段不实现动态 reload 或 RAG |
+| ⬜ | F9.6f Integration 与 Human Gate | F9.6 集成验收 | 用“Node A 产出文件 -> register Resource -> report Main -> Main handoff -> Human start Node B -> Node B 使用 Resource”的完整链路验证 | Node B 在 Resource 到位后保持未执行；Human 启动后才产生 Turn；Node A 无法直接联系 Node B；Roadmap 修改请求只能升级到 Main；完整链路不依赖自动 Scheduler |
 | ⬜ | F9.7 Human-Controlled ProjectRuntime | Project 执行生命周期 | 让 Project 根据当前 Roadmap、Human 操作和 Main 协调结果判断 Node 是否具备执行条件、是否正在执行以及是否等待人工动作，同时继续复用单一 AgentRuntime | 依赖满足、消息或 Asset 到位都不自动启动 Node；每个 Node Turn 由 Human 明确启动；不新增与 locked/idle/working/completing/skipped 平行的第二套 Node 状态机；同一 Node 无隐式并发 Turn；取消、失败和恢复不产生递归 Agent 调用或悬挂任务 |
 | ⬜ | F9.8 长程 Core 集成验收 | 后端集成测试与阶段记录 | 用一个完整 Human-in-the-loop 长程场景证明 Project、Roadmap、Main Agent、多个 Node Agent、资产交接、阻塞协调和 Roadmap Mutation 可以共同工作 | Goal -> Roadmap -> Human start -> Node report / Asset -> Main 协调 -> Human start next Node -> Mutation -> 继续执行的完整链路可重复验证 |
 | ⏸️ | F9.9 Public Project / Roadmap Contract Handoff | Host / RPC / 桌面共享控制面 | 在 Core 稳定后，为桌面端提供 Project / Roadmap / Mailbox / Asset 的必要只读状态和 Human 操作入口 | 开始此 Step 前必须停止修改并向用户报告；前后端共同确认版本、人工 Gate、消息 / 资产引用、取消与兼容语义后才能修改共享契约 |
@@ -221,12 +233,12 @@ Phase 9 明确不做：
 - 不把 Roadmap 仅保存在 Main Agent Session、Prompt 或一次 LLM 输出里；
 - 不允许 Node Agent 直接读取、调用或向另一个 Node Agent 发消息；
 - Node 默认不读取完整 Roadmap，也不拥有 `modify_roadmap`；
-- 不让依赖满足、收到消息、directive 或 Project Asset 自动触发 Node Agent Turn；
+- 不让依赖满足、收到消息或 Resource 到位自动触发 Node Agent Turn；
 - 不让 Node 的 `result` 报告自动改变为人工确认后的终态；
 - 不在消息工具调用中递归同步启动 Main 或另一个 Node；
 - 不让 LLM 直接提交未经验证的 Roadmap 最终状态；
 - 不在 Phase 9 完整实现 Evidence、Verifier、评分器或“任务真的完成”的最终判定；
-- 不加入 Research 专属 RAG、Claim-Evidence Graph、论文库、LaTeX 或长期 Research Memory；
+- F9.6 不加入 RAG、向量检索、动态 Skill / Tool / Resource reload、Claim-Evidence Graph 或长期 Research Memory；
 - 不在 F9.9 之前改动 Host / RPC / 前端共享 Project 协议；
 - Phase 9 不加入数据库或自动落盘；本阶段所说的恢复只指给定历史后的内存重建，不是进程重启恢复；
 - F9.6 只借鉴显式 Message / Artifact 的 A2A 思想，不实现标准 A2A 的 Agent Card、网络发现或跨服务 Transport。
@@ -235,7 +247,7 @@ Phase 9 明确不做：
 
 | Phase | 核心问题 | 目标产物 |
 |---|---|---|
-| Phase 10（F10） | 应用退出后如何保留并恢复项目与执行上下文？ | Project、Node、Roadmap、Session、Mailbox、Project Asset 和工具记录的数据库持久化、启动恢复与中断处理 |
+| Phase 10（F10） | 应用退出后如何保留并恢复项目与执行上下文？ | Project、Node、Roadmap、Session、Mailbox、Resource Registry 元数据和工具记录的数据库持久化、启动恢复与中断处理；Project Workspace 继续承载实际文件 |
 | 后续待排期 | 系统如何判断节点和项目真的完成？ | 保留 Evidence + Verification 目标，在 F10 持久化之后、Research 完整闭环验收之前安排 |
 | Phase 11 | Research Workspace 如何使用通用 Core？ | Research Agent Profile、Claim / Evidence、RAG 与研究领域适配 |
 | Phase 12 | 系统如何与研究者长期共同演进？ | Research Memory、长期反馈与 Human-AI Co-evolution |
@@ -246,13 +258,13 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Pha
 
 F9.5 已完成并收口：Main Agent 通过 `read_roadmap`、`read_node`、`write_roadmap`、`modify_roadmap` 建立完整规划闭环，Roadmap / Node version 与可信 Binding 继续作为确定性授权边界；F9.5 收尾见 [70：F9.5 closeout](70-devlog-f9.5-closeout.md)。
 
-F9.6 重新定义为 **Project Communication 与 Artifact Handoff**。设计见 [71：F9.6 Project Communication 与 Artifact Handoff](71-devlog-f9.6-project-communication-design.md)。核心约束是：Main 是唯一跨 Node 协调者；Node 默认只拥有局部上下文；Node 产物注册为 Project Asset Reference；Node 中出现 Roadmap 修改要求时只能升级为 `planning_request` 或由用户前往 Main 讨论；任何消息、资产分配和依赖满足都不能自动启动另一个 Node。
+F9.6 现重新定义为 **Project Workspace 与 Resource Handoff**。设计见 [71：F9.6 Project Workspace 与 Resource Handoff](71-devlog-f9.6-project-communication-design.md)。核心约束是：Main 是唯一跨 Node 协调者；每个 Project 拥有独立 Workspace；重要产物通过 Resource Registry 获得稳定身份与描述；Node 只看到 Main 为其提供的 Resource metadata，需要时再读取内容；任何消息、Resource 到位和依赖满足都不能自动启动另一个 Node。
 
-F9.6a 已完成：`MailboxStore` 已建立 Project 级 append-only message history，正常写入只暴露 `postFromNode` / `postFromMain` 两个方向明确的入口；跨 Project、control Node、非法 replay route 和不连续历史会被拒绝，且 Mailbox 不依赖 AgentRuntime。实现记录见 [72：F9.6a Project Mailbox Domain](72-devlog-f9.6a-project-mailbox.md)。可信 Session -> Node/Main 身份派生仍按计划留到 F9.6c / F9.6d。
+F9.6a 已完成：`MailboxStore` 已建立 Project 级 append-only message history，正常写入暴露 `postFromNode` / `postFromMain` 两个方向明确的入口；跨 Project、control Node、非法 replay route 和不连续历史会被拒绝，且 Mailbox 不依赖 AgentRuntime。后续产品链路主要使用 Node -> Main report；不再新增 Directive 作为第二套任务事实源，Main 对 Node 任务的调整继续使用 Roadmap mutation。
 
-**当前下一步唯一指向 F9.6b Project Asset Registry 与 Artifact Handoff。** 该 Step 只建立带来源追踪的 Project Asset Reference 与资产分配事实，不接 Agent report/directive 工具，也绝不因 Asset 到位自动启动 Node。
+**当前下一步唯一指向 F9.6b Project Workspace Foundation。** 该 Step 只建立每 Project 独立 Workspace、目录生命周期与安全相对路径解析；不建立 Resource Registry，不接 Agent Tool，不做 Context Builder、动态 reload 或 RAG。F9.6c 再建立内存 Resource Registry，F9.6d/e 再分别接入 Node 能力与 Main handoff / Node resource metadata 上下文。
 
-F9.1 与 F9.2 已完成，记录见 [55：Project 与通用 Node 领域](55-devlog-project-node-domain.md)。整个 Phase 9 先使用内存状态；F10 统一实施项目、节点、路线图、会话、消息、Project Asset 及工具记录的数据库持久化与启动恢复。调研与拆分方案见 [56：内存与持久化阶段划分](56-devlog-persistence-plan.md)。
+F9.1 与 F9.2 已完成，记录见 [55：Project 与通用 Node 领域](55-devlog-project-node-domain.md)。整个 Phase 9 的 Project / Roadmap / Mailbox / Resource Registry 元数据继续保持内存状态；Project Workspace 从 F9.6b 开始作为实际文件承载层存在。F10 再统一实施项目状态与 Registry 元数据的数据库持久化、启动恢复和中断处理。调研与拆分方案见 [56：内存与持久化阶段划分](56-devlog-persistence-plan.md)。
 
 F9.3.1 的结构规则沿用 [57：路线结构与关系表达](57-devlog-roadmap-graph.md) 并按 [63：F9.3 修复方案](63-devlog-node-state-review.md) 收敛；状态、路线变更、历史重建和地图查询修复见 [64：F9.3 状态模型修复](64-devlog-node-state-repair.md)。F9.4 已建立 Main / Node 的可信 Session Binding 与 Profile 边界；F9.5 已完成 Main Agent Roadmap 规划工具闭环。
 
