@@ -109,17 +109,25 @@ export class ResourceStore extends Service {
     this.requireProject(projectId);
 
     const localIds = new Set<ResourceId>();
+    const localEventIds = new Set<string>();
     const events: ResourceEvent[] = [];
     const resources: ProjectResource[] = [];
 
     for (let index = 0; index < history.length; index += 1) {
       const event = await this.parseEvent(projectId, history[index], index + 1);
+      if (localEventIds.has(event.id)) {
+        throw new ResourceError(
+          "invalid-history",
+          "Resource history contains a duplicate event id.",
+        );
+      }
       if (localIds.has(event.resourceId) || this.byId.has(event.resourceId)) {
         throw new ResourceError(
           "resource-already-exists",
           "Resource history contains an already-owned Resource id.",
         );
       }
+      localEventIds.add(event.id);
       localIds.add(event.resourceId);
       events.push(event);
       resources.push(this.project(event));
@@ -173,8 +181,6 @@ export class ResourceStore extends Service {
     const sourceNodeId = createNodeId(record.sourceNodeId);
     this.requireSourceNode(projectId, sourceNodeId);
     const metadata = this.validateMetadata({
-      projectId,
-      sourceNodeId,
       title: record.title,
       description: record.description,
       type: record.resourceType,
