@@ -12,7 +12,7 @@ export type TurnId = Brand<string, "TurnId">;
 export type StepId = Brand<string, "StepId">;
 export type NodeId = Brand<string, "NodeId">;
 export type ProjectId = Brand<string, "ProjectId">;
-export type ExerciseId = Brand<string, "ExerciseId">;
+export type ExerciseId = Brand<string, "ExerciseId">;\nexport type ResourceId = Brand<string, "ResourceId">;
 
 function assertIdValue(value: string, idName: string): void {
   if (value.length === 0) {
@@ -64,6 +64,6 @@ export function createExerciseId(value: string): ExerciseId {
   return makeId<ExerciseId>(value, "ExerciseId");
 }
 
-export function idToString(id: Brand<string, string>): string {
+export function createResourceId(value: string): ResourceId {\n  return makeId<ResourceId>(value, "ResourceId");\n}\n\nexport function idToString(id: Brand<string, string>): string {
   return id;
 }

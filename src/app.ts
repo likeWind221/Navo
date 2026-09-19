@@ -7,7 +7,7 @@ import { LLMService } from "./llm/service.js";
 import { MailboxStore } from "./mailbox/store.js";
 import type { NodePluginConfig } from "./node/plugin.js";
 import { NodePlugin } from "./node/plugin.js";
-import { MainSessionService } from "./project/session.js";
+import { MainSessionService } from "./project/session.js";\nimport { ResourceStore } from "./resource/store.js";
 import { SessionStore } from "./session/store.js";
 import { ProjectStore } from "./project/store.js";
 import { RoadmapStore } from "./roadmap/store.js";
@@ -39,7 +39,7 @@ export async function NavoApp(
   await ctx.plugin(NodePlugin, config.node);
   await ctx.plugin(MailboxStore);
   if (config.workspace !== undefined) {
-    await ctx.plugin(ProjectWorkspaceStore, config.workspace);
+    await ctx.plugin(ProjectWorkspaceStore, config.workspace);\n    await ctx.plugin(ResourceStore);
   }
   await ctx.plugin(MainSessionService, { model: config.node.session.model });
   await ctx.plugin(RoadmapStore);
