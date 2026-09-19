@@ -33,7 +33,7 @@ export class ProjectWorkspaceStore extends Service {
   static inject = ["projects"];
 
   private readonly configuredRoot: string;
-  private projectsRootPromise?: Promise<string>;
+  private projectsRootPromise: Promise<string> | undefined;
 
   constructor(ctx: Context, config: ProjectWorkspaceConfig) {
     super(ctx, "projectWorkspaces");
