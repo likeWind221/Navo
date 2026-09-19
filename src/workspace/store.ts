@@ -148,10 +148,19 @@ export class ProjectWorkspaceStore extends Service {
   }
 
   private async projectsRoot(): Promise<string> {
-    if (this.projectsRootPromise === undefined) {
-      this.projectsRootPromise = this.prepareProjectsRoot();
+    if (this.projectsRootPromise !== undefined) {
+      return this.projectsRootPromise;
     }
-    return this.projectsRootPromise;
+    const pending = this.prepareProjectsRoot();
+    this.projectsRootPromise = pending;
+    try {
+      return await pending;
+    } catch (error: unknown) {
+      if (this.projectsRootPromise === pending) {
+        this.projectsRootPromise = undefined;
+      }
+      throw error;
+    }
   }
 
   private async prepareProjectsRoot(): Promise<string> {
