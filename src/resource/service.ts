@@ -1,12 +1,7 @@
-import { randomUUID } from "node:crypto";
-
 import { Service } from "cordis";
 import type { Context } from "cordis";
 
-import {
-  createEventId,
-  createResourceId,
-} from "../brand/ids.js";
+import { createResourceId } from "../brand/ids.js";
 import type {
   ProjectId,
   ResourceId,
@@ -18,7 +13,7 @@ import {
 } from "./access.js";
 import { ResourceError } from "./errors.js";
 import type { ResourceEvent } from "./events.js";
-import { freezeResourceEvent } from "./events.js";
+import { createResourceEvent } from "./events.js";
 import { parseResourceHistory } from "./history.js";
 import { ResourceStore } from "./store.js";
 import type {
@@ -67,7 +62,7 @@ export class ResourceService extends Service {
     this.requireActiveProject(input.projectId);
     requireResourceWorkNode(this.ctx, input.projectId, input.sourceNodeId);
 
-    const event = this.eventHeader(
+    const event = this.event(
       input.projectId,
       resourceId,
       0,
@@ -91,7 +86,7 @@ export class ResourceService extends Service {
     const effective = effectiveResourceChanges(current, changes);
     if (Object.keys(effective).length === 0) return current;
 
-    return this.store.append(this.eventHeader(
+    return this.store.append(this.event(
       input.projectId,
       input.resourceId,
       current.revision,
@@ -108,7 +103,7 @@ export class ResourceService extends Service {
     requireResourceAccessNodes(this.ctx, input.projectId, access);
     if (sameResourceAccess(current.access, access)) return current;
 
-    return this.store.append(this.eventHeader(
+    return this.store.append(this.event(
       input.projectId,
       input.resourceId,
       current.revision,
@@ -121,7 +116,7 @@ export class ResourceService extends Service {
     this.requireActiveProject(input.projectId);
     const current = this.requireCurrent(input.projectId, input.resourceId);
     this.requireRevision(current, input.expectedRevision);
-    this.store.append(this.eventHeader(
+    this.store.append(this.event(
       input.projectId,
       input.resourceId,
       current.revision,
@@ -213,25 +208,21 @@ export class ResourceService extends Service {
     return activeResources(this.store.restore(projectId, events));
   }
 
-  private eventHeader<TType extends ResourceEvent["type"]>(
+  private event<TType extends ResourceEvent["type"]>(
     projectId: ProjectId,
     resourceId: ResourceId,
     baseRevision: number,
     type: TType,
     data: Extract<ResourceEvent, { type: TType }>["data"],
   ): Extract<ResourceEvent, { type: TType }> {
-    return freezeResourceEvent({
-      version: 2,
-      id: createEventId(randomUUID()),
+    return createResourceEvent({
       projectId,
       resourceId,
       sequence: this.store.getEvents(projectId).length + 1,
-      revision: baseRevision + 1,
       baseRevision,
-      timestamp: new Date().toISOString(),
       type,
       data,
-    } as Extract<ResourceEvent, { type: TType }>) as Extract<ResourceEvent, { type: TType }>;
+    });
   }
 
   private requireRevision(
