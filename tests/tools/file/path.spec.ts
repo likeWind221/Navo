@@ -66,6 +66,36 @@ describe("file environment path targets", () => {
     }
   });
 
+  it("optionally confines existing, missing, absolute and symlink targets to workspaceRoot", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "navo-file-boundary-"));
+    try {
+      const root = join(parent, "project");
+      const outside = join(parent, "outside");
+      await mkdir(root);
+      await mkdir(outside);
+      await writeFile(join(root, "inside.txt"), "inside", "utf8");
+      await writeFile(join(outside, "secret.txt"), "secret", "utf8");
+      const environment = await createFileEnvironment(root, root);
+
+      await expect(resolveFileTarget(environment, "inside.txt"))
+        .resolves.toMatchObject({ exists: true });
+      await expect(resolveFileTarget(environment, join(outside, "secret.txt")))
+        .rejects.toMatchObject({ code: "path-not-allowed" });
+      await expect(resolveFileTarget(environment, "../outside/new.txt"))
+        .rejects.toMatchObject({ code: "path-not-allowed" });
+
+      await symlink(
+        outside,
+        join(root, "escape"),
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      await expect(resolveFileTarget(environment, "escape/secret.txt"))
+        .rejects.toMatchObject({ code: "path-not-allowed" });
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
   it("requires an absolute existing directory and rejects invalid paths", async () => {
     await expect(createFileEnvironment("relative/workspace"))
       .rejects.toMatchObject({ code: "invalid-config" });

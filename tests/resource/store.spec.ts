@@ -10,6 +10,7 @@ import {
   createProjectId,
   createResourceId,
 } from "../../src/brand/ids.js";
+import type { ProjectId } from "../../src/brand/ids.js";
 import { NodeStore } from "../../src/node/store.js";
 import { ProjectStore } from "../../src/project/store.js";
 import { ResourceStore } from "../../src/resource/store.js";
@@ -35,23 +36,29 @@ async function fixture(): Promise<string> {
   return root;
 }
 
-async function domain(root: string): Promise<Context> {
+async function domain(): Promise<Context> {
   const ctx = new Context();
   contexts.push(ctx);
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
-  await ctx.plugin(ProjectWorkspaceStore, { root });
+  await ctx.plugin(ProjectWorkspaceStore);
   await ctx.plugin(ResourceStore);
   return ctx;
 }
 
+async function bind(ctx: Context, projectId: ProjectId, root = await fixture()): Promise<string> {
+  await ctx.projectWorkspaces.create(projectId, root);
+  return root;
+}
+
 async function makeFile(
   ctx: Context,
-  projectId: ReturnType<typeof createProjectId>,
+  projectId: ProjectId,
   ref: string,
   content = "resource\n",
 ): Promise<void> {
-  const workspace = await ctx.projectWorkspaces.create(projectId);
+  const workspace = await ctx.projectWorkspaces.get(projectId);
+  if (workspace === undefined) throw new Error("Project Workspace is not bound.");
   const target = await ctx.projectWorkspaces.resolve(projectId, ref);
   await writeFile(target.path, content, "utf8");
   expect(workspace.projectId).toBe(projectId);
@@ -59,9 +66,9 @@ async function makeFile(
 
 describe("Project Resource Registry", () => {
   it("registers stable metadata and lists resources in Project order", async () => {
-    const root = await fixture();
-    const ctx = await domain(root);
+    const ctx = await domain();
     const project = ctx.projects.create({ goal: "Build reusable findings" });
+    await bind(ctx, project.id);
     const node = ctx.nodes.create({ projectId: project.id, objective: objective("survey A2A") });
     await makeFile(ctx, project.id, "assets/a2a.md");
 
@@ -98,10 +105,11 @@ describe("Project Resource Registry", () => {
   });
 
   it("rejects cross-Project, control-Node, archived-Project, missing-target, and invalid metadata registrations", async () => {
-    const root = await fixture();
-    const ctx = await domain(root);
+    const ctx = await domain();
     const first = ctx.projects.create({ goal: "First" });
     const second = ctx.projects.create({ goal: "Second" });
+    await bind(ctx, first.id);
+    await bind(ctx, second.id);
     const firstNode = ctx.nodes.create({ projectId: first.id, objective: objective("first") });
     const secondNode = ctx.nodes.create({ projectId: second.id, objective: objective("second") });
     const control = ctx.nodes.create({
@@ -110,7 +118,6 @@ describe("Project Resource Registry", () => {
       purpose: "checkpoint",
       title: "Review",
     });
-    await ctx.projectWorkspaces.create(first.id);
 
     await expect(ctx.resources.create({
       projectId: first.id,
@@ -161,10 +168,11 @@ describe("Project Resource Registry", () => {
   });
 
   it("rejects cross-Project Resource lookup even when the caller knows the id", async () => {
-    const root = await fixture();
-    const ctx = await domain(root);
+    const ctx = await domain();
     const first = ctx.projects.create({ goal: "First" });
     const second = ctx.projects.create({ goal: "Second" });
+    await bind(ctx, first.id);
+    await bind(ctx, second.id);
     const node = ctx.nodes.create({ projectId: second.id, objective: objective("produce") });
     await makeFile(ctx, second.id, "assets/result.md");
     const resource = await ctx.resources.create({
@@ -182,9 +190,9 @@ describe("Project Resource Registry", () => {
   });
 
   it("restores an immutable history atomically and continues registration sequence", async () => {
-    const root = await fixture();
-    const source = await domain(root);
+    const source = await domain();
     const project = source.projects.create({ goal: "Replay resources" });
+    const root = await bind(source, project.id);
     const node = source.nodes.create({ projectId: project.id, objective: objective("produce") });
     await makeFile(source, project.id, "assets/report.md");
     const first = await source.resources.create({
@@ -200,9 +208,10 @@ describe("Project Resource Registry", () => {
     const nodeHistory = JSON.parse(JSON.stringify(source.nodes.getEvents(node.node.id)));
     const resourceHistory = JSON.parse(JSON.stringify(source.resources.getEvents(project.id)));
 
-    const target = await domain(root);
+    const target = await domain();
     target.projects.restore(project.id, projectHistory);
     target.nodes.restore(node.node.id, nodeHistory);
+    await target.projectWorkspaces.create(project.id, root);
     const restored = await target.resources.restore(project.id, resourceHistory);
     resourceHistory[0].data.title = "mutated outside";
     resourceHistory.push(resourceHistory[0]);
@@ -225,9 +234,9 @@ describe("Project Resource Registry", () => {
   });
 
   it("rejects malformed replay and duplicate ids without partial commit", async () => {
-    const root = await fixture();
-    const source = await domain(root);
+    const source = await domain();
     const project = source.projects.create({ goal: "Validate replay" });
+    const root = await bind(source, project.id);
     const node = source.nodes.create({ projectId: project.id, objective: objective("produce") });
     await makeFile(source, project.id, "assets/report.md");
     await source.resources.create({
@@ -243,9 +252,10 @@ describe("Project Resource Registry", () => {
     const nodeHistory = JSON.parse(JSON.stringify(source.nodes.getEvents(node.node.id)));
     const event = JSON.parse(JSON.stringify(source.resources.getEvents(project.id)[0]));
 
-    const target = await domain(root);
+    const target = await domain();
     target.projects.restore(project.id, projectHistory);
     target.nodes.restore(node.node.id, nodeHistory);
+    await target.projectWorkspaces.create(project.id, root);
 
     await expect(target.resources.restore(project.id, [{ ...event, sequence: 2 }]))
       .rejects.toMatchObject({ code: "invalid-history" });
@@ -262,9 +272,9 @@ describe("Project Resource Registry", () => {
   });
 
   it("allows replay when content disappeared but still revalidates Workspace containment", async () => {
-    const root = await fixture();
-    const source = await domain(root);
+    const source = await domain();
     const project = source.projects.create({ goal: "Durable metadata" });
+    const root = await bind(source, project.id);
     const node = source.nodes.create({ projectId: project.id, objective: objective("produce") });
     await makeFile(source, project.id, "assets/report.md");
     const resource = await source.resources.create({
@@ -282,21 +292,22 @@ describe("Project Resource Registry", () => {
     const nodeHistory = JSON.parse(JSON.stringify(source.nodes.getEvents(node.node.id)));
     const resourceHistory = JSON.parse(JSON.stringify(source.resources.getEvents(project.id)));
 
-    const target = await domain(root);
+    const target = await domain();
     target.projects.restore(project.id, projectHistory);
     target.nodes.restore(node.node.id, nodeHistory);
+    await target.projectWorkspaces.create(project.id, root);
     expect(await target.resources.restore(project.id, resourceHistory))
       .toMatchObject([{ id: resource.id, ref: resource.ref }]);
   });
 
-  it("is mounted in NavoApp whenever Project Workspace is explicitly configured", async () => {
+  it("is mounted in NavoApp and uses an explicitly bound Project Workspace", async () => {
     const root = await fixture();
     const app = await createApp({
       node: { session: { model: { provider: "mock", model: "test" } } },
-      workspace: { root },
     });
     contexts.push(app);
     const project = app.projects.create({ goal: "Mounted registry" });
+    await app.projectWorkspaces.create(project.id, root);
     const node = app.nodes.create({ projectId: project.id, objective: objective("produce") });
     await makeFile(app, project.id, "assets/app.md");
     const resource = await app.resources.create({
