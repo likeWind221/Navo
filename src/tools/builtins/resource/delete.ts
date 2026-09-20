@@ -50,3 +50,14 @@ export function createDeleteResourceTool(ctx: Context): ToolDefinition {
     },
   };
 }
+
+export const DeleteResourceTool = Object.assign(
+  function registerDeleteResourceTool(ctx: Context): () => void {
+    const dispose = ctx.effect(
+      () => ctx.tools.register(createDeleteResourceTool(ctx)),
+      "resource.delete-tool",
+    );
+    return () => { void dispose(); };
+  },
+  { inject: ["tools", "projects", "nodes", "resources"] },
+);
