@@ -13,6 +13,7 @@ export type WorkspaceErrorCode =
   | "invalid-config"
   | "project-not-found"
   | "workspace-not-found"
+  | "workspace-conflict"
   | "invalid-ref"
   | "path-not-allowed"
   | "not-found"
