@@ -6,6 +6,11 @@ import { createAgentTurnV2Handler } from "../../src/host/turn/v2.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 
 import { createFileEnvironment } from "../../src/tools/builtins/file/path.js";
+import { SEND_TO_MAIN_TOOL_NAME } from "../../src/tools/builtins/mailbox/send.js";
+import { DELETE_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/delete.js";
+import { FETCH_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/fetch.js";
+import { REGISTER_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/register.js";
+import { UPDATE_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/update.js";
 import { MODIFY_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/modify-roadmap.js";
 import { READ_NODE_TOOL_NAME } from "../../src/tools/builtins/roadmap/read-node.js";
 import { READ_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/read.js";
@@ -39,6 +44,9 @@ describe("desktop Host tool availability", () => {
         "web_search", "web_fetch",
         "read", "shell", "edit", "write",
         READ_ROADMAP_TOOL_NAME, READ_NODE_TOOL_NAME, WRITE_ROADMAP_TOOL_NAME, MODIFY_ROADMAP_TOOL_NAME,
+        REGISTER_RESOURCE_TOOL_NAME, FETCH_RESOURCE_TOOL_NAME,
+        UPDATE_RESOURCE_TOOL_NAME, DELETE_RESOURCE_TOOL_NAME,
+        SEND_TO_MAIN_TOOL_NAME,
       ].sort());
       const adapter = new MockLLMAdapter([
         modelResponse([{
@@ -63,6 +71,13 @@ describe("desktop Host tool availability", () => {
       expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(READ_NODE_TOOL_NAME);
       expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(WRITE_ROADMAP_TOOL_NAME);
       expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(MODIFY_ROADMAP_TOOL_NAME);
+      expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toEqual(expect.arrayContaining([
+        REGISTER_RESOURCE_TOOL_NAME,
+        FETCH_RESOURCE_TOOL_NAME,
+        UPDATE_RESOURCE_TOOL_NAME,
+        DELETE_RESOURCE_TOOL_NAME,
+        SEND_TO_MAIN_TOOL_NAME,
+      ]));
       expect(events.at(-1)).toMatchObject({ type: "turn-completed" });
     } finally {
       await ctx.fiber.dispose();
