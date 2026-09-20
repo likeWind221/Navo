@@ -1,5 +1,7 @@
 # 73：F9.6b Project Workspace Foundation
 
+> **后续修订：** F9.6b 已完成并验收，但其“配置一个全局 root，再映射到 `projects/project-<safe-key>`”的物理布局将在 F9.6d.1 迁移为“用户选择的 Project Workspace 根目录 + `.navo/` 内部区”。本文件保留 F9.6b 当时的真实实现与验收记录；新模型见 [75](75-devlog-f9.6-workspace-resource-revision.md)。
+
 ## 1. 目标与边界
 
 F9.6b 只解决一个基础问题：**Project 的真实文件属于哪个物理边界，以及 Project 内相对引用如何安全落到该边界。**

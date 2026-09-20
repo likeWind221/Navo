@@ -31,6 +31,7 @@
 - [F9.6a：Project Mailbox Domain](72-devlog-f9.6a-project-mailbox.md)：Project 级消息事实、合法 Main/Node 路由、归属校验与 replay 边界。
 - [F9.6b：Project Workspace Foundation](73-devlog-f9.6b-project-workspace.md)：每 Project 独立物理 Workspace、portable relative ref、安全路径 containment 与 symlink escape 验收。
 - [F9.6c：Project Resource Registry](74-devlog-f9.6c-project-resource-registry.md)：Project 级 Resource 身份、source Node provenance、Workspace-relative ref、原子 replay 与跨 Project 隔离。
+- [F9.6 Workspace 与 Resource 最终模型修订](75-devlog-f9.6-workspace-resource-revision.md)：确定用户项目根目录 + `.navo/` 内部区、稳定 Resource Service/权限模型，以及 F9.6d.1–d.3 的迁移拆分。
 
 - [阶段 0：工程骨架](02-阶段-0-工程骨架开发记录.md)
 - [阶段 1：核心协议](03-devlog-phase-1-core-protocol.md)

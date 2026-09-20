@@ -1,5 +1,7 @@
 # 71：F9.6 Project Workspace 与 Resource Handoff 设计
 
+> **设计修订（2026-09-20）：** 本文记录 F9.6 最初收敛方案。进入 Node Resource capability 前，Workspace 与 Resource 模型进一步调整：Project 直接绑定用户选择的真实目录，Navo 内部文件只写入 `.navo/`；Resource 继续作为稳定领域对象，由服务接口管理生命周期与权限，不采用动态目录扫描作为事实源。后续权威设计见 [75：F9.6 Workspace 与 Resource 最终模型修订](75-devlog-f9.6-workspace-resource-revision.md)。本文保留为设计演进轨迹。
+
 ## 1. 背景
 
 F9.5 已完成 Main Agent 的 Roadmap 读取、创建与修改闭环，F9.6a 已完成 Project Mailbox Domain。经过 F9.6a 后的继续讨论，F9.6 不再沿用“Directive + Asset Assignment + 全局资源搜索”的复杂协调模型，而收敛为更直接的 Project 工作模型：

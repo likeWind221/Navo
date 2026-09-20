@@ -1,5 +1,7 @@
 # 74：F9.6c Project Resource Registry
 
+> **后续修订：** F9.6c 已完成并验收，但进入 Agent capability 前进一步明确 Resource 的最终方向：Resource 仍由稳定 ID 表示，Registry/Repository 是事实源，任何增删改查和权限变更必须经过 Resource Service；不采用扫描 `.navo/assets` 动态生成 Resource。物理内容将收口到 `.navo/assets/<resource-id>/`，权限模型与 entryRef 在 F9.6d.2 落地。本文保留 F9.6c 当时的真实实现与验收记录；新模型见 [75](75-devlog-f9.6-workspace-resource-revision.md)。
+
 ## 1. 目标与边界
 
 F9.6c 只解决一个领域问题：**Workspace 中哪些重要产物成为 Project 可追踪 Resource，以及这些 Resource 如何保留稳定身份、来源与相对引用。**
