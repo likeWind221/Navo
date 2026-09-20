@@ -15,4 +15,5 @@ export type NodeErrorCode =
   | "stale-revision"
   | "invalid-message"
   | "node-session-service-unavailable"
+  | "node-context-unavailable"
   | "invalid-event-stream";
