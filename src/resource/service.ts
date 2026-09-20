@@ -41,8 +41,12 @@ import { activeResources } from "./projector.js";
 import { ResourceStore } from "./store.js";
 import {
   effectiveResourceChanges,
+  requireActiveResourceProject,
   requireResourceAccessNodes,
   requireResourcePrincipal,
+  requireResourceProject,
+  requireResourceRevision,
+  requireResourceWorkspace,
   validateResourceMetadata,
   validateResourcePatch,
 } from "./validation.js";
@@ -61,12 +65,12 @@ export class ResourceService extends Service {
     input: PublishResourceInput,
     signal?: AbortSignal,
   ): Promise<ProjectResource> {
-    this.requireActiveProject(input.projectId);
+    requireActiveResourceProject(this.ctx, input.projectId);
     const owner = normalizeResourcePrincipal(input.owner);
     requireResourcePrincipal(this.ctx, input.projectId, owner);
     const entryRef = resourceEntryRefFromSource(input.sourceRef);
     const metadata = validateResourceMetadata({ ...input, entryRef });
-    const workspace = await this.requireWorkspace(input.projectId);
+    const workspace = await requireResourceWorkspace(this.ctx, input.projectId);
     const resourceId = this.nextId();
 
     const published = await publishResourceContent(
@@ -77,7 +81,7 @@ export class ResourceService extends Service {
     );
     try {
       signal?.throwIfAborted();
-      this.requireActiveProject(input.projectId);
+      requireActiveResourceProject(this.ctx, input.projectId);
       requireResourcePrincipal(this.ctx, input.projectId, owner);
       return this.store.append(this.event(
         input.projectId,
@@ -99,12 +103,12 @@ export class ResourceService extends Service {
   }
 
   update(input: UpdateResourceInput): ProjectResource {
-    this.requireActiveProject(input.projectId);
+    requireActiveResourceProject(this.ctx, input.projectId);
     const actor = normalizeResourcePrincipal(input.actor);
     requireResourcePrincipal(this.ctx, input.projectId, actor);
     const current = this.requireCurrent(input.projectId, input.resourceId);
     requireResourceOwner(current, actor);
-    this.requireRevision(current, input.expectedRevision);
+    requireResourceRevision(current, input.expectedRevision);
     const changes = validateResourcePatch(input.changes);
     const effective = effectiveResourceChanges(current, changes);
     if (Object.keys(effective).length === 0) return current;
@@ -119,12 +123,12 @@ export class ResourceService extends Service {
   }
 
   setAccess(input: SetResourceAccessInput): ProjectResource {
-    this.requireActiveProject(input.projectId);
+    requireActiveResourceProject(this.ctx, input.projectId);
     const actor = normalizeResourcePrincipal(input.actor);
     requireResourcePrincipal(this.ctx, input.projectId, actor);
     requireResourceAccessManager(actor);
     const current = this.requireCurrent(input.projectId, input.resourceId);
-    this.requireRevision(current, input.expectedRevision);
+    requireResourceRevision(current, input.expectedRevision);
     const access = normalizeResourceAccess(input.access, current.owner);
     requireResourceAccessNodes(this.ctx, input.projectId, access);
     if (sameResourceAccess(current.access, access)) return current;
@@ -139,12 +143,12 @@ export class ResourceService extends Service {
   }
 
   delete(input: DeleteResourceInput): void {
-    this.requireActiveProject(input.projectId);
+    requireActiveResourceProject(this.ctx, input.projectId);
     const actor = normalizeResourcePrincipal(input.actor);
     requireResourcePrincipal(this.ctx, input.projectId, actor);
     const current = this.requireCurrent(input.projectId, input.resourceId);
     requireResourceOwner(current, actor);
-    this.requireRevision(current, input.expectedRevision);
+    requireResourceRevision(current, input.expectedRevision);
     this.store.append(this.event(
       input.projectId,
       input.resourceId,
@@ -158,7 +162,7 @@ export class ResourceService extends Service {
     projectId: ProjectId,
     resourceId: ResourceId,
   ): ProjectResource | undefined {
-    this.requireProject(projectId);
+    requireResourceProject(this.ctx, projectId);
     const state = this.store.getState(resourceId);
     if (state === undefined) return undefined;
     if (state.resource.projectId !== projectId) {
@@ -171,7 +175,7 @@ export class ResourceService extends Service {
   }
 
   listByProject(projectId: ProjectId): readonly ProjectResource[] {
-    this.requireProject(projectId);
+    requireResourceProject(this.ctx, projectId);
     return activeResources(this.store.listStates(projectId));
   }
 
@@ -181,7 +185,8 @@ export class ResourceService extends Service {
     viewer: ResourcePrincipal,
   ): ProjectResource | undefined {
     const principal = normalizeResourcePrincipal(viewer);
-    this.requireViewer(projectId, principal);
+    requireResourceProject(this.ctx, projectId);
+    requireResourcePrincipal(this.ctx, projectId, principal);
     const resource = this.get(projectId, resourceId);
     if (resource === undefined) return undefined;
     return canReadResource(resource, principal) ? resource : undefined;
@@ -192,7 +197,8 @@ export class ResourceService extends Service {
     viewer: ResourcePrincipal,
   ): readonly ProjectResource[] {
     const principal = normalizeResourcePrincipal(viewer);
-    this.requireViewer(projectId, principal);
+    requireResourceProject(this.ctx, projectId);
+    requireResourcePrincipal(this.ctx, projectId, principal);
     const resources = this.listByProject(projectId)
       .filter(resource => canReadResource(resource, principal));
     return resources.length === 0 ? emptyResources : Object.freeze(resources);
@@ -213,13 +219,13 @@ export class ResourceService extends Service {
       );
     }
     return resolveResourceEntry(
-      await this.requireWorkspace(projectId),
+      await requireResourceWorkspace(this.ctx, projectId),
       resource,
     );
   }
 
   getEvents(projectId: ProjectId): readonly ResourceEvent[] {
-    this.requireProject(projectId);
+    requireResourceProject(this.ctx, projectId);
     return this.store.getEvents(projectId);
   }
 
@@ -227,8 +233,8 @@ export class ResourceService extends Service {
     projectId: ProjectId,
     history: readonly unknown[],
   ): Promise<readonly ProjectResource[]> {
-    this.requireProject(projectId);
-    await this.requireWorkspace(projectId);
+    requireResourceProject(this.ctx, projectId);
+    await requireResourceWorkspace(this.ctx, projectId);
     if (this.store.hasHistory(projectId)) {
       throw new ResourceError(
         "registry-already-restored",
@@ -263,22 +269,6 @@ export class ResourceService extends Service {
     }) as Extract<ResourceEvent, { type: TType }>;
   }
 
-  private requireRevision(
-    resource: ProjectResource,
-    expectedRevision: number,
-  ): void {
-    if (
-      !Number.isSafeInteger(expectedRevision)
-      || expectedRevision < 1
-      || resource.revision !== expectedRevision
-    ) {
-      throw new ResourceError(
-        "stale-revision",
-        "Read the current Resource before modifying it.",
-      );
-    }
-  }
-
   private requireCurrent(
     projectId: ProjectId,
     resourceId: ResourceId,
@@ -288,40 +278,6 @@ export class ResourceService extends Service {
     throw new ResourceError("resource-unavailable", "Resource is unavailable.");
   }
 
-  private requireProject(projectId: ProjectId): void {
-    if (this.ctx.projects.get(projectId) === undefined) {
-      throw new ResourceError(
-        "project-unavailable",
-        "Resource Service requires an existing Project.",
-      );
-    }
-  }
-
-  private requireActiveProject(projectId: ProjectId): void {
-    if (this.ctx.projects.get(projectId)?.status !== "active") {
-      throw new ResourceError(
-        "project-unavailable",
-        "Resource mutation requires an active Project.",
-      );
-    }
-  }
-
-  private requireViewer(
-    projectId: ProjectId,
-    viewer: ResourcePrincipal,
-  ): void {
-    this.requireProject(projectId);
-    requireResourcePrincipal(this.ctx, projectId, viewer);
-  }
-
-  private async requireWorkspace(projectId: ProjectId) {
-    const workspace = await this.ctx.projectWorkspaces.get(projectId);
-    if (workspace !== undefined) return workspace;
-    throw new ResourceError(
-      "workspace-unavailable",
-      "Resource Service requires a bound Project Workspace.",
-    );
-  }
 }
 
 declare module "cordis" {
