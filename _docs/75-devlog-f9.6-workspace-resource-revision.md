@@ -131,8 +131,10 @@ Resource
 +-- description
 +-- type
 +-- sourceNodeId       # 可信 Binding 决定来源
-+-- visibility         # private | project
-+-- allowedNodeIds     # Main 定向授权
++-- access
+|   +-- private
+|   +-- shared(nodeIds)
+|   +-- project
 +-- entryRef           # Resource root 内主入口文件
 +-- createdAt
 +-- updatedAt
@@ -204,11 +206,11 @@ F9.6 先保持最小权限集合：
 private
   -> Main + source Node 可读
 
-private + allowedNodeIds
-  -> Main + source Node + Main 明确授权的 Node 可读
+shared(nodeIds)
+  -> Main + source Node + 指定 work Nodes 可读
 
 project
-  -> Main + 当前 Project 所有 work Node 可读
+  -> Main + 当前 Project 所有 work Nodes 可读
 ```
 
 原则：
@@ -230,7 +232,7 @@ register_resource(...)
 
 fetch_resource(resource_id)
   -> 校验 caller Binding
-  -> 校验 Resource visibility/grant
+  -> 校验 Resource access
   -> 读取 Resource 主入口内容
 
 send_to_main(message)
