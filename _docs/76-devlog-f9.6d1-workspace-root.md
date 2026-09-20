@@ -119,18 +119,16 @@ pnpm test       PASS
 - 即使 Host file cwd 大于 Project root，Project-bound Node Session 的 `read` 仍不能越界；
 - F9.6c ResourceStore 的 7 项回归测试全部通过。
 
-当前执行环境仍无法解析 `github.com`，因此不能执行 clean-clone 本机验证。按仓库门禁，本 Step 保持 **🔄**，PR #18 不在本机验证前合并。
-
-本机应执行：
+用户已完成本机验证：
 
 ```text
-git fetch origin
-git switch phase9-f9.6d1-workspace-root
-pnpm install --frozen-lockfile
-pnpm typecheck
-pnpm test
+pnpm install --frozen-lockfile  PASS
+pnpm typecheck                 PASS
+pnpm test                      PASS
 ```
+
+因此本 Step 已满足仓库要求的 **本机 + CI 双重门禁**，可以正式收口。
 
 ## 下一步
 
-本机验证和 PR 合并完成后进入 F9.6d.2 Resource Lifecycle 与 Access Domain。本 Step 未实现 Resource CRUD v2、权限 grant/revoke、`register_resource`、`fetch_resource`、`send_to_main`、Main handoff、数据库或前端/RPC 契约。
+F9.6d.1 完成后，当前唯一下一步进入 F9.6d.2 Resource Lifecycle 与 Access Domain。本 Step 未实现 Resource CRUD v2、权限 grant/revoke、`register_resource`、`fetch_resource`、`send_to_main`、Main handoff、数据库或前端/RPC 契约。
