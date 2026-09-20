@@ -17,7 +17,9 @@ import { RoadmapStore } from "./roadmap/store.js";
 import { FileError } from "./tools/builtins/file/errors.js";
 import { createFileEnvironment } from "./tools/builtins/file/path.js";
 import type { FileEnvironment } from "./tools/builtins/file/path.js";
+import { SendToMainTool } from "./tools/builtins/mailbox/send.js";
 import { RoadmapToolsPlugin } from "./tools/builtins/roadmap/plugin.js";
+import { ResourceToolsPlugin } from "./tools/builtins/resource/plugin.js";
 import type { ToolsPluginConfig } from "./tools/plugin.js";
 import { ToolsPlugin } from "./tools/plugin.js";
 import { ProjectWorkspaceStore } from "./workspace/store.js";
@@ -53,7 +55,7 @@ export async function NavoApp(
           "Project Agent Session has no bound Project Workspace.",
         );
       }
-      return createFileEnvironment(workspace.root, workspace.root);
+      return createFileEnvironment(workspace.root, workspace.root, [workspace.navoRoot]);
     };
     return () => {
       resolveProjectFileEnvironment = undefined;
@@ -70,6 +72,8 @@ export async function NavoApp(
   await ctx.plugin(NodePlugin, config.node);
   await ctx.plugin(MailboxStore);
   await ctx.plugin(ResourceService);
+  await ctx.plugin(ResourceToolsPlugin);
+  await ctx.plugin(SendToMainTool);
   await ctx.plugin(MainSessionService, { model: config.node.session.model });
   await ctx.plugin(RoadmapStore);
   await ctx.plugin(RoadmapToolsPlugin);
