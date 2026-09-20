@@ -56,9 +56,9 @@ Workspace source
 
 ### 普通文件 Tool 不能绕过 Resource ACL
 
-Project Agent 的 FileEnvironment 增加 `blockedRoots`，当前把整个 `.navo/` 作为受保护内部区。普通 `read/write/edit/shell` 即使知道 `.navo/assets/<resource-id>` 路径，也会被 `path-not-allowed` 拒绝；Resource 内容只能先经过 `fetch_resource -> ResourceService.getVisible/resolveEntry` 的授权检查。
+Project Agent 的 FileEnvironment 增加 `blockedRoots`，当前把整个 `.navo/` 作为受保护内部区。所有经过 File path resolver 的 `read/write/edit` 都会拒绝进入 `.navo/`；当前 Node Profile 实际只开放其中的 `read`，因此模型无法通过猜测 `.navo/assets/<resource-id>` 路径绕过 Resource ACL。Resource 内容必须先经过 `fetch_resource -> ResourceService.getVisible/resolveEntry` 的授权检查。
 
-普通桌面 Session 没有 Project Binding 时保持既有 Host 文件环境语义，不受该 Project policy 影响。
+`shell` 不使用逐路径 resolver，而是直接以 FileEnvironment cwd 启动进程，因此本 Step **不声称 shell 已被 blockedRoots 沙箱化**。当前 Project Main/Node Profile 均未开放 shell，所以不会形成现有 Resource ACL 绕过面；未来若为 Project Agent 开放 shell，必须另行设计命令级 filesystem sandbox。普通桌面 Session 没有 Project Binding 时继续保持既有 Host 文件环境语义。
 
 ### Access 与 ownership 分离
 
