@@ -144,7 +144,7 @@ pnpm test       PASS
 - create/update/access/delete event history 可完整 replay 并继续 revision；
 - v1 history、非法 lifecycle、duplicate event id、duplicate ResourceId 和非法 shared Node replay 被原子拒绝。
 
-当前仍等待本机 `pnpm install --frozen-lockfile`、`pnpm typecheck`、`pnpm test` 完整验证，因此 F9.6d.2 保持 **🔄**，PR #19 暂不合并。
+用户已完成本机 `pnpm install --frozen-lockfile`、`pnpm typecheck`、`pnpm test` 完整验证，结果全部通过；结合最终 head 的 GitHub Windows CI，F9.6d.2 已满足本机 + CI 双重门禁，可以正式收口。
 
 ## 下一步
 
