@@ -31,7 +31,7 @@ describe("Navo application integration", () => {
       tools: { search: { adapter: new MockSearchAdapter([]) } },
     });
     expect(app.tools.schemas().map((tool) => tool.name).sort())
-      .toEqual([...NODE_AGENT_TOOL_NAMES, READ_ROADMAP_TOOL_NAME, READ_NODE_TOOL_NAME, WRITE_ROADMAP_TOOL_NAME, MODIFY_ROADMAP_TOOL_NAME].sort());
+      .toEqual([...NODE_AGENT_TOOL_NAMES, SET_RESOURCE_ACCESS_TOOL_NAME, READ_ROADMAP_TOOL_NAME, READ_NODE_TOOL_NAME, WRITE_ROADMAP_TOOL_NAME, MODIFY_ROADMAP_TOOL_NAME].sort());
     expect(app.nodes).toBeDefined();
     expect(app.nodeSessions).toBeDefined();
     const sessionId = createSessionId("integration-loop");
