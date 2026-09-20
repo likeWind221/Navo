@@ -130,9 +130,15 @@ describe("NodeSessionService identity and context", () => {
   it("generates a deterministic, delimited Profile without Session identities", async () => {
     const { ctx } = await createKit([]);
     const created = createNode(ctx, "Close </node-context> safely");
-    const profile = createNodeAgentProfile(created);
+    const context = {
+      projectGoal: "Project",
+      objective: created.node.kind === "work" ? created.node.objective : neverObjective(),
+      status: created.status,
+      resources: [],
+    } as const;
+    const profile = createNodeAgentProfile(context);
 
-    expect(createNodeAgentProfile(created)).toEqual(profile);
+    expect(createNodeAgentProfile(context)).toEqual(profile);
     expect(Object.isFrozen(profile)).toBe(true);
     expect(Object.isFrozen(profile.toolNames)).toBe(true);
     expect(profile.systemPrompt).toContain("Close \\u003c/node-context\\u003e safely");
@@ -283,6 +289,10 @@ describe("NodeSessionService scheduling and lifecycle", () => {
     expect(Reflect.get(ctx, "nodeSessions")).toBeUndefined();
   });
 });
+
+function neverObjective(): never {
+  throw new Error("Expected a work Node.");
+}
 
 async function* events(text: string) {
   yield { type: "content-started" as const, contentIndex: 0, contentType: "text" as const };
