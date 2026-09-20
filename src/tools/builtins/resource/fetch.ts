@@ -1,6 +1,7 @@
 import type { Context } from "cordis";
 
 import type { JsonObject } from "../../../llm/types.js";
+import { ResourceError } from "../../../resource/errors.js";
 import { createFileEnvironment } from "../file/path.js";
 import { readTextFile } from "../file/read.js";
 import { FILE_LIMITS } from "../file/types.js";
@@ -47,7 +48,10 @@ export function createFetchResourceTool(ctx: Context): ToolDefinition {
           caller.principal,
         );
         if (resource === undefined) {
-          throw new Error("Resource is unavailable to the current caller.");
+          throw new ResourceError(
+            "resource-unavailable",
+            "Resource is unavailable to the current caller.",
+          );
         }
         const target = await ctx.resources.resolveEntry(
           caller.projectId,
