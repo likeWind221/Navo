@@ -73,3 +73,14 @@ export function createRegisterResourceTool(ctx: Context): ToolDefinition {
     },
   };
 }
+
+export const RegisterResourceTool = Object.assign(
+  function registerRegisterResourceTool(ctx: Context): () => void {
+    const dispose = ctx.effect(
+      () => ctx.tools.register(createRegisterResourceTool(ctx)),
+      "resource.register-tool",
+    );
+    return () => { void dispose(); };
+  },
+  { inject: ["tools", "projects", "nodes", "resources"] },
+);
