@@ -1,3 +1,6 @@
+import { randomUUID } from "node:crypto";
+
+import { createEventId } from "../brand/ids.js";
 import type {
   EventId,
   NodeId,
@@ -43,6 +46,28 @@ export interface ResourceEventHeader {
   readonly revision: number;
   readonly baseRevision: number;
   readonly timestamp: string;
+}
+
+export function createResourceEvent<TType extends ResourceEvent["type"]>(input: {
+  readonly projectId: ProjectId;
+  readonly resourceId: ResourceId;
+  readonly sequence: number;
+  readonly baseRevision: number;
+  readonly type: TType;
+  readonly data: Extract<ResourceEvent, { type: TType }>["data"];
+}): Extract<ResourceEvent, { type: TType }> {
+  return freezeResourceEvent({
+    version: 2,
+    id: createEventId(randomUUID()),
+    projectId: input.projectId,
+    resourceId: input.resourceId,
+    sequence: input.sequence,
+    revision: input.baseRevision + 1,
+    baseRevision: input.baseRevision,
+    timestamp: new Date().toISOString(),
+    type: input.type,
+    data: input.data,
+  } as Extract<ResourceEvent, { type: TType }>) as Extract<ResourceEvent, { type: TType }>;
 }
 
 export function freezeResourceEvent(event: ResourceEvent): ResourceEvent {
