@@ -83,6 +83,15 @@ export function projectResourceEvent(
   });
 }
 
+export function activeResources(
+  states: readonly ResourceState[],
+): readonly ProjectResource[] {
+  return Object.freeze(states
+    .filter((state): state is Extract<ResourceState, { status: "active" }> =>
+      state.status === "active")
+    .map(state => state.resource));
+}
+
 export function projectResourceHistory(
   projectId: ProjectId,
   events: readonly ResourceEvent[],
