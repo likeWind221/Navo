@@ -31,8 +31,15 @@ describe("NodeAgent file capability", () => {
       },
     });
 
-    const withoutFiles = createNodeAgentProfile(node);
-    const withRead = createNodeAgentProfile(node, { allowFileRead: true });
+    if (node.node.kind !== "work") throw new Error("Expected work Node.");
+    const context = {
+      projectGoal: project.goal,
+      objective: node.node.objective,
+      status: node.status,
+      resources: [],
+    } as const;
+    const withoutFiles = createNodeAgentProfile(context);
+    const withRead = createNodeAgentProfile(context, { allowFileRead: true });
 
     expect(withoutFiles.toolNames).not.toContain("read");
     expect(withRead.toolNames).toContain("read");
