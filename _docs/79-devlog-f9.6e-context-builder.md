@@ -87,7 +87,7 @@ Resource name/description 等外部文本在最终渲染边界统一转义，避
 - Main 授权本身不启动 Node；
 - 下一次 Human-started Turn 重新 build 后才出现 Resource metadata。
 
-F9.6e 仍未完成：Main Agent 的正式 `set_resource_access` / handoff capability 尚未实现，因此本阶段保持 **🔄**。
+用户已完成本机 `pnpm install --frozen-lockfile`、`pnpm typecheck`、`pnpm test` 完整验证，结果全部通过；结合 GitHub Windows CI，Context Builder 子阶段已满足本机 + CI 双重门禁并可正式收口。F9.6e 整体仍未完成：Main Agent 的正式 `set_resource_access` / handoff capability 尚未实现，因此 F9.6e 保持 **🔄**。
 
 ## 下一步
 
