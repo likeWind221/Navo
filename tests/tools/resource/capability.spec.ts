@@ -86,6 +86,12 @@ async function callTool(
   });
 }
 
+function resultText(result: Awaited<ReturnType<typeof callTool>>): string {
+  const block = result.block.content[0];
+  if (block?.type !== "text") throw new Error("Expected text tool result.");
+  return block.text;
+}
+
 function artifactObject(result: Awaited<ReturnType<typeof callTool>>) {
   if (result.kind !== "success" || result.artifact === undefined
       || result.artifact === null || typeof result.artifact !== "object"
@@ -121,8 +127,8 @@ describe("Project Resource Agent capabilities", () => {
       max_lines: 2,
     });
     expect(fetched.kind).toBe("success");
-    expect(fetched.block.content[0]?.text).toContain("1: alpha");
-    expect(fetched.block.content[0]?.text).toContain("[Continue with start_line=3]");
+    expect(resultText(fetched)).toContain("1: alpha");
+    expect(resultText(fetched)).toContain("[Continue with start_line=3]");
 
     const updated = await callTool(app, sessionId, UPDATE_RESOURCE_TOOL_NAME, {
       resource_id: resourceId,
@@ -288,7 +294,7 @@ describe("Project Resource Agent capabilities", () => {
       resource_id: id,
     });
     expect(fetched.kind).toBe("success");
-    expect(fetched.block.content[0]?.text).toContain("protected");
+    expect(resultText(fetched)).toContain("protected");
   });
 
   it("sends Node text to Main without changing routing or starting another Agent", async () => {
