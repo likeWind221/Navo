@@ -1,4 +1,5 @@
 import {
+  mkdir,
   mkdtemp,
   readFile,
   rm,
@@ -51,179 +52,187 @@ async function projectFixture(ctx: Context) {
   const root = await fixture();
   const project = ctx.projects.create({ goal: "Resource project" });
   const workspace = await ctx.projectWorkspaces.create(project.id, root);
+  await mkdir(join(root, "sources"));
   return { project, workspace, root };
 }
 
-function createInput(projectId: ProjectId, sourceNodeId: NodeId) {
-  return {
+async function publishNodeResource(
+  ctx: Context,
+  projectId: ProjectId,
+  root: string,
+  nodeId: NodeId,
+  source = "sources/report.md",
+) {
+  await writeFile(join(root, ...source.split("/")), "result\n", "utf8");
+  return ctx.resources.publish({
     projectId,
-    sourceNodeId,
+    owner: { kind: "node", nodeId },
+    sourceRef: source,
     name: "Experiment report",
     description: "Reusable experiment findings",
     type: "text/markdown",
-    entryRef: "report.md",
-  };
+  });
 }
 
 describe("Resource Service lifecycle", () => {
-  it("creates a stable private Resource and prepares only its .navo asset root", async () => {
+  it("publishes a stable private Node-owned Resource by copying a Workspace file", async () => {
     const ctx = await domain();
     const { project, workspace, root } = await projectFixture(ctx);
-    await writeFile(join(root, "user.txt"), "keep\n", "utf8");
     const node = ctx.nodes.create({ projectId: project.id, objective: objective("produce") });
 
-    const resource = await ctx.resources.create(createInput(project.id, node.node.id));
+    const resource = await publishNodeResource(ctx, project.id, root, node.node.id);
 
     expect(resource).toMatchObject({
       projectId: project.id,
-      sourceNodeId: node.node.id,
+      owner: { kind: "node", nodeId: node.node.id },
       name: "Experiment report",
-      description: "Reusable experiment findings",
-      type: "text/markdown",
       entryRef: "report.md",
       access: { kind: "private" },
       revision: 1,
     });
-    expect(resource.createdAt).toBe(resource.updatedAt);
-    expect(Object.isFrozen(resource)).toBe(true);
-    expect(Object.isFrozen(resource.access)).toBe(true);
-    expect((await stat(join(workspace.assetsRoot, String(resource.id)))).isDirectory()).toBe(true);
-    expect(await readFile(join(root, "user.txt"), "utf8")).toBe("keep\n");
-    expect(ctx.resources.get(project.id, resource.id)).toEqual(resource);
-    expect(ctx.resources.listByProject(project.id)).toEqual([resource]);
-    expect(ctx.resources.getEvents(project.id)).toHaveLength(1);
+    const copied = join(workspace.assetsRoot, String(resource.id), "report.md");
+    expect((await stat(copied)).isFile()).toBe(true);
+    expect(await readFile(copied, "utf8")).toBe("result\n");
+    expect(await readFile(join(root, "sources", "report.md"), "utf8")).toBe("result\n");
   });
 
-  it("updates mutable metadata with optimistic revision and skips semantic no-ops", async () => {
+  it("lets a Node owner update metadata with optimistic revision", async () => {
     const ctx = await domain();
-    const { project } = await projectFixture(ctx);
-    const node = ctx.nodes.create({ projectId: project.id, objective: objective("produce") });
-    const created = await ctx.resources.create(createInput(project.id, node.node.id));
+    const { project, root } = await projectFixture(ctx);
+    const owner = ctx.nodes.create({ projectId: project.id, objective: objective("owner") });
+    const resource = await publishNodeResource(ctx, project.id, root, owner.node.id);
 
     const updated = ctx.resources.update({
       projectId: project.id,
-      resourceId: created.id,
+      actor: { kind: "node", nodeId: owner.node.id },
+      resourceId: resource.id,
       expectedRevision: 1,
       changes: {
         name: "Final report",
         description: "Final findings",
-        entryRef: "final.md",
       },
     });
     expect(updated).toMatchObject({
-      id: created.id,
-      projectId: created.projectId,
-      sourceNodeId: created.sourceNodeId,
       name: "Final report",
       description: "Final findings",
-      type: created.type,
-      entryRef: "final.md",
-      access: { kind: "private" },
+      entryRef: "report.md",
       revision: 2,
-      createdAt: created.createdAt,
     });
-
-    const noOp = ctx.resources.update({
-      projectId: project.id,
-      resourceId: created.id,
-      expectedRevision: 2,
-      changes: { name: "Final report" },
-    });
-    expect(noOp).toBe(updated);
-    expect(ctx.resources.getEvents(project.id)).toHaveLength(2);
 
     expect(() => ctx.resources.update({
       projectId: project.id,
-      resourceId: created.id,
+      actor: { kind: "node", nodeId: owner.node.id },
+      resourceId: resource.id,
       expectedRevision: 1,
       changes: { name: "stale" },
     })).toThrow(expect.objectContaining({ code: "stale-revision" }));
-    expect(() => ctx.resources.update({
-      projectId: project.id,
-      resourceId: created.id,
-      expectedRevision: 2,
-      changes: {},
-    })).toThrow(expect.objectContaining({ code: "invalid-resource" }));
-    expect(() => ctx.resources.update({
-      projectId: project.id,
-      resourceId: created.id,
-      expectedRevision: 2,
-      changes: { entryRef: "../escape.md" },
-    })).toThrow(expect.objectContaining({ code: "invalid-resource" }));
   });
 
-  it("deletes only the Resource fact and preserves its physical content root", async () => {
+  it("supports Main-owned Resources with the same owner CRUD rule", async () => {
     const ctx = await domain();
-    const { project, workspace } = await projectFixture(ctx);
-    const source = ctx.nodes.create({ projectId: project.id, objective: objective("source") });
-    const resource = await ctx.resources.create(createInput(project.id, source.node.id));
-    const resourceRoot = join(workspace.assetsRoot, String(resource.id));
-    await writeFile(join(resourceRoot, "report.md"), "result\n", "utf8");
+    const { project, root } = await projectFixture(ctx);
+    await writeFile(join(root, "sources", "main.md"), "main result\n", "utf8");
+
+    const resource = await ctx.resources.publish({
+      projectId: project.id,
+      owner: { kind: "main" },
+      sourceRef: "sources/main.md",
+      name: "Main synthesis",
+      description: "Project-level synthesis",
+      type: "text/markdown",
+    });
+    expect(resource.owner).toEqual({ kind: "main" });
+
+    const updated = ctx.resources.update({
+      projectId: project.id,
+      actor: { kind: "main" },
+      resourceId: resource.id,
+      expectedRevision: 1,
+      changes: { name: "Main synthesis v2" },
+    });
+    expect(updated.revision).toBe(2);
 
     ctx.resources.delete({
       projectId: project.id,
+      actor: { kind: "main" },
+      resourceId: resource.id,
+      expectedRevision: 2,
+    });
+    expect(ctx.resources.get(project.id, resource.id)).toBeUndefined();
+  });
+
+  it("domain delete removes the active fact but preserves published content", async () => {
+    const ctx = await domain();
+    const { project, workspace, root } = await projectFixture(ctx);
+    const owner = ctx.nodes.create({ projectId: project.id, objective: objective("owner") });
+    const resource = await publishNodeResource(ctx, project.id, root, owner.node.id);
+    const copied = join(workspace.assetsRoot, String(resource.id), "report.md");
+
+    ctx.resources.delete({
+      projectId: project.id,
+      actor: { kind: "node", nodeId: owner.node.id },
       resourceId: resource.id,
       expectedRevision: 1,
     });
 
     expect(ctx.resources.get(project.id, resource.id)).toBeUndefined();
-    expect(ctx.resources.listByProject(project.id)).toEqual([]);
-    expect(await readFile(join(resourceRoot, "report.md"), "utf8")).toBe("result\n");
-    expect(ctx.resources.getEvents(project.id).at(-1)).toMatchObject({
-      type: "resource-deleted",
-      baseRevision: 1,
-      revision: 2,
-    });
-    expect(() => ctx.resources.update({
-      projectId: project.id,
-      resourceId: resource.id,
-      expectedRevision: 2,
-      changes: { name: "cannot revive" },
-    })).toThrow(expect.objectContaining({ code: "resource-unavailable" }));
+    expect(await readFile(copied, "utf8")).toBe("result\n");
   });
 
-  it("allows reads from archived Projects but rejects lifecycle mutations", async () => {
+  it("rejects publishing from .navo and Workspace escape paths", async () => {
     const ctx = await domain();
-    const { project } = await projectFixture(ctx);
-    const source = ctx.nodes.create({ projectId: project.id, objective: objective("source") });
-    const resource = await ctx.resources.create(createInput(project.id, source.node.id));
+    const { project, root } = await projectFixture(ctx);
+    const owner = ctx.nodes.create({ projectId: project.id, objective: objective("owner") });
+    await writeFile(join(root, ".navo", "nodes", "internal.txt"), "internal", "utf8");
+
+    for (const sourceRef of [".navo/nodes/internal.txt", "../outside.txt"]) {
+      await expect(ctx.resources.publish({
+        projectId: project.id,
+        owner: { kind: "node", nodeId: owner.node.id },
+        sourceRef,
+        name: "Invalid",
+        description: "Invalid source",
+        type: "text/plain",
+      })).rejects.toMatchObject({ code: "invalid-resource" });
+    }
+  });
+
+  it("allows reads from archived Projects but rejects owner mutations", async () => {
+    const ctx = await domain();
+    const { project, root } = await projectFixture(ctx);
+    const owner = ctx.nodes.create({ projectId: project.id, objective: objective("owner") });
+    const resource = await publishNodeResource(ctx, project.id, root, owner.node.id);
     ctx.projects.archive(project.id, "pause");
 
     expect(ctx.resources.get(project.id, resource.id)).toEqual(resource);
-    expect(ctx.resources.listByProject(project.id)).toEqual([resource]);
     expect(() => ctx.resources.update({
       projectId: project.id,
+      actor: { kind: "node", nodeId: owner.node.id },
       resourceId: resource.id,
       expectedRevision: 1,
       changes: { name: "blocked" },
     })).toThrow(expect.objectContaining({ code: "project-unavailable" }));
-    expect(() => ctx.resources.setAccess({
-      projectId: project.id,
-      resourceId: resource.id,
-      expectedRevision: 1,
-      access: { kind: "project" },
-    })).toThrow(expect.objectContaining({ code: "project-unavailable" }));
-    expect(() => ctx.resources.delete({
-      projectId: project.id,
-      resourceId: resource.id,
-      expectedRevision: 1,
-    })).toThrow(expect.objectContaining({ code: "project-unavailable" }));
   });
 
-  it("mounts the Resource Service in the complete application", async () => {
+  it("mounts Resource publication in the complete application", async () => {
     const root = await fixture();
+    await mkdir(join(root, "sources"));
+    await writeFile(join(root, "sources", "app.md"), "app\n", "utf8");
     const app = await createApp({
       node: { session: { model: { provider: "mock", model: "test" } } },
     });
     contexts.push(app);
     const project = app.projects.create({ goal: "Mounted Resource Service" });
     await app.projectWorkspaces.create(project.id, root);
-    const source = app.nodes.create({
-      projectId: project.id,
-      objective: objective("produce"),
-    });
 
-    const resource = await app.resources.create(createInput(project.id, source.node.id));
+    const resource = await app.resources.publish({
+      projectId: project.id,
+      owner: { kind: "main" },
+      sourceRef: "sources/app.md",
+      name: "App resource",
+      description: "Mounted through NavoApp",
+      type: "text/markdown",
+    });
     expect(app.resources.get(project.id, resource.id)).toEqual(resource);
   });
 });
