@@ -68,26 +68,32 @@ Node A ---> Project Mailbox ---> Main Agent ---> Project Mailbox ---> Node B
 
 Node 的报告、阻塞、协调请求和 Project 级 Planning Request 应先成为 Project 可记录事实，再由 Main Agent 后续处理；不在一次工具调用中递归同步触发另一 Agent，以避免隐藏调用链和循环协调。
 
-### Project Workspace 与 Resource Registry 承载跨 Node 产物
+### Project Workspace 与 Resource Service 承载跨 Node 产物
 
-每个 Project 拥有独立 Workspace，Node 产生的文件和后续可复用产物首先落在当前 Project 的工作空间内。Resource Registry 不复制文件内容，而为重要产物保存稳定 Resource ID、来源 Node、描述和相对 Workspace 引用。
+每个 Project 直接绑定用户选择的真实 Workspace，Navo 自身的 Node 中间文件与正式 Resource 内容统一收口到 `.navo/`。正式 Resource 使用稳定 Resource ID，与文件名和目录扫描解耦；身份、来源、元数据、revision 和访问范围只能通过 Resource Service 改变。
 
 ```text
-Project
+Project Workspace
   |
-  +--> Workspace
-  |      +--> assets/
-  |      +--> nodes/
+  +--> user files
   |
-  +--> Resource Registry (F9: in-memory)
-             |
-             +--> resource_id
-             +--> source_node_id
-             +--> description
-             +--> relative reference
+  +--> .navo/
+         +--> nodes/
+         +--> assets/<resource-id>/
+                    +--> <entryRef>
+
+Resource Service
+  |
+  +--> stable ResourceId
+  +--> source Node
+  +--> name / description / type
+  +--> access: private | shared(nodeIds) | project
+  +--> entryRef / revision
+  |
+  +--> private in-memory Store (F9)
 ```
 
-Main 负责决定哪些 Resource Reference 对后续 Node 可见。Node 启动时只需要持续知道可用资源的元数据，真正内容按需读取；Resource 到位仍不会自动启动 Node。通用 Context Builder、动态 reload 与 RAG 不在 F9.6 实现。
+Main 后续负责把 Resource 从 private 定向共享给指定 Node，或提升为 Project 共享。Node 启动时只需要持续知道自己可见的 Resource metadata，正文按需读取；Resource 到位仍不会自动启动 Node。通用 Context Builder、动态 reload 与 RAG 不在 F9.6 实现。
 
 ### Human 是 Node 执行的最终 Gate
 
