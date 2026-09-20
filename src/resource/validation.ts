@@ -39,7 +39,7 @@ export function validateResourcePatch(
   const keys = Object.keys(input);
   if (
     keys.length === 0
-    || keys.some(key => !["name", "description", "type", "entryRef"].includes(key))
+    || keys.some(key => !["name", "description", "type"].includes(key))
   ) {
     throw new ResourceError(code, "Resource metadata patch is invalid.");
   }
@@ -55,9 +55,6 @@ export function validateResourcePatch(
       ...(input.type === undefined
         ? {}
         : { type: requireResourceText(input.type, "type") }),
-      ...(input.entryRef === undefined
-        ? {}
-        : { entryRef: validateResourceEntryRef(input.entryRef) }),
     });
   } catch (error: unknown) {
     if (code === "invalid-history") {
@@ -84,9 +81,6 @@ export function effectiveResourceChanges(
       : {}),
     ...(changes.type !== undefined && changes.type !== current.type
       ? { type: changes.type }
-      : {}),
-    ...(changes.entryRef !== undefined && changes.entryRef !== current.entryRef
-      ? { entryRef: changes.entryRef }
       : {}),
   });
 }
