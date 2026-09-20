@@ -23,15 +23,6 @@ export type ResourceAccess =
   | { readonly kind: "shared"; readonly nodeIds: readonly NodeId[] }
   | { readonly kind: "project" };
 
-export interface CreateResourceInput {
-  readonly projectId: ProjectId;
-  readonly owner: ResourcePrincipal;
-  readonly name: string;
-  readonly description: string;
-  readonly type: string;
-  readonly entryRef: string;
-}
-
 export interface PublishResourceInput {
   readonly projectId: ProjectId;
   readonly owner: ResourcePrincipal;
@@ -45,7 +36,6 @@ export interface ResourceMetadataPatch {
   readonly name?: string;
   readonly description?: string;
   readonly type?: string;
-  readonly entryRef?: string;
 }
 
 export interface UpdateResourceInput {
