@@ -16,7 +16,6 @@ import type { NodeId, ProjectId } from "../../src/brand/ids.js";
 import { NodeStore } from "../../src/node/store.js";
 import { ProjectStore } from "../../src/project/store.js";
 import { ResourceService } from "../../src/resource/service.js";
-import { ResourceStore } from "../../src/resource/store.js";
 import { ProjectWorkspaceStore } from "../../src/workspace/store.js";
 
 const contexts: Context[] = [];
@@ -44,7 +43,6 @@ async function domain(): Promise<Context> {
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
   await ctx.plugin(ProjectWorkspaceStore);
-  await ctx.plugin(ResourceStore);
   await ctx.plugin(ResourceService);
   return ctx;
 }
@@ -227,6 +225,5 @@ describe("Resource Service lifecycle", () => {
 
     const resource = await app.resources.create(createInput(project.id, source.node.id));
     expect(app.resources.get(project.id, resource.id)).toEqual(resource);
-    expect(app.resourceStore.getState(resource.id)?.resource).toEqual(resource);
   });
 });
