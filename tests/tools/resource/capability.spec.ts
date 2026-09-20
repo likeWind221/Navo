@@ -11,10 +11,14 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { createApp } from "../../../src/app.js";
 import {
+  createResourceId,
   createSessionId,
   createToolCallId,
 } from "../../../src/brand/ids.js";
-import type { SessionId } from "../../../src/brand/ids.js";
+import type {
+  ProjectId,
+  SessionId,
+} from "../../../src/brand/ids.js";
 import { createFileEnvironment } from "../../../src/tools/builtins/file/path.js";
 import { DELETE_RESOURCE_TOOL_NAME } from "../../../src/tools/builtins/resource/delete.js";
 import { FETCH_RESOURCE_TOOL_NAME } from "../../../src/tools/builtins/resource/fetch.js";
@@ -50,9 +54,9 @@ async function fixture() {
   return { app, project, workspace, root };
 }
 
-function bindNode(app: Awaited<ReturnType<typeof createApp>>, projectId: string) {
+function bindNode(app: Awaited<ReturnType<typeof createApp>>, projectId: ProjectId) {
   const node = app.nodes.create({
-    projectId: projectId as never,
+    projectId,
     objective: {
       title: "Produce findings",
       description: "Produce reusable findings",
@@ -209,7 +213,7 @@ describe("Project Resource Agent capabilities", () => {
     app.resources.setAccess({
       projectId: project.id,
       actor: { kind: "main" },
-      resourceId: id as never,
+      resourceId: createResourceId(id),
       expectedRevision: 1,
       access: { kind: "shared", nodeIds: [reader.node.node.id] },
     });
