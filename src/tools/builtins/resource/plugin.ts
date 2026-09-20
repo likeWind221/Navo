@@ -19,10 +19,3 @@ export function ResourceToolsPlugin(ctx: Context): void {
     };
   }, "resource.tools");
 }
-
-ResourceToolsPlugin.inject = [
-  "tools",
-  "projects",
-  "nodes",
-  "resources",
-] as const;
