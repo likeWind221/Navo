@@ -11,6 +11,7 @@ import {
 import type { NodeId, SessionId } from "../brand/ids.js";
 import { requireNodeProjectBinding } from "../project/binding.js";
 import { FILE_TOOL_SCHEMAS } from "../tools/builtins/file/types.js";
+import { NodeTurnContextBuilder } from "./context.js";
 import { NodeError } from "./errors.js";
 import type { NodeSnapshot } from "./model.js";
 import { createNodeAgentProfile } from "./profile.js";
@@ -54,11 +55,20 @@ export class NodeSessionService extends Service {
 
   private readonly controllers = new Set<AbortController>();
 
+  private contextBuilder: NodeTurnContextBuilder | undefined;
+
   private unavailable = false;
 
   constructor(ctx: Context, config: NodeSessionServiceConfig) {
     super(ctx, "nodeSessions");
     this.model = snapshotModel(config?.model);
+    this.ctx.inject(["projects", "nodes", "resources"], (scope) => {
+      const builder = new NodeTurnContextBuilder(scope);
+      this.contextBuilder = builder;
+      return () => {
+        if (this.contextBuilder === builder) this.contextBuilder = undefined;
+      };
+    });
     this.ctx.effect(() => () => {
       this.unavailable = true;
       for (const controller of this.controllers) controller.abort();
@@ -136,11 +146,19 @@ export class NodeSessionService extends Service {
         node.node.projectId,
         pending.nodeId,
       );
-      const project = this.ctx.projects.get(node.node.projectId)!;
       const current = this.ctx.nodes.beginWork(pending.nodeId);
       working = true;
       this.active.set(sessionId, pending);
-      const profile = createNodeAgentProfile(current, project, {
+      pending.signal.throwIfAborted();
+      const builder = this.contextBuilder;
+      if (builder === undefined) {
+        throw new NodeError(
+          "node-context-unavailable",
+          "Node Turn context is unavailable for the current Project.",
+        );
+      }
+      const context = builder.build(current);
+      const profile = createNodeAgentProfile(context, {
         allowFileRead: this.ctx.tools.schemas().some(
           (tool) => tool.name === FILE_TOOL_SCHEMAS.read.name,
         ),
