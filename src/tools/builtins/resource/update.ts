@@ -72,3 +72,14 @@ export function createUpdateResourceTool(ctx: Context): ToolDefinition {
     },
   };
 }
+
+export const UpdateResourceTool = Object.assign(
+  function registerUpdateResourceTool(ctx: Context): () => void {
+    const dispose = ctx.effect(
+      () => ctx.tools.register(createUpdateResourceTool(ctx)),
+      "resource.update-tool",
+    );
+    return () => { void dispose(); };
+  },
+  { inject: ["tools", "projects", "nodes", "resources"] },
+);
