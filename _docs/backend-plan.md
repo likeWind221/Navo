@@ -216,7 +216,7 @@ Project
 | 🔄 | F9.6 Project Workspace 与 Resource Handoff | Project 消息、工作空间、资源与跨 Node 协调 | 建立每 Project 独立 Workspace，把 Node 产物注册为可追溯 Resource，并通过 Main 完成跨 Node 资源交接，同时保持 Node 隔离和 Human 执行 Gate | Workspace 隔离成立；Resource 来源可追溯且通过引用交接；不存在 Node-to-Node 通道；任何 handoff 都不自动启动 Node |
 | ✅ | F9.6a Project Mailbox Domain | Project 消息领域 | 建立可重放的 ProjectMessage / Mailbox history，并在领域层限制合法路由为 Node->Main 与 Main->Node | `postFromNode` / `postFromMain` 已形成方向明确的写入边界；Project / work Node 归属、历史连续性和合法路由可验证；跨 Project、control Node、Node-to-Node replay 被拒绝；append message 不依赖或触发 AgentRuntime |
 | ✅ | F9.6b Project Workspace Foundation | Project 文件工作空间 | 为每个 Project 建立独立 Workspace 根目录与安全路径解析，作为 Node 文件和后续 Resource 的物理承载层 | 不同 Project Workspace 互相隔离；资源路径以 Project 内相对引用表达；路径逃逸被拒绝；不引入数据库、Registry 或 Agent Tool |
-| 🔄 | F9.6c Project Resource Registry | Project 资源领域 | 为 Workspace 中的重要产物建立内存 Resource Registry，记录稳定 ID、来源、描述和资源引用，不复制实际内容 | Resource 可 create/get/list by Project；来源 Node 必须属于当前 Project；跨 Project 引用被拒绝；Registry 在 F9 只驻内存，F10 再统一持久化 |
+| ✅ | F9.6c Project Resource Registry | Project 资源领域 | 为 Workspace 中的重要产物建立内存 Resource Registry，记录稳定 ID、来源、描述和资源引用，不复制实际内容 | Resource 可 create/get/list by Project；来源 Node 必须属于当前 Project；跨 Project 引用被拒绝；Registry 在 F9 只驻内存，F10 再统一持久化 |
 | ⬜ | F9.6d Node Reporting 与 Resource Capability | Node Agent 协作能力 | 让 Node 通过可信 Binding 注册 Resource、按需读取当前可见 Resource，并向 Main 报告 result、blocker、coordination_request、planning_request | projectId / sourceNodeId 来自 Session Binding 而非模型参数；Node 不能读取未分配或跨 Project Resource；report 不直接联系其他 Node，也不自动完成 Node |
 | ⬜ | F9.6e Main Resource Handoff 与 Node Resource Context | Main Agent 协调 / Node 启动上下文 | Main 通过 Resource Reference 把资源提供给指定 Node；Node 后续 Turn 启动时持续看到可用 Resource metadata，需要内容时按需读取 | 不新增 Directive 事实源；任务变化继续使用 `modify_roadmap`；Node 上下文只注入 Resource ID / title / description 等元数据，不默认注入完整内容；当前阶段不实现动态 reload 或 RAG |
 | ⬜ | F9.6f Integration 与 Human Gate | F9.6 集成验收 | 用“Node A 产出文件 -> register Resource -> report Main -> Main handoff -> Human start Node B -> Node B 使用 Resource”的完整链路验证 | Node B 在 Resource 到位后保持未执行；Human 启动后才产生 Turn；Node A 无法直接联系 Node B；Roadmap 修改请求只能升级到 Main；完整链路不依赖自动 Scheduler |
@@ -266,7 +266,7 @@ F9.6b 已完成：新增独立的 Project Workspace 领域层，在显式可信�
 
 F9.6c 已完成代码实现并通过 GitHub Windows CI：新增 Project 级 append-only Resource Registry，Resource 记录稳定 ResourceId、Project、source work Node、title/description/type 与 Project-relative ref；新注册要求目标文件当前存在，历史 replay 则允许内容后来暂时缺失，但仍重新验证 Project / Node / Workspace 边界。跨 Project Resource lookup、control Node 来源、archived Project 新注册、非法历史与重复 Resource id 都被领域层拒绝。实现记录见 [74：F9.6c Project Resource Registry](74-devlog-f9.6c-project-resource-registry.md)。
 
-**F9.6c 当前保持 🔄，尚未正式收口。** GitHub CI 已通过 `pnpm typecheck` 与全量测试，但当前执行环境无法解析 `github.com`，未能完成仓库约定的本机 clean-clone 验证，因此暂不标记 ✅、暂不进入 F9.6d。待本机复验通过并合入 PR 后，下一步才切换为 F9.6d Node Reporting 与 Resource Capability。
+**F9.6c 已正式收口。** GitHub Windows CI 已通过 `pnpm typecheck` 与全量测试（62 test files / 397 tests），用户随后确认本机 `pnpm install --frozen-lockfile`、`pnpm typecheck`、`pnpm test` 也全部通过，满足仓库的本机 + CI 双重门禁。**当前下一步唯一指向 F9.6d Node Reporting 与 Resource Capability。**
 
 F9.1 与 F9.2 已完成，记录见 [55：Project 与通用 Node 领域](55-devlog-project-node-domain.md)。整个 Phase 9 的 Project / Roadmap / Mailbox / Resource Registry 元数据继续保持内存状态；Project Workspace 从 F9.6b 开始作为实际文件承载层存在。F10 再统一实施项目状态与 Registry 元数据的数据库持久化、启动恢复和中断处理。调研与拆分方案见 [56：内存与持久化阶段划分](56-devlog-persistence-plan.md)。
 
