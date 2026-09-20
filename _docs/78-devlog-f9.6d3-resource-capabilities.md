@@ -114,7 +114,7 @@ pnpm test       PASS
 - Resource v3 replay 与 Main/Node ownership；
 - 原 Host、Main Session、Node Session、research loop 和 Project Workspace 回归继续通过。
 
-当前等待本机 `pnpm install --frozen-lockfile`、`pnpm typecheck`、`pnpm test` 完整验证，因此 F9.6d.3 保持 **🔄**，PR #20 暂不合并。
+用户已完成本机 `pnpm install --frozen-lockfile`、`pnpm typecheck`、`pnpm test` 完整验证，结果全部通过；结合最终 head 的 GitHub Windows CI，F9.6d.3 已满足本机 + CI 双重门禁，可以正式收口。
 
 ## 下一步
 
