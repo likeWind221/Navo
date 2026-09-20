@@ -222,10 +222,10 @@ describe("Resource history replay", () => {
       projectId: otherProject.id,
       objective: objective("other"),
     });
-    const duplicateResource = JSON.parse(JSON.stringify(valid));
+    const duplicateResource = [JSON.parse(JSON.stringify(valid[0]))];
     duplicateResource[0].projectId = otherProject.id;
+    duplicateResource[0].sequence = 1;
     duplicateResource[0].data.sourceNodeId = otherNode.node.id;
-    duplicateResource[1].projectId = otherProject.id;
 
     const targetD = await domain();
     targetD.projects.restore(
