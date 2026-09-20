@@ -48,14 +48,14 @@ export interface ResourceEventHeader {
   readonly timestamp: string;
 }
 
-export function createResourceEvent<TType extends ResourceEvent["type"]>(input: {
+export function createResourceEvent(input: {
   readonly projectId: ProjectId;
   readonly resourceId: ResourceId;
   readonly sequence: number;
   readonly baseRevision: number;
-  readonly type: TType;
-  readonly data: Extract<ResourceEvent, { type: TType }>["data"];
-}): Extract<ResourceEvent, { type: TType }> {
+  readonly type: ResourceEvent["type"];
+  readonly data: ResourceEvent["data"];
+}): ResourceEvent {
   return freezeResourceEvent({
     version: 2,
     id: createEventId(randomUUID()),
@@ -67,7 +67,7 @@ export function createResourceEvent<TType extends ResourceEvent["type"]>(input: 
     timestamp: new Date().toISOString(),
     type: input.type,
     data: input.data,
-  } as Extract<ResourceEvent, { type: TType }>) as Extract<ResourceEvent, { type: TType }>;
+  } as ResourceEvent);
 }
 
 export function freezeResourceEvent(event: ResourceEvent): ResourceEvent {
