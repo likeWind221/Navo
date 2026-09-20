@@ -178,25 +178,26 @@ pnpm test       PASS
 
 ## 9. 本机验证状态
 
-仓库规范要求本机与 CI 双重验证。本次执行环境尝试：
+仓库规范要求本机与 CI 双重验证。GitHub Windows CI 已通过：
 
 ```text
-git clone --branch phase9-f9.6c-resource-registry ...
+pnpm typecheck  PASS
+pnpm test       PASS
+
+62 test files
+397 tests
+397 passed
 ```
 
-但容器 DNS 无法解析 `github.com`，因此无法在本机取得仓库并运行 pnpm。这个失败属于当前执行环境网络限制，不是代码测试失败，但也不能等价写成“本机验证已通过”。
-
-因此当前 Step 状态保持 **🔄**，PR 可以供人工 review，但在本机 clean-clone 验证通过前不标记 ✅。
-
-建议本机执行：
+用户随后在本机对 `phase9-f9.6c-resource-registry` 执行并确认全部通过：
 
 ```text
-git fetch origin
-git switch phase9-f9.6c-resource-registry
-pnpm install --frozen-lockfile
-pnpm typecheck
-pnpm test
+pnpm install --frozen-lockfile  PASS
+pnpm typecheck                  PASS
+pnpm test                       PASS
 ```
+
+因此 F9.6c 满足双重门禁，可正式收口为 **✅**。
 
 ## 10. 当前边界
 
@@ -227,4 +228,4 @@ Node resource context              <- F9.6e
 full Human-gated integration       <- F9.6f
 ```
 
-F9.6c 当前等待本机复验与 PR 合并，之后才能进入 F9.6d。
+F9.6c 已完成本机与 CI 双重验证并进入合并收口；下一步为 F9.6d Node Reporting 与 Resource Capability。
