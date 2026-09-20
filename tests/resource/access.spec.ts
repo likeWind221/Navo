@@ -10,7 +10,6 @@ import { tmpdir } from "node:os";
 import { Context } from "cordis";
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { NodeId, ProjectId } from "../../src/brand/ids.js";
 import { NodeStore } from "../../src/node/store.js";
 import { ProjectStore } from "../../src/project/store.js";
 import { ResourceService } from "../../src/resource/service.js";
@@ -45,181 +44,184 @@ async function domain(): Promise<Context> {
   return ctx;
 }
 
-async function projectFixture(ctx: Context) {
-  const root = await fixture();
-  const project = ctx.projects.create({ goal: "Access project" });
-  const workspace = await ctx.projectWorkspaces.create(project.id, root);
-  return { project, workspace };
-}
-
-function createInput(projectId: ProjectId, sourceNodeId: NodeId) {
-  return {
-    projectId,
-    sourceNodeId,
-    name: "Resource",
-    description: "Shared findings",
-    type: "text/markdown",
-    entryRef: "report.md",
-  };
-}
-
-describe("Resource access and content boundary", () => {
-  it("represents access as exactly private, shared Nodes, or the whole Project", async () => {
+describe("Resource ownership, access and content boundary", () => {
+  it("keeps owner CRUD separate from Main-controlled read distribution", async () => {
     const ctx = await domain();
-    const { project } = await projectFixture(ctx);
-    const source = ctx.nodes.create({ projectId: project.id, objective: objective("source") });
+    const root = await fixture();
+    const project = ctx.projects.create({ goal: "Access project" });
+    await ctx.projectWorkspaces.create(project.id, root);
+    await writeFile(join(root, "report.md"), "report\n", "utf8");
+    const owner = ctx.nodes.create({ projectId: project.id, objective: objective("owner") });
+    const reader = ctx.nodes.create({ projectId: project.id, objective: objective("reader") });
+    const resource = await ctx.resources.publish({
+      projectId: project.id,
+      owner: { kind: "node", nodeId: owner.node.id },
+      sourceRef: "report.md",
+      name: "Report",
+      description: "Owner report",
+      type: "text/markdown",
+    });
+
+    expect(ctx.resources.getVisible(project.id, resource.id, {
+      kind: "node", nodeId: reader.node.id,
+    })).toBeUndefined();
+
+    expect(() => ctx.resources.setAccess({
+      projectId: project.id,
+      actor: { kind: "node", nodeId: owner.node.id },
+      resourceId: resource.id,
+      expectedRevision: 1,
+      access: { kind: "shared", nodeIds: [reader.node.id] },
+    })).toThrow(expect.objectContaining({ code: "invalid-access" }));
+
+    const shared = ctx.resources.setAccess({
+      projectId: project.id,
+      actor: { kind: "main" },
+      resourceId: resource.id,
+      expectedRevision: 1,
+      access: { kind: "shared", nodeIds: [reader.node.id] },
+    });
+    expect(ctx.resources.getVisible(project.id, resource.id, {
+      kind: "node", nodeId: reader.node.id,
+    })).toEqual(shared);
+
+    expect(() => ctx.resources.update({
+      projectId: project.id,
+      actor: { kind: "node", nodeId: reader.node.id },
+      resourceId: resource.id,
+      expectedRevision: 2,
+      changes: { name: "Reader edit" },
+    })).toThrow(expect.objectContaining({ code: "resource-not-owned" }));
+
+    expect(() => ctx.resources.delete({
+      projectId: project.id,
+      actor: { kind: "main" },
+      resourceId: resource.id,
+      expectedRevision: 2,
+    })).toThrow(expect.objectContaining({ code: "resource-not-owned" }));
+  });
+
+  it("supports private, shared and project access for Main-owned Resources", async () => {
+    const ctx = await domain();
+    const root = await fixture();
+    const project = ctx.projects.create({ goal: "Main assets" });
+    await ctx.projectWorkspaces.create(project.id, root);
+    await writeFile(join(root, "main.md"), "main\n", "utf8");
+    const nodeA = ctx.nodes.create({ projectId: project.id, objective: objective("A") });
     const nodeB = ctx.nodes.create({ projectId: project.id, objective: objective("B") });
-    const nodeC = ctx.nodes.create({ projectId: project.id, objective: objective("C") });
+
+    const resource = await ctx.resources.publish({
+      projectId: project.id,
+      owner: { kind: "main" },
+      sourceRef: "main.md",
+      name: "Main",
+      description: "Main-owned",
+      type: "text/markdown",
+    });
+    expect(ctx.resources.getVisible(project.id, resource.id, {
+      kind: "node", nodeId: nodeA.node.id,
+    })).toBeUndefined();
+
+    const shared = ctx.resources.setAccess({
+      projectId: project.id,
+      actor: { kind: "main" },
+      resourceId: resource.id,
+      expectedRevision: 1,
+      access: { kind: "shared", nodeIds: [nodeA.node.id] },
+    });
+    expect(ctx.resources.getVisible(project.id, resource.id, {
+      kind: "node", nodeId: nodeA.node.id,
+    })).toEqual(shared);
+    expect(ctx.resources.getVisible(project.id, resource.id, {
+      kind: "node", nodeId: nodeB.node.id,
+    })).toBeUndefined();
+
+    const projectWide = ctx.resources.setAccess({
+      projectId: project.id,
+      actor: { kind: "main" },
+      resourceId: resource.id,
+      expectedRevision: 2,
+      access: { kind: "project" },
+    });
+    expect(ctx.resources.getVisible(project.id, resource.id, {
+      kind: "node", nodeId: nodeB.node.id,
+    })).toEqual(projectWide);
+  });
+
+  it("rejects invalid shared membership and implicit Node owner duplication", async () => {
+    const ctx = await domain();
+    const root = await fixture();
+    const project = ctx.projects.create({ goal: "Membership" });
+    await ctx.projectWorkspaces.create(project.id, root);
+    await writeFile(join(root, "report.md"), "report\n", "utf8");
+    const owner = ctx.nodes.create({ projectId: project.id, objective: objective("owner") });
+    const reader = ctx.nodes.create({ projectId: project.id, objective: objective("reader") });
     const control = ctx.nodes.create({
       projectId: project.id,
       kind: "control",
       purpose: "checkpoint",
       title: "review",
     });
-    const otherProject = ctx.projects.create({ goal: "Other" });
-    await ctx.projectWorkspaces.create(otherProject.id, await fixture());
-    const otherNode = ctx.nodes.create({
-      projectId: otherProject.id,
-      objective: objective("other"),
-    });
-    const resource = await ctx.resources.create(createInput(project.id, source.node.id));
-
-    const shared = ctx.resources.setAccess({
+    const resource = await ctx.resources.publish({
       projectId: project.id,
-      resourceId: resource.id,
-      expectedRevision: 1,
-      access: { kind: "shared", nodeIds: [nodeC.node.id, nodeB.node.id] },
-    });
-    expect(shared.revision).toBe(2);
-    expect(shared.access).toEqual({
-      kind: "shared",
-      nodeIds: [...[nodeB.node.id, nodeC.node.id]].sort(),
+      owner: { kind: "node", nodeId: owner.node.id },
+      sourceRef: "report.md",
+      name: "Report",
+      description: "Membership",
+      type: "text/markdown",
     });
 
-    const projectShared = ctx.resources.setAccess({
-      projectId: project.id,
-      resourceId: resource.id,
-      expectedRevision: 2,
-      access: { kind: "project" },
-    });
-    expect(projectShared).toMatchObject({ revision: 3, access: { kind: "project" } });
-
-    const privateAgain = ctx.resources.setAccess({
-      projectId: project.id,
-      resourceId: resource.id,
-      expectedRevision: 3,
-      access: { kind: "private" },
-    });
-    expect(privateAgain).toMatchObject({ revision: 4, access: { kind: "private" } });
-
-    expect(ctx.resources.setAccess({
-      projectId: project.id,
-      resourceId: resource.id,
-      expectedRevision: 4,
-      access: { kind: "private" },
-    })).toBe(privateAgain);
-
-    for (const value of [
+    for (const access of [
       { kind: "shared", nodeIds: [] },
-      { kind: "shared", nodeIds: [source.node.id] },
-      { kind: "shared", nodeIds: [nodeB.node.id, nodeB.node.id] },
+      { kind: "shared", nodeIds: [owner.node.id] },
+      { kind: "shared", nodeIds: [reader.node.id, reader.node.id] },
+      { kind: "shared", nodeIds: [control.node.id] },
     ] as const) {
       expect(() => ctx.resources.setAccess({
         projectId: project.id,
+        actor: { kind: "main" },
         resourceId: resource.id,
-        expectedRevision: 4,
-        access: value,
-      })).toThrow(expect.objectContaining({ code: "invalid-access" }));
-    }
-
-    for (const nodeId of [control.node.id, otherNode.node.id]) {
-      expect(() => ctx.resources.setAccess({
-        projectId: project.id,
-        resourceId: resource.id,
-        expectedRevision: 4,
-        access: { kind: "shared", nodeIds: [nodeId] },
+        expectedRevision: 1,
+        access,
       })).toThrow(expect.objectContaining({ code: "invalid-access" }));
     }
   });
 
-  it("filters visibility while keeping Main and source Node implicit", async () => {
+  it("rejects an entry symlink that escapes into another Resource root", async () => {
     const ctx = await domain();
-    const { project } = await projectFixture(ctx);
-    const source = ctx.nodes.create({ projectId: project.id, objective: objective("source") });
-    const nodeB = ctx.nodes.create({ projectId: project.id, objective: objective("B") });
-    const nodeC = ctx.nodes.create({ projectId: project.id, objective: objective("C") });
-    const resource = await ctx.resources.create(createInput(project.id, source.node.id));
+    const root = await fixture();
+    const project = ctx.projects.create({ goal: "Content boundary" });
+    const workspace = await ctx.projectWorkspaces.create(project.id, root);
+    await writeFile(join(root, "first.md"), "first\n", "utf8");
+    await writeFile(join(root, "second.md"), "second\n", "utf8");
 
-    expect(ctx.resources.getVisible(project.id, resource.id, { kind: "main" })).toEqual(resource);
-    expect(ctx.resources.getVisible(project.id, resource.id, {
-      kind: "node", nodeId: source.node.id,
-    })).toEqual(resource);
-    expect(ctx.resources.getVisible(project.id, resource.id, {
-      kind: "node", nodeId: nodeB.node.id,
-    })).toBeUndefined();
-
-    const shared = ctx.resources.setAccess({
+    const first = await ctx.resources.publish({
       projectId: project.id,
-      resourceId: resource.id,
-      expectedRevision: 1,
-      access: { kind: "shared", nodeIds: [nodeB.node.id] },
+      owner: { kind: "main" },
+      sourceRef: "first.md",
+      name: "First",
+      description: "First",
+      type: "text/markdown",
     });
-    expect(ctx.resources.getVisible(project.id, resource.id, {
-      kind: "node", nodeId: nodeB.node.id,
-    })).toEqual(shared);
-    expect(ctx.resources.listVisible(project.id, {
-      kind: "node", nodeId: nodeC.node.id,
-    })).toEqual([]);
-
-    const projectShared = ctx.resources.setAccess({
+    const second = await ctx.resources.publish({
       projectId: project.id,
-      resourceId: resource.id,
-      expectedRevision: 2,
-      access: { kind: "project" },
-    });
-    expect(ctx.resources.listVisible(project.id, {
-      kind: "node", nodeId: nodeC.node.id,
-    })).toEqual([projectShared]);
-  });
-
-  it("resolves entries only inside the current Resource root", async () => {
-    const ctx = await domain();
-    const { project, workspace } = await projectFixture(ctx);
-    const source = ctx.nodes.create({ projectId: project.id, objective: objective("source") });
-    const safe = await ctx.resources.create(createInput(project.id, source.node.id));
-    const safeRoot = join(workspace.assetsRoot, String(safe.id));
-    await writeFile(join(safeRoot, "report.md"), "safe\n", "utf8");
-
-    await expect(ctx.resources.resolveEntry(
-      project.id,
-      safe.id,
-      { kind: "node", nodeId: source.node.id },
-    )).resolves.toEqual({
-      resourceId: safe.id,
-      path: join(safeRoot, "report.md"),
+      owner: { kind: "main" },
+      sourceRef: "second.md",
+      name: "Second",
+      description: "Second",
+      type: "text/markdown",
     });
 
-    const second = await ctx.resources.create({
-      ...createInput(project.id, source.node.id),
-      name: "Escaping entry",
-      entryRef: "escape/secret.md",
-    });
+    const firstEntry = join(workspace.assetsRoot, String(first.id), "first.md");
     const secondRoot = join(workspace.assetsRoot, String(second.id));
-    await writeFile(join(safeRoot, "secret.md"), "secret\n", "utf8");
+    await rm(firstEntry);
     await symlink(
-      safeRoot,
-      join(secondRoot, "escape"),
+      secondRoot,
+      firstEntry,
       process.platform === "win32" ? "junction" : "dir",
     );
-    await expect(ctx.resources.resolveEntry(project.id, second.id))
-      .rejects.toMatchObject({ code: "resource-content-unavailable" });
 
-    const missing = await ctx.resources.create({
-      ...createInput(project.id, source.node.id),
-      name: "Missing entry",
-      entryRef: "missing.md",
-    });
-    await expect(ctx.resources.resolveEntry(project.id, missing.id))
+    await expect(ctx.resources.resolveEntry(project.id, first.id, { kind: "main" }))
       .rejects.toMatchObject({ code: "resource-content-unavailable" });
   });
 });

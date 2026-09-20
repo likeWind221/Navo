@@ -1,15 +1,36 @@
 import { createNodeId } from "../brand/ids.js";
-import type { NodeId } from "../brand/ids.js";
 import { ResourceError } from "./errors.js";
 import type {
   ProjectResource,
   ResourceAccess,
-  ResourceViewer,
+  ResourcePrincipal,
 } from "./model.js";
+
+export function normalizeResourcePrincipal(
+  value: ResourcePrincipal,
+): ResourcePrincipal {
+  if (value.kind === "main") return Object.freeze({ kind: "main" });
+  if (value.kind === "node") {
+    return Object.freeze({
+      kind: "node",
+      nodeId: createNodeId(value.nodeId),
+    });
+  }
+  throw new ResourceError("invalid-resource", "Resource owner is invalid.");
+}
+
+export function sameResourcePrincipal(
+  left: ResourcePrincipal,
+  right: ResourcePrincipal,
+): boolean {
+  if (left.kind !== right.kind) return false;
+  return left.kind === "main"
+    || (right.kind === "node" && left.nodeId === right.nodeId);
+}
 
 export function normalizeResourceAccess(
   value: ResourceAccess,
-  sourceNodeId: NodeId,
+  owner: ResourcePrincipal,
 ): ResourceAccess {
   if (value.kind === "private") return Object.freeze({ kind: "private" });
   if (value.kind === "project") return Object.freeze({ kind: "project" });
@@ -21,10 +42,13 @@ export function normalizeResourceAccess(
   }
 
   const nodeIds = value.nodeIds.map(nodeId => createNodeId(nodeId));
-  if (nodeIds.some(nodeId => nodeId === sourceNodeId)) {
+  if (
+    owner.kind === "node"
+    && nodeIds.some(nodeId => nodeId === owner.nodeId)
+  ) {
     throw new ResourceError(
       "invalid-access",
-      "Resource source Node is implicit and must not appear in shared access.",
+      "Resource owner is implicit and must not appear in shared access.",
     );
   }
   const unique = [...new Set(nodeIds)].sort();
@@ -52,11 +76,32 @@ export function sameResourceAccess(
 
 export function canReadResource(
   resource: ProjectResource,
-  viewer: ResourceViewer,
+  viewer: ResourcePrincipal,
 ): boolean {
   if (viewer.kind === "main") return true;
-  if (viewer.nodeId === resource.sourceNodeId) return true;
+  if (sameResourcePrincipal(resource.owner, viewer)) return true;
   if (resource.access.kind === "project") return true;
   if (resource.access.kind === "private") return false;
   return resource.access.nodeIds.includes(viewer.nodeId);
+}
+
+export function requireResourceOwner(
+  resource: ProjectResource,
+  actor: ResourcePrincipal,
+): void {
+  if (sameResourcePrincipal(resource.owner, actor)) return;
+  throw new ResourceError(
+    "resource-not-owned",
+    "Only the Resource owner may modify or delete this Resource.",
+  );
+}
+
+export function requireResourceAccessManager(
+  actor: ResourcePrincipal,
+): void {
+  if (actor.kind === "main") return;
+  throw new ResourceError(
+    "invalid-access",
+    "Only the Main Agent may change Resource access.",
+  );
 }

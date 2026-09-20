@@ -3,20 +3,20 @@ import { randomUUID } from "node:crypto";
 import { createEventId } from "../brand/ids.js";
 import type {
   EventId,
-  NodeId,
   ProjectId,
   ResourceId,
 } from "../brand/ids.js";
 import type {
   ResourceAccess,
   ResourceMetadataPatch,
+  ResourcePrincipal,
 } from "./model.js";
 
 export type ResourceEvent = ResourceEventHeader & (
   | {
       readonly type: "resource-created";
       readonly data: {
-        readonly sourceNodeId: NodeId;
+        readonly owner: ResourcePrincipal;
         readonly name: string;
         readonly description: string;
         readonly resourceType: string;
@@ -38,7 +38,7 @@ export type ResourceEvent = ResourceEventHeader & (
 );
 
 export interface ResourceEventHeader {
-  readonly version: 2;
+  readonly version: 3;
   readonly id: EventId;
   readonly projectId: ProjectId;
   readonly resourceId: ResourceId;
@@ -57,7 +57,7 @@ export function createResourceEvent(input: {
   readonly data: ResourceEvent["data"];
 }): ResourceEvent {
   return freezeResourceEvent({
-    version: 2,
+    version: 3,
     id: createEventId(randomUUID()),
     projectId: input.projectId,
     resourceId: input.resourceId,

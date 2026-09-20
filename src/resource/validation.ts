@@ -1,11 +1,13 @@
 import type { Context } from "cordis";
 
 import type { NodeId, ProjectId } from "../brand/ids.js";
+import type { ProjectWorkspace } from "../workspace/model.js";
 import { ResourceError } from "./errors.js";
 import type {
   ProjectResource,
   ResourceAccess,
   ResourceMetadataPatch,
+  ResourcePrincipal,
 } from "./model.js";
 import { validateResourceEntryRef } from "./path.js";
 
@@ -38,7 +40,7 @@ export function validateResourcePatch(
   const keys = Object.keys(input);
   if (
     keys.length === 0
-    || keys.some(key => !["name", "description", "type", "entryRef"].includes(key))
+    || keys.some(key => !["name", "description", "type"].includes(key))
   ) {
     throw new ResourceError(code, "Resource metadata patch is invalid.");
   }
@@ -54,9 +56,6 @@ export function validateResourcePatch(
       ...(input.type === undefined
         ? {}
         : { type: requireResourceText(input.type, "type") }),
-      ...(input.entryRef === undefined
-        ? {}
-        : { entryRef: validateResourceEntryRef(input.entryRef) }),
     });
   } catch (error: unknown) {
     if (code === "invalid-history") {
@@ -84,10 +83,17 @@ export function effectiveResourceChanges(
     ...(changes.type !== undefined && changes.type !== current.type
       ? { type: changes.type }
       : {}),
-    ...(changes.entryRef !== undefined && changes.entryRef !== current.entryRef
-      ? { entryRef: changes.entryRef }
-      : {}),
   });
+}
+
+export function requireResourcePrincipal(
+  ctx: Context,
+  projectId: ProjectId,
+  principal: ResourcePrincipal,
+  code: "node-unavailable" | "invalid-history" | "invalid-access" = "node-unavailable",
+): void {
+  if (principal.kind === "main") return;
+  requireResourceWorkNode(ctx, projectId, principal.nodeId, code);
 }
 
 export function requireResourceWorkNode(
@@ -136,4 +142,55 @@ function requireResourceText(value: unknown, field: string): string {
     );
   }
   return value;
+}
+
+export function requireResourceProject(
+  ctx: Context,
+  projectId: ProjectId,
+): void {
+  if (ctx.projects.get(projectId) !== undefined) return;
+  throw new ResourceError(
+    "project-unavailable",
+    "Resource Service requires an existing Project.",
+  );
+}
+
+export function requireActiveResourceProject(
+  ctx: Context,
+  projectId: ProjectId,
+): void {
+  if (ctx.projects.get(projectId)?.status === "active") return;
+  throw new ResourceError(
+    "project-unavailable",
+    "Resource mutation requires an active Project.",
+  );
+}
+
+export function requireResourceRevision(
+  resource: ProjectResource,
+  expectedRevision: number,
+): void {
+  if (
+    Number.isSafeInteger(expectedRevision)
+    && expectedRevision >= 1
+    && resource.revision === expectedRevision
+  ) {
+    return;
+  }
+  throw new ResourceError(
+    "stale-revision",
+    "Read the current Resource before modifying it.",
+  );
+}
+
+export async function requireResourceWorkspace(
+  ctx: Context,
+  projectId: ProjectId,
+): Promise<ProjectWorkspace> {
+  const workspace = await ctx.projectWorkspaces.get(projectId);
+  if (workspace !== undefined) return workspace;
+  throw new ResourceError(
+    "workspace-unavailable",
+    "Resource Service requires a bound Project Workspace.",
+  );
 }

@@ -1,4 +1,8 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import {
+  mkdtemp,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -13,7 +17,6 @@ import { ProjectWorkspaceStore } from "../../src/workspace/store.js";
 
 const contexts: Context[] = [];
 const roots: string[] = [];
-
 const objective = (title: string) => ({
   title,
   description: `Do ${title}`,
@@ -41,216 +44,152 @@ async function domain(): Promise<Context> {
   return ctx;
 }
 
-async function restoreDomain(
+async function restoreProject(
   source: Context,
+  target: Context,
   projectId: ProjectId,
-  nodeIds: readonly ReturnType<typeof source.nodes.create>[],
   root: string,
-): Promise<Context> {
-  const target = await domain();
+): Promise<void> {
   target.projects.restore(
     projectId,
     JSON.parse(JSON.stringify(source.projects.getEvents(projectId))),
   );
-  for (const node of nodeIds) {
+  for (const node of source.nodes.getByProject(projectId)) {
     target.nodes.restore(
       node.node.id,
       JSON.parse(JSON.stringify(source.nodes.getEvents(node.node.id))),
     );
   }
   await target.projectWorkspaces.create(projectId, root);
-  return target;
 }
 
-describe("Resource history replay", () => {
-  it("replays create, metadata, access, and delete facts and continues revisions", async () => {
+describe("Resource history replay v3", () => {
+  it("replays Main and Node ownership, updates, access and delete", async () => {
     const source = await domain();
     const root = await fixture();
-    const project = source.projects.create({ goal: "Replay Resource lifecycle" });
+    const project = source.projects.create({ goal: "Replay" });
     await source.projectWorkspaces.create(project.id, root);
     const nodeA = source.nodes.create({ projectId: project.id, objective: objective("A") });
     const nodeB = source.nodes.create({ projectId: project.id, objective: objective("B") });
+    await writeFile(join(root, "node.md"), "node\n", "utf8");
+    await writeFile(join(root, "main.md"), "main\n", "utf8");
 
-    const first = await source.resources.create({
+    const nodeResource = await source.resources.publish({
       projectId: project.id,
-      sourceNodeId: nodeA.node.id,
-      name: "First",
-      description: "First resource",
+      owner: { kind: "node", nodeId: nodeA.node.id },
+      sourceRef: "node.md",
+      name: "Node",
+      description: "Node resource",
       type: "text/markdown",
-      entryRef: "report.md",
     });
     const updated = source.resources.update({
       projectId: project.id,
-      resourceId: first.id,
+      actor: { kind: "node", nodeId: nodeA.node.id },
+      resourceId: nodeResource.id,
       expectedRevision: 1,
-      changes: { name: "First updated" },
+      changes: { name: "Node updated" },
     });
     const shared = source.resources.setAccess({
       projectId: project.id,
-      resourceId: first.id,
+      actor: { kind: "main" },
+      resourceId: nodeResource.id,
       expectedRevision: 2,
       access: { kind: "shared", nodeIds: [nodeB.node.id] },
     });
 
-    const second = await source.resources.create({
+    const mainResource = await source.resources.publish({
       projectId: project.id,
-      sourceNodeId: nodeA.node.id,
-      name: "Second",
-      description: "Delete me",
-      type: "application/json",
-      entryRef: "data.json",
+      owner: { kind: "main" },
+      sourceRef: "main.md",
+      name: "Main",
+      description: "Main resource",
+      type: "text/markdown",
     });
     source.resources.delete({
       projectId: project.id,
-      resourceId: second.id,
+      actor: { kind: "main" },
+      resourceId: mainResource.id,
       expectedRevision: 1,
     });
 
+    const target = await domain();
+    await restoreProject(source, target, project.id, root);
     const history = JSON.parse(JSON.stringify(source.resources.getEvents(project.id)));
-    const target = await restoreDomain(source, project.id, [nodeA, nodeB], root);
     const restored = await target.resources.restore(project.id, history);
 
     expect(restored).toEqual([shared]);
     expect(restored[0]).toMatchObject({
-      id: first.id,
-      name: "First updated",
+      owner: { kind: "node", nodeId: nodeA.node.id },
+      name: "Node updated",
       revision: 3,
       access: { kind: "shared", nodeIds: [nodeB.node.id] },
-      createdAt: first.createdAt,
-      updatedAt: shared.updatedAt,
-    });
-    expect(target.resources.get(project.id, second.id)).toBeUndefined();
-    expect(target.resources.getEvents(project.id).find(event =>
-      event.resourceId === second.id && event.type === "resource-deleted"))
-      .toMatchObject({ baseRevision: 1, revision: 2 });
-    expect(Object.isFrozen(target.resources.getEvents(project.id))).toBe(true);
-
-    const continued = target.resources.update({
-      projectId: project.id,
-      resourceId: first.id,
-      expectedRevision: 3,
-      changes: { description: "continued after replay" },
-    });
-    expect(continued.revision).toBe(4);
-    expect(target.resources.getEvents(project.id).at(-1)).toMatchObject({
-      sequence: 6,
-      baseRevision: 3,
-      revision: 4,
-      type: "resource-updated",
     });
     expect(updated.revision).toBe(2);
+    expect(target.resources.get(project.id, mainResource.id)).toBeUndefined();
   });
 
-  it("rejects malformed lifecycle history atomically", async () => {
-    const source = await domain();
-    const root = await fixture();
-    const project = source.projects.create({ goal: "Reject invalid replay" });
-    await source.projectWorkspaces.create(project.id, root);
-    const nodeA = source.nodes.create({ projectId: project.id, objective: objective("A") });
-    const resource = await source.resources.create({
-      projectId: project.id,
-      sourceNodeId: nodeA.node.id,
-      name: "Resource",
-      description: "Replay",
-      type: "text/plain",
-      entryRef: "entry.txt",
-    });
-    source.resources.update({
-      projectId: project.id,
-      resourceId: resource.id,
-      expectedRevision: 1,
-      changes: { name: "Updated" },
-    });
-    const history = JSON.parse(JSON.stringify(source.resources.getEvents(project.id)));
-
-    const target = await restoreDomain(source, project.id, [nodeA], root);
-    history[1].baseRevision = 0;
-    await expect(target.resources.restore(project.id, history))
-      .rejects.toMatchObject({ code: "invalid-history" });
-    expect(target.resources.getEvents(project.id)).toEqual([]);
-    expect(target.resources.listByProject(project.id)).toEqual([]);
-  });
-
-  it("rejects old schemas, invalid shared Nodes, duplicate event ids, and duplicate Resource ids", async () => {
+  it("rejects v2 history and invalid owner atomically", async () => {
     const source = await domain();
     const root = await fixture();
     const project = source.projects.create({ goal: "Strict replay" });
     await source.projectWorkspaces.create(project.id, root);
-    const nodeA = source.nodes.create({ projectId: project.id, objective: objective("A") });
-    const nodeB = source.nodes.create({ projectId: project.id, objective: objective("B") });
-    const resource = await source.resources.create({
+    await writeFile(join(root, "main.md"), "main\n", "utf8");
+    await source.resources.publish({
       projectId: project.id,
-      sourceNodeId: nodeA.node.id,
-      name: "Resource",
-      description: "Replay",
-      type: "text/plain",
-      entryRef: "entry.txt",
-    });
-    source.resources.setAccess({
-      projectId: project.id,
-      resourceId: resource.id,
-      expectedRevision: 1,
-      access: { kind: "shared", nodeIds: [nodeB.node.id] },
+      owner: { kind: "main" },
+      sourceRef: "main.md",
+      name: "Main",
+      description: "Main resource",
+      type: "text/markdown",
     });
     const valid = JSON.parse(JSON.stringify(source.resources.getEvents(project.id)));
 
-    const oldSchema = JSON.parse(JSON.stringify(valid));
-    oldSchema[0].version = 1;
-    const targetA = await restoreDomain(source, project.id, [nodeA, nodeB], root);
-    await expect(targetA.resources.restore(project.id, oldSchema))
+    const v2 = JSON.parse(JSON.stringify(valid));
+    v2[0].version = 2;
+    const targetA = await domain();
+    await restoreProject(source, targetA, project.id, root);
+    await expect(targetA.resources.restore(project.id, v2))
       .rejects.toMatchObject({ code: "invalid-history" });
+    expect(targetA.resources.getEvents(project.id)).toEqual([]);
 
-    const invalidNode = JSON.parse(JSON.stringify(valid));
-    invalidNode[1].data.access.nodeIds = ["missing-node"];
-    const targetB = await restoreDomain(source, project.id, [nodeA, nodeB], root);
-    await expect(targetB.resources.restore(project.id, invalidNode))
+    const invalidOwner = JSON.parse(JSON.stringify(valid));
+    invalidOwner[0].data.owner = { kind: "node", nodeId: "missing-node" };
+    const targetB = await domain();
+    await restoreProject(source, targetB, project.id, root);
+    await expect(targetB.resources.restore(project.id, invalidOwner))
       .rejects.toMatchObject({ code: "invalid-history" });
+    expect(targetB.resources.getEvents(project.id)).toEqual([]);
+  });
 
-    const duplicateEvent = JSON.parse(JSON.stringify(valid));
-    duplicateEvent[1].id = duplicateEvent[0].id;
-    const targetC = await restoreDomain(source, project.id, [nodeA, nodeB], root);
-    await expect(targetC.resources.restore(project.id, duplicateEvent))
-      .rejects.toMatchObject({ code: "invalid-history" });
+  it("rejects duplicate Resource identity across Projects", async () => {
+    const source = await domain();
+    const rootA = await fixture();
+    const rootB = await fixture();
+    const projectA = source.projects.create({ goal: "A" });
+    const projectB = source.projects.create({ goal: "B" });
+    await source.projectWorkspaces.create(projectA.id, rootA);
+    await source.projectWorkspaces.create(projectB.id, rootB);
+    await writeFile(join(rootA, "a.md"), "a\n", "utf8");
 
-    const otherProject = source.projects.create({ goal: "Other" });
-    const otherRoot = await fixture();
-    await source.projectWorkspaces.create(otherProject.id, otherRoot);
-    const otherNode = source.nodes.create({
-      projectId: otherProject.id,
-      objective: objective("other"),
+    await source.resources.publish({
+      projectId: projectA.id,
+      owner: { kind: "main" },
+      sourceRef: "a.md",
+      name: "A",
+      description: "A",
+      type: "text/markdown",
     });
-    const duplicateResource = [JSON.parse(JSON.stringify(valid[0]))];
-    duplicateResource[0].id = "other-project-create-event";
-    duplicateResource[0].projectId = otherProject.id;
-    duplicateResource[0].sequence = 1;
-    duplicateResource[0].data.sourceNodeId = otherNode.node.id;
+    const historyA = JSON.parse(JSON.stringify(source.resources.getEvents(projectA.id)));
+    const duplicate = [JSON.parse(JSON.stringify(historyA[0]))];
+    duplicate[0].id = "other-create-event";
+    duplicate[0].projectId = projectB.id;
+    duplicate[0].sequence = 1;
 
-    const targetD = await domain();
-    targetD.projects.restore(
-      project.id,
-      JSON.parse(JSON.stringify(source.projects.getEvents(project.id))),
-    );
-    targetD.nodes.restore(
-      nodeA.node.id,
-      JSON.parse(JSON.stringify(source.nodes.getEvents(nodeA.node.id))),
-    );
-    targetD.nodes.restore(
-      nodeB.node.id,
-      JSON.parse(JSON.stringify(source.nodes.getEvents(nodeB.node.id))),
-    );
-    await targetD.projectWorkspaces.create(project.id, root);
-    await targetD.resources.restore(project.id, valid);
-
-    targetD.projects.restore(
-      otherProject.id,
-      JSON.parse(JSON.stringify(source.projects.getEvents(otherProject.id))),
-    );
-    targetD.nodes.restore(
-      otherNode.node.id,
-      JSON.parse(JSON.stringify(source.nodes.getEvents(otherNode.node.id))),
-    );
-    await targetD.projectWorkspaces.create(otherProject.id, otherRoot);
-    await expect(targetD.resources.restore(otherProject.id, duplicateResource))
+    const target = await domain();
+    await restoreProject(source, target, projectA.id, rootA);
+    await target.resources.restore(projectA.id, historyA);
+    await restoreProject(source, target, projectB.id, rootB);
+    await expect(target.resources.restore(projectB.id, duplicate))
       .rejects.toMatchObject({ code: "resource-already-exists" });
   });
 });

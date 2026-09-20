@@ -7,6 +7,7 @@ import type { FilePath } from "./types.js";
 export interface FileEnvironment {
   readonly cwd: string;
   readonly workspaceRoot?: string;
+  readonly blockedRoots?: readonly string[];
 }
 
 export interface FileTarget {
@@ -18,6 +19,7 @@ export interface FileTarget {
 export async function createFileEnvironment(
   cwd: string,
   workspaceRoot?: string,
+  blockedRoots: readonly string[] = [],
 ): Promise<FileEnvironment> {
   if (typeof cwd !== "string" || !cwd || cwd.includes("\0") || !isAbsolute(cwd)) {
     throw new FileError(
@@ -32,6 +34,12 @@ export async function createFileEnvironment(
     "File environment cwd must be a directory.",
   );
   if (workspaceRoot === undefined) {
+    if (blockedRoots.length > 0) {
+      throw new FileError(
+        "invalid-config",
+        "File environment blockedRoots require workspaceRoot.",
+      );
+    }
     return Object.freeze({ cwd: canonicalCwd });
   }
   if (
@@ -51,8 +59,39 @@ export async function createFileEnvironment(
     "File environment workspaceRoot could not be resolved.",
     "File environment workspaceRoot must be a directory.",
   );
-  assertFileContained(canonicalRoot, canonicalCwd, "File environment cwd must stay inside workspaceRoot.");
-  return Object.freeze({ cwd: canonicalCwd, workspaceRoot: canonicalRoot });
+  assertFileContained(
+    canonicalRoot,
+    canonicalCwd,
+    "File environment cwd must stay inside workspaceRoot.",
+  );
+
+  const canonicalBlocked = await Promise.all(blockedRoots.map(async (root) => {
+    if (typeof root !== "string" || !root || root.includes("\0") || !isAbsolute(root)) {
+      throw new FileError(
+        "invalid-config",
+        "File environment blocked roots must be non-empty absolute paths.",
+      );
+    }
+    const canonical = await canonicalDirectory(
+      root,
+      "File environment blocked root could not be resolved.",
+      "File environment blocked root must be a directory.",
+    );
+    assertFileContained(
+      canonicalRoot,
+      canonical,
+      "File environment blocked roots must stay inside workspaceRoot.",
+    );
+    return canonical;
+  }));
+
+  return Object.freeze({
+    cwd: canonicalCwd,
+    workspaceRoot: canonicalRoot,
+    ...(canonicalBlocked.length === 0
+      ? {}
+      : { blockedRoots: Object.freeze(canonicalBlocked) }),
+  });
 }
 
 export async function resolveFileTarget(
@@ -64,7 +103,7 @@ export async function resolveFileTarget(
 
   try {
     const canonical = await realpath(candidate);
-    assertEnvironmentContained(environment, canonical);
+    assertEnvironmentAllowed(environment, canonical);
     return Object.freeze({
       inputPath,
       path: canonical,
@@ -83,7 +122,7 @@ export async function resolveFileTarget(
   } catch (error: unknown) {
     throw classifyFileError(error, "The parent of the file target could not be resolved.");
   }
-  assertEnvironmentContained(environment, canonicalParent);
+  assertEnvironmentAllowed(environment, canonicalParent);
 
   return Object.freeze({
     inputPath,
@@ -92,26 +131,38 @@ export async function resolveFileTarget(
   });
 }
 
-function assertEnvironmentContained(environment: FileEnvironment, path: string): void {
-  if (environment.workspaceRoot === undefined) return;
-  assertFileContained(
-    environment.workspaceRoot,
-    path,
-    "File target escapes the current Project Workspace.",
-  );
+function assertEnvironmentAllowed(
+  environment: FileEnvironment,
+  path: string,
+): void {
+  if (environment.workspaceRoot !== undefined) {
+    assertFileContained(
+      environment.workspaceRoot,
+      path,
+      "File target escapes the current Project Workspace.",
+    );
+  }
+  for (const blocked of environment.blockedRoots ?? []) {
+    if (isContained(blocked, path)) {
+      throw new FileError(
+        "path-not-allowed",
+        "File target belongs to Navo internal storage and requires a trusted Project capability.",
+      );
+    }
+  }
 }
 
 function assertFileContained(parent: string, child: string, message: string): void {
+  if (isContained(parent, child)) return;
+  throw new FileError("path-not-allowed", message);
+}
+
+function isContained(parent: string, child: string): boolean {
   const fromParent = relative(parent, child);
-  if (
-    fromParent === ""
+  return fromParent === ""
     || (fromParent !== ".."
       && !fromParent.startsWith(`..${sep}`)
-      && !isAbsolute(fromParent))
-  ) {
-    return;
-  }
-  throw new FileError("path-not-allowed", message);
+      && !isAbsolute(fromParent));
 }
 
 async function canonicalDirectory(

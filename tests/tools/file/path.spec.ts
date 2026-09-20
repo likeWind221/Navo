@@ -96,6 +96,30 @@ describe("file environment path targets", () => {
     }
   });
 
+  it("blocks configured internal roots for existing, missing and symlinked targets", async () => {
+    const root = await createFixture();
+    try {
+      const internal = join(root, ".navo");
+      await mkdir(internal);
+      await writeFile(join(internal, "secret.txt"), "secret", "utf8");
+      const environment = await createFileEnvironment(root, root, [internal]);
+
+      await expect(resolveFileTarget(environment, ".navo/secret.txt"))
+        .rejects.toMatchObject({ code: "path-not-allowed" });
+      await expect(resolveFileTarget(environment, ".navo/new.txt"))
+        .rejects.toMatchObject({ code: "path-not-allowed" });
+
+      const alias = join(root, "internal-alias");
+      await symlink(internal, alias, process.platform === "win32" ? "junction" : "dir");
+      await expect(resolveFileTarget(environment, "internal-alias/secret.txt"))
+        .rejects.toMatchObject({ code: "path-not-allowed" });
+      await expect(resolveFileTarget(environment, "notes/a.txt"))
+        .resolves.toMatchObject({ exists: true });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("requires an absolute existing directory and rejects invalid paths", async () => {
     await expect(createFileEnvironment("relative/workspace"))
       .rejects.toMatchObject({ code: "invalid-config" });

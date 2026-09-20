@@ -1,5 +1,7 @@
 # 77：F9.6d.2 Resource Lifecycle 与 Access Domain
 
+> **后续修订（F9.6d.3）：** 本文记录 F9.6d.2 当时的 Resource 模型。随后 Resource provenance 从 Node-only `sourceNodeId` 泛化为 `owner: Main | Node`，owner 获得自身 Resource CRUD，非 owner 保持 read-only，Main 额外负责 access 分发；事件 schema 升级到 v3。后续权威实现见 [78](78-devlog-f9.6d3-resource-capabilities.md)。本文保留为阶段轨迹。
+
 ## 做了什么
 
 F9.6d.2 将 F9.6c 的一次性 Resource Registry 升级为稳定的 Resource 生命周期领域。Resource 不再由目录扫描或任意文件引用决定身份，而由稳定 `ResourceId` 表示，并通过唯一的 `ResourceService` 完成创建、读取、修改、删除、权限变化和历史恢复。

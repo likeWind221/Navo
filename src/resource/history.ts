@@ -6,17 +6,20 @@ import {
   createResourceId,
 } from "../brand/ids.js";
 import type {
-  NodeId,
   ProjectId,
   ResourceId,
 } from "../brand/ids.js";
-import { normalizeResourceAccess } from "./access.js";
+import {
+  normalizeResourceAccess,
+  normalizeResourcePrincipal,
+} from "./access.js";
 import { ResourceError } from "./errors.js";
 import type { ResourceEvent } from "./events.js";
 import { freezeResourceEvent } from "./events.js";
 import type {
   ResourceAccess,
   ResourceMetadataPatch,
+  ResourcePrincipal,
 } from "./model.js";
 import {
   projectResourceEvent,
@@ -24,7 +27,7 @@ import {
 } from "./projector.js";
 import {
   requireResourceAccessNodes,
-  requireResourceWorkNode,
+  requireResourcePrincipal,
   validateResourceMetadata,
   validateResourcePatch,
 } from "./validation.js";
@@ -64,7 +67,7 @@ function parseResourceEvent(
   if (raw === null || typeof raw !== "object") throw invalidHistory();
   const value = raw as Record<string, unknown>;
   if (
-    value.version !== 2
+    value.version !== 3
     || typeof value.id !== "string"
     || value.projectId !== projectId
     || typeof value.resourceId !== "string"
@@ -81,7 +84,7 @@ function parseResourceEvent(
 
   const resourceId = createResourceId(value.resourceId);
   const header = {
-    version: 2 as const,
+    version: 3 as const,
     id: createEventId(value.id),
     projectId,
     resourceId,
@@ -93,15 +96,14 @@ function parseResourceEvent(
   const data = value.data as Record<string, unknown>;
 
   if (value.type === "resource-created") {
-    if (typeof data.sourceNodeId !== "string") throw invalidHistory();
-    const sourceNodeId = createNodeId(data.sourceNodeId);
-    requireResourceWorkNode(ctx, projectId, sourceNodeId, "invalid-history");
+    const owner = parseHistoryPrincipal(data.owner);
+    requireResourcePrincipal(ctx, projectId, owner, "invalid-history");
     const metadata = validateCreatedMetadata(data);
     return freezeResourceEvent({
       ...header,
       type: "resource-created",
       data: {
-        sourceNodeId,
+        owner,
         name: metadata.name,
         description: metadata.description,
         resourceType: metadata.type,
@@ -127,7 +129,7 @@ function parseResourceEvent(
   }
 
   if (value.type === "resource-access-changed") {
-    const access = parseHistoryAccess(data.access, current.resource.sourceNodeId);
+    const access = parseHistoryAccess(data.access, current.resource.owner);
     requireResourceAccessNodes(ctx, projectId, access, "invalid-history");
     return freezeResourceEvent({
       ...header,
@@ -167,18 +169,45 @@ function validateCreatedMetadata(data: Record<string, unknown>) {
   }
 }
 
+function parseHistoryPrincipal(value: unknown): ResourcePrincipal {
+  if (value === null || typeof value !== "object") throw invalidHistory();
+  const principal = value as Record<string, unknown>;
+  try {
+    if (principal.kind === "main" && Object.keys(principal).length === 1) {
+      return normalizeResourcePrincipal({ kind: "main" });
+    }
+    if (
+      principal.kind === "node"
+      && Object.keys(principal).length === 2
+      && typeof principal.nodeId === "string"
+    ) {
+      return normalizeResourcePrincipal({
+        kind: "node",
+        nodeId: createNodeId(principal.nodeId),
+      });
+    }
+  } catch (error: unknown) {
+    throw new ResourceError(
+      "invalid-history",
+      "Resource history contains an invalid owner.",
+      { cause: error },
+    );
+  }
+  throw invalidHistory();
+}
+
 function parseHistoryAccess(
   value: unknown,
-  sourceNodeId: NodeId,
+  owner: ResourcePrincipal,
 ): ResourceAccess {
   if (value === null || typeof value !== "object") throw invalidHistory();
   const access = value as Record<string, unknown>;
   try {
     if (access.kind === "private" && Object.keys(access).length === 1) {
-      return normalizeResourceAccess({ kind: "private" }, sourceNodeId);
+      return normalizeResourceAccess({ kind: "private" }, owner);
     }
     if (access.kind === "project" && Object.keys(access).length === 1) {
-      return normalizeResourceAccess({ kind: "project" }, sourceNodeId);
+      return normalizeResourceAccess({ kind: "project" }, owner);
     }
     if (
       access.kind === "shared"
@@ -189,7 +218,7 @@ function parseHistoryAccess(
       return normalizeResourceAccess({
         kind: "shared",
         nodeIds: access.nodeIds.map(nodeId => createNodeId(nodeId as string)),
-      }, sourceNodeId);
+      }, owner);
     }
   } catch (error: unknown) {
     throw new ResourceError(
