@@ -10,6 +10,7 @@ import {
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import type { JsonObject, ToolCallContentBlock } from "../../src/llm/types.js";
 import { NODE_AGENT_TOOL_NAMES } from "../../src/node/profile.js";
+import { SET_RESOURCE_ACCESS_TOOL_NAME } from "../../src/tools/builtins/resource/access.js";
 import { MODIFY_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/modify-roadmap.js";
 import { READ_NODE_TOOL_NAME } from "../../src/tools/builtins/roadmap/read-node.js";
 import { READ_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/read.js";
