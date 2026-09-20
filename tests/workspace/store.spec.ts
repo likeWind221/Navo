@@ -226,6 +226,7 @@ describe("Project Workspace root migration", () => {
       sessionId,
       allowedTools: ["read"],
     });
+    if (inside.kind === "failure") throw new Error(inside.failure.message);
     expect(inside).toMatchObject({ kind: "success" });
     expect(inside.block.content).toEqual([
       expect.objectContaining({ type: "text", text: expect.stringContaining("inside") }),
