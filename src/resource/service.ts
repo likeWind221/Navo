@@ -11,31 +11,38 @@ import type {
 import {
   canReadResource,
   normalizeResourceAccess,
+  normalizeResourcePrincipal,
+  requireResourceAccessManager,
+  requireResourceOwner,
   sameResourceAccess,
 } from "./access.js";
 import { ResourceError } from "./errors.js";
 import type { ResourceEvent } from "./events.js";
 import { createResourceEvent } from "./events.js";
 import { parseResourceHistory } from "./history.js";
-import { ResourceStore } from "./store.js";
 import type {
-  CreateResourceInput,
   DeleteResourceInput,
   ProjectResource,
+  PublishResourceInput,
   ResourceEntryTarget,
-  ResourceViewer,
+  ResourcePrincipal,
   SetResourceAccessInput,
   UpdateResourceInput,
 } from "./model.js";
 import {
-  ensureResourceRoot,
+  resourceEntryRefFromSource,
   resolveResourceEntry,
 } from "./path.js";
+import {
+  discardPublishedResourceContent,
+  publishResourceContent,
+} from "./publication.js";
 import { activeResources } from "./projector.js";
+import { ResourceStore } from "./store.js";
 import {
   effectiveResourceChanges,
   requireResourceAccessNodes,
-  requireResourceWorkNode,
+  requireResourcePrincipal,
   validateResourceMetadata,
   validateResourcePatch,
 } from "./validation.js";
@@ -50,39 +57,53 @@ export class ResourceService extends Service {
     super(ctx, "resources");
   }
 
-  async create(input: CreateResourceInput): Promise<ProjectResource> {
+  async publish(
+    input: PublishResourceInput,
+    signal?: AbortSignal,
+  ): Promise<ProjectResource> {
     this.requireActiveProject(input.projectId);
-    requireResourceWorkNode(this.ctx, input.projectId, input.sourceNodeId);
-    const metadata = validateResourceMetadata(input);
+    const owner = normalizeResourcePrincipal(input.owner);
+    requireResourcePrincipal(this.ctx, input.projectId, owner);
+    const entryRef = resourceEntryRefFromSource(input.sourceRef);
+    const metadata = validateResourceMetadata({ ...input, entryRef });
     const workspace = await this.requireWorkspace(input.projectId);
+    const resourceId = this.nextId();
 
-    let resourceId: ResourceId;
-    do resourceId = createResourceId(randomUUID());
-    while (this.store.has(resourceId));
-
-    await ensureResourceRoot(workspace, resourceId);
-    this.requireActiveProject(input.projectId);
-    requireResourceWorkNode(this.ctx, input.projectId, input.sourceNodeId);
-
-    const event = this.event(
-      input.projectId,
+    const published = await publishResourceContent(
+      workspace,
       resourceId,
-      0,
-      "resource-created",
-      {
-        sourceNodeId: input.sourceNodeId,
-        name: metadata.name,
-        description: metadata.description,
-        resourceType: metadata.type,
-        entryRef: metadata.entryRef,
-      },
+      input.sourceRef,
+      signal,
     );
-    return this.store.append(event).resource;
+    try {
+      signal?.throwIfAborted();
+      this.requireActiveProject(input.projectId);
+      requireResourcePrincipal(this.ctx, input.projectId, owner);
+      return this.store.append(this.event(
+        input.projectId,
+        resourceId,
+        0,
+        "resource-created",
+        {
+          owner,
+          name: metadata.name,
+          description: metadata.description,
+          resourceType: metadata.type,
+          entryRef: published.entryRef,
+        },
+      )).resource;
+    } catch (error: unknown) {
+      await discardPublishedResourceContent(published.root);
+      throw error;
+    }
   }
 
   update(input: UpdateResourceInput): ProjectResource {
     this.requireActiveProject(input.projectId);
+    const actor = normalizeResourcePrincipal(input.actor);
+    requireResourcePrincipal(this.ctx, input.projectId, actor);
     const current = this.requireCurrent(input.projectId, input.resourceId);
+    requireResourceOwner(current, actor);
     this.requireRevision(current, input.expectedRevision);
     const changes = validateResourcePatch(input.changes);
     const effective = effectiveResourceChanges(current, changes);
@@ -99,9 +120,12 @@ export class ResourceService extends Service {
 
   setAccess(input: SetResourceAccessInput): ProjectResource {
     this.requireActiveProject(input.projectId);
+    const actor = normalizeResourcePrincipal(input.actor);
+    requireResourcePrincipal(this.ctx, input.projectId, actor);
+    requireResourceAccessManager(actor);
     const current = this.requireCurrent(input.projectId, input.resourceId);
     this.requireRevision(current, input.expectedRevision);
-    const access = normalizeResourceAccess(input.access, current.sourceNodeId);
+    const access = normalizeResourceAccess(input.access, current.owner);
     requireResourceAccessNodes(this.ctx, input.projectId, access);
     if (sameResourceAccess(current.access, access)) return current;
 
@@ -116,7 +140,10 @@ export class ResourceService extends Service {
 
   delete(input: DeleteResourceInput): void {
     this.requireActiveProject(input.projectId);
+    const actor = normalizeResourcePrincipal(input.actor);
+    requireResourcePrincipal(this.ctx, input.projectId, actor);
     const current = this.requireCurrent(input.projectId, input.resourceId);
+    requireResourceOwner(current, actor);
     this.requireRevision(current, input.expectedRevision);
     this.store.append(this.event(
       input.projectId,
@@ -151,28 +178,30 @@ export class ResourceService extends Service {
   getVisible(
     projectId: ProjectId,
     resourceId: ResourceId,
-    viewer: ResourceViewer,
+    viewer: ResourcePrincipal,
   ): ProjectResource | undefined {
-    this.requireViewer(projectId, viewer);
+    const principal = normalizeResourcePrincipal(viewer);
+    this.requireViewer(projectId, principal);
     const resource = this.get(projectId, resourceId);
     if (resource === undefined) return undefined;
-    return canReadResource(resource, viewer) ? resource : undefined;
+    return canReadResource(resource, principal) ? resource : undefined;
   }
 
   listVisible(
     projectId: ProjectId,
-    viewer: ResourceViewer,
+    viewer: ResourcePrincipal,
   ): readonly ProjectResource[] {
-    this.requireViewer(projectId, viewer);
+    const principal = normalizeResourcePrincipal(viewer);
+    this.requireViewer(projectId, principal);
     const resources = this.listByProject(projectId)
-      .filter(resource => canReadResource(resource, viewer));
+      .filter(resource => canReadResource(resource, principal));
     return resources.length === 0 ? emptyResources : Object.freeze(resources);
   }
 
   async resolveEntry(
     projectId: ProjectId,
     resourceId: ResourceId,
-    viewer?: ResourceViewer,
+    viewer?: ResourcePrincipal,
   ): Promise<ResourceEntryTarget> {
     const resource = viewer === undefined
       ? this.get(projectId, resourceId)
@@ -208,6 +237,13 @@ export class ResourceService extends Service {
     }
     const events = parseResourceHistory(this.ctx, projectId, history);
     return activeResources(this.store.restore(projectId, events));
+  }
+
+  private nextId(): ResourceId {
+    let resourceId: ResourceId;
+    do resourceId = createResourceId(randomUUID());
+    while (this.store.has(resourceId));
+    return resourceId;
   }
 
   private event<TType extends ResourceEvent["type"]>(
@@ -270,11 +306,12 @@ export class ResourceService extends Service {
     }
   }
 
-  private requireViewer(projectId: ProjectId, viewer: ResourceViewer): void {
+  private requireViewer(
+    projectId: ProjectId,
+    viewer: ResourcePrincipal,
+  ): void {
     this.requireProject(projectId);
-    if (viewer.kind === "node") {
-      requireResourceWorkNode(this.ctx, projectId, viewer.nodeId);
-    }
+    requireResourcePrincipal(this.ctx, projectId, viewer);
   }
 
   private async requireWorkspace(projectId: ProjectId) {
@@ -286,7 +323,6 @@ export class ResourceService extends Service {
     );
   }
 }
-
 
 declare module "cordis" {
   interface Context {
