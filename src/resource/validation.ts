@@ -6,6 +6,7 @@ import type {
   ProjectResource,
   ResourceAccess,
   ResourceMetadataPatch,
+  ResourcePrincipal,
 } from "./model.js";
 import { validateResourceEntryRef } from "./path.js";
 
@@ -88,6 +89,16 @@ export function effectiveResourceChanges(
       ? { entryRef: changes.entryRef }
       : {}),
   });
+}
+
+export function requireResourcePrincipal(
+  ctx: Context,
+  projectId: ProjectId,
+  principal: ResourcePrincipal,
+  code: "node-unavailable" | "invalid-history" | "invalid-access" = "node-unavailable",
+): void {
+  if (principal.kind === "main") return;
+  requireResourceWorkNode(ctx, projectId, principal.nodeId, code);
 }
 
 export function requireResourceWorkNode(
