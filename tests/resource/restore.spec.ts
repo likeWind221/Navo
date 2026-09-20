@@ -223,6 +223,7 @@ describe("Resource history replay", () => {
       objective: objective("other"),
     });
     const duplicateResource = [JSON.parse(JSON.stringify(valid[0]))];
+    duplicateResource[0].id = "other-project-create-event";
     duplicateResource[0].projectId = otherProject.id;
     duplicateResource[0].sequence = 1;
     duplicateResource[0].data.sourceNodeId = otherNode.node.id;
