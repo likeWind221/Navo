@@ -20,4 +20,5 @@ export type ResourceErrorCode =
   | "invalid-access"
   | "invalid-history"
   | "stale-revision"
+  | "resource-not-owned"
   | "resource-content-unavailable";

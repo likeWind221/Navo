@@ -1,6 +1,10 @@
 import { ResourceError } from "./errors.js";
 import type { ResourceEvent } from "./events.js";
-import type { ProjectResource, ResourceAccess } from "./model.js";
+import type {
+  ProjectResource,
+  ResourceAccess,
+  ResourcePrincipal,
+} from "./model.js";
 
 export type ResourceState =
   | { readonly status: "active"; readonly resource: ProjectResource }
@@ -23,7 +27,7 @@ export function projectResourceEvent(
       resource: freezeResource({
         id: event.resourceId,
         projectId: event.projectId,
-        sourceNodeId: event.data.sourceNodeId,
+        owner: event.data.owner,
         name: event.data.name,
         description: event.data.description,
         type: event.data.resourceType,
@@ -94,8 +98,13 @@ export function activeResources(
 function freezeResource(resource: ProjectResource): ProjectResource {
   return Object.freeze({
     ...resource,
+    owner: freezePrincipal(resource.owner),
     access: freezeAccess(resource.access),
   });
+}
+
+function freezePrincipal(owner: ResourcePrincipal): ResourcePrincipal {
+  return Object.freeze({ ...owner });
 }
 
 function freezeAccess(access: ResourceAccess): ResourceAccess {
