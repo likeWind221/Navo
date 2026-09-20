@@ -119,6 +119,13 @@ export function requireNodeProjectBinding(
   return binding;
 }
 
+export function requireAgentBinding(
+  ctx: Context,
+  sessionId: SessionId | undefined,
+): AgentBinding {
+  return requireBinding(ctx, sessionId);
+}
+
 function requireBinding(
   ctx: Context,
   sessionId: SessionId | undefined,
