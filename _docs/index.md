@@ -35,6 +35,7 @@
 - [F9.6d.1：Project Workspace Root Migration](76-devlog-f9.6d1-workspace-root.md)：Project 直接绑定用户已有目录、Navo 文件收口到 `.navo/`、Project-bound 文件读取 containment 与迁移回归。
 - [F9.6d.2：Resource Lifecycle 与 Access Domain](77-devlog-f9.6d2-resource-lifecycle.md)：稳定 Resource CRUD/revision、`private | shared | project` 访问模型、私有内存 Store、Resource 内容根与严格 replay。
 - [F9.6d.3：Resource Ownership 与 Main Communication Capability](78-devlog-f9.6d3-resource-capabilities.md)：Main/Node owner CRUD、授权资源只读、Workspace 文件快照发布、`.navo` ACL 防绕过与 Node→Main 文本通信。
+- [F9.6e：Node Turn Context Builder](79-devlog-f9.6e-context-builder.md)：Turn-start 上下文构建机制、可见 Resource metadata 快照、Profile 安全渲染与 Human-start 刷新边界；Main handoff Tool 待后续子阶段。
 
 - [阶段 0：工程骨架](02-阶段-0-工程骨架开发记录.md)
 - [阶段 1：核心协议](03-devlog-phase-1-core-protocol.md)
