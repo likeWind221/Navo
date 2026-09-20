@@ -20,6 +20,7 @@ import { ResourceError } from "./errors.js";
 import type { ResourceEvent } from "./events.js";
 import { freezeResourceEvent } from "./events.js";
 import { parseResourceHistory } from "./history.js";
+import { ResourceStore } from "./store.js";
 import type {
   CreateResourceInput,
   DeleteResourceInput,
@@ -45,7 +46,8 @@ import {
 const emptyResources: readonly ProjectResource[] = Object.freeze([]);
 
 export class ResourceService extends Service {
-  static inject = ["projects", "nodes", "projectWorkspaces", "resourceStore"];
+  static inject = ["projects", "nodes", "projectWorkspaces"];
+  private readonly store = new ResourceStore();
 
   constructor(ctx: Context) {
     super(ctx, "resources");
@@ -59,7 +61,7 @@ export class ResourceService extends Service {
 
     let resourceId: ResourceId;
     do resourceId = createResourceId(randomUUID());
-    while (this.ctx.resourceStore.has(resourceId));
+    while (this.store.has(resourceId));
 
     await ensureResourceRoot(workspace, resourceId);
     this.requireActiveProject(input.projectId);
@@ -78,7 +80,7 @@ export class ResourceService extends Service {
         entryRef: metadata.entryRef,
       },
     );
-    return this.ctx.resourceStore.append(event).resource;
+    return this.store.append(event).resource;
   }
 
   update(input: UpdateResourceInput): ProjectResource {
@@ -89,7 +91,7 @@ export class ResourceService extends Service {
     const effective = effectiveResourceChanges(current, changes);
     if (Object.keys(effective).length === 0) return current;
 
-    return this.ctx.resourceStore.append(this.eventHeader(
+    return this.store.append(this.eventHeader(
       input.projectId,
       input.resourceId,
       current.revision,
@@ -106,7 +108,7 @@ export class ResourceService extends Service {
     requireResourceAccessNodes(this.ctx, input.projectId, access);
     if (sameResourceAccess(current.access, access)) return current;
 
-    return this.ctx.resourceStore.append(this.eventHeader(
+    return this.store.append(this.eventHeader(
       input.projectId,
       input.resourceId,
       current.revision,
@@ -119,7 +121,7 @@ export class ResourceService extends Service {
     this.requireActiveProject(input.projectId);
     const current = this.requireCurrent(input.projectId, input.resourceId);
     this.requireRevision(current, input.expectedRevision);
-    this.ctx.resourceStore.append(this.eventHeader(
+    this.store.append(this.eventHeader(
       input.projectId,
       input.resourceId,
       current.revision,
@@ -133,7 +135,7 @@ export class ResourceService extends Service {
     resourceId: ResourceId,
   ): ProjectResource | undefined {
     this.requireProject(projectId);
-    const state = this.ctx.resourceStore.getState(resourceId);
+    const state = this.store.getState(resourceId);
     if (state === undefined) return undefined;
     if (state.resource.projectId !== projectId) {
       throw new ResourceError(
@@ -146,7 +148,7 @@ export class ResourceService extends Service {
 
   listByProject(projectId: ProjectId): readonly ProjectResource[] {
     this.requireProject(projectId);
-    return activeResources(this.ctx.resourceStore.listStates(projectId));
+    return activeResources(this.store.listStates(projectId));
   }
 
   getVisible(
@@ -192,7 +194,7 @@ export class ResourceService extends Service {
 
   getEvents(projectId: ProjectId): readonly ResourceEvent[] {
     this.requireProject(projectId);
-    return this.ctx.resourceStore.getEvents(projectId);
+    return this.store.getEvents(projectId);
   }
 
   async restore(
@@ -201,14 +203,14 @@ export class ResourceService extends Service {
   ): Promise<readonly ProjectResource[]> {
     this.requireProject(projectId);
     await this.requireWorkspace(projectId);
-    if (this.ctx.resourceStore.hasHistory(projectId)) {
+    if (this.store.hasHistory(projectId)) {
       throw new ResourceError(
         "registry-already-restored",
         "Cannot overwrite an existing Project Resource history.",
       );
     }
     const events = parseResourceHistory(this.ctx, projectId, history);
-    return activeResources(this.ctx.resourceStore.restore(projectId, events));
+    return activeResources(this.store.restore(projectId, events));
   }
 
   private eventHeader<TType extends ResourceEvent["type"]>(
@@ -223,7 +225,7 @@ export class ResourceService extends Service {
       id: createEventId(randomUUID()),
       projectId,
       resourceId,
-      sequence: this.ctx.resourceStore.getEvents(projectId).length + 1,
+      sequence: this.store.getEvents(projectId).length + 1,
       revision: baseRevision + 1,
       baseRevision,
       timestamp: new Date().toISOString(),

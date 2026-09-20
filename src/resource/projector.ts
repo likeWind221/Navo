@@ -1,4 +1,3 @@
-import type { ProjectId } from "../brand/ids.js";
 import { ResourceError } from "./errors.js";
 import type { ResourceEvent } from "./events.js";
 import type { ProjectResource, ResourceAccess } from "./model.js";
@@ -90,18 +89,6 @@ export function activeResources(
     .filter((state): state is Extract<ResourceState, { status: "active" }> =>
       state.status === "active")
     .map(state => state.resource));
-}
-
-export function projectResourceHistory(
-  projectId: ProjectId,
-  events: readonly ResourceEvent[],
-): ReadonlyMap<string, ResourceState> {
-  const states = new Map<string, ResourceState>();
-  for (const event of events) {
-    if (event.projectId !== projectId) throw invalidHistory();
-    states.set(event.resourceId, projectResourceEvent(states.get(event.resourceId), event));
-  }
-  return states;
 }
 
 function freezeResource(resource: ProjectResource): ProjectResource {

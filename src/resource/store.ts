@@ -1,6 +1,3 @@
-import { Service } from "cordis";
-import type { Context } from "cordis";
-
 import type { ProjectId, ResourceId } from "../brand/ids.js";
 import { ResourceError } from "./errors.js";
 import type { ResourceEvent } from "./events.js";
@@ -13,15 +10,11 @@ import {
 const emptyHistory: readonly ResourceEvent[] = Object.freeze([]);
 const emptyStates: readonly ResourceState[] = Object.freeze([]);
 
-export class ResourceStore extends Service {
+export class ResourceStore {
   private readonly histories = new Map<ProjectId, readonly ResourceEvent[]>();
   private readonly states = new Map<ResourceId, ResourceState>();
   private readonly orders = new Map<ProjectId, readonly ResourceId[]>();
   private readonly eventIds = new Set<string>();
-
-  constructor(ctx: Context) {
-    super(ctx, "resourceStore");
-  }
 
   has(resourceId: ResourceId): boolean {
     return this.states.has(resourceId);
@@ -121,11 +114,5 @@ export class ResourceStore extends Service {
     for (const [resourceId, state] of localStates) this.states.set(resourceId, state);
     for (const eventId of localEventIds) this.eventIds.add(eventId);
     return Object.freeze(localOrder.map(resourceId => localStates.get(resourceId)!));
-  }
-}
-
-declare module "cordis" {
-  interface Context {
-    resourceStore: ResourceStore;
   }
 }
