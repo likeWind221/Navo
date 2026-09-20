@@ -33,7 +33,7 @@ import {
   ensureResourceRoot,
   resolveResourceEntry,
 } from "./path.js";
-import type { ResourceState } from "./projector.js";
+import { activeResources } from "./projector.js";
 import {
   effectiveResourceChanges,
   requireResourceAccessNodes,
@@ -146,7 +146,7 @@ export class ResourceService extends Service {
 
   listByProject(projectId: ProjectId): readonly ProjectResource[] {
     this.requireProject(projectId);
-    return freezeActive(this.ctx.resourceStore.listStates(projectId));
+    return activeResources(this.ctx.resourceStore.listStates(projectId));
   }
 
   getVisible(
@@ -208,7 +208,7 @@ export class ResourceService extends Service {
       );
     }
     const events = parseResourceHistory(this.ctx, projectId, history);
-    return freezeActive(this.ctx.resourceStore.restore(projectId, events));
+    return activeResources(this.ctx.resourceStore.restore(projectId, events));
   }
 
   private eventHeader<TType extends ResourceEvent["type"]>(
@@ -292,12 +292,3 @@ export class ResourceService extends Service {
   }
 }
 
-function freezeActive(
-  states: readonly ResourceState[],
-): readonly ProjectResource[] {
-  const resources = states
-    .filter((state): state is Extract<ResourceState, { status: "active" }> =>
-      state.status === "active")
-    .map(state => state.resource);
-  return resources.length === 0 ? emptyResources : Object.freeze(resources);
-}
