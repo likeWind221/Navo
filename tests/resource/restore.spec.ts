@@ -9,7 +9,6 @@ import type { ProjectId } from "../../src/brand/ids.js";
 import { NodeStore } from "../../src/node/store.js";
 import { ProjectStore } from "../../src/project/store.js";
 import { ResourceService } from "../../src/resource/service.js";
-import { ResourceStore } from "../../src/resource/store.js";
 import { ProjectWorkspaceStore } from "../../src/workspace/store.js";
 
 const contexts: Context[] = [];
@@ -38,7 +37,6 @@ async function domain(): Promise<Context> {
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
   await ctx.plugin(ProjectWorkspaceStore);
-  await ctx.plugin(ResourceStore);
   await ctx.plugin(ResourceService);
   return ctx;
 }
@@ -122,10 +120,9 @@ describe("Resource history replay", () => {
       updatedAt: shared.updatedAt,
     });
     expect(target.resources.get(project.id, second.id)).toBeUndefined();
-    expect(target.resourceStore.getState(second.id)).toMatchObject({
-      status: "deleted",
-      resource: { revision: 2 },
-    });
+    expect(target.resources.getEvents(project.id).find(event =>
+      event.resourceId === second.id && event.type === "resource-deleted"))
+      .toMatchObject({ baseRevision: 1, revision: 2 });
     expect(Object.isFrozen(target.resources.getEvents(project.id))).toBe(true);
 
     const continued = target.resources.update({
@@ -170,7 +167,7 @@ describe("Resource history replay", () => {
     history[1].baseRevision = 0;
     await expect(target.resources.restore(project.id, history))
       .rejects.toMatchObject({ code: "invalid-history" });
-    expect(target.resourceStore.hasHistory(project.id)).toBe(false);
+    expect(target.resources.getEvents(project.id)).toEqual([]);
     expect(target.resources.listByProject(project.id)).toEqual([]);
   });
 
