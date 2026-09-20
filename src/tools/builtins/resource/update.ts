@@ -4,6 +4,7 @@ import type { JsonObject } from "../../../llm/types.js";
 import type { ResourceMetadataPatch } from "../../../resource/model.js";
 import type { ToolDefinition } from "../../types.js";
 import {
+  invalidResourceTool,
   optionalText,
   positiveRevision,
   requireResourceToolCaller,
@@ -48,7 +49,7 @@ export function createUpdateResourceTool(ctx: Context): ToolDefinition {
             : { type: arguments_.type as string }),
         });
         if (Object.keys(changes).length === 0) {
-          throw new TypeError("update_resource requires at least one metadata field.");
+          throw invalidResourceTool("provide at least one of name, description, or type.");
         }
         const resource = ctx.resources.update({
           projectId: caller.projectId,
