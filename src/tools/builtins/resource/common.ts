@@ -11,6 +11,7 @@ import {
   requireAgentBinding,
 } from "../../../project/binding.js";
 import { ResourceError } from "../../../resource/errors.js";
+import { FileError } from "../file/errors.js";
 import type {
   ProjectResource,
   ResourcePrincipal,
@@ -93,6 +94,9 @@ export function resourceToolFailure(error: unknown): never {
       { cause: error },
     );
   }
+  if (error instanceof FileError) {
+    throw new ToolExecutionError(error.message, error.modelMessage, { cause: error });
+  }
   if (error instanceof ResourceError) {
     throw new ToolExecutionError(
       error.message,
@@ -113,7 +117,7 @@ export function resourceToolFailure(error: unknown): never {
   );
 }
 
-function invalidResourceTool(message: string): ToolExecutionError {
+export function invalidResourceTool(message: string): ToolExecutionError {
   return new ToolExecutionError(
     `Invalid Resource tool request: ${message}`,
     `The Resource request is invalid: ${message}`,
