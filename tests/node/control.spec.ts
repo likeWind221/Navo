@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createEventId, createNodeId, createSessionId } from "../../src/brand/ids.js";
 import { NodeStore } from "../../src/node/store.js";
 import { projectNode } from "../../src/node/projector.js";
-import { createNodeAgentProfile } from "../../src/node/profile.js";
+import { NodeTurnContextBuilder } from "../../src/node/context.js";
 import { ProjectStore } from "../../src/project/store.js";
 import type { NodeEvent } from "../../src/node/events.js";
 
@@ -27,7 +27,7 @@ describe("control nodes", () => {
     ctx.nodes.unlock(id, "Review");
     expect(() => ctx.nodes.bindSession(id, createSessionId("forbidden"))).toThrow(expect.objectContaining({ code: "invalid-state" }));
     expect(() => ctx.nodes.beginWork(id)).toThrow(expect.objectContaining({ code: "invalid-state" }));
-    expect(() => createNodeAgentProfile(ctx.nodes.get(id)!)).toThrow();
+    expect(() => new NodeTurnContextBuilder(ctx).build(ctx.nodes.get(id)!)).toThrow();
     ctx.nodes.lock(id, "Not ready");
     const idle = ctx.nodes.unlock(id, "Ready");
     expect(() => ctx.nodes.confirmCompletion(id, { confirmedBy: "human", reason: "Accepted", reviewedRevision: idle.revision - 1 })).toThrow();
