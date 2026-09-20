@@ -46,9 +46,10 @@ async function domain(): Promise<Context> {
   return ctx;
 }
 
-async function bind(ctx: Context, projectId: ProjectId, root = await fixture()): Promise<string> {
-  await ctx.projectWorkspaces.create(projectId, root);
-  return root;
+async function bind(ctx: Context, projectId: ProjectId, root?: string): Promise<string> {
+  const resolvedRoot = root ?? await fixture();
+  await ctx.projectWorkspaces.create(projectId, resolvedRoot);
+  return resolvedRoot;
 }
 
 async function makeFile(
