@@ -99,3 +99,14 @@ export function createFetchResourceTool(ctx: Context): ToolDefinition {
     },
   };
 }
+
+export const FetchResourceTool = Object.assign(
+  function registerFetchResourceTool(ctx: Context): () => void {
+    const dispose = ctx.effect(
+      () => ctx.tools.register(createFetchResourceTool(ctx)),
+      "resource.fetch-tool",
+    );
+    return () => { void dispose(); };
+  },
+  { inject: ["tools", "projects", "nodes", "resources"] },
+);
