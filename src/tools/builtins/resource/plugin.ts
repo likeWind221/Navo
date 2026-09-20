@@ -1,24 +1,13 @@
 import type { Context } from "cordis";
 
-import { createDeleteResourceTool } from "./delete.js";
-import { createFetchResourceTool } from "./fetch.js";
-import { createRegisterResourceTool } from "./register.js";
-import { createUpdateResourceTool } from "./update.js";
+import { DeleteResourceTool } from "./delete.js";
+import { FetchResourceTool } from "./fetch.js";
+import { RegisterResourceTool } from "./register.js";
+import { UpdateResourceTool } from "./update.js";
 
-export const ResourceToolsPlugin = Object.assign(
-  function registerResourceTools(ctx: Context): void {
-    const definitions = [
-      createRegisterResourceTool(ctx),
-      createFetchResourceTool(ctx),
-      createUpdateResourceTool(ctx),
-      createDeleteResourceTool(ctx),
-    ];
-    ctx.effect(() => {
-      const dispose = definitions.map(definition => ctx.tools.register(definition));
-      return () => {
-        for (const unregister of dispose.reverse()) unregister();
-      };
-    }, "resource.tools");
-  },
-  { inject: ["tools", "projects", "nodes", "resources"] },
-);
+export async function ResourceToolsPlugin(ctx: Context): Promise<void> {
+  await ctx.plugin(RegisterResourceTool);
+  await ctx.plugin(FetchResourceTool);
+  await ctx.plugin(UpdateResourceTool);
+  await ctx.plugin(DeleteResourceTool);
+}
