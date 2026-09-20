@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { lstat, mkdir, realpath, stat } from "node:fs/promises";
 import {
   basename,
@@ -13,7 +12,7 @@ import type { ProjectId } from "../brand/ids.js";
 import { WorkspaceError } from "./errors.js";
 import type { WorkspaceTarget } from "./model.js";
 
-export function validateWorkspaceBaseRoot(root: unknown): string {
+export function validateWorkspaceRoot(root: unknown): string {
   if (
     typeof root !== "string"
     || root.length === 0
@@ -28,12 +27,7 @@ export function validateWorkspaceBaseRoot(root: unknown): string {
   return root;
 }
 
-export function projectDirectoryName(projectId: ProjectId): string {
-  const digest = createHash("sha256").update(projectId, "utf8").digest("hex");
-  return `project-${digest}`;
-}
-
-export async function canonicalBaseRoot(root: string): Promise<string> {
+export async function canonicalWorkspaceRoot(root: string): Promise<string> {
   let canonical: string;
   try {
     canonical = await realpath(root);
@@ -99,15 +93,15 @@ export async function ensureOwnedDirectory(
 
 export async function resolveWorkspaceTarget(
   projectId: ProjectId,
-  workspaceRoot: string,
+  internalRoot: string,
   ref: string,
 ): Promise<WorkspaceTarget> {
   const segments = parseWorkspaceRef(ref);
-  const candidate = join(workspaceRoot, ...segments);
+  const candidate = join(internalRoot, ...segments);
 
   try {
     const canonical = await realpath(candidate);
-    assertContained(workspaceRoot, canonical);
+    assertContained(internalRoot, canonical);
     return Object.freeze({
       projectId,
       ref,
@@ -123,7 +117,6 @@ export async function resolveWorkspaceTarget(
     }
   }
 
-  // A dangling symlink must not be reclassified as a safe missing leaf.
   try {
     const info = await lstat(candidate);
     if (info.isSymbolicLink()) {
@@ -155,7 +148,7 @@ export async function resolveWorkspaceTarget(
     canonicalParent,
     "The parent of the Project Workspace target is not a directory.",
   );
-  assertContained(workspaceRoot, canonicalParent);
+  assertContained(internalRoot, canonicalParent);
 
   return Object.freeze({
     projectId,

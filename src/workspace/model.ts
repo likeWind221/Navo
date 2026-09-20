@@ -1,14 +1,12 @@
 import type { ProjectId } from "../brand/ids.js";
 
-/**
- * Host-side physical Workspace projection. Absolute paths are execution details;
- * durable Resource identity must use Project-relative refs instead.
- */
 export interface ProjectWorkspace {
   readonly projectId: ProjectId;
   readonly root: string;
+  readonly navoRoot: string;
   readonly assetsRoot: string;
   readonly nodesRoot: string;
+  readonly skillsRoot: string;
 }
 
 export interface WorkspaceTarget {
@@ -18,5 +16,7 @@ export interface WorkspaceTarget {
   readonly exists: boolean;
 }
 
+export const NAVO_INTERNAL_REF = ".navo";
 export const PROJECT_ASSETS_REF = "assets";
 export const PROJECT_NODES_REF = "nodes";
+export const PROJECT_SKILLS_REF = "skills";

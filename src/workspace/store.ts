@@ -7,8 +7,10 @@ import type { Context } from "cordis";
 import type { ProjectId } from "../brand/ids.js";
 import { WorkspaceError } from "./errors.js";
 import {
+  NAVO_INTERNAL_REF,
   PROJECT_ASSETS_REF,
   PROJECT_NODES_REF,
+  PROJECT_SKILLS_REF,
 } from "./model.js";
 import type {
   ProjectWorkspace,
@@ -16,83 +18,78 @@ import type {
 } from "./model.js";
 import {
   assertContained,
-  canonicalBaseRoot,
+  canonicalWorkspaceRoot,
   classifyWorkspaceIoError,
   ensureOwnedDirectory,
   isCode,
-  projectDirectoryName,
   resolveWorkspaceTarget,
-  validateWorkspaceBaseRoot,
+  validateWorkspaceRoot,
 } from "./path.js";
-
-export interface ProjectWorkspaceConfig {
-  readonly root: string;
-}
 
 export class ProjectWorkspaceStore extends Service {
   static inject = ["projects"];
 
-  private readonly configuredRoot: string;
-  private projectsRootPromise: Promise<string> | undefined;
+  private readonly byProject = new Map<ProjectId, ProjectWorkspace>();
+  private readonly byRoot = new Map<string, ProjectId>();
 
-  constructor(ctx: Context, config: ProjectWorkspaceConfig) {
+  constructor(ctx: Context) {
     super(ctx, "projectWorkspaces");
-    this.configuredRoot = validateWorkspaceBaseRoot(config?.root);
   }
 
-  async create(projectId: ProjectId): Promise<ProjectWorkspace> {
+  async create(projectId: ProjectId, root: string): Promise<ProjectWorkspace> {
     this.requireProject(projectId);
-    const projectsRoot = await this.projectsRoot();
-    const projectRoot = await ensureOwnedDirectory(
-      join(projectsRoot, projectDirectoryName(projectId)),
-      projectsRoot,
+    const canonicalRoot = await canonicalWorkspaceRoot(validateWorkspaceRoot(root));
+
+    const existing = this.byProject.get(projectId);
+    if (existing !== undefined) {
+      if (existing.root === canonicalRoot) return existing;
+      throw new WorkspaceError(
+        "workspace-conflict",
+        "Project is already bound to a different Workspace root.",
+      );
+    }
+
+    const owner = this.byRoot.get(canonicalRoot);
+    if (owner !== undefined && owner !== projectId) {
+      throw new WorkspaceError(
+        "workspace-conflict",
+        "Workspace root is already bound to another Project.",
+      );
+    }
+
+    const navoRoot = await ensureOwnedDirectory(
+      join(canonicalRoot, NAVO_INTERNAL_REF),
+      canonicalRoot,
     );
     const assetsRoot = await ensureOwnedDirectory(
-      join(projectRoot, PROJECT_ASSETS_REF),
-      projectRoot,
+      join(navoRoot, PROJECT_ASSETS_REF),
+      navoRoot,
     );
     const nodesRoot = await ensureOwnedDirectory(
-      join(projectRoot, PROJECT_NODES_REF),
-      projectRoot,
+      join(navoRoot, PROJECT_NODES_REF),
+      navoRoot,
     );
-    return freezeWorkspace({ projectId, root: projectRoot, assetsRoot, nodesRoot });
+    const skillsRoot = await ensureOwnedDirectory(
+      join(navoRoot, PROJECT_SKILLS_REF),
+      navoRoot,
+    );
+
+    const workspace = freezeWorkspace({
+      projectId,
+      root: canonicalRoot,
+      navoRoot,
+      assetsRoot,
+      nodesRoot,
+      skillsRoot,
+    });
+    this.byProject.set(projectId, workspace);
+    this.byRoot.set(canonicalRoot, projectId);
+    return workspace;
   }
 
   async get(projectId: ProjectId): Promise<ProjectWorkspace | undefined> {
     this.requireProject(projectId);
-    const projectsRoot = await this.projectsRoot();
-    const candidate = join(projectsRoot, projectDirectoryName(projectId));
-
-    let info;
-    try {
-      info = await lstat(candidate);
-    } catch (error: unknown) {
-      if (isCode(error, "ENOENT")) return undefined;
-      throw classifyWorkspaceIoError(
-        error,
-        "Project Workspace could not be inspected.",
-      );
-    }
-    if (info.isSymbolicLink()) {
-      throw new WorkspaceError(
-        "path-not-allowed",
-        "Project Workspace root cannot be a symbolic link.",
-      );
-    }
-    if (!info.isDirectory()) {
-      throw new WorkspaceError(
-        "not-a-directory",
-        "Project Workspace root must be a directory.",
-      );
-    }
-
-    const projectRoot = await ensureOwnedDirectory(candidate, projectsRoot);
-    return freezeWorkspace({
-      projectId,
-      root: projectRoot,
-      assetsRoot: join(projectRoot, PROJECT_ASSETS_REF),
-      nodesRoot: join(projectRoot, PROJECT_NODES_REF),
-    });
+    return this.byProject.get(projectId);
   }
 
   async resolve(projectId: ProjectId, ref: string): Promise<WorkspaceTarget> {
@@ -100,72 +97,62 @@ export class ProjectWorkspaceStore extends Service {
     if (workspace === undefined) {
       throw new WorkspaceError(
         "workspace-not-found",
-        "Project Workspace has not been created.",
+        "Project Workspace has not been bound.",
       );
     }
-    return resolveWorkspaceTarget(projectId, workspace.root, ref);
+    return resolveWorkspaceTarget(projectId, workspace.navoRoot, ref);
   }
 
   async cleanup(projectId: ProjectId): Promise<boolean> {
     this.requireProject(projectId);
-    const projectsRoot = await this.projectsRoot();
-    const candidate = join(projectsRoot, projectDirectoryName(projectId));
+    const workspace = this.byProject.get(projectId);
+    if (workspace === undefined) return false;
 
     let info;
     try {
-      info = await lstat(candidate);
+      info = await lstat(workspace.navoRoot);
     } catch (error: unknown) {
-      if (isCode(error, "ENOENT")) return false;
+      if (isCode(error, "ENOENT")) {
+        this.unbind(workspace);
+        return false;
+      }
       throw classifyWorkspaceIoError(
         error,
-        "Project Workspace could not be inspected before cleanup.",
+        "Navo Workspace directory could not be inspected before cleanup.",
       );
     }
     if (info.isSymbolicLink()) {
       throw new WorkspaceError(
         "path-not-allowed",
-        "Project Workspace cleanup refuses symbolic-link roots.",
+        "Navo Workspace cleanup refuses symbolic-link roots.",
       );
     }
     if (!info.isDirectory()) {
       throw new WorkspaceError(
         "not-a-directory",
-        "Project Workspace cleanup requires a directory.",
+        "Navo Workspace root must be a directory.",
       );
     }
 
-    const canonical = await ensureOwnedDirectory(candidate, projectsRoot);
-    assertContained(projectsRoot, canonical);
+    const canonical = await canonicalWorkspaceRoot(workspace.navoRoot);
+    assertContained(workspace.root, canonical);
     try {
-      await rm(candidate, { recursive: true, force: false });
+      await rm(workspace.navoRoot, { recursive: true, force: false });
     } catch (error: unknown) {
       throw classifyWorkspaceIoError(
         error,
-        "Project Workspace cleanup failed.",
+        "Navo Workspace cleanup failed.",
       );
     }
+    this.unbind(workspace);
     return true;
   }
 
-  private async projectsRoot(): Promise<string> {
-    if (this.projectsRootPromise !== undefined) {
-      return this.projectsRootPromise;
+  private unbind(workspace: ProjectWorkspace): void {
+    this.byProject.delete(workspace.projectId);
+    if (this.byRoot.get(workspace.root) === workspace.projectId) {
+      this.byRoot.delete(workspace.root);
     }
-    const pending = this.prepareProjectsRoot();
-    this.projectsRootPromise = pending;
-    try {
-      return await pending;
-    } catch (error: unknown) {
-      if (this.projectsRootPromise === pending) {
-        this.projectsRootPromise = undefined;
-      }
-      throw error;
-    }
-  }
-
-  private async prepareProjectsRoot(): Promise<string> {
-    const baseRoot = await canonicalBaseRoot(this.configuredRoot);
-    return ensureOwnedDirectory(join(baseRoot, "projects"), baseRoot);
   }
 
   private requireProject(projectId: ProjectId): void {
