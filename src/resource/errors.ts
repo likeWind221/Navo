@@ -12,9 +12,12 @@ export class ResourceError extends Error {
 export type ResourceErrorCode =
   | "project-unavailable"
   | "node-unavailable"
+  | "workspace-unavailable"
   | "resource-unavailable"
   | "resource-already-exists"
   | "registry-already-restored"
   | "invalid-resource"
+  | "invalid-access"
   | "invalid-history"
-  | "resource-target-missing";
+  | "stale-revision"
+  | "resource-content-unavailable";
