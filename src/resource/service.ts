@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { Service } from "cordis";
 import type { Context } from "cordis";
 
@@ -222,7 +224,7 @@ export class ResourceService extends Service {
       baseRevision,
       type,
       data,
-    });
+    }) as Extract<ResourceEvent, { type: TType }>;
   }
 
   private requireRevision(
