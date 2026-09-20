@@ -84,3 +84,24 @@ export function canReadResource(
   if (resource.access.kind === "private") return false;
   return resource.access.nodeIds.includes(viewer.nodeId);
 }
+
+export function requireResourceOwner(
+  resource: ProjectResource,
+  actor: ResourcePrincipal,
+): void {
+  if (sameResourcePrincipal(resource.owner, actor)) return;
+  throw new ResourceError(
+    "resource-not-owned",
+    "Only the Resource owner may modify or delete this Resource.",
+  );
+}
+
+export function requireResourceAccessManager(
+  actor: ResourcePrincipal,
+): void {
+  if (actor.kind === "main") return;
+  throw new ResourceError(
+    "invalid-access",
+    "Only the Main Agent may change Resource access.",
+  );
+}
