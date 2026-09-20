@@ -292,3 +292,9 @@ export class ResourceService extends Service {
   }
 }
 
+
+declare module "cordis" {
+  interface Context {
+    resources: ResourceService;
+  }
+}
