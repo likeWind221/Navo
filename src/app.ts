@@ -26,6 +26,10 @@ export interface NavoAppConfig {
   readonly node: NodePluginConfig;
 }
 
+interface ProjectFileScope {
+  context: Context | undefined;
+}
+
 export async function NavoApp(
   ctx: Context,
   config: NavoAppConfig,
@@ -36,10 +40,20 @@ export async function NavoApp(
     ctx.plugin(LLMService),
   ]);
   await ctx.plugin(ProjectWorkspaceStore);
-  await ctx.plugin(ToolsPlugin, projectAwareToolsConfig(ctx, config.tools));
+
+  const fileScope: ProjectFileScope = { context: undefined };
+  await ctx.plugin(ToolsPlugin, projectAwareToolsConfig(fileScope, config.tools));
   await ctx.plugin(AgentRuntime, config.runtime);
   await ctx.plugin(CommandService);
   await ctx.plugin(NodePlugin, config.node);
+
+  ctx.inject(["projects", "nodes", "projectWorkspaces"], (scopeCtx) => {
+    fileScope.context = scopeCtx;
+    scopeCtx.effect(() => () => {
+      if (fileScope.context === scopeCtx) fileScope.context = undefined;
+    }, "projectFileScope");
+  });
+
   await ctx.plugin(MailboxStore);
   await ctx.plugin(ResourceStore);
   await ctx.plugin(MainSessionService, { model: config.node.session.model });
@@ -61,7 +75,7 @@ export async function createApp(
 }
 
 function projectAwareToolsConfig(
-  ctx: Context,
+  scope: ProjectFileScope,
   config: ToolsPluginConfig | undefined,
 ): ToolsPluginConfig | undefined {
   const file = config?.file;
@@ -72,11 +86,15 @@ function projectAwareToolsConfig(
     file: {
       ...file,
       async resolveFileEnvironment(sessionId) {
-        const binding = resolveAgentBinding(ctx, sessionId);
+        const scopeCtx = scope.context;
+        if (scopeCtx === undefined) {
+          return file.resolveFileEnvironment(sessionId);
+        }
+        const binding = resolveAgentBinding(scopeCtx, sessionId);
         if (binding === undefined) {
           return file.resolveFileEnvironment(sessionId);
         }
-        const workspace = await ctx.projectWorkspaces.get(binding.projectId);
+        const workspace = await scopeCtx.projectWorkspaces.get(binding.projectId);
         if (workspace === undefined) {
           throw new FileError(
             "path-not-allowed",
