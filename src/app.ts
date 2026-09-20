@@ -10,6 +10,7 @@ import type { NodePluginConfig } from "./node/plugin.js";
 import { NodePlugin } from "./node/plugin.js";
 import { resolveAgentBinding } from "./project/binding.js";
 import { MainSessionService } from "./project/session.js";
+import { ResourceService } from "./resource/service.js";
 import { ResourceStore } from "./resource/store.js";
 import { SessionStore } from "./session/store.js";
 import { ProjectStore } from "./project/store.js";
@@ -70,6 +71,7 @@ export async function NavoApp(
   await ctx.plugin(NodePlugin, config.node);
   await ctx.plugin(MailboxStore);
   await ctx.plugin(ResourceStore);
+  await ctx.plugin(ResourceService);
   await ctx.plugin(MainSessionService, { model: config.node.session.model });
   await ctx.plugin(RoadmapStore);
   await ctx.plugin(RoadmapToolsPlugin);
