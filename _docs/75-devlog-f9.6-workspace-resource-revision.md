@@ -130,7 +130,7 @@ Resource
 +-- name               # 人和 Agent 可读名称；不再额外保留 title
 +-- description
 +-- type
-+-- sourceNodeId       # 可信 Binding 决定来源
++-- owner              # Main | Node；可信 Binding 决定
 +-- access
 |   +-- private
 |   +-- shared(nodeIds)
@@ -179,7 +179,7 @@ Database
 +-- ...
 ```
 
-Resource metadata 不复制正文；`entryRef` 只允许解析到该 Resource root 内。
+正式发布时从用户 Workspace 复制文件快照到 Resource root；Resource metadata 只保存入口 `entryRef`，不内嵌正文。
 
 因此：
 
@@ -204,39 +204,45 @@ F9.6 先保持最小权限集合：
 
 ```text
 private
-  -> Main + source Node 可读
+  -> Main 可读；owner 可读
 
 shared(nodeIds)
-  -> Main + source Node + 指定 work Nodes 可读
+  -> Main + owner + 指定 work Nodes 可读
 
 project
-  -> Main + 当前 Project 所有 work Nodes 可读
+  -> Main + owner + 当前 Project 所有 work Nodes 可读
 ```
 
 原则：
 
-- Node 创建 Resource 时默认 private；
-- Node 不能自行给其他 Node 授权；
-- Main 是唯一跨 Node Resource 分发者；
+- Main 与 Node 都可以拥有 Resource；owner 来自 trusted Session Binding；
+- owner 可维护自己 Resource 的 metadata 与领域生命周期，非 owner 只读；
+- 新 Resource 默认 private；
+- Node owner 不能自行给其他 Node 授权；Main 是唯一跨 Node Resource 分发者；
 - 未授权 Node 不应通过猜测 ResourceId/name 获知私有资源存在；
 - 权限变化也必须经过 Resource Service，而不是修改 Workspace 文件。
 
 ## 8. Node 侧最终能力
 
-Node Agent 后续只需要三个高层能力：
+Project Agent 的 Resource capability 为：
 
 ```text
-register_resource(...)
-  -> 创建正式 Resource
-  -> projectId/sourceNodeId 来自 trusted Session Binding
+register_resource(path, ...)
+  -> Main / Node 都可发布当前 Workspace 文件
+  -> projectId / owner 来自 trusted Session Binding
+  -> 复制为 .navo/assets/<resource-id>/ 下稳定快照
 
-fetch_resource(resource_id)
-  -> 校验 caller Binding
-  -> 校验 Resource access
-  -> 读取 Resource 主入口内容
+fetch_resource(resource_id, ...)
+  -> owner 可读
+  -> 非 owner 只有在 shared/project 授权后可读
+
+update_resource(resource_id, expected_revision, ...)
+delete_resource(resource_id, expected_revision)
+  -> 仅 owner 可修改 metadata / 领域删除
+  -> published file snapshot 不原地改写
 
 send_to_main(message)
-  -> Node -> Main 单向文本通信
+  -> 仅 Node -> Main 单向文本通信
   -> 不接受 projectId / nodeId / targetNodeId
 ```
 
@@ -291,10 +297,11 @@ Resource Lifecycle & Access Domain
   -> 稳定 Resource + CRUD/service + permission
 
 F9.6d.3
-Node Resource & Main Communication Capability
-  -> register_resource
-  -> fetch_resource
+Resource Ownership & Main Communication Capability
+  -> Main / Node owner CRUD
+  -> authorized non-owner read
   -> send_to_main
+  -> generic file access cannot enter .navo
 
 F9.6e
 Main Resource Handoff & Node Resource Context
@@ -307,6 +314,4 @@ F9.6b/F9.6c 保持 ✅，因为它们记录了当时已完成并验收的基础�
 
 ## 12. 当前下一步
 
-当前唯一下一步为 **F9.6d.1 Project Workspace Root Migration**。
-
-这一 Step 只迁移 Workspace 根目录与安全边界，不同时重构 Resource 权限和 Agent capability。
+F9.6d.1 与 F9.6d.2 已完成。F9.6d.3 已完成代码实现并等待本机验证；通过双重门禁后，唯一下一步进入 **F9.6e Main Resource Handoff 与 Node Resource Context**。
