@@ -138,5 +138,6 @@ function classifyReadError(error: unknown, signal: AbortSignal): FileError {
     return new FileError("permission-denied", "Read access denied.", { cause: error });
   }
   if (code === "ENOTDIR") return new FileError("not-a-directory", "Invalid parent directory.", { cause: error });
-  return new FileError("io-failed", "Read failed.", { cause: error });
+  const detail = error instanceof Error ? error.message : String(error);
+  return new FileError("io-failed", `Read failed: ${detail}`, { cause: error });
 }
