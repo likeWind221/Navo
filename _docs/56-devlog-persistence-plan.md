@@ -31,6 +31,6 @@
 
 ## F9.3 实施结果
 
-F9.3 后续已经完成并经历设计收敛。最终实现不再采用早期的 Path、soft edge、Roadmap Member 或 Board eligibility 模型；当前权威设计统一见 [64：F9.3 In-Memory Roadmap](64-devlog-node-state-repair.md)。
+F9.3 后续已经完成并经历设计收敛。最终实现不再采用早期的 Path、soft edge、Roadmap Member 或 Board eligibility 模型；当前权威设计统一见 [59：F9.3 In-Memory Roadmap](59-devlog-f9.3-roadmap.md)。
 
 持久化边界不变：F9.3 的 Roadmap / Node 状态仍是可由事件历史重建的**内存领域状态**，不等于进程重启后的持久恢复。F10 再统一实现 Project、Node、Roadmap、Session、Mailbox、Resource Registry 等状态的数据库持久化、事务边界与中断恢复。
