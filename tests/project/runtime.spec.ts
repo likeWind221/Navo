@@ -2,7 +2,7 @@ import { Context } from "cordis";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { AgentRuntime } from "../../src/agent/runtime.js";
-import { createNodeId } from "../../src/brand/ids.js";
+import type { NodeId, ProjectId } from "../../src/brand/ids.js";
 import { LLMService } from "../../src/llm/service.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import { NodeSessionService } from "../../src/node/session.js";
@@ -48,7 +48,7 @@ async function createKit(entries: ConstructorParameters<typeof MockLLMAdapter>[0
   return { ctx, adapter };
 }
 
-function createWorkNode(ctx: Context, projectId: ReturnType<Context["projects"]["create"]>["id"], title: string) {
+function createWorkNode(ctx: Context, projectId: ProjectId, title: string) {
   return ctx.nodes.create({
     projectId,
     objective: {
@@ -59,7 +59,7 @@ function createWorkNode(ctx: Context, projectId: ReturnType<Context["projects"][
   });
 }
 
-function addRoadmap(ctx: Context, projectId: ReturnType<Context["projects"]["create"]>["id"], nodeIds: readonly ReturnType<typeof createNodeId>[]) {
+function addRoadmap(ctx: Context, projectId: ProjectId, nodeIds: readonly NodeId[]) {
   ctx.roadmaps.create({
     definition: {
       projectId,
