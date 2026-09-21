@@ -9,6 +9,7 @@ import { MailboxStore } from "./mailbox/store.js";
 import type { NodePluginConfig } from "./node/plugin.js";
 import { NodePlugin } from "./node/plugin.js";
 import { resolveAgentBinding } from "./project/binding.js";
+import { ProjectRuntime } from "./project/runtime.js";
 import { MainSessionService } from "./project/session.js";
 import { ResourceService } from "./resource/service.js";
 import { SessionStore } from "./session/store.js";
@@ -78,6 +79,7 @@ export async function NavoApp(
   await ctx.plugin(ReadMailboxTool);
   await ctx.plugin(MainSessionService, { model: config.node.session.model });
   await ctx.plugin(RoadmapStore);
+  await ctx.plugin(ProjectRuntime);
   await ctx.plugin(RoadmapToolsPlugin);
 }
 
