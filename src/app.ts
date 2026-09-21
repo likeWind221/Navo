@@ -17,6 +17,7 @@ import { RoadmapStore } from "./roadmap/store.js";
 import { FileError } from "./tools/builtins/file/errors.js";
 import { createFileEnvironment } from "./tools/builtins/file/path.js";
 import type { FileEnvironment } from "./tools/builtins/file/path.js";
+import { ReadMailboxTool } from "./tools/builtins/mailbox/read.js";
 import { SendToMainTool } from "./tools/builtins/mailbox/send.js";
 import { RoadmapToolsPlugin } from "./tools/builtins/roadmap/plugin.js";
 import { ResourceToolsPlugin } from "./tools/builtins/resource/plugin.js";
@@ -74,6 +75,7 @@ export async function NavoApp(
   await ctx.plugin(ResourceService);
   await ctx.plugin(ResourceToolsPlugin);
   await ctx.plugin(SendToMainTool);
+  await ctx.plugin(ReadMailboxTool);
   await ctx.plugin(MainSessionService, { model: config.node.session.model });
   await ctx.plugin(RoadmapStore);
   await ctx.plugin(RoadmapToolsPlugin);
