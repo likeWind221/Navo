@@ -70,11 +70,11 @@ export class ProjectRuntime extends Service {
 
     this.startingNodes.add(input.nodeId);
     try {
-      const turn = this.ctx.nodeSessions.start({
-        nodeId: input.nodeId,
-        text: input.text,
-        signal: input.signal,
-      });
+      const turn = this.ctx.nodeSessions.start(
+        input.signal === undefined
+          ? { nodeId: input.nodeId, text: input.text }
+          : { nodeId: input.nodeId, text: input.text, signal: input.signal },
+      );
       return turn.finally(() => {
         this.startingNodes.delete(input.nodeId);
       });
