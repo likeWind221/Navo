@@ -9,6 +9,7 @@ import { DELETE_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/del
 import { FETCH_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/fetch.js";
 import { REGISTER_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/register.js";
 import { UPDATE_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/update.js";
+import { SET_RESOURCE_ACCESS_TOOL_NAME } from "../../src/tools/builtins/resource/access.js";
 import { MODIFY_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/modify-roadmap.js";
 import { READ_NODE_TOOL_NAME } from "../../src/tools/builtins/roadmap/read-node.js";
 import { READ_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/read.js";
@@ -59,6 +60,7 @@ describe("generic Node research loop", () => {
         WRITE_ROADMAP_TOOL_NAME, MODIFY_ROADMAP_TOOL_NAME,
         REGISTER_RESOURCE_TOOL_NAME, FETCH_RESOURCE_TOOL_NAME,
         UPDATE_RESOURCE_TOOL_NAME, DELETE_RESOURCE_TOOL_NAME,
+        SET_RESOURCE_ACCESS_TOOL_NAME,
         SEND_TO_MAIN_TOOL_NAME,
       ].sort());
     expect(adapter.requests[0]?.tools?.map(tool => tool.name).sort())
@@ -72,6 +74,7 @@ describe("generic Node research loop", () => {
     expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(READ_NODE_TOOL_NAME);
     expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(WRITE_ROADMAP_TOOL_NAME);
     expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(MODIFY_ROADMAP_TOOL_NAME);
+    expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(SET_RESOURCE_ACCESS_TOOL_NAME);
     const ready = app.nodes.get(node.node.id)!;
     expect(ready.status).toBe("idle");
     expect(ready.confirmation).toBeUndefined();

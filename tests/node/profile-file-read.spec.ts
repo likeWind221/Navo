@@ -7,6 +7,7 @@ import { DELETE_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/del
 import { FETCH_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/fetch.js";
 import { REGISTER_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/register.js";
 import { UPDATE_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/update.js";
+import { SET_RESOURCE_ACCESS_TOOL_NAME } from "../../src/tools/builtins/resource/access.js";
 import { ProjectStore } from "../../src/project/store.js";
 import { NodeStore } from "../../src/node/store.js";
 
@@ -50,6 +51,7 @@ describe("NodeAgent file capability", () => {
       DELETE_RESOURCE_TOOL_NAME,
       SEND_TO_MAIN_TOOL_NAME,
     ]));
+    expect(withRead.toolNames).not.toContain(SET_RESOURCE_ACCESS_TOOL_NAME);
     expect(withRead.toolNames).not.toEqual(
       expect.arrayContaining(["shell", "edit", "write"]),
     );

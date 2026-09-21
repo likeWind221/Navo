@@ -7,6 +7,7 @@ import { DELETE_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/del
 import { FETCH_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/fetch.js";
 import { REGISTER_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/register.js";
 import { UPDATE_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/update.js";
+import { SET_RESOURCE_ACCESS_TOOL_NAME } from "../../src/tools/builtins/resource/access.js";
 
 describe("Main Agent Resource profile", () => {
   it("exposes owner Resource CRUD but not Node-to-Main messaging", () => {
@@ -23,8 +24,10 @@ describe("Main Agent Resource profile", () => {
       FETCH_RESOURCE_TOOL_NAME,
       UPDATE_RESOURCE_TOOL_NAME,
       DELETE_RESOURCE_TOOL_NAME,
+      SET_RESOURCE_ACCESS_TOOL_NAME,
     ]));
     expect(profile.toolNames).not.toContain(SEND_TO_MAIN_TOOL_NAME);
     expect(profile.systemPrompt).toContain("Resources owned by Nodes are read-only");
+    expect(profile.systemPrompt).toContain("set_resource_access");
   });
 });
