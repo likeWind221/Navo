@@ -7,6 +7,7 @@ import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import { LLMService } from "../../src/llm/service.js";
 import type { GenerateRequest } from "../../src/llm/types.js";
 import { MailboxStore } from "../../src/mailbox/store.js";
+import { ReadMailboxTool } from "../../src/tools/builtins/mailbox/read.js";
 import { NodeStore } from "../../src/node/store.js";
 import { createMainAgentProfile, MAIN_AGENT_TOOL_NAMES } from "../../src/project/profile.js";
 import { MainSessionService } from "../../src/project/session.js";
@@ -44,6 +45,7 @@ async function createKit(entries: ConstructorParameters<typeof MockLLMAdapter>[0
   await ctx.plugin(ResourceService);
   await ctx.plugin(MailboxStore);
   await ctx.plugin(ResourceToolsPlugin);
+  await ctx.plugin(ReadMailboxTool);
   await ctx.plugin(SearchTool, { adapter: new MockSearchAdapter([]) });
   await ctx.plugin(FetchTool, { core: new MockFetchCore([]) });
   await ctx.plugin(RoadmapStore);
