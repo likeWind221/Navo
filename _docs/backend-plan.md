@@ -264,7 +264,7 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Pha
 
 ## 9. 当前下一步
 
-F9.5 已完成并收口：Main Agent 通过 `read_roadmap`、`read_node`、`write_roadmap`、`modify_roadmap` 建立完整规划闭环，Roadmap / Node version 与可信 Binding 继续作为确定性授权边界；F9.5 收尾见 [70：F9.5 closeout](70-devlog-f9.5-closeout.md)。
+F9.5 已完成并收口：Main Agent 通过 `read_roadmap`、`read_node`、`write_roadmap`、`modify_roadmap` 建立完整规划闭环，Roadmap / Node version 与可信 Binding 继续作为确定性授权边界；统一实现记录见 [70：F9.5 Main Agent Planning](70-devlog-f9.5-closeout.md)。
 
 F9.6 现重新定义为 **Project Workspace 与 Resource Handoff**。设计见 [71：F9.6 Project Workspace 与 Resource Handoff](71-devlog-f9.6-project-communication-design.md)。核心约束是：Main 是唯一跨 Node 协调者；每个 Project 拥有独立 Workspace；重要产物通过 Resource Registry 获得稳定身份与描述；Node 只看到 Main 为其提供的 Resource metadata，需要时再读取内容；任何消息、Resource 到位和依赖满足都不能自动启动另一个 Node。
 
@@ -280,7 +280,7 @@ F9.6c 已完成代码实现并通过 GitHub Windows CI：新增 Project 级 appe
 
 F9.1 与 F9.2 已完成，记录见 [55：Project 与通用 Node 领域](55-devlog-project-node-domain.md)。整个 Phase 9 的 Project / Roadmap / Mailbox / Resource Registry 元数据继续保持内存状态；Project Workspace 从 F9.6b 开始作为实际文件承载层存在。F10 再统一实施项目状态与 Registry 元数据的数据库持久化、启动恢复和中断处理。调研与拆分方案见 [56：内存与持久化阶段划分](56-devlog-persistence-plan.md)。
 
-F9.3.1 的结构规则沿用 [57：路线结构与关系表达](57-devlog-roadmap-graph.md) 并按 [63：F9.3 修复方案](63-devlog-node-state-review.md) 收敛；状态、路线变更、历史重建和地图查询修复见 [64：F9.3 状态模型修复](64-devlog-node-state-repair.md)。F9.4 已建立 Main / Node 的可信 Session Binding 与 Profile 边界；F9.5 已完成 Main Agent Roadmap 规划工具闭环。
+F9.3 的图结构、required/optional、Node 五态、RoadmapStore、依赖 lock/unlock、历史重建与地图查询已经合并为统一记录 [64：F9.3 In-Memory Roadmap](64-devlog-node-state-repair.md)。F9.4 已建立 Main / Node 的可信 Session Binding 与 Profile 边界；F9.5 已完成 Main Agent Roadmap 规划工具闭环。
 
 Node 当前状态约定：新建 locked，解锁后 idle，实际执行时 working，回合结束回到 idle；人工可将 idle 确认为 completing，或将 locked/idle 确认为 skipped；两种终态均满足后续依赖。RoadmapStore 在同一批 Node 事件中追加 node-unlocked，手动 unlock 不能绕过必选祖先；没有路线的独立 Node 仍可使用 NodeStore 原有生命周期。F9.6 / F9.7 继续遵守 Human Gate：Node 即使具备执行条件，也必须由用户明确启动 Turn。
 
