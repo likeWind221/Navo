@@ -37,6 +37,7 @@
 - [F9.6d.3：Resource Ownership 与 Main Communication Capability](78-devlog-f9.6d3-resource-capabilities.md)：Main/Node owner CRUD、授权资源只读、Workspace 文件快照发布、`.navo` ACL 防绕过与 Node→Main 文本通信。
 - [F9.6e：Node Turn Context Builder](79-devlog-f9.6e-context-builder.md)：Turn-start 上下文构建机制、可见 Resource metadata 快照、Profile 安全渲染与 Human-start 刷新边界；Main handoff Tool 待后续子阶段。
 - [F9.6e：Main Resource Handoff](80-devlog-f9.6e-main-resource-handoff.md)：Main-only Resource access capability、private/shared/project handoff、可信 Session Binding 与 Human Gate 验收。
+- [F9.6f：Integration 与 Human Gate](81-devlog-f9.6f-integration-human-gate.md)：Node A -> Main -> Node B 的真实 Tool 链路、Main-only Mailbox 读取与 F9.6 Human Gate 收口验收。
 
 - [阶段 0：工程骨架](02-阶段-0-工程骨架开发记录.md)
 - [阶段 1：核心协议](03-devlog-phase-1-core-protocol.md)

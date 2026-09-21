@@ -4,6 +4,7 @@ import { createApp } from "../../src/app.js";
 import { createToolCallId } from "../../src/brand/ids.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import { MockFetchCore } from "../../src/tools/builtins/fetch/mock.js";
+import { READ_MAILBOX_TOOL_NAME } from "../../src/tools/builtins/mailbox/read.js";
 import { SEND_TO_MAIN_TOOL_NAME } from "../../src/tools/builtins/mailbox/send.js";
 import { DELETE_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/delete.js";
 import { FETCH_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/fetch.js";
@@ -61,6 +62,7 @@ describe("generic Node research loop", () => {
         REGISTER_RESOURCE_TOOL_NAME, FETCH_RESOURCE_TOOL_NAME,
         UPDATE_RESOURCE_TOOL_NAME, DELETE_RESOURCE_TOOL_NAME,
         SET_RESOURCE_ACCESS_TOOL_NAME,
+        READ_MAILBOX_TOOL_NAME,
         SEND_TO_MAIN_TOOL_NAME,
       ].sort());
     expect(adapter.requests[0]?.tools?.map(tool => tool.name).sort())
@@ -75,6 +77,7 @@ describe("generic Node research loop", () => {
     expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(WRITE_ROADMAP_TOOL_NAME);
     expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(MODIFY_ROADMAP_TOOL_NAME);
     expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(SET_RESOURCE_ACCESS_TOOL_NAME);
+    expect(adapter.requests[0]?.tools?.map(tool => tool.name)).not.toContain(READ_MAILBOX_TOOL_NAME);
     const ready = app.nodes.get(node.node.id)!;
     expect(ready.status).toBe("idle");
     expect(ready.confirmation).toBeUndefined();

@@ -6,6 +6,7 @@ import { createAgentTurnV2Handler } from "../../src/host/turn/v2.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 
 import { createFileEnvironment } from "../../src/tools/builtins/file/path.js";
+import { READ_MAILBOX_TOOL_NAME } from "../../src/tools/builtins/mailbox/read.js";
 import { SEND_TO_MAIN_TOOL_NAME } from "../../src/tools/builtins/mailbox/send.js";
 import { DELETE_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/delete.js";
 import { FETCH_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/fetch.js";
@@ -48,6 +49,7 @@ describe("desktop Host tool availability", () => {
         REGISTER_RESOURCE_TOOL_NAME, FETCH_RESOURCE_TOOL_NAME,
         UPDATE_RESOURCE_TOOL_NAME, DELETE_RESOURCE_TOOL_NAME,
         SET_RESOURCE_ACCESS_TOOL_NAME,
+        READ_MAILBOX_TOOL_NAME,
         SEND_TO_MAIN_TOOL_NAME,
       ].sort());
       const adapter = new MockLLMAdapter([
@@ -79,6 +81,7 @@ describe("desktop Host tool availability", () => {
         UPDATE_RESOURCE_TOOL_NAME,
         DELETE_RESOURCE_TOOL_NAME,
         SET_RESOURCE_ACCESS_TOOL_NAME,
+        READ_MAILBOX_TOOL_NAME,
         SEND_TO_MAIN_TOOL_NAME,
       ]));
       expect(events.at(-1)).toMatchObject({ type: "turn-completed" });
