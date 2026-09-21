@@ -24,6 +24,7 @@
 - [F9.5：Main Agent Planning](62-devlog-f9.5-main-agent-planning.md)：整合 read_roadmap、read_node、write_roadmap、modify_roadmap，形成受可信 Binding 与版本校验约束的 Main Roadmap 规划闭环。
 - [CI 与 PR 流程接入](61-devlog-ci-pr-flow.md)：GitHub Actions 的 typecheck/test 门禁、Step 分支与 squash 合并约定，以及 CI 暴露的平台测试问题。
 - [F9.6：Project Workspace 与 Resource Handoff](63-devlog-f9.6-workspace-resource-handoff.md)：整合 Mailbox、真实 Project Workspace、Resource 生命周期/权限、Main/Node capability、Context Builder、Main handoff 与 Human Gate 端到端验收。
+- [F9.7a：ProjectRuntime Core](64-devlog-f9.7a-project-runtime-core.md)：建立 Human-controlled Node start 统一入口，复用 Node 五态与 AgentRuntime，并以瞬时 reservation 阻止同 Node 双重 Human start。
 
 - [阶段 0：工程骨架](02-阶段-0-工程骨架开发记录.md)
 - [阶段 1：核心协议](03-devlog-phase-1-core-protocol.md)
