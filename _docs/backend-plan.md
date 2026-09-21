@@ -266,7 +266,9 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Pha
 
 F9.5 已完成并收口：Main Agent 通过 `read_roadmap`、`read_node`、`write_roadmap`、`modify_roadmap` 建立完整规划闭环，Roadmap / Node version 与可信 Binding 继续作为确定性授权边界；统一实现记录见 [70：F9.5 Main Agent Planning](70-devlog-f9.5-closeout.md)。
 
-F9.6 已正式收口：Project 直接绑定用户真实 Workspace，Navo 内部文件统一进入 `.navo/`；Resource 由稳定 ResourceId、Main/Node ownership、revision 与 `private | shared | project` ACL 管理；Node 通过 `send_to_main` 报告，Main 通过 `read_mailbox` 与 `set_resource_access` 完成协调；Node Turn 由 Context Builder 在 Human-start 时注入可见 Resource metadata，正文通过 `fetch_resource` 按需读取。任何消息、Resource 或依赖变化都不会自动启动 Node。统一实现与验收记录见 [81：F9.6 Project Workspace 与 Resource Handoff](81-devlog-f9.6f-integration-human-gate.md)。Phase 9 当前下一步为 F9.7 Human-Controlled ProjectRuntime。\n\nF9.1 与 F9.2 已完成，记录见 [55：Project 与通用 Node 领域](55-devlog-project-node-domain.md)。整个 Phase 9 的 Project / Roadmap / Mailbox / Resource Registry 元数据继续保持内存状态；Project Workspace 从 F9.6b 开始作为实际文件承载层存在。F10 再统一实施项目状态与 Registry 元数据的数据库持久化、启动恢复和中断处理。调研与拆分方案见 [56：内存与持久化阶段划分](56-devlog-persistence-plan.md)。
+F9.6 已正式收口：Project 直接绑定用户真实 Workspace，Navo 内部文件统一进入 `.navo/`；Resource 由稳定 ResourceId、Main/Node ownership、revision 与 `private | shared | project` ACL 管理；Node 通过 `send_to_main` 报告，Main 通过 `read_mailbox` 与 `set_resource_access` 完成协调；Node Turn 由 Context Builder 在 Human-start 时注入可见 Resource metadata，正文通过 `fetch_resource` 按需读取。任何消息、Resource 或依赖变化都不会自动启动 Node。统一实现与验收记录见 [81：F9.6 Project Workspace 与 Resource Handoff](81-devlog-f9.6f-integration-human-gate.md)。Phase 9 当前下一步为 F9.7 Human-Controlled ProjectRuntime。
+
+F9.1 与 F9.2 已完成，记录见 [55：Project 与通用 Node 领域](55-devlog-project-node-domain.md)。整个 Phase 9 的 Project / Roadmap / Mailbox / Resource Registry 元数据继续保持内存状态；Project Workspace 从 F9.6b 开始作为实际文件承载层存在。F10 再统一实施项目状态与 Registry 元数据的数据库持久化、启动恢复和中断处理。调研与拆分方案见 [56：内存与持久化阶段划分](56-devlog-persistence-plan.md)。
 
 F9.3 的图结构、required/optional、Node 五态、RoadmapStore、依赖 lock/unlock、历史重建与地图查询已经合并为统一记录 [64：F9.3 In-Memory Roadmap](64-devlog-node-state-repair.md)。F9.4 已建立 Main / Node 的可信 Session Binding 与 Profile 边界；F9.5 已完成 Main Agent Roadmap 规划工具闭环。
 
