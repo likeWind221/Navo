@@ -19,14 +19,8 @@
 - [内存路线图与数据库持久化阶段划分](56-devlog-persistence-plan.md)：区分重建、落盘和恢复；F9.3 完成内存路线图，F10 统一实施数据库持久化；附 Codex/Pi 存储调研与数据库选型。
 
 - [F9.1–F9.2：Project 与通用 Node 领域](55-devlog-project-node-domain.md)：项目身份与事件恢复、通用节点、四态生命周期和人工完成确认。
-- [F9.3.1：路线结构与关系表达](57-devlog-roadmap-graph.md)：节点级必选/可选、有向连接、汇合前置与结构校验。
-- [F9.3.1：节点图设计复审](58-devlog-roadmap-review.md)：删除路径组约束，用通用节点与边表达分叉/汇合，保留穿过可选节点的必选祖先。
-- [F9.3.1–F9.3.2：控制节点与路线服务](59-devlog-roadmap-store.md)：人工控制点、内存批量编辑、跨 Store 创建提交、运行保护与历史重建。
-- [F9.3.3：进度看板与执行资格](61-devlog-roadmap-board.md)：实时状态投影、工作/人工动作资格、具体阻塞原因与分类进度。
-- [Node 状态模型复审](63-devlog-node-state-review.md)：取消成员/替换状态，节点属性归位，统一依赖派生状态，并取消循环步骤。
-- [F9.3：状态模型修复](64-devlog-node-state-repair.md)：五态 Node、事件解锁、路线批变更、历史重建与只读节点地图。
-- [F9.4：Agent Profile 与 Binding](65-devlog-agent-profile-binding.md)：Main / Node Profile、可信 Session Binding、归档拒绝与角色/项目越权防护，含本机完整验证结果。
-- [CI 与 PR 流程接入](66-devlog-ci-pr-flow.md)：GitHub Actions 的 typecheck/test 门禁、Step 分支与 squash 合并约定，以及 CI 暴露的平台测试问题。
+- [F9.3：In-Memory Roadmap](64-devlog-node-state-repair.md)：整合图结构、required/optional、RoadmapStore、Node 五态、依赖 lock/unlock、原子变更、历史重建与只读地图查询；旧 Board/Path 方案已收敛。\n- [F9.4：Agent Profile 与 Binding](65-devlog-agent-profile-binding.md)：Main / Node Profile、可信 Session Binding、归档拒绝与角色/项目越权防护，含本机完整验证结果。
+- [F9.5：Main Agent Planning](70-devlog-f9.5-closeout.md)：整合 read_roadmap、read_node、write_roadmap、modify_roadmap，形成受可信 Binding 与版本校验约束的 Main Roadmap 规划闭环。\n- [CI 与 PR 流程接入](66-devlog-ci-pr-flow.md)：GitHub Actions 的 typecheck/test 门禁、Step 分支与 squash 合并约定，以及 CI 暴露的平台测试问题。
 - [F9.6 Project Workspace 与 Resource Handoff 设计](71-devlog-f9.6-project-communication-design.md)：F9.6 重规划后的 Workspace、Resource Registry、Node reporting 与 Main handoff 总体边界。
 - [F9.6a：Project Mailbox Domain](72-devlog-f9.6a-project-mailbox.md)：Project 级消息事实、合法 Main/Node 路由、归属校验与 replay 边界。
 - [F9.6b：Project Workspace Foundation](73-devlog-f9.6b-project-workspace.md)：每 Project 独立物理 Workspace、portable relative ref、安全路径 containment 与 symlink escape 验收。
