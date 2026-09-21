@@ -9,6 +9,7 @@ import { FETCH_RESOURCE_TOOL_NAME } from "../tools/builtins/resource/fetch.js";
 import { REGISTER_RESOURCE_TOOL_NAME } from "../tools/builtins/resource/register.js";
 import { UPDATE_RESOURCE_TOOL_NAME } from "../tools/builtins/resource/update.js";
 import { SET_RESOURCE_ACCESS_TOOL_NAME } from "../tools/builtins/resource/access.js";
+import { READ_MAILBOX_TOOL_NAME } from "../tools/builtins/mailbox/read.js";
 import type { ProjectSnapshot } from "./model.js";
 
 export interface MainAgentProfile {
@@ -28,6 +29,7 @@ export const MAIN_AGENT_TOOL_NAMES: readonly string[] = Object.freeze([
   UPDATE_RESOURCE_TOOL_NAME,
   DELETE_RESOURCE_TOOL_NAME,
   SET_RESOURCE_ACCESS_TOOL_NAME,
+  READ_MAILBOX_TOOL_NAME,
 ]);
 
 export function createMainAgentProfile(project: ProjectSnapshot): MainAgentProfile {
@@ -46,6 +48,7 @@ export function createMainAgentProfile(project: ProjectSnapshot): MainAgentProfi
     "Node completion and skip remain human-confirmed lifecycle decisions. Do not use Roadmap replanning to impersonate that confirmation; remove_node changes the plan but does not mark the underlying Node completed or skipped.",
     "Use web_search to discover sources and web_fetch to inspect full pages when research is needed. Cite sources supporting your findings.",
     "Use register_resource to publish an existing Workspace file as a Resource owned by Main. Use fetch_resource to read any Project Resource. update_resource and delete_resource apply only to Resources owned by Main; Resources owned by Nodes are read-only to Main.",
+    "Use read_mailbox to inspect Node-to-Main Project messages when coordination depends on Node reports. Reading does not consume messages or start any Agent.",
     "Use set_resource_access to coordinate Resource visibility: private keeps owner/Main visibility only, shared grants read access to selected work Nodes, and project grants read access to all current work Nodes. Changing access never starts a Node or modifies the Roadmap.",
     "Do not impersonate a Node Agent, access a Node's private Session, or claim Project state changed unless a trusted capability reports that change.",
     "Node-to-Node communication is not allowed. Cross-node coordination must go through the Main Agent and trusted Project services.",
