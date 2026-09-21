@@ -1,99 +1,223 @@
-# 70：F9.5 Main Agent Planning 收尾
+# 70：F9.5 Main Agent Planning
 
 ## 结论
 
-F9.5 已完成，可以进入 F9.6 Project Mailbox 与协调。
+F9.5 已完成 Main Agent 的 Roadmap 规划闭环：模型可以读取当前 Project 事实、创建初始 Roadmap、对已有 Roadmap 做版本化增量修改，但最终写入仍由可信 Binding、RoadmapStore 和 Node 领域规则决定。
 
-F9.5 的目标不是让 Main Agent 直接拥有 Project / Node 的任意写权限，而是建立一组受可信 Binding 与领域规则约束的规划 capability，使模型能够读取、创建和增量修改 Roadmap，同时仍由确定性 Core 决定哪些变化可以成为 Project 事实。
+本记录整合原 F9.5a–F9.5d 的 `read_roadmap`、`read_node`、`write_roadmap`、`modify_roadmap` 四份开发记录，作为 F9.5 的唯一权威实现记录。
 
-## 已完成能力
-
-F9.5 按四个小步完成：
-
-- F9.5a `read_roadmap`：Main Agent 读取当前 Project 的权威 Roadmap、version、依赖与 Node 摘要，不暴露 Node 私有 Session / confirmation。
-- F9.5b `read_node`：Main Agent 按 NodeId 读取当前 Project 内单个 Node 的定义与精确 revision，NodeId 只是引用而不是授权。
-- F9.5c `write_roadmap`：仅在 Roadmap 不存在时创建初始计划；proposal-local `key` 在可信边界内映射为 Navo 生成的持久 NodeId，并返回 `key -> NodeId` receipt。
-- F9.5d `modify_roadmap`：对已有 Roadmap 进行单 action、版本化的增量修改，支持 `add_node`、`edit_node`、`connect`、`disconnect`、`reorder`、`remove_node`。
-
-完整规划闭环如下：
+## 完整规划闭环
 
 ```text
-Main Agent
+                   Main Agent
+                       |
+          +------------+------------+
+          |                         |
+          v                         v
+   read_roadmap                 read_node
+          |                         |
+          +------------+------------+
+                       |
+                       v
+               current Project facts
+                       |
+          +------------+------------+
+          |                         |
+          v                         v
+   write_roadmap              modify_roadmap
+          |                         |
+          +------------+------------+
+                       |
+                       v
+              trusted Main Binding
+                       |
+                       v
+                  RoadmapStore
+                       |
+        version / DAG / Node validation
+                       |
+                       v
+             authoritative Project facts
+```
+
+Main Agent 获得的是“规划 capability”，不是任意 Project/Node 写权限。
+
+## 读取能力
+
+### read_roadmap
+
+`read_roadmap()` 从可信 Main Session Binding 推导 Project，不接受模型提交 `project_id`。
+
+模型可见视图只包含 Roadmap version、依赖、Node ID、标题、required、status、`depends_on`、goal 与 done_when 等规划信息；Node 私有 `sessionId`、confirmation 等执行信息不暴露。
+
+空 Roadmap 是正常状态，而不是错误。
+
+### read_node
+
+`read_node(node_id)` 用于读取一个具体 Node 的定义和精确 revision。NodeId 只是“选择哪个对象”的引用，不构成授权：
+
+```text
+model node_id
     |
-    +--> read_roadmap --------------------+
-    |                                     |
-    +--> read_node -----------------------+--> current Project facts
-    |                                     |
-    +--> write_roadmap / modify_roadmap --+
-                                            |
-                                            v
-                                   trusted Main Binding
-                                            |
-                                            v
-                                     RoadmapStore
-                                            |
-                              validate version / DAG / Node
-                                            |
-                                            v
-                                   authoritative facts
+trusted Main Binding
+    |
+node.projectId == binding.projectId ?
+    |
+    +-- yes --> Agent-visible Node view
+    +-- no  --> current Project 中不存在
 ```
 
-## 权限边界
+跨 Project Node 和不存在 Node 对模型采用一致的拒绝边界，避免利用 NodeId 探测其他 Project。
 
-F9.5 完成后，Main Agent 拥有的是“规划权”，不是 Node lifecycle 的最终裁决权。
+## 初始 Roadmap 创建
+
+`write_roadmap` 只允许在当前 Project 尚无 Roadmap 时创建初始规划。
+
+模型提交 proposal-local `key` 表达节点间依赖，Navo 在可信边界内生成真正的持久 NodeId：
 
 ```text
-Main Agent
-  +-- create / edit planning definition
-  +-- add / remove / reorder Roadmap Node
-  +-- connect / disconnect dependencies
-  +-- choose required / optional
-  X-- confirm Node completion
-  X-- mark Node skipped as human confirmation
-
-Roadmap / Node Core
-  +-- validate references and DAG
-  +-- reject stale Roadmap / Node revisions
-  +-- protect working Node definitions
-  +-- derive dependency-based locked / idle transitions
-
-Human authority
-  +-- completion confirmation
-  +-- skip confirmation
+LLM proposal
+  nodes: [research, build]
+  build.depends_on = [research]
+        |
+        v
+proposal-local keys
+        |
+        v
+Navo generate NodeId
+        |
+        v
+candidate DAG validation
+        |
+        v
+atomic Node + Roadmap commit
 ```
 
-`remove_node` 只表示把 Node 从当前规划路线中移除，不伪造 `skipped`；Node 历史事实继续存在。
+成功后返回 `key -> NodeId` receipt。cycle、非法引用等校验失败时，不留下孤儿 Node 或半写入 Roadmap。
 
-## 一致性与安全性
+已有 Roadmap 不能被 `write_roadmap` 覆盖，后续变化必须走 `modify_roadmap`。
 
-- Project 身份由 Main Session 的 trusted Binding 推导，不由模型提交 `project_id`。
-- `modify_roadmap` 使用精确 `base_version`；`edit_node` 额外要求精确 `node_version`。
-- stale version、非法引用、重复关系、cycle、working Node 定义修改等均在提交前被拒绝。
-- Node 创建 / 定义事件与 Roadmap change 在候选状态验证通过后才提交，失败不留下部分规划事实。
-- Roadmap capability 只进入 Main Agent Profile，工具内部仍重新执行 `requireMainBinding`；Node Session 即使直接 dispatch 也不能越权。
-- Main / Node 继续复用同一个 `AgentRuntime`，F9.5 没有创建角色专属 Runtime。
+## 增量 Roadmap 修改
 
-## 验证状态
+`modify_roadmap` 每次只执行一种 action：
 
-F9.5a、F9.5b、F9.5c、F9.5d 均已通过独立 PR 接入 `master`。最终 F9.5d PR #9 的 Windows GitHub CI 已通过，现有 gate 包含：
+- `add_node`
+- `edit_node`
+- `connect`
+- `disconnect`
+- `reorder`
+- `remove_node`
+
+一次只做一个 action 的目的，是让多步重规划保持可审计，并让每一步都基于上一轮成功结果返回的新 revision。
+
+### 两级版本保护
+
+普通 Roadmap mutation 要求：
 
 ```text
-pnpm install --frozen-lockfile
-pnpm typecheck
-pnpm test
+base_version == current Roadmap revision
 ```
 
-因此 F9.5 在当前开发规则下达到完成标准。
+`edit_node` 还要求：
 
-## 下一步：F9.6 Project Mailbox 与协调
+```text
+node_version == current Node revision
+```
 
-F9.6 开始解决规划层尚未解决的信息流问题：Node Agent 如何把结果、阻塞和协调请求作为 Project 事实报告给 Main Agent，以及 Main Agent 如何向指定 Node 下发后续 directive，同时继续禁止 Node-to-Node 直接通信。
+因此即使 Roadmap version 没变化，只要目标 Node 在其他路径中已更新，旧 Node view 也不能覆盖新定义。
 
-建议拆分为：
+### Node 定义修改
 
-1. **F9.6a Mailbox Domain**：建立 ProjectMessage / MailboxStore（或等价领域服务）、消息身份、Project ownership、追加历史和读取投影；暂不触发 Agent。
-2. **F9.6b Node -> Main**：Node Agent 获得受限报告 capability，支持结果、阻塞、协调请求；消息先落为 Project 事实，不在工具调用内递归唤醒 Main Agent。
-3. **F9.6c Main -> Node**：Main Agent 可以向当前 Project 中指定 Node 下发 directive；NodeId 仍只是引用，工具通过 Main Binding + Project ownership 校验授权。
-4. **F9.6d 协调闭环验收**：验证 Node A -> Mailbox -> Main -> Mailbox -> Node B 的受控链路，并以攻击测试证明 Node A 无法直接发送给 Node B、跨 Project 消息不可见。
+Node 定义变化通过正式 `definition-changed` Event 记录，而不是 Tool 直接改内存对象。
 
-F9.6 不负责长期自动调度或递归 Agent 唤醒；那属于 F9.7 ProjectRuntime 长期编排。F9.6 的核心产物是一个可记录、可追溯、权限明确的 Project 级异步通信事实层。
+仅：
+
+```text
+locked / idle -> editable
+working / completing / skipped -> frozen
+```
+
+且 work/control 类型不能互相转换。若一个 Node 已经进入执行或终态，需要通过重规划新增/移除 Node，而不是静默篡改历史定义。
+
+### remove_node 与 skip 的区别
+
+`remove_node` 表示把 Node 从当前路线规划中移除：
+
+```text
+Roadmap no longer references Node
+!=
+Node was human-confirmed skipped
+```
+
+Node 历史仍保留。Main Agent 没有 `skip_node` 或 completion confirmation 权限。
+
+## 权限与安全边界
+
+F9.5 采用两层防线：
+
+```text
+Profile allowlist
+      |
+      v
+model sees capability
+      |
+      v
+Tool execute
+      |
+requireMainBinding()
+      |
+      v
+domain validation
+```
+
+因此即使 Node Session 绕过 Profile 直接 dispatch Roadmap Tool，也会因为真实 Session Binding 被拒绝。
+
+关键不变量包括：
+
+- Project 身份来自 trusted Main Session，而非模型参数；
+- stale Roadmap / Node revision 被拒绝；
+- 非法引用、重复关系和 cycle 被拒绝；
+- working Node 定义不可编辑；
+- 候选 Node Event + Roadmap change 全部校验后再提交；
+- Main / Node 始终复用同一个 `AgentRuntime`；
+- Main 不能确认 Node completion / skip。
+
+## Agent-facing 语义
+
+F9.5 将模型侧 work Node 描述统一为：
+
+```text
+goal      = 要完成什么
+done_when = 什么条件下认为完成
+```
+
+底层 Node Domain 仍使用 `objective.description` / `acceptanceCriteria`，Agent-facing DTO 不要求重写领域事件模型。
+
+## 验证
+
+F9.5a–F9.5d 均通过独立 PR 合入 master。测试重点包括：
+
+- Main 可以读取 Roadmap / Node，但看不到私有 Session/confirmation；
+- Node Session 不能调用 Main-only Roadmap capability；
+- 初始 Roadmap 创建返回 key-to-NodeId receipt；
+- cycle / 非法 proposal 不产生部分提交；
+- stale Roadmap version 被拒绝；
+- stale Node version 被拒绝；
+- working Node 不可编辑；
+- connect cycle 完全回滚；
+- reorder / remove 后 Roadmap 可稳定重建。
+
+最终 F9.5d GitHub Windows CI 通过 `pnpm typecheck` 与全量 `pnpm test`。
+
+## 与后续 Step 的边界
+
+F9.5 只解决 **Main 如何规划和修改 Roadmap**。
+
+它不解决：
+
+- Node 如何向 Main 报告结果或阻塞；
+- Resource 如何跨 Node 交接；
+- Resource 到位后 Node 如何获得上下文；
+- Node 是否自动执行。
+
+这些由 F9.6 Workspace / Resource Handoff 与 F9.7 Human-Controlled ProjectRuntime 继续处理。
