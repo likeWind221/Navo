@@ -19,9 +19,12 @@
 - [内存路线图与数据库持久化阶段划分](56-devlog-persistence-plan.md)：区分重建、落盘和恢复；F9.3 完成内存路线图，F10 统一实施数据库持久化；附 Codex/Pi 存储调研与数据库选型。
 
 - [F9.1–F9.2：Project 与通用 Node 领域](55-devlog-project-node-domain.md)：项目身份与事件恢复、通用节点、四态生命周期和人工完成确认。
-- [F9.3：In-Memory Roadmap](64-devlog-node-state-repair.md)：整合图结构、required/optional、RoadmapStore、Node 五态、依赖 lock/unlock、原子变更、历史重建与只读地图查询；旧 Board/Path 方案已收敛。\n- [F9.4：Agent Profile 与 Binding](65-devlog-agent-profile-binding.md)：Main / Node Profile、可信 Session Binding、归档拒绝与角色/项目越权防护，含本机完整验证结果。
-- [F9.5：Main Agent Planning](70-devlog-f9.5-closeout.md)：整合 read_roadmap、read_node、write_roadmap、modify_roadmap，形成受可信 Binding 与版本校验约束的 Main Roadmap 规划闭环。\n- [CI 与 PR 流程接入](66-devlog-ci-pr-flow.md)：GitHub Actions 的 typecheck/test 门禁、Step 分支与 squash 合并约定，以及 CI 暴露的平台测试问题。
-- [F9.6：Project Workspace 与 Resource Handoff](81-devlog-f9.6f-integration-human-gate.md)：整合 Mailbox、真实 Project Workspace、Resource 生命周期/权限、Main/Node capability、Context Builder、Main handoff 与 Human Gate 端到端验收。\n
+- [F9.3：In-Memory Roadmap](64-devlog-node-state-repair.md)：整合图结构、required/optional、RoadmapStore、Node 五态、依赖 lock/unlock、原子变更、历史重建与只读地图查询；旧 Board/Path 方案已收敛。
+- [F9.4：Agent Profile 与 Binding](65-devlog-agent-profile-binding.md)：Main / Node Profile、可信 Session Binding、归档拒绝与角色/项目越权防护，含本机完整验证结果。
+- [F9.5：Main Agent Planning](70-devlog-f9.5-closeout.md)：整合 read_roadmap、read_node、write_roadmap、modify_roadmap，形成受可信 Binding 与版本校验约束的 Main Roadmap 规划闭环。
+- [CI 与 PR 流程接入](66-devlog-ci-pr-flow.md)：GitHub Actions 的 typecheck/test 门禁、Step 分支与 squash 合并约定，以及 CI 暴露的平台测试问题。
+- [F9.6：Project Workspace 与 Resource Handoff](81-devlog-f9.6f-integration-human-gate.md)：整合 Mailbox、真实 Project Workspace、Resource 生命周期/权限、Main/Node capability、Context Builder、Main handoff 与 Human Gate 端到端验收。
+
 - [阶段 0：工程骨架](02-阶段-0-工程骨架开发记录.md)
 - [阶段 1：核心协议](03-devlog-phase-1-core-protocol.md)
 - [阶段 2：SessionLog 与消息投影](04-devlog-phase-2-session-log.md)
