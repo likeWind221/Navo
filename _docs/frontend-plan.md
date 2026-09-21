@@ -214,13 +214,13 @@ Final answer (outside collapse)
 
 | ⛔ | F5.2 真实项目入口 | 前端项目视图与桌面桥接；后端依赖交由 backend-plan.md 实施 | 用户可以创建、列出、打开真实项目并查看基本信息；当前缺少公共项目接口，等待交接，尚未实施前端接入 |
 
-F5.1 正式入口使用当前真实会话，项目及多会话仅在独立预览使用 Mock。真实项目管理、会话查询和恢复依赖交由 `backend-plan.md` 实施，后续前端接入另行确认。实现见 [F5.1 开发记录](60-devlog-f5-1-workspace.md)。
+F5.1 正式入口使用当前真实会话，项目及多会话仅在独立预览使用 Mock。真实项目管理、会话查询和恢复依赖交由 `backend-plan.md` 实施，后续前端接入另行确认。实现见 [F5.1 开发记录](57-devlog-f5-1-workspace.md)。
 
 ## 4. 当前下一步
 
 F4.1–F4.4 已全部完成。2026-09-14 用户明确确认 Navo Electron 体验验收成功，F4 正式收尾，没有剩余验收项。自动检查与用户验收分别记录于 [F4 验收收尾](54-devlog-tool-result-rows.md)。
 
-文本过程、活动摘要、工具结果、主题图标、高亮动画及单 HTML 演示的实现记录已合并至 [F4 实现汇总](52-devlog-f4-4-text-process.md)。工具列表配置诊断独立保留于 [工具列表排查](53-devlog-message-demo-tool-audit.md)，不扩展本次后端交付范围。F5.1 已通过用户验收。F5.2 已获授权，当前等待后端公共项目接口及项目名称/工作目录语义交付；交接见 [F5.2 接入核对](62-devlog-f5-2-project-handoff.md)，不以 Mock 代替真实项目。
+文本过程、活动摘要、工具结果、主题图标、高亮动画及单 HTML 演示的实现记录已合并至 [F4 实现汇总](52-devlog-f4-4-text-process.md)。工具列表配置诊断独立保留于 [工具列表排查](53-devlog-message-demo-tool-audit.md)，不扩展本次后端交付范围。F5.1 已通过用户验收。F5.2 已获授权，当前等待后端公共项目接口及项目名称/工作目录语义交付；交接见 [F5.2 接入核对](58-devlog-f5-2-project-handoff.md)，不以 Mock 代替真实项目。
 
 F3 阶段已全部收口：F3.10 Markdown 与 F3.11 数学公式的代码、测试、Electron 自动验收与真实模型人工桌面验收均已通过，详见 [F3.11 开发记录](42-devlog-f3-11-math.md) 与 [F3.10 开发记录](41-devlog-f3-10-markdown.md)。F4 之后仍未固化的候选方向有 `/compact`、`/model`、`/clear` 等真实命令，多会话与持久化，以及学习地图与 Node 内容面板。
 
