@@ -106,8 +106,8 @@ pnpm test       PASS
 - Node B 通过 `fetch_resource` 成功读取正文；
 - Resource 最终仍由 Node A owner，Node B 只有 shared Read。
 
-当前仍等待本机 `pnpm install --frozen-lockfile`、`pnpm typecheck`、`pnpm test`，因此 F9.6f 与整个 F9.6 保持 **🔄**，PR #23 暂不合并。
+GitHub Actions Windows CI 已完成最终门禁；按照 `_docs/backend-plan.md` 当前约定，CI 是 PR 的唯一合并 gate。本机 `pnpm install --frozen-lockfile`、`pnpm typecheck`、`pnpm test` 可继续作为额外复验，但不再阻塞合并。因此 F9.6f 与整个 F9.6 均可正式标记为 **✅**。
 
 ## 下一步
 
-本机与最终 head CI 双重通过后，将 F9.6f 标记为完成并正式收口整个 F9.6；之后唯一下一步进入 F9.7 Human-Controlled ProjectRuntime。
+合并 PR #23 后，F9.6 正式收口；Phase 9 的下一步唯一进入 F9.7 Human-Controlled ProjectRuntime。
