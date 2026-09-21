@@ -109,7 +109,7 @@ pnpm test       PASS
 - Main Profile 暴露 handoff Tool，Node Profile 不暴露；
 - Desktop/普通 Node Runtime 不因全局注册而获得该能力。
 
-当前 F9.6e 代码实现已完成，但仍等待本机 `pnpm install --frozen-lockfile`、`pnpm typecheck`、`pnpm test`，因此整体保持 **🔄**，PR #22 暂不合并。
+用户已完成本机 `pnpm install --frozen-lockfile`、`pnpm typecheck`、`pnpm test` 完整验证，结果全部通过；结合最终 head 的 GitHub Windows CI，Main Resource Handoff 子阶段已满足本机 + CI 双重门禁，可以正式收口 F9.6e。
 
 ## 下一步
 
