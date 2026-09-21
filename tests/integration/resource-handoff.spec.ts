@@ -166,10 +166,8 @@ describe("F9.6 Resource handoff integration", () => {
       }),
     ]);
 
-    expect(app.nodes.get(nodeB.node.id)).toMatchObject({
-      status: "idle",
-      sessionId: undefined,
-    });
+    expect(app.nodes.get(nodeB.node.id)?.status).toBe("idle");
+    expect(app.nodes.get(nodeB.node.id)?.sessionId).toBeUndefined();
     const nodeBEventsBeforeMain = app.nodes.getEvents(nodeB.node.id).length;
 
     const mainTurn = await app.mainSessions.sendMessage({
@@ -178,10 +176,8 @@ describe("F9.6 Resource handoff integration", () => {
     });
     expect(mainTurn.turn).toMatchObject({ status: "completed", steps: 3 });
     expect(app.nodes.getEvents(nodeB.node.id)).toHaveLength(nodeBEventsBeforeMain);
-    expect(app.nodes.get(nodeB.node.id)).toMatchObject({
-      status: "idle",
-      sessionId: undefined,
-    });
+    expect(app.nodes.get(nodeB.node.id)?.status).toBe("idle");
+    expect(app.nodes.get(nodeB.node.id)?.sessionId).toBeUndefined();
 
     const mainRequest = adapter.requests[3]!;
     expect(mainRequest.tools?.map(tool => tool.name))
