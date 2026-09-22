@@ -6,6 +6,8 @@ export class ProjectError extends Error {
 }
 
 export type ProjectErrorCode =
+  | "turn-active"
+  | "runtime-unavailable"
   | "project-not-found"
   | "project-already-exists"
   | "project-unavailable"

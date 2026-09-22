@@ -29,7 +29,7 @@ Main Agent            Project Nodes
         LLM / ToolService
 ```
 
-Phase 9 的目标不是把 Roadmap 塞进一次 Agent 会话，也不是建立一个以 Scheduler 为中心的全自动工作流引擎，而是让一个 Project 能够长期存在、持续演进，并由一个 Main Agent 管理整体路线、多个相互隔离的 Node Agent 执行节点工作，同时保留 Human 对每个 Node 是否真正开始执行的明确控制权。
+Phase 9 的目标不是把 Roadmap 塞进一次 Agent 会话，也不是建立一个以 Scheduler 为中心的全自动工作流引擎，而是让一个 Project 能够长期存在、持续演进，并由一个 Main Agent 管理整体路线、多个相互隔离的 Node Agent 执行节点工作，同时让 Human 对 Main / Node 的每一次 Agent Turn 都保留明确启动与中止权。Project 事实可以改变“下一步允许做什么”，但不能自行触发 Agent 执行。
 
 ## 2. Phase 9 核心产品契约
 
@@ -95,22 +95,24 @@ Resource Service
 
 Main 后续负责把 Resource 从 private 定向共享给指定 Node，或提升为 Project 共享。Node 启动时只需要持续知道自己可见的 Resource metadata，正文按需读取；Resource 到位仍不会自动启动 Node。通用 Context Builder、动态 reload 与 RAG 不在 F9.6 实现。
 
-### Human 是 Node 执行的最终 Gate
+### Human 是 Project Agent Turn 的最终 Gate
 
-Navo 不以“依赖一满足就自动跑下一个节点”为目标。Roadmap 解锁、收到 Main directive、收到 Asset 或收到 Mailbox 消息，都不得自动触发 Node Agent Turn。
+Navo 不以“Project 事实一变化就自动唤醒 Agent”为目标。Project 创建、Roadmap 解锁、Mailbox 新消息、Resource 到位或 Main / Node 的上一次 Turn 结束，都不得自动触发下一次 Main Agent 或 Node Agent Turn。所有 Agent Turn 都必须来自明确 Human Action。
 
 ```text
-Node ready
-   |
-   X  no auto-run
-   |
-Human explicit start
-   |
-   v
-Node working
+Project facts changed
+      |
+      +--> Main can act ----X----> no auto-run
+      |
+      +--> Node ready ------X----> no auto-run
+                                  |
+                           Human explicit action
+                             /             \
+                            v               v
+                      Main Agent Turn   Node Agent Turn
 ```
 
-Node 报告 result 也不等于 Node 已完成；F9.2 的人工确认 completing / skipped 规则继续生效。
+Main Session 在 Project 创建时已经拥有稳定身份，因此这里控制的是 **Main Turn 是否开始**，不是重新创建 Main Session。Node 报告 result 也不等于 Node 已完成；F9.2 的人工确认 completing / skipped 规则继续生效。
 
 ### 现有 Node 包是 Phase 9 的迁移基础
 
@@ -181,9 +183,9 @@ GitHub CI
 
 ## 6. Phase 9（F9）：Project-Oriented Multi-Agent Roadmap Runtime
 
-**阶段目标：** 让 Navo 能把一个长期 Goal 作为 Project 持续管理：Main Agent 维护可视化 Roadmap，多个隔离 Node Agent 分别推进节点；每个 Project 拥有独立 Workspace，Node 的报告、阻塞和 Resource 回到 Project / Main 协调；Main 可以安全修改 Roadmap 并为后续 Node 准备可发现资源，但每个 Node 的真实执行仍由 Human 明确启动。
+**阶段目标：** 让 Navo 能把一个长期 Goal 作为 Project 持续管理：Main Agent 维护可视化 Roadmap，多个隔离 Node Agent 分别推进节点；每个 Project 拥有独立 Workspace，Node 的报告、阻塞和 Resource 回到 Project / Main 协调；Main 可以安全修改 Roadmap 并为后续 Node 准备可发现资源，但 Main / Node 的每一次真实 Agent Turn 都只能由 Human 明确触发。
 
-**阶段验收场景：** 创建 Project 与 Goal；Main Agent 形成多 Node Roadmap；Human 启动 Node A，Node A 在当前 Project Workspace 中生成调研产物、注册 Resource 并向 Main 报告结果；Main 将该 Resource Reference 提供给 Node B；Node B 后续启动时能够持续看到资源元数据并按需读取内容，但不会因为 Resource 到位自动运行；若 Node 在工作中遇到阻塞或 Roadmap 修改要求，只能向 Main 报告 / escalation，不能直接联系其他 Node 或自行修改 Project Roadmap。
+**阶段验收场景：** 创建 Project 与 Goal 后，Main Session 已存在但 Main 不自动运行；Human 明确启动 Main Turn 形成多 Node Roadmap；Human 再启动 Node A，Node A 在当前 Project Workspace 中生成调研产物、注册 Resource 并向 Main 报告结果；Mailbox 新消息不会自动唤醒 Main，Human 再次启动 Main Turn 后由 Main 读取结果并将 Resource Reference 提供给 Node B；Resource 到位也不会自动运行 Node B，只有 Human 启动其 Turn 后才继续执行。若 Node 在工作中遇到阻塞或 Roadmap 修改要求，只能向 Main 报告 / escalation，不能直接联系其他 Node 或自行修改 Project Roadmap。
 
 ```text
 Project
@@ -205,7 +207,7 @@ Project
   |     + Node Binding           + Node Binding
   |     + Session                + Session
   |
-  +--> Human Gate: each Node Turn starts explicitly
+  +--> Human Gate: each Main / Node Turn starts explicitly
 ```
 
 | 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
@@ -228,8 +230,10 @@ Project
 | ✅ | F9.6d.3 Resource Ownership 与 Main Communication Capability | Project Agent 协作能力 | 让 Main 与 Node 都能通过可信 Session Binding 发布并维护自己拥有的正式 Resource；非 owner 对获授权 Resource 只读；Node 可通过单向文本通信把需要进入全局决策的信息发送给 Main | Resource owner 只能来自 Session Binding；owner 可 register/fetch/update metadata/delete，自身之外只能按 access 读取；只有 Main 能改变 access；普通文件工具不能读取 `.navo/` 绕过 Resource ACL；`send_to_main` 不自动修改 Roadmap、完成 Node 或启动其他 Agent |
 | ✅ | F9.6e Main Resource Handoff 与 Node Resource Context | Main Agent 协调 / Node 启动上下文 | Main 通过 Resource 权限服务把资源提供给指定 Node 或提升为 Project 共享；Node 后续 Turn 只发现自己可见的 Resource metadata，需要正文时按 Resource ID 按需读取 | 不新增 Directive 事实源；任务变化继续使用 `modify_roadmap`；Node 上下文只注入 Resource ID / name / description 等元数据，不默认注入完整内容；资源到位不自动启动 Node；当前阶段不实现动态 reload 或 RAG |
 | ✅ | F9.6f Integration 与 Human Gate | F9.6 集成验收 | 用“Node A 产出文件 -> 创建 Resource -> send_to_main -> Main 授权 -> Human start Node B -> Node B fetch Resource”的完整链路验证 | Node B 在授权后保持未执行；Human 启动后才产生 Turn；Node A 无法直接联系或授权 Node B；Resource 内容读取同时受 Project Workspace 与 Resource 权限约束；完整链路不依赖自动 Scheduler |
-| ⬜ | F9.7 Human-Controlled ProjectRuntime | Project 执行生命周期 | 让 Project 根据当前 Roadmap、Human 操作和 Main 协调结果判断 Node 是否具备执行条件、是否正在执行以及是否等待人工动作，同时继续复用单一 AgentRuntime | 依赖满足、消息或 Resource 到位都不自动启动 Node；每个 Node Turn 由 Human 明确启动；不新增与 locked/idle/working/completing/skipped 平行的第二套 Node 状态机；同一 Node 无隐式并发 Turn；取消、失败和恢复不产生递归 Agent 调用或悬挂任务 |
-| ✅ | F9.7a ProjectRuntime Core | Project 执行入口 | 新增薄的 Human-controlled ProjectRuntime，统一检查 active Project、Node 归属/kind/idle、当前 Roadmap membership，并调用既有 NodeSessionService；不重新计算依赖、不自动启动 Agent | `canStartNode` / `startNode` 已形成 Project 级入口；NodeStore 五态仍是权威执行状态；无 Roadmap 独立 Node 保持兼容；瞬时 start reservation 阻止同 Node 双重 Human start；消息、Resource、依赖变化均不会触发 start |
+| 🔄 | F9.7 Human-Controlled ProjectRuntime | Project Agent 执行控制面 | 让 ProjectRuntime 成为 Human 控制 Main / Node Agent Turn 的统一入口：Project 事实只决定当前允许哪些动作，真正的 Main / Node Turn 仍必须由 Human 明确触发；继续复用现有 MainSessionService、NodeSessionService 与单一 AgentRuntime | Project 创建、Mailbox 消息、Resource 到位、依赖满足或上一次 Turn 结束都不会自动唤醒任何 Agent；Main 与每个 Node 同时最多一个 active Turn；Node 五态继续由 NodeStore 权威维护，Main 不新增持久状态机；取消、失败和恢复不产生递归 Agent 调用或悬挂任务 |
+| ✅ | F9.7a ProjectRuntime Core | Node Human-start 入口 | 建立薄的 ProjectRuntime Core，先统一 Node Turn 的 Human-start 校验：active Project、Node 归属/kind/idle、当前 Roadmap membership 与同 Node 重复启动保护；不重新计算依赖、不自动启动 Agent | `canStartNode` / `startNode` 已形成 Project 级入口；NodeStore 五态仍是权威执行状态；无 Roadmap 独立 Node 保持兼容；瞬时 start reservation 阻止同 Node 双重 Human start；消息、Resource、依赖变化均不会触发 start |
+| ✅ | F9.7b Main + Node Human Control Lifecycle | Main / Node Human 操作入口 | 把 Main 与 Node 的显式执行控制统一收口到 ProjectRuntime：Main 支持 Human-started Turn 与取消；Node 区分首次启动与已有 Session 的后续 Human Turn，并支持取消；Node completion / skip 也通过 Project 级 Human control façade 调用既有领域能力 | Project 创建只创建 Main Session 身份，不自动执行 Main；首次和后续 Main Turn 都复用同一 Main Session 且禁止隐式并发；Node 后续 Turn 不能利用 Session FIFO 绕过 Human Gate；取消只影响目标 active Turn，不级联启动/停止其他 Agent；confirm / skip 保留 revision 与既有 NodeStore 规则 |
+| ⬜ | F9.7c Runtime Failure / Recovery Integration | Project 执行异常与收口验收 | 验证 Main / Node Turn 在取消、模型失败、Tool failure、Project archive、Service dispose 与竞态下都能释放临时执行 reservation，并回到既有领域事实允许的稳定状态；补齐 ProjectRuntime 级集成场景 | 任一 Turn 失败或取消后无悬挂 active 标记；Node 不遗留非法 working；Main 不产生伪持久状态；Project archive 后不能启动新 Turn；Mailbox / Resource / Roadmap 变化在恢复过程中也不会自动递归唤醒 Agent；F9.7 的 Human Gate 可通过集成测试重复证明 |
 | ⬜ | F9.8 长程 Core 集成验收 | 后端集成测试与阶段记录 | 用一个完整 Human-in-the-loop 长程场景证明 Project、Roadmap、Main Agent、多个 Node Agent、资产交接、阻塞协调和 Roadmap Mutation 可以共同工作 | Goal -> Roadmap -> Human start -> Node report / Resource -> Main 协调 -> Human start next Node -> Mutation -> 继续执行的完整链路可重复验证 |
 | ⏸️ | F9.9 Public Project / Roadmap Contract Handoff | Host / RPC / 桌面共享控制面 | 在 Core 稳定后，为桌面端提供 Project / Roadmap / Mailbox / Asset 的必要只读状态和 Human 操作入口 | 开始此 Step 前必须停止修改并向用户报告；前后端共同确认版本、人工 Gate、消息 / Resource 引用、取消与兼容语义后才能修改共享契约 |
 
@@ -242,7 +246,7 @@ Phase 9 明确不做：
 - 不把 Roadmap 仅保存在 Main Agent Session、Prompt 或一次 LLM 输出里；
 - 不允许 Node Agent 直接读取、调用或向另一个 Node Agent 发消息；
 - Node 默认不读取完整 Roadmap，也不拥有 `modify_roadmap`；
-- 不让依赖满足、收到消息或 Resource 到位自动触发 Node Agent Turn；
+- 不让 Project 创建、依赖满足、Mailbox 消息、Resource 到位、Roadmap mutation 或上一 Turn 结束自动触发 Main / Node Agent Turn；
 - 不让 Node 的 `result` 报告自动改变为人工确认后的终态；
 - 不在消息工具调用中递归同步启动 Main 或另一个 Node；
 - 不让 LLM 直接提交未经验证的 Roadmap 最终状态；
@@ -267,13 +271,13 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Pha
 
 F9.5 已完成并收口：Main Agent 通过 `read_roadmap`、`read_node`、`write_roadmap`、`modify_roadmap` 建立完整规划闭环，Roadmap / Node version 与可信 Binding 继续作为确定性授权边界；统一实现记录见 [62：F9.5 Main Agent Planning](62-devlog-f9.5-main-agent-planning.md)。
 
-F9.6 已正式收口：Project 直接绑定用户真实 Workspace，Navo 内部文件统一进入 `.navo/`；Resource 由稳定 ResourceId、Main/Node ownership、revision 与 `private | shared | project` ACL 管理；Node 通过 `send_to_main` 报告，Main 通过 `read_mailbox` 与 `set_resource_access` 完成协调；Node Turn 由 Context Builder 在 Human-start 时注入可见 Resource metadata，正文通过 `fetch_resource` 按需读取。任何消息、Resource 或依赖变化都不会自动启动 Node。统一实现与验收记录见 [63：F9.6 Project Workspace 与 Resource Handoff](63-devlog-f9.6-workspace-resource-handoff.md)。F9.7a 已建立薄的 Human-controlled `ProjectRuntime` Node start 入口，不新增状态机并阻止同 Node 双重 Human start；实现记录见 [64：F9.7a ProjectRuntime Core](64-devlog-f9.7a-project-runtime-core.md)。当前下一步为 F9.7b Human Control Lifecycle。
+F9.6 已正式收口：Project 直接绑定用户真实 Workspace，Navo 内部文件统一进入 `.navo/`；Resource 由稳定 ResourceId、Main/Node ownership、revision 与 `private | shared | project` ACL 管理；Node 通过 `send_to_main` 报告，Main 通过 `read_mailbox` 与 `set_resource_access` 完成协调；Node Turn 由 Context Builder 在 Human-start 时注入可见 Resource metadata，正文通过 `fetch_resource` 按需读取。任何消息、Resource 或依赖变化都不会自动启动 Node。统一实现与验收记录见 [63：F9.6 Project Workspace 与 Resource Handoff](63-devlog-f9.6-workspace-resource-handoff.md)。F9.7a 已建立薄的 Human-controlled `ProjectRuntime` Node start 入口，不新增状态机并阻止同 Node 双重 Human start；实现记录见 [64：F9.7a ProjectRuntime Core](64-devlog-f9.7a-project-runtime-core.md)。F9.7 的范围现已明确为 **Main + Node 的统一 Human Control**：Project 创建时 Main Session 已存在，但 Main Turn 不自动执行；Mailbox / Resource / Roadmap 等 Project 事实只改变可执行条件，不触发 Agent。F9.7b 已实现 Main Turn 启动/取消、Node 首次与后续 Turn/取消及 Human completion / skip；本机完整验证及 PR #28 GitHub CI 已通过，实现与验证完成，当前等待用户确认合并。记录见 [65：F9.7b 人工执行控制](65-devlog-f9.7b-human-control.md)。合入后下一步为 F9.7c 异常与恢复集成验收，尚未开始。
 
 F9.1 与 F9.2 已完成，记录见 [55：Project 与通用 Node 领域](55-devlog-project-node-domain.md)。整个 Phase 9 的 Project / Roadmap / Mailbox / Resource Registry 元数据继续保持内存状态；Project Workspace 从 F9.6b 开始作为实际文件承载层存在。F10 再统一实施项目状态与 Registry 元数据的数据库持久化、启动恢复和中断处理。调研与拆分方案见 [56：内存与持久化阶段划分](56-devlog-persistence-plan.md)。
 
 F9.3 的图结构、required/optional、Node 五态、RoadmapStore、依赖 lock/unlock、历史重建与地图查询已经合并为统一记录 [59：F9.3 In-Memory Roadmap](59-devlog-f9.3-roadmap.md)。F9.4 已建立 Main / Node 的可信 Session Binding 与 Profile 边界；F9.5 已完成 Main Agent Roadmap 规划工具闭环。
 
-Node 当前状态约定：新建 locked，解锁后 idle，实际执行时 working，回合结束回到 idle；人工可将 idle 确认为 completing，或将 locked/idle 确认为 skipped；两种终态均满足后续依赖。RoadmapStore 在同一批 Node 事件中追加 node-unlocked，手动 unlock 不能绕过必选祖先；没有路线的独立 Node 仍可使用 NodeStore 原有生命周期。F9.6 / F9.7 继续遵守 Human Gate：Node 即使具备执行条件，也必须由用户明确启动 Turn。
+Node 当前状态约定：新建 locked，解锁后 idle，实际执行时 working，回合结束回到 idle；人工可将 idle 确认为 completing，或将 locked/idle 确认为 skipped；两种终态均满足后续依赖。RoadmapStore 在同一批 Node 事件中追加 node-unlocked，手动 unlock 不能绕过必选祖先；没有路线的独立 Node 仍可使用 NodeStore 原有生命周期。Main 不新增 locked/idle/working 等持久状态机：Project 创建时固定拥有 Main Session，F9.7 只维护“当前是否存在 active Main Turn”的瞬时运行时事实。F9.6 / F9.7 统一遵守 Human Gate：Main / Node 即使具备执行条件，也必须由用户明确触发下一次 Turn。
 
 ## 10. 后端维护记录：桌面工具可用性排查（2026-09-14）
 
