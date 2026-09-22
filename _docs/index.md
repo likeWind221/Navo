@@ -26,6 +26,8 @@
 - [F9.6：Project Workspace 与 Resource Handoff](63-devlog-f9.6-workspace-resource-handoff.md)：整合 Mailbox、真实 Project Workspace、Resource 生命周期/权限、Main/Node capability、Context Builder、Main handoff 与 Human Gate 端到端验收。
 - [F9.7a：ProjectRuntime Core](64-devlog-f9.7a-project-runtime-core.md)：建立 Human-controlled Node start 统一入口，复用 Node 五态与 AgentRuntime，并以瞬时 reservation 阻止同 Node 双重 Human start。
 
+- [F9.7b：Main / Node 人工执行控制](65-devlog-f9.7b-human-control.md)：统一显式启动、后续回合、定向取消及人工完成/跳过，保留既有会话与领域状态。
+
 - [阶段 0：工程骨架](02-阶段-0-工程骨架开发记录.md)
 - [阶段 1：核心协议](03-devlog-phase-1-core-protocol.md)
 - [阶段 2：SessionLog 与消息投影](04-devlog-phase-2-session-log.md)
