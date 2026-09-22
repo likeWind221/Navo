@@ -7,6 +7,7 @@
 - [SkillWorld v0.6 PRD 归档](48-legacy-skillworld-prd.md)：Phase 0–8 的原始 Learning-first / DAG 设计历史。
 - [后端 Agent 内核开发计划](backend-plan.md)：后端阶段、步骤、状态和验收标准。
 - [前端开发计划](frontend-plan.md)：Electron + React 前端阶段、步骤、状态和验收标准。
+- [Bug 跟踪与修复计划](bug-plan.md)：待定位、待修复与已修复状态，逐项关闭条件和修复笔记入口。
 - [后端开发进度总览](19-backend-progress.md)：当前已完成能力、架构、验收和后续阶段。
 - [前端开发进度总览](20-frontend-progress.md)：当前桌面链路、Renderer 状态、QA 和后续边界。
 - [前端信息架构](12-frontend-information-architecture.md)：页面目标、路由、Node 工作区和权限边界。
@@ -15,6 +16,8 @@
 - [源码目录与命名整理方案](23-structure.md)：后端、RPC、前端的模块目录、单词命名与逐文件映射；已实施。
 
 ## 后端阶段记录
+
+- [Bug 跟踪机制与 F9.8 已知问题交接](68-devlog-bug-tracking.md)：BUG-001 至 BUG-004 登记、修复留痕规则及本次带已知问题合并授权。
 
 - [内存路线图与数据库持久化阶段划分](56-devlog-persistence-plan.md)：区分重建、落盘和恢复；F9.3 完成内存路线图，F10 统一实施数据库持久化；附 Codex/Pi 存储调研与数据库选型。
 
