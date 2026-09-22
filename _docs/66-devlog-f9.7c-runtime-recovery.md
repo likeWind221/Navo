@@ -36,10 +36,10 @@ Human start -> ProjectRuntime -> Session -> AgentRuntime
 - 首轮失败证据：Runtime dispose 返回时两个活动回合均未结束；整应用释放时出现 `ctx.sessions.append` 和 `ctx.nodes.endWork` 访问 undefined，Main/Node Promise 被拒绝。修复后模型等待和工具执行两种关闭路径都产生唯一 turn-ended，步骤日志闭合、Node 恢复 idle、调用正常返回 cancelled。
 - 搜索工具会把底层 Error 规范化成安全的工具错误；测试断言规范化结果，不要求泄露原始错误信息。取消与终态竞争测试在 finished 交付前取消，断言只产生一个取消终态。
 - 本机 `pnpm typecheck` 通过；ProjectRuntime 与资源交接相关 32 项通过；完整 `pnpm test` 为 77 个文件、456 项通过。模型/搜索使用 Mock，领域状态、事件、工具执行和临时工作区文件走真实实现。
-- GitHub CI 待 PR 执行，F9.7c 和 F9.7 总状态暂不标完成。没有真实模型或桌面验收。
+- [PR #29](https://github.com/likeWind221/Navo/pull/29) 的 [GitHub CI](https://github.com/likeWind221/Navo/actions/runs/35683317014) 通过，F9.7c 与 F9.7 标为实现和验证完成；未进行真实模型或桌面验收。
 
 ## 下一步
 
-- F9.7c CI 通过后，按用户要求在整个 F9.7 开发验证完成时串行合并 F9.7b、F9.7c；保留每个 Step 独立 squash 提交。
+- F9.7c 整体验证通过后，F9.7b 已 squash 合入 master（8234a72）；F9.7c 已移到新的 master，文件内容与重排前完全一致，保留独立 PR。文档收口后的最终 CI 仍作为 F9.7c 合并门禁。
 - 下一功能步骤是 F9.8 长程 Core 集成验收，本次不实施；Host/RPC/前端公共契约仍由 F9.9 交接，当前 F5.2 仍等待公共项目入口。
 - 本次任务为计划、索引和开发记录的唯一写入者；F9.7b 导读已交付，本轮最终回复交付 F9.7c 模块地图、修复机制与实际验证边界。

@@ -44,7 +44,7 @@ Turn result -> release reservation
 - 入口结构/状态错误同步抛出；经 `runReserved` 调用的 Session 错误以 Promise rejection 返回，调用方应统一用 try/await 捕获。
 - 生产 runtime 文件 216 行，仍由同一 Project 控制边界负责；错误定义保留独立模块；测试按启动、生命周期、人工确认场景拆分，共用装配不进入生产。
 - 本机验证：`pnpm typecheck` 通过；ProjectRuntime 相关 14 项测试通过；`pnpm test` 完整 75 个文件、439 项通过；`git diff --check` 通过。测试使用 Mock 模型，但实际经过 Session、AgentRuntime、NodeStore、RoadmapStore。
-- [PR #28](https://github.com/likeWind221/Navo/pull/28) 的 [GitHub CI](https://github.com/likeWind221/Navo/actions/runs/35682500070) 通过（47 秒，含 frozen-lockfile 安装、typecheck、完整 test）；计划标为实现与验证完成，尚未合并。未进行真实模型或桌面验收，未证明 F9.7c 的模型/工具失败、归档及释放竞态完整矩阵。
+- [PR #28](https://github.com/likeWind221/Navo/pull/28) 的 [GitHub CI](https://github.com/likeWind221/Navo/actions/runs/35682500070) 通过（47 秒，含 frozen-lockfile 安装、typecheck、完整 test）；计划标为实现与验证完成；随后按用户要求等待 F9.7c 整体通过，于 F9.7 收口时合入 master（8234a72）。未进行真实模型或桌面验收，未证明 F9.7c 的模型/工具失败、归档及释放竞态完整矩阵。
 
 ## 下一步
 
