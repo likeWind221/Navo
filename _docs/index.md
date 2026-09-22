@@ -7,6 +7,7 @@
 - [SkillWorld v0.6 PRD 归档](48-legacy-skillworld-prd.md)：Phase 0–8 的原始 Learning-first / DAG 设计历史。
 - [后端 Agent 内核开发计划](backend-plan.md)：后端阶段、步骤、状态和验收标准。
 - [前端开发计划](frontend-plan.md)：Electron + React 前端阶段、步骤、状态和验收标准。
+- [Bug 跟踪与修复计划](bug-plan.md)：待定位、待修复与已修复状态，逐项关闭条件和修复笔记入口。
 - [后端开发进度总览](19-backend-progress.md)：当前已完成能力、架构、验收和后续阶段。
 - [前端开发进度总览](20-frontend-progress.md)：当前桌面链路、Renderer 状态、QA 和后续边界。
 - [前端信息架构](12-frontend-information-architecture.md)：页面目标、路由、Node 工作区和权限边界。
@@ -15,6 +16,8 @@
 - [源码目录与命名整理方案](23-structure.md)：后端、RPC、前端的模块目录、单词命名与逐文件映射；已实施。
 
 ## 后端阶段记录
+
+- [Bug 跟踪机制与 F9.8 已知问题交接](68-devlog-bug-tracking.md)：BUG-001 至 BUG-004 登记、修复留痕规则及本次带已知问题合并授权。
 
 - [内存路线图与数据库持久化阶段划分](56-devlog-persistence-plan.md)：区分重建、落盘和恢复；F9.3 完成内存路线图，F10 统一实施数据库持久化；附 Codex/Pi 存储调研与数据库选型。
 
@@ -29,6 +32,8 @@
 - [F9.7b：Main / Node 人工执行控制](65-devlog-f9.7b-human-control.md)：统一显式启动、后续回合、定向取消及人工完成/跳过，保留既有会话与领域状态。
 
 - [F9.7c：异常恢复与执行收口](66-devlog-f9.7c-runtime-recovery.md)：验证失败、取消、归档和服务释放，修复并行卸载时的回合清理，并以 ProjectRuntime 验证资源交接人工 Gate。
+
+- [F9.8：长程 Core 集成验收](67-devlog-f9.8-longterm-acceptance.md)：离线人工回合闭环通过；追加真实 Qwen 验收记录，续接资源发现与工具调用稳定性仍待收尾。
 
 - [阶段 0：工程骨架](02-阶段-0-工程骨架开发记录.md)
 - [阶段 1：核心协议](03-devlog-phase-1-core-protocol.md)
