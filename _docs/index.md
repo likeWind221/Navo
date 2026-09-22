@@ -30,6 +30,8 @@
 
 - [F9.7c：异常恢复与执行收口](66-devlog-f9.7c-runtime-recovery.md)：验证失败、取消、归档和服务释放，修复并行卸载时的回合清理，并以 ProjectRuntime 验证资源交接人工 Gate。
 
+- [F9.8：长程 Core 集成验收](67-devlog-f9.8-longterm-acceptance.md)：以完整人工回合场景验证 Main 规划、节点资源交接、阻塞重规划、版本/权限边界及后续执行。
+
 - [阶段 0：工程骨架](02-阶段-0-工程骨架开发记录.md)
 - [阶段 1：核心协议](03-devlog-phase-1-core-protocol.md)
 - [阶段 2：SessionLog 与消息投影](04-devlog-phase-2-session-log.md)
