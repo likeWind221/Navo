@@ -28,6 +28,8 @@
 
 - [F9.7b：Main / Node 人工执行控制](65-devlog-f9.7b-human-control.md)：统一显式启动、后续回合、定向取消及人工完成/跳过，保留既有会话与领域状态。
 
+- [F9.7c：异常恢复与执行收口](66-devlog-f9.7c-runtime-recovery.md)：验证失败、取消、归档和服务释放，修复并行卸载时的回合清理，并以 ProjectRuntime 验证资源交接人工 Gate。
+
 - [阶段 0：工程骨架](02-阶段-0-工程骨架开发记录.md)
 - [阶段 1：核心协议](03-devlog-phase-1-core-protocol.md)
 - [阶段 2：SessionLog 与消息投影](04-devlog-phase-2-session-log.md)

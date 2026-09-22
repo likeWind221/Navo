@@ -26,16 +26,17 @@ declare module "cordis" {
 export class ProjectRuntime extends Service {
   static inject = ["projects", "nodes", "roadmaps", "nodeSessions", "mainSessions"];
 
-  private readonly activeNodes = new Map<NodeId, AbortController>();
-  private readonly activeMains = new Map<ProjectId, AbortController>();
+  private readonly activeNodes = new Map<NodeId, ActiveTurn>();
+  private readonly activeMains = new Map<ProjectId, ActiveTurn>();
   private unavailable = false;
 
   constructor(ctx: Context) {
     super(ctx, "projectRuntime");
-    this.ctx.effect(() => () => {
+    this.ctx.effect(() => async () => {
       this.unavailable = true;
-      for (const controller of this.activeMains.values()) controller.abort();
-      for (const controller of this.activeNodes.values()) controller.abort();
+      const active = [...this.activeMains.values(), ...this.activeNodes.values()];
+      for (const turn of active) turn.controller.abort();
+      await Promise.all(active.map(turn => turn.done));
     }, "projectRuntime.lifecycle");
   }
 
@@ -55,7 +56,7 @@ export class ProjectRuntime extends Service {
 
   stopMain(projectId: ProjectId): boolean {
     this.requireProject(projectId);
-    return this.abort(this.activeMains.get(projectId));
+    return this.abort(this.activeMains.get(projectId)?.controller);
   }
 
   canStartNode(projectId: ProjectId, nodeId: NodeId): boolean {
@@ -106,7 +107,7 @@ export class ProjectRuntime extends Service {
 
   stopNode(projectId: ProjectId, nodeId: NodeId): boolean {
     this.requireProjectNode(projectId, nodeId);
-    return this.abort(this.activeNodes.get(nodeId));
+    return this.abort(this.activeNodes.get(nodeId)?.controller);
   }
 
   confirmCompletion(projectId: ProjectId, nodeId: NodeId, confirmation: NodeConfirmation): NodeSnapshot {
@@ -135,17 +136,19 @@ export class ProjectRuntime extends Service {
   }
 
   private async runReserved<K, T>(
-    active: Map<K, AbortController>, key: K, callerSignal: AbortSignal | undefined,
+    active: Map<K, ActiveTurn>, key: K, callerSignal: AbortSignal | undefined,
     run: (signal: AbortSignal) => Promise<T>,
   ): Promise<T> {
     const controller = new AbortController();
+    const settled = Promise.withResolvers<void>();
     const signal = callerSignal === undefined
       ? controller.signal : AbortSignal.any([callerSignal, controller.signal]);
-    active.set(key, controller);
+    active.set(key, { controller, done: settled.promise });
     try {
       return await run(signal);
     } finally {
       active.delete(key);
+      settled.resolve();
     }
   }
 
@@ -213,4 +216,9 @@ export class ProjectRuntime extends Service {
     }
     return node;
   }
+}
+
+interface ActiveTurn {
+  readonly controller: AbortController;
+  readonly done: Promise<void>;
 }

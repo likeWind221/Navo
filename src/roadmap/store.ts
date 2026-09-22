@@ -5,6 +5,7 @@ import { createEventId } from "../brand/ids.js";
 import type { NodeId, ProjectId } from "../brand/ids.js";
 import type { NodeDefinitionChange, NodeEventDraft } from "../node/events.js";
 import type { NodeRequirement, NodeSnapshot } from "../node/model.js";
+import type { NodeStore } from "../node/store.js";
 import { buildRoadmapGraph } from "./graph.js";
 import { RoadmapError } from "./errors.js";
 import { freezeRoadmapEvent } from "./events.js";
@@ -19,7 +20,8 @@ export class RoadmapStore extends Service {
 
   constructor(ctx: Context) {
     super(ctx, "roadmaps");
-    this.ctx.nodes.coordinate(drafts => this.commitNodeAction(drafts));
+    const nodes = this.ctx.nodes;
+    nodes.coordinate(drafts => this.commitNodeAction(nodes, drafts));
   }
 
   create(input: CreateRoadmapInput): RoadmapSnapshot {
@@ -113,25 +115,25 @@ export class RoadmapStore extends Service {
     this.snapshots.set(projectId, snapshot);
   }
 
-  private commitNodeAction(drafts: readonly NodeEventDraft[]): void {
+  private commitNodeAction(nodes: NodeStore, drafts: readonly NodeEventDraft[]): void {
     if (drafts.length === 0) return;
     if (drafts.every(draft => draft.type === "node-created" || draft.type === "control-created")) {
-      this.ctx.nodes.commit(this.ctx.nodes.prepare(drafts));
+      nodes.commit(nodes.prepare(drafts));
       return;
     }
     const first = drafts[0];
     const id = first?.nodeId;
-    const node = id ? this.ctx.nodes.get(id) : undefined;
+    const node = id ? nodes.get(id) : undefined;
     if (!node) throw new RoadmapError("not-found", "Node does not exist");
     const projectId = node.node.projectId;
     const roadmap = this.get(projectId);
     if (!roadmap) {
-      this.ctx.nodes.commit(this.ctx.nodes.prepare(drafts));
+      nodes.commit(nodes.prepare(drafts));
       return;
     }
-    const batch = this.ctx.nodes.prepare(drafts);
+    const batch = nodes.prepare(drafts);
     const proposed = new Map<NodeId, NodeSnapshot>();
-    for (const value of this.ctx.nodes.getByProject(projectId)) proposed.set(value.node.id, value);
+    for (const value of nodes.getByProject(projectId)) proposed.set(value.node.id, value);
     for (const draft of drafts) proposed.set(draft.nodeId, batch.get(draft.nodeId)!);
     const graph = buildRoadmapGraph(roadmap.graph.definition, [...proposed.values()].map(value => value.node));
     for (const draft of drafts.filter(value => value.type === "node-unlocked")) {
@@ -142,7 +144,7 @@ export class RoadmapStore extends Service {
     }
     const added = new Set(drafts.map(draft => draft.nodeId));
     this.findUnlocks(graph, proposed, batch, added);
-    this.ctx.nodes.commit(batch);
+    nodes.commit(batch);
   }
 
   private unlockReady(projectId: ProjectId): void {
