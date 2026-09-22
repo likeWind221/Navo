@@ -131,6 +131,7 @@ export class NodeSessionService extends Service {
     text: string,
     pending: PendingTurn,
   ): Promise<NodeSessionTurnResult> {
+    const nodes = this.ctx.nodes;
     let working = false;
     try {
       if (this.unavailable) {
@@ -177,7 +178,7 @@ export class NodeSessionService extends Service {
       });
       return Object.freeze({ nodeId: pending.nodeId, sessionId, turn });
     } finally {
-      if (working) this.ctx.nodes.endWork(pending.nodeId);
+      if (working) nodes.endWork(pending.nodeId);
       if (this.active.get(sessionId) === pending) this.active.delete(sessionId);
       this.controllers.delete(pending.controller);
     }

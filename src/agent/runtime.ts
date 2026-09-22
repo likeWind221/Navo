@@ -7,6 +7,7 @@ import { createMessageId, createStepId, createTurnId } from "../brand/ids.js";
 import type { SessionId, StepId, TurnId } from "../brand/ids.js";
 import type { CommandAnchor } from "../../shared/content.js";
 import type { ErrorSource, Failure, TurnEndStatus } from "../session/types.js";
+import type { SessionStore } from "../session/store.js";
 import { resolveAgentRuntimeLimits, runWithModelRetries } from "./limits.js";
 import { AgentInbox } from "./inbox.js";
 import { TurnOutput } from "./output.js";
@@ -34,11 +35,13 @@ export class AgentRuntime extends Service {
   private readonly defaultLimits: AgentRuntimeLimits;
   private readonly inbox: AgentInbox;
   private readonly turns = new Map<SessionId, TurnState>();
+  private readonly sessions: SessionStore;
 
   constructor(ctx: Context, limits: Partial<AgentRuntimeLimits> = {}) {
     super(ctx, "agentRuntime");
     this.defaultLimits = resolveAgentRuntimeLimits(limits);
     this.inbox = new AgentInbox();
+    this.sessions = ctx.sessions;
   }
 
   async runTurn(input: RunTurnInput): Promise<TurnResult> {
@@ -78,14 +81,14 @@ export class AgentRuntime extends Service {
     let result: TurnResult;
     this.beginTurn(input.sessionId, turnId);
     try {
-      this.ctx.sessions.append({
+      this.sessions.append({
         type: "turn-started",
         sessionId: input.sessionId,
         data: { turnId },
       });
       try {
         await output.start();
-        this.ctx.sessions.append({
+        this.sessions.append({
           type: "user-message",
           sessionId: input.sessionId,
           data: { message: input.userMessage },
@@ -117,7 +120,7 @@ export class AgentRuntime extends Service {
         if (failure) this.appendError(input.sessionId, turnId, "runtime", failure);
         result = turnResult(status, turnId, steps, failure);
       }
-      this.ctx.sessions.append({
+      this.sessions.append({
         type: "turn-ended",
         sessionId: input.sessionId,
         data: { turnId, status: result.status },
@@ -146,7 +149,7 @@ export class AgentRuntime extends Service {
     const { input, turnId, signal, limits } = turn;
     const stepId = createStepId(randomUUID());
     const messageId = createMessageId(randomUUID());
-    this.ctx.sessions.append({
+    this.sessions.append({
       type: "step-started",
       sessionId: input.sessionId,
       data: { turnId, stepId },
@@ -188,7 +191,7 @@ export class AgentRuntime extends Service {
         stepId,
       );
     }
-    this.ctx.sessions.append({
+    this.sessions.append({
       type: "step-ended",
       sessionId: input.sessionId,
       data: { turnId, stepId, status: outcome.status },
@@ -204,7 +207,7 @@ export class AgentRuntime extends Service {
     failure: Failure,
     stepId?: StepId,
   ): void {
-    this.ctx.sessions.append({
+    this.sessions.append({
       type: "error",
       sessionId,
       data: {

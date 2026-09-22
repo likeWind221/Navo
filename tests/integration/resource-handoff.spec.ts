@@ -17,7 +17,7 @@ import { SEND_TO_MAIN_TOOL_NAME } from "../../src/tools/builtins/mailbox/send.js
 import { SET_RESOURCE_ACCESS_TOOL_NAME } from "../../src/tools/builtins/resource/access.js";
 import { FETCH_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/fetch.js";
 import { REGISTER_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/register.js";
-import { modelResponse } from "../helpers/runtime.js";
+import { modelError, modelResponse } from "../helpers/runtime.js";
 
 const apps: Awaited<ReturnType<typeof createApp>>[] = [];
 const roots: string[] = [];
@@ -50,8 +50,8 @@ function systemText(request: GenerateRequest): string {
   return block.text;
 }
 
-describe("F9.6 Resource handoff integration", () => {
-  it("runs Node A -> Main -> Node B only through Human-started Turns", async () => {
+describe("F9.7 ProjectRuntime Resource handoff recovery", () => {
+  it("recovers Node A and runs A -> Main -> B only through Human-controlled ProjectRuntime", async () => {
     const root = await mkdtemp(join(tmpdir(), "navo-f96f-"));
     roots.push(root);
     await writeFile(
@@ -82,11 +82,15 @@ describe("F9.6 Resource handoff integration", () => {
         acceptanceCriteria: ["Read Node A evidence"],
       },
     });
-    app.nodes.unlock(nodeA.node.id, "Human starts producer");
-    app.nodes.unlock(nodeB.node.id, "Ready but not started");
+    app.roadmaps.create({
+      definition: { projectId: project.id, nodes: [nodeA.node.id, nodeB.node.id],
+        edges: [{ from: nodeA.node.id, to: nodeB.node.id }] },
+      reason: "Producer before consumer",
+    });
 
     let resourceId = "";
     const adapter = new MockLLMAdapter([
+      modelError("MODEL"),
       call(REGISTER_RESOURCE_TOOL_NAME, {
         path: "node-a-report.md",
         name: "Node A report",
@@ -152,11 +156,19 @@ describe("F9.6 Resource handoff integration", () => {
     ]);
     app.llm.registerAdapter("mock", adapter);
 
-    const nodeATurn = await app.nodeSessions.start({
+    const failed = await app.projectRuntime.startNode({
+      projectId: project.id, nodeId: nodeA.node.id, text: "Start producer",
+    });
+    expect(failed.turn.status).toBe("failed");
+    expect(app.projectRuntime.canContinueNode(project.id, nodeA.node.id)).toBe(true);
+    expect(adapter.requests).toHaveLength(1);
+    const nodeATurn = await app.projectRuntime.continueNode({
+      projectId: project.id,
       nodeId: nodeA.node.id,
       text: "Publish your report and notify Main.",
     });
     expect(nodeATurn.turn).toMatchObject({ status: "completed", steps: 3 });
+    expect(nodeATurn.sessionId).toBe(failed.sessionId);
     expect(resourceId).not.toBe("");
     expect(app.mailbox.getHistory(project.id)).toEqual([
       expect.objectContaining({
@@ -166,11 +178,19 @@ describe("F9.6 Resource handoff integration", () => {
       }),
     ]);
 
+    expect(app.nodes.get(nodeB.node.id)?.status).toBe("locked");
+    app.projectRuntime.confirmCompletion(project.id, nodeA.node.id, {
+      confirmedBy: "human", reason: "Accept producer result",
+      reviewedRevision: app.nodes.get(nodeA.node.id)!.revision,
+    });
+    await Promise.resolve();
+    expect(adapter.requests).toHaveLength(4);
+    expect(app.sessions.getEvents(project.mainSessionId)).toHaveLength(0);
     expect(app.nodes.get(nodeB.node.id)?.status).toBe("idle");
     expect(app.nodes.get(nodeB.node.id)?.sessionId).toBeUndefined();
     const nodeBEventsBeforeMain = app.nodes.getEvents(nodeB.node.id).length;
 
-    const mainTurn = await app.mainSessions.sendMessage({
+    const mainTurn = await app.projectRuntime.startMain({
       projectId: project.id,
       text: `Read Node reports and make the reported Resource available to Node B ${nodeB.node.id}.`,
     });
@@ -178,8 +198,9 @@ describe("F9.6 Resource handoff integration", () => {
     expect(app.nodes.getEvents(nodeB.node.id)).toHaveLength(nodeBEventsBeforeMain);
     expect(app.nodes.get(nodeB.node.id)?.status).toBe("idle");
     expect(app.nodes.get(nodeB.node.id)?.sessionId).toBeUndefined();
+    expect(adapter.requests).toHaveLength(7);
 
-    const mainRequest = adapter.requests[3]!;
+    const mainRequest = adapter.requests[4]!;
     expect(mainRequest.tools?.map(tool => tool.name))
       .toEqual(expect.arrayContaining([
         READ_MAILBOX_TOOL_NAME,
@@ -192,7 +213,8 @@ describe("F9.6 Resource handoff integration", () => {
     expect(adapter.requests[0]?.tools?.map(tool => tool.name))
       .not.toContain(READ_MAILBOX_TOOL_NAME);
 
-    const nodeBTurn = await app.nodeSessions.start({
+    const nodeBTurn = await app.projectRuntime.startNode({
+      projectId: project.id,
       nodeId: nodeB.node.id,
       text: "Use the Resource Main made available.",
     });

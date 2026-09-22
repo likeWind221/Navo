@@ -21,7 +21,6 @@ import { MockSearchAdapter } from "../../../src/tools/builtins/search/adapters/m
 import { SearchTool } from "../../../src/tools/builtins/search/tool.js";
 import { ToolService } from "../../../src/tools/service.js";
 import { ProjectWorkspaceStore } from "../../../src/workspace/store.js";
-import { modelResponse } from "../../helpers/runtime.js";
 
 import { MainSessionService } from "../../../src/project/session.js";
 import { ReadMailboxTool } from "../../../src/tools/builtins/mailbox/read.js";
@@ -34,7 +33,10 @@ afterEach(async () => {
   contexts.clear();
 });
 
-export async function createKit(entries: ConstructorParameters<typeof MockLLMAdapter>[0]) {
+export async function createKit(
+  entries: ConstructorParameters<typeof MockLLMAdapter>[0],
+  searchEntries: ConstructorParameters<typeof MockSearchAdapter>[0] = [],
+) {
   const ctx = new Context();
   contexts.add(ctx);
 
@@ -49,22 +51,45 @@ export async function createKit(entries: ConstructorParameters<typeof MockLLMAda
   await ctx.plugin(MailboxStore);
   await ctx.plugin(ResourceToolsPlugin);
   await ctx.plugin(SendToMainTool);
-  await ctx.plugin(SearchTool, { adapter: new MockSearchAdapter([]) });
+  const searchAdapter = new MockSearchAdapter(searchEntries);
+  await ctx.plugin(SearchTool, { adapter: searchAdapter });
   await ctx.plugin(FetchTool, { core: new MockFetchCore([]) });
 
   const adapter = new MockLLMAdapter(entries);
   ctx.llm.registerAdapter("mock", adapter);
 
-  await ctx.plugin(NodeSessionService, {
+  const nodeFiber = ctx.plugin(NodeSessionService, {
     model: { provider: "mock", model: "project-runtime-test" },
   });
+  await nodeFiber;
   await ctx.plugin(RoadmapStore);
   await ctx.plugin(ReadMailboxTool);
   await ctx.plugin(RoadmapToolsPlugin);
-  await ctx.plugin(MainSessionService, { model: { provider: "mock", model: "project-runtime-test" } });
-  await ctx.plugin(ProjectRuntime);
+  const mainFiber = ctx.plugin(MainSessionService, { model: { provider: "mock", model: "project-runtime-test" } });
+  await mainFiber;
+  const runtimeFiber = ctx.plugin(ProjectRuntime);
+  await runtimeFiber;
 
-  return { ctx, adapter };
+  return { ctx, adapter, searchAdapter, runtimeFiber, nodeFiber, mainFiber };
+}
+
+export function createActor(ctx: Context, kind: "main" | "node") {
+  const project = ctx.projects.create({ goal: `${kind} recovery` });
+  const nodeId = kind === "node" ? createWorkNode(ctx, project.id, "Work").node.id : undefined;
+  if (nodeId !== undefined) addRoadmap(ctx, project.id, [nodeId]);
+  const runtime = ctx.projectRuntime;
+  return {
+    project, nodeId,
+    start: (signal?: AbortSignal) => nodeId === undefined
+      ? runtime.startMain({ projectId: project.id, text: "Human start", ...(signal ? { signal } : {}) })
+      : runtime.startNode({ projectId: project.id, nodeId, text: "Human start", ...(signal ? { signal } : {}) }),
+    next: () => nodeId === undefined
+      ? runtime.startMain({ projectId: project.id, text: "Human continue" })
+      : runtime.continueNode({ projectId: project.id, nodeId, text: "Human continue" }),
+    stop: () => nodeId === undefined ? runtime.stopMain(project.id) : runtime.stopNode(project.id, nodeId),
+    canContinue: () => nodeId === undefined
+      ? runtime.canStartMain(project.id) : runtime.canContinueNode(project.id, nodeId),
+  };
 }
 
 export function createWorkNode(ctx: Context, projectId: ProjectId, title: string) {

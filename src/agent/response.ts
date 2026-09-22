@@ -2,6 +2,7 @@ import type { Context } from "cordis";
 
 import type { StepId } from "../brand/ids.js";
 import type { ToolCallContentBlock } from "../llm/types.js";
+import type { SessionStore } from "../session/store.js";
 import {
   toolResultMessage,
   unexecutedToolResultMessage,
@@ -17,11 +18,13 @@ export async function acceptResponse(
 ): Promise<StepOutcome> {
   const { input, turnId, signal } = turn;
   const { sessionId } = input;
+  const sessions = ctx.sessions;
+  const tools = ctx.tools;
   const { message, finishReason, usage } = response;
   const calls = message.content.filter(
     (block): block is ToolCallContentBlock => block.type === "tool-call",
   );
-  ctx.sessions.append({
+  sessions.append({
     type: "assistant-message",
     sessionId,
     data: {
@@ -34,9 +37,9 @@ export async function acceptResponse(
   });
   if (finishReason.kind === "max-tokens") {
     for (const toolCall of calls) {
-      appendToolCall(ctx, sessionId, turnId, stepId, toolCall);
+      appendToolCall(sessions, sessionId, turnId, stepId, toolCall);
       const message = unexecutedToolResultMessage(toolCall.id);
-      ctx.sessions.append({
+      sessions.append({
         type: "tool-call-result",
         sessionId,
         data: {
@@ -60,22 +63,22 @@ export async function acceptResponse(
     );
   }
   for (const toolCall of calls) {
-    appendToolCall(ctx, sessionId, turnId, stepId, toolCall);
-    const result = await ctx.tools.execute(toolCall, signal, {
+    appendToolCall(sessions, sessionId, turnId, stepId, toolCall);
+    const result = await tools.execute(toolCall, signal, {
       sessionId,
       allowedTools: input.toolNames,
       onStarted: async () => {
         await turn.output.toolStarted(toolCall.id);
       },
     });
-    ctx.sessions.append({
+    sessions.append({
       type: "tool-call-result",
       sessionId,
       data: { turnId, stepId, message: toolResultMessage(result) },
     });
     await turn.output.toolResult(result);
     if (result.kind === "failure") {
-      ctx.sessions.append({
+      sessions.append({
         type: "error",
         sessionId,
         data: {
@@ -93,13 +96,13 @@ export async function acceptResponse(
 }
 
 function appendToolCall(
-  ctx: Context,
+  sessions: SessionStore,
   sessionId: TurnScope["input"]["sessionId"],
   turnId: TurnScope["turnId"],
   stepId: StepId,
   toolCall: ToolCallContentBlock,
 ): void {
-  ctx.sessions.append({
+  sessions.append({
     type: "tool-call-requested",
     sessionId,
     data: { turnId, stepId, toolCall },
