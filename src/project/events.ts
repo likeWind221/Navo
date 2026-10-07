@@ -1,5 +1,11 @@
 import type { EventId, ProjectId, SessionId } from "../brand/ids.js";
 
+declare module "cordis" {
+  interface Events {
+    "project/changed"(projectId: ProjectId): void;
+  }
+}
+
 export type ProjectEvent =
   | ProjectEventRecord<"project-created", {
       readonly name: string;

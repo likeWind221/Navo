@@ -55,7 +55,7 @@ const emptyResources: readonly ProjectResource[] = Object.freeze([]);
 
 export class ResourceService extends Service {
   static inject = ["projects", "nodes", "projectWorkspaces"];
-  private readonly store = new ResourceStore();
+  private readonly store = new ResourceStore(projectId => this.ctx.emit("project/changed", projectId));
 
   constructor(ctx: Context) {
     super(ctx, "resources");

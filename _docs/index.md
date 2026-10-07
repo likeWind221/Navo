@@ -26,6 +26,7 @@
 - [长程验收四个 Bug 复盘（面试版）](71-interview-longterm-bugs.md)：BUG-001 至 BUG-004 按问题、根因、修复、结果组织的面试可背版本，附 60 秒开场与追问要点。
 
 - [Resource 访问级别 project 更名为 public](72-devlog-resource-access-rename.md)：行为不变，明确 public 仅限本 Project 所有工作 Node；无持久化数据，无需迁移。
+- [F9.9c 变化跟随](75-devlog-f9.9c-project-follow.md)：`project.follow.v1` 先推完整基线再推整份替换帧，各状态所有者在提交点发出 `project/changed`。
 - [F9.9b Human 操作入口](74-devlog-f9.9b-human-control.md)：`project.turn.v1` 复用 v2 事件流式执行 Main / Node 回合、cancel 帧只取消目标回合、`project.node.review.v1` 完成与跳过。
 - [F9.9a 项目查询与创建](73-devlog-f9.9a-project-query.md)：项目名称与列表、5 个 `project.*.v1` 公共方法、`agent.turn.v1` 更名、业务失败经 error 帧转发。
 
