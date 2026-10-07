@@ -5,6 +5,7 @@ import type { NodeId, ProjectId } from "../brand/ids.js";
 import { NodeError } from "../node/errors.js";
 import type { NodeConfirmation, NodeSnapshot } from "../node/model.js";
 import type {
+  NodeSessionMessageInput,
   NodeSessionTurnResult,
 } from "../node/session.js";
 import { ProjectError } from "./errors.js";
@@ -16,11 +17,8 @@ export interface NodeActions {
   readonly skip: boolean;
 }
 
-export interface ProjectNodeTurnInput {
+export interface ProjectNodeTurnInput extends NodeSessionMessageInput {
   readonly projectId: ProjectId;
-  readonly nodeId: NodeId;
-  readonly text: string;
-  readonly signal?: AbortSignal;
 }
 
 declare module "cordis" {
@@ -102,13 +100,13 @@ export class ProjectRuntime extends Service {
       throw new NodeError("node-already-bound", "Use continueNode for an existing Node Session.");
     }
     return this.runReserved(this.activeNodes, input.nodeId, input.signal,
-      signal => this.ctx.nodeSessions.start({ nodeId: input.nodeId, text: input.text, signal }));
+      signal => this.ctx.nodeSessions.start({ ...nodeTurn(input), signal }));
   }
 
   continueNode(input: ProjectNodeTurnInput): Promise<NodeSessionTurnResult> {
     this.requireStartableNode(input.projectId, input.nodeId);
     return this.runReserved(this.activeNodes, input.nodeId, input.signal,
-      signal => this.ctx.nodeSessions.sendMessage({ nodeId: input.nodeId, text: input.text, signal }));
+      signal => this.ctx.nodeSessions.sendMessage({ ...nodeTurn(input), signal }));
   }
 
   isMainActive(projectId: ProjectId): boolean {
@@ -242,6 +240,10 @@ export class ProjectRuntime extends Service {
     }
     return node;
   }
+}
+
+function nodeTurn({ projectId: _, signal: __, ...input }: ProjectNodeTurnInput): NodeSessionMessageInput {
+  return input;
 }
 
 interface ActiveTurn {

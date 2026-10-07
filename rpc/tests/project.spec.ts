@@ -11,7 +11,9 @@ import {
   projectGetMethod,
   projectListMethod,
   projectMailboxMethod,
+  projectNodeReviewMethod,
   projectResourcesMethod,
+  projectTurnMethod,
 } from "../index.js";
 import type { NodeV1, ProjectSummaryV1 } from "../index.js";
 import { createTransportPair } from "./helpers/transport.js";
@@ -128,5 +130,39 @@ describe("F9.9a project contract", () => {
     pair.close();
     await server.dispose();
     await serving;
+  });
+  it("validates Human turn and review inputs", () => {
+    const turn = { projectId: "p", requestId: "r", text: "Go", target: { kind: "node", nodeId: "n" } };
+    expect(projectTurnMethod.name).toBe("project.turn.v1");
+    expect(projectNodeReviewMethod.name).toBe("project.node.review.v1");
+    expect(projectTurnMethod.parseInput(turn)).toEqual(turn);
+    expect(projectTurnMethod.parseInput({ ...turn, target: { kind: "main" } }).target).toEqual({ kind: "main" });
+    for (const candidate of [
+      { ...turn, target: { kind: "main", nodeId: "n" } },
+      { ...turn, target: { kind: "node" } },
+      { ...turn, text: " " },
+      { ...turn, sessionId: "s" },
+    ]) {
+      expect(() => projectTurnMethod.parseInput(candidate)).toThrow(RpcError);
+    }
+    const review = { projectId: "p", nodeId: "n", action: "skip", reason: "Not needed", reviewedRevision: 2 };
+    expect(projectNodeReviewMethod.parseInput(review)).toEqual(review);
+    for (const candidate of [
+      { ...review, action: "delete" }, { ...review, reason: "" }, { ...review, reviewedRevision: 0 },
+      { ...review, confirmedBy: "someone" },
+    ]) {
+      expect(() => projectNodeReviewMethod.parseInput(candidate)).toThrow(RpcError);
+    }
+    expect(projectNodeReviewMethod.parseOutput(node)).toEqual(node);
+  });
+
+  it("adopts the Session announced by the first turn event and then enforces it", () => {
+    const input = { projectId: "p", requestId: "r", text: "Go", target: { kind: "main" as const } };
+    const started = { type: "turn-started", sessionId: "main-session", requestId: "r", turnId: "t" };
+    const validator = projectTurnMethod.createOutputValidator!(input);
+    expect(validator.parse(started)).toEqual(started);
+    expect(() => validator.parse({ ...started, type: "turn-cancelled", sessionId: "other" })).toThrow(RpcError);
+    expect(() => projectTurnMethod.createOutputValidator!(input).end()).toThrow(RpcError);
+    expect(() => projectTurnMethod.createOutputValidator!(input).parse({ ...started, requestId: "x" })).toThrow(RpcError);
   });
 });

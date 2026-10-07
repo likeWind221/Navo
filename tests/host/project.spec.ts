@@ -1,9 +1,7 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { Context } from "cordis";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   projectCreateMethod,
@@ -12,79 +10,9 @@ import {
   projectMailboxMethod,
   projectResourcesMethod,
   RpcError,
-  StreamRpcClient,
-  StreamRpcRouter,
-  StreamRpcServer,
 } from "../../rpc/index.js";
-import type { RpcMethod } from "../../rpc/index.js";
-import { createTransportPair } from "../../rpc/tests/helpers/transport.js";
-import { createApp } from "../../src/app.js";
-import { createNodeId, createProjectId } from "../../src/brand/ids.js";
-import { registerProjectMethods } from "../../src/host/project.js";
-
-const cleanups: Array<() => Promise<void>> = [];
-
-afterEach(async () => {
-  for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
-});
-
-async function host() {
-  const ctx = await createApp({ node: { session: { model: { provider: "mock", model: "mock" } } } });
-  const pair = createTransportPair();
-  const router = new StreamRpcRouter();
-  registerProjectMethods(router, ctx);
-  const server = new StreamRpcServer(pair.server, router);
-  const serving = server.serve();
-  const client = new StreamRpcClient(pair.client);
-  cleanups.push(async () => {
-    pair.close();
-    await server.dispose();
-    await serving;
-    await ctx.fiber.dispose();
-  });
-  return { ctx, client };
-}
-
-async function workspace(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "navo-host-project-"));
-  cleanups.push(() => rm(root, { recursive: true, force: true }));
-  return root;
-}
-
-async function call<I, O>(client: StreamRpcClient, method: RpcMethod<I, O>, input: I): Promise<O> {
-  const items: O[] = [];
-  for await (const item of client.stream(method, input)) items.push(item);
-  expect(items).toHaveLength(1);
-  return items[0]!;
-}
-
-async function failureOf<I, O>(client: StreamRpcClient, method: RpcMethod<I, O>, input: I) {
-  const error = await call(client, method, input).then(() => undefined, (cause: unknown) => cause);
-  expect(error).toBeInstanceOf(RpcError);
-  return (error as RpcError).failure;
-}
-
-function seedRoadmap(ctx: Context, projectId: string) {
-  const id = createProjectId(projectId);
-  const first = createNodeId("node-first");
-  const second = createNodeId("node-second");
-  ctx.roadmaps.create({
-    definition: { projectId: id, nodes: [first, second], edges: [{ from: first, to: second }] },
-    reason: "Human-approved plan",
-    newNodes: [first, second].map((nodeId, index) => ({
-      nodeId,
-      input: {
-        projectId: id,
-        objective: {
-          title: index === 0 ? "Collect" : "Analyze",
-          description: "Do the work",
-          acceptanceCriteria: ["Done"],
-        },
-      },
-    })),
-  });
-  return { first, second };
-}
+import { createProjectId } from "../../src/brand/ids.js";
+import { call, failureOf, host, seedRoadmap, workspace } from "./project/helpers.js";
 
 describe("Kernel Host project methods", () => {
   it("creates a named Project bound to its Workspace and lists it newest first", async () => {

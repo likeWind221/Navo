@@ -1,5 +1,7 @@
 import { RpcError } from "../../../rpc/errors.js";
 import type { ProjectFailureCode } from "../../../rpc/project.js";
+import { NodeError } from "../../node/errors.js";
+import type { NodeErrorCode } from "../../node/errors.js";
 import { ProjectError } from "../../project/errors.js";
 import type { ProjectErrorCode } from "../../project/errors.js";
 import { WorkspaceError } from "../../workspace/errors.js";
@@ -14,6 +16,18 @@ const projectCodes: Partial<Record<ProjectErrorCode, ProjectFailureCode>> = {
   "invalid-message": "invalid-request",
 };
 
+const nodeCodes: Partial<Record<NodeErrorCode, ProjectFailureCode>> = {
+  "node-not-found": "node-not-found",
+  "project-unavailable": "project-unavailable",
+  "invalid-state": "invalid-state",
+  "node-already-bound": "invalid-state",
+  "node-session-required": "invalid-state",
+  "stale-revision": "revision-conflict",
+  "invalid-message": "invalid-request",
+  "node-session-service-unavailable": "runtime-unavailable",
+  "node-context-unavailable": "runtime-unavailable",
+};
+
 const workspaceCodes: Partial<Record<WorkspaceErrorCode, ProjectFailureCode>> = {
   "project-not-found": "project-not-found",
   "workspace-conflict": "workspace-conflict",
@@ -26,8 +40,9 @@ const workspaceCodes: Partial<Record<WorkspaceErrorCode, ProjectFailureCode>> = 
 
 export function toProjectFailure(error: unknown): RpcError {
   const code = error instanceof ProjectError ? projectCodes[error.code]
-    : error instanceof WorkspaceError ? workspaceCodes[error.code]
-      : undefined;
+    : error instanceof NodeError ? nodeCodes[error.code]
+      : error instanceof WorkspaceError ? workspaceCodes[error.code]
+        : undefined;
   if (code === undefined || !(error instanceof Error)) {
     process.stderr.write(`[kernel-host] project method failed: ${describe(error)}\n`);
     return projectFailure("internal", "Project operation failed.");

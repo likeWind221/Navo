@@ -5,9 +5,12 @@ import {
   projectGetMethod,
   projectListMethod,
   projectMailboxMethod,
+  projectNodeReviewMethod,
   projectResourcesMethod,
+  projectTurnMethod,
 } from "../../rpc/project.js";
 import type {
+  NodeReviewInput,
   NodeV1,
   ProjectCreateInput,
   ProjectDetailV1,
@@ -21,13 +24,14 @@ import type {
 import { RpcError } from "../../rpc/errors.js";
 import type { StreamRpcRouter } from "../../rpc/stream/router.js";
 import type { RpcStreamHandler } from "../../rpc/stream.js";
-import { createProjectId } from "../brand/ids.js";
+import { createNodeId, createProjectId } from "../brand/ids.js";
 import type { ProjectId } from "../brand/ids.js";
 import type { MailboxParticipant } from "../mailbox/model.js";
 import type { NodeSnapshot } from "../node/model.js";
 import type { ProjectSnapshot } from "../project/model.js";
 import type { ProjectResource } from "../resource/model.js";
 import { projectFailure, toProjectFailure } from "./project/failure.js";
+import { createProjectTurnHandler } from "./project/turn.js";
 
 export const MAILBOX_PAGE_BODY_BUDGET = 524_288;
 
@@ -38,6 +42,8 @@ export function registerProjectMethods(router: StreamRpcRouter, ctx: Context): (
     router.register(projectGetMethod, unary(input => getProject(ctx, input.projectId))),
     router.register(projectMailboxMethod, unary(input => readMailbox(ctx, input))),
     router.register(projectResourcesMethod, unary(input => listResources(ctx, input.projectId))),
+    router.register(projectTurnMethod, createProjectTurnHandler(ctx)),
+    router.register(projectNodeReviewMethod, unary(input => reviewNode(ctx, input))),
   ];
   return () => { for (const dispose of unregister) dispose(); };
 }
@@ -100,6 +106,16 @@ function readMailbox(ctx: Context, input: ProjectMailboxInput): ProjectMailboxV1
 function listResources(ctx: Context, projectId: string): ProjectResourcesV1 {
   const project = requireProject(ctx, projectId);
   return { resources: ctx.resources.listByProject(project.id).map(describeResource) };
+}
+
+function reviewNode(ctx: Context, input: NodeReviewInput): NodeV1 {
+  const projectId = createProjectId(input.projectId);
+  const nodeId = createNodeId(input.nodeId);
+  const confirmation = { confirmedBy: "human", reason: input.reason, reviewedRevision: input.reviewedRevision };
+  const node = input.action === "complete"
+    ? ctx.projectRuntime.confirmCompletion(projectId, nodeId, confirmation)
+    : ctx.projectRuntime.skipNode(projectId, nodeId, confirmation);
+  return describeNode(ctx, projectId, node);
 }
 
 async function summarize(ctx: Context, project: ProjectSnapshot): Promise<ProjectSummaryV1> {

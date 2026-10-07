@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { Service } from "cordis";
 import type { Context } from "cordis";
 
-import type { TurnModelConfig, TurnResult } from "../agent/types.js";
+import type { RunTurnInput, TurnModelConfig, TurnResult } from "../agent/types.js";
 import { createMessageId } from "../brand/ids.js";
 import type { ProjectId, SessionId } from "../brand/ids.js";
 import { changedFacts, lastObservedFacts } from "../session/reminder.js";
@@ -19,7 +19,9 @@ export interface MainSessionServiceConfig {
 export interface MainSessionMessageInput {
   readonly projectId: ProjectId;
   readonly text: string;
+  readonly requestId?: string;
   readonly signal?: AbortSignal;
+  readonly onEvent?: RunTurnInput["onEvent"];
 }
 
 export interface MainSessionTurnResult {
@@ -68,6 +70,8 @@ export class MainSessionService extends Service {
       systemPrompt: profile.systemPrompt,
       toolNames: profile.toolNames,
       ...(input.signal === undefined ? {} : { signal: input.signal }),
+      ...(input.requestId === undefined ? {} : { requestId: input.requestId }),
+      ...(input.onEvent === undefined ? {} : { onEvent: input.onEvent }),
     });
     return Object.freeze({
       projectId: binding.projectId,
