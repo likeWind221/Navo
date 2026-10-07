@@ -1,5 +1,8 @@
+import type { AgentTurnV2Event } from "./content.js";
 import type { RpcMethod, RpcOutputValidator } from "./protocol.js";
 import { RpcError } from "./errors.js";
+import { agentTurnV2Method } from "./content/stream.js";
+import { createProjectTurnOutputValidator } from "./project/turn.js";
 import {
   parseProjectCreateInput,
   parseProjectDetail,
@@ -10,6 +13,9 @@ import {
   parseProjectResources,
   parseProjectSummary,
   parseEmptyInput,
+  parseNodeReviewInput,
+  parseNode,
+  parseProjectTurnInput,
 } from "./project/validation.js";
 
 export const projectListMethod: RpcMethod<ProjectListInput, ProjectListV1> = Object.freeze({
@@ -47,6 +53,20 @@ export const projectResourcesMethod: RpcMethod<ProjectRefInput, ProjectResources
   createOutputValidator: () => singleOutput(parseProjectResources),
 });
 
+export const projectTurnMethod: RpcMethod<ProjectTurnInput, AgentTurnV2Event> = Object.freeze({
+  name: "project.turn.v1",
+  parseInput: parseProjectTurnInput,
+  parseOutput: (value: unknown) => agentTurnV2Method.parseOutput(value),
+  createOutputValidator: createProjectTurnOutputValidator,
+});
+
+export const projectNodeReviewMethod: RpcMethod<NodeReviewInput, NodeV1> = Object.freeze({
+  name: "project.node.review.v1",
+  parseInput: parseNodeReviewInput,
+  parseOutput: parseNode,
+  createOutputValidator: () => singleOutput(parseNode),
+});
+
 export type ProjectFailureCode =
   | "invalid-request"
   | "project-not-found"
@@ -76,6 +96,25 @@ export interface ProjectMailboxInput {
   readonly projectId: string;
   readonly afterSequence: number | null;
   readonly limit: number;
+}
+
+export interface ProjectTurnInput {
+  readonly projectId: string;
+  readonly requestId: string;
+  readonly text: string;
+  readonly target: ProjectTurnTarget;
+}
+
+export type ProjectTurnTarget =
+  | { readonly kind: "main" }
+  | { readonly kind: "node"; readonly nodeId: string };
+
+export interface NodeReviewInput {
+  readonly projectId: string;
+  readonly nodeId: string;
+  readonly action: "complete" | "skip";
+  readonly reason: string;
+  readonly reviewedRevision: number;
 }
 
 export interface ProjectListV1 {
@@ -188,6 +227,7 @@ export const PROJECT_NAME_MAX_CHARS = 80;
 export const PROJECT_GOAL_MAX_CHARS = 8_000;
 export const PROJECT_WORKSPACE_ROOT_MAX_CHARS = 4_096;
 export const PROJECT_MAILBOX_PAGE_MAX = 100;
+export const PROJECT_REVIEW_REASON_MAX_CHARS = 4_000;
 
 function singleOutput<T>(parse: (value: unknown) => T): RpcOutputValidator<T> {
   let received = false;

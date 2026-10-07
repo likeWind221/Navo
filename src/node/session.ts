@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { Service } from "cordis";
 import type { Context } from "cordis";
 
-import type { TurnResult, TurnModelConfig } from "../agent/types.js";
+import type { RunTurnInput, TurnResult, TurnModelConfig } from "../agent/types.js";
 import {
   createMessageId,
   createSessionId,
@@ -24,7 +24,9 @@ export interface NodeSessionServiceConfig {
 export interface NodeSessionMessageInput {
   readonly nodeId: NodeId;
   readonly text: string;
+  readonly requestId?: string;
   readonly signal?: AbortSignal;
+  readonly onEvent?: RunTurnInput["onEvent"];
 }
 
 export interface NodeSessionTurnResult {
@@ -116,8 +118,8 @@ export class NodeSessionService extends Service {
     const previous = this.tails.get(sessionId) ?? Promise.resolve();
     this.controllers.add(controller);
     const result = previous.then(
-      () => this.runQueued(sessionId, text, pending),
-      () => this.runQueued(sessionId, text, pending),
+      () => this.runQueued(sessionId, text, pending, input),
+      () => this.runQueued(sessionId, text, pending, input),
     );
     const tail = result.then(() => undefined, () => undefined);
     this.tails.set(sessionId, tail);
@@ -131,6 +133,7 @@ export class NodeSessionService extends Service {
     sessionId: SessionId,
     text: string,
     pending: PendingTurn,
+    input: NodeSessionMessageInput,
   ): Promise<NodeSessionTurnResult> {
     const nodes = this.ctx.nodes;
     let working = false;
@@ -182,6 +185,8 @@ export class NodeSessionService extends Service {
         systemPrompt: profile.systemPrompt,
         toolNames: profile.toolNames,
         signal: pending.signal,
+        ...(input.requestId === undefined ? {} : { requestId: input.requestId }),
+        ...(input.onEvent === undefined ? {} : { onEvent: input.onEvent }),
       });
       return Object.freeze({ nodeId: pending.nodeId, sessionId, turn });
     } finally {

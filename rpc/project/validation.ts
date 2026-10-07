@@ -1,5 +1,7 @@
 import { RpcError } from "../errors.js";
+import { AGENT_TEXT_MAX_CHARS } from "../agent.js";
 import type {
+  NodeReviewInput,
   NodeV1,
   ProjectCreateInput,
   ProjectDetailV1,
@@ -14,12 +16,14 @@ import type {
   ProjectResourceV1,
   ProjectResourcesV1,
   ProjectSummaryV1,
+  ProjectTurnInput,
   RoadmapV1,
 } from "../project.js";
 import {
   PROJECT_GOAL_MAX_CHARS,
   PROJECT_MAILBOX_PAGE_MAX,
   PROJECT_NAME_MAX_CHARS,
+  PROJECT_REVIEW_REASON_MAX_CHARS,
   PROJECT_WORKSPACE_ROOT_MAX_CHARS,
 } from "../project.js";
 import { exactKeys, requireBoundedString, requireRecord } from "../validation.js";
@@ -57,6 +61,31 @@ export function parseProjectMailboxInput(value: unknown): ProjectMailboxInput {
     projectId: id(input.projectId, "projectId"),
     afterSequence: input.afterSequence === null ? null : count(input.afterSequence, "afterSequence"),
     limit: input.limit as number,
+  };
+}
+
+export function parseProjectTurnInput(value: unknown): ProjectTurnInput {
+  const input = shape(value, ["projectId", "requestId", "text", "target"], "project turn input");
+  const target = requireRecord(input.target, "turn target");
+  return {
+    projectId: id(input.projectId, "projectId"),
+    requestId: id(input.requestId, "requestId"),
+    text: visibleText(input.text, "turn text", AGENT_TEXT_MAX_CHARS),
+    target: target.kind === "main" && exactKeys(target, ["kind"]) ? { kind: "main" }
+      : target.kind === "node" && exactKeys(target, ["kind", "nodeId"])
+        ? { kind: "node", nodeId: id(target.nodeId, "target nodeId") }
+        : invalid("Malformed turn target"),
+  };
+}
+
+export function parseNodeReviewInput(value: unknown): NodeReviewInput {
+  const input = shape(value, ["projectId", "nodeId", "action", "reason", "reviewedRevision"], "node review input");
+  return {
+    projectId: id(input.projectId, "projectId"),
+    nodeId: id(input.nodeId, "nodeId"),
+    action: oneOf(input.action, ["complete", "skip"] as const, "review action"),
+    reason: visibleText(input.reason, "review reason", PROJECT_REVIEW_REASON_MAX_CHARS),
+    reviewedRevision: positive(input.reviewedRevision, "reviewedRevision"),
   };
 }
 
@@ -102,7 +131,7 @@ function parseRoadmap(value: unknown): RoadmapV1 {
   };
 }
 
-function parseNode(value: unknown): NodeV1 {
+export function parseNode(value: unknown): NodeV1 {
   const node = shape(value, ["nodeId", "revision", "kind", "requirement", "status", "title", "description",
     "acceptanceCriteria", "controlPurpose", "hasSession", "turnActive", "actions", "confirmation"], "node");
   const kind = oneOf(node.kind, ["work", "control"] as const, "node kind");
