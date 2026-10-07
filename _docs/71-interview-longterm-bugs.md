@@ -1,6 +1,6 @@
 # 71：Navo 长程验收四个 Bug 复盘（面试版）
 
-2026-10-07 · 技术细节与证据见 [69：修复笔记](69-bugfix-bug-001-004-longterm.md)，状态以 [Bug 跟踪表](bug-plan.md) 为准，代码见 [PR #33](https://github.com/likeWind221/Navo/pull/33)。
+2026-10-07 · 技术细节与证据见 [70：修复笔记](70-bugfix-bug-001-004-longterm.md)，状态以 [Bug 跟踪表](bug-plan.md) 为准，代码见 [PR #33](https://github.com/likeWind221/Navo/pull/33)。
 
 ## 背景：问题是怎么被发现的
 

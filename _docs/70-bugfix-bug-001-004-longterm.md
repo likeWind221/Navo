@@ -1,4 +1,4 @@
-# 69：BUG-001 至 BUG-004 长程真实验收排查与修复
+# 70：BUG-001 至 BUG-004 长程真实验收排查与修复
 
 关联：[Bug 跟踪表](bug-plan.md)、[67：F9.8 长程验收](67-devlog-f9.8-longterm-acceptance.md)、[68：Bug 跟踪机制](68-devlog-bug-tracking.md)。分支 `fix/bug-001-004-longterm`，[Draft PR #33](https://github.com/likeWind221/Navo/pull/33)。
 
