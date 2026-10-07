@@ -1,6 +1,6 @@
 # 69：BUG-001 至 BUG-004 长程真实验收排查与修复
 
-关联：[Bug 跟踪表](bug-plan.md)、[67：F9.8 长程验收](67-devlog-f9.8-longterm-acceptance.md)、[68：Bug 跟踪机制](68-devlog-bug-tracking.md)。分支 `fix/bug-001-004-longterm`，Draft PR 见文末。
+关联：[Bug 跟踪表](bug-plan.md)、[67：F9.8 长程验收](67-devlog-f9.8-longterm-acceptance.md)、[68：Bug 跟踪机制](68-devlog-bug-tracking.md)。分支 `fix/bug-001-004-longterm`，[Draft PR #33](https://github.com/likeWind221/Navo/pull/33)。
 
 ## 现象与复现
 
@@ -92,4 +92,4 @@
 - BUG-003（权威状态在 Store，不在对话）：人工确认发生在 Main 对话之外，Main 只能复述历史旧值。规定陈述状态或可运行性前必须本回合读取，否则声明未核实，并加入状态转换探针验证。要点：与分布式系统“读最新版本、不信缓存”同理。
 - 方法论：可观测性 → 离线排除工程原因 → 真实证据定位模型行为 → 结构性修复 → 多次真实复跑并如实记录成功率与边界。
 
-PR：PR_LINK
+PR：[#33](https://github.com/likeWind221/Navo/pull/33)（Draft，待用户审核合并）
