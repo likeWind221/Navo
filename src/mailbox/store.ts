@@ -92,6 +92,7 @@ export class MailboxStore extends Service {
       body,
     });
     this.histories.set(projectId, Object.freeze([...history, message]));
+    this.ctx.emit("project/changed", projectId);
     return message;
   }
 

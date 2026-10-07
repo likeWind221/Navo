@@ -54,7 +54,7 @@ export class ProjectRuntime extends Service {
     if (this.activeMains.has(input.projectId)) {
       throw new ProjectError("turn-active", "Main already has a Human-started Turn in progress.");
     }
-    return this.runReserved(this.activeMains, input.projectId, input.signal,
+    return this.runReserved(input.projectId, this.activeMains, input.projectId, input.signal,
       signal => this.ctx.mainSessions.sendMessage({ ...input, signal }));
   }
 
@@ -99,13 +99,13 @@ export class ProjectRuntime extends Service {
     if (node.sessionId !== undefined) {
       throw new NodeError("node-already-bound", "Use continueNode for an existing Node Session.");
     }
-    return this.runReserved(this.activeNodes, input.nodeId, input.signal,
+    return this.runReserved(input.projectId, this.activeNodes, input.nodeId, input.signal,
       signal => this.ctx.nodeSessions.start({ ...nodeTurn(input), signal }));
   }
 
   continueNode(input: ProjectNodeTurnInput): Promise<NodeSessionTurnResult> {
     this.requireStartableNode(input.projectId, input.nodeId);
-    return this.runReserved(this.activeNodes, input.nodeId, input.signal,
+    return this.runReserved(input.projectId, this.activeNodes, input.nodeId, input.signal,
       signal => this.ctx.nodeSessions.sendMessage({ ...nodeTurn(input), signal }));
   }
 
@@ -160,7 +160,7 @@ export class ProjectRuntime extends Service {
   }
 
   private async runReserved<K, T>(
-    active: Map<K, ActiveTurn>, key: K, callerSignal: AbortSignal | undefined,
+    projectId: ProjectId, active: Map<K, ActiveTurn>, key: K, callerSignal: AbortSignal | undefined,
     run: (signal: AbortSignal) => Promise<T>,
   ): Promise<T> {
     const controller = new AbortController();
@@ -168,11 +168,13 @@ export class ProjectRuntime extends Service {
     const signal = callerSignal === undefined
       ? controller.signal : AbortSignal.any([callerSignal, controller.signal]);
     active.set(key, { controller, done: settled.promise });
+    this.ctx.emit("project/changed", projectId);
     try {
       return await run(signal);
     } finally {
       active.delete(key);
       settled.resolve();
+      this.ctx.emit("project/changed", projectId);
     }
   }
 

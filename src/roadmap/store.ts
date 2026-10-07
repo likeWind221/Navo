@@ -113,6 +113,7 @@ export class RoadmapStore extends Service {
   private commitHistory(projectId: ProjectId, history: readonly RoadmapEvent[], snapshot: RoadmapSnapshot): void {
     this.histories.set(projectId, history);
     this.snapshots.set(projectId, snapshot);
+    this.ctx.emit("project/changed", projectId);
   }
 
   private commitNodeAction(nodes: NodeStore, drafts: readonly NodeEventDraft[]): void {

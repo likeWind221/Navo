@@ -8,6 +8,7 @@ import {
   StreamRpcRouter,
   StreamRpcServer,
   projectCreateMethod,
+  projectFollowMethod,
   projectGetMethod,
   projectListMethod,
   projectMailboxMethod,
@@ -164,5 +165,16 @@ describe("F9.9a project contract", () => {
     expect(() => validator.parse({ ...started, type: "turn-cancelled", sessionId: "other" })).toThrow(RpcError);
     expect(() => projectTurnMethod.createOutputValidator!(input).end()).toThrow(RpcError);
     expect(() => projectTurnMethod.createOutputValidator!(input).parse({ ...started, requestId: "x" })).toThrow(RpcError);
+  });
+  it("accepts repeated follow frames after a required baseline", () => {
+    const frame = { detail, mailboxSequence: 0, resourceRevision: 0 };
+    expect(projectFollowMethod.name).toBe("project.follow.v1");
+    const validator = projectFollowMethod.createOutputValidator!({ projectId: "p" });
+    expect(validator.parse(frame)).toEqual(frame);
+    expect(validator.parse({ ...frame, mailboxSequence: 3 }).mailboxSequence).toBe(3);
+    expect(() => validator.end()).not.toThrow();
+    expect(() => projectFollowMethod.createOutputValidator!({ projectId: "p" }).end()).toThrow(RpcError);
+    expect(() => projectFollowMethod.parseOutput({ ...frame, resourceRevision: -1 })).toThrow(RpcError);
+    expect(() => projectFollowMethod.parseOutput({ detail })).toThrow(RpcError);
   });
 });

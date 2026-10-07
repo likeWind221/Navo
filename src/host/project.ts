@@ -2,6 +2,7 @@ import type { Context } from "cordis";
 
 import {
   projectCreateMethod,
+  projectFollowMethod,
   projectGetMethod,
   projectListMethod,
   projectMailboxMethod,
@@ -13,11 +14,9 @@ import type {
   NodeReviewInput,
   NodeV1,
   ProjectCreateInput,
-  ProjectDetailV1,
   ProjectListV1,
   ProjectMailboxInput,
   ProjectMailboxV1,
-  ProjectParticipantV1,
   ProjectResourcesV1,
   ProjectSummaryV1,
 } from "../../rpc/project.js";
@@ -25,13 +24,17 @@ import { RpcError } from "../../rpc/errors.js";
 import type { StreamRpcRouter } from "../../rpc/stream/router.js";
 import type { RpcStreamHandler } from "../../rpc/stream.js";
 import { createNodeId, createProjectId } from "../brand/ids.js";
-import type { ProjectId } from "../brand/ids.js";
-import type { MailboxParticipant } from "../mailbox/model.js";
-import type { NodeSnapshot } from "../node/model.js";
-import type { ProjectSnapshot } from "../project/model.js";
-import type { ProjectResource } from "../resource/model.js";
-import { projectFailure, toProjectFailure } from "./project/failure.js";
+import { toProjectFailure } from "./project/failure.js";
+import { createProjectFollowHandler } from "./project/follow.js";
 import { createProjectTurnHandler } from "./project/turn.js";
+import {
+  describeNode,
+  describeResource,
+  getProject,
+  participant,
+  requireProject,
+  summarize,
+} from "./project/view.js";
 
 export const MAILBOX_PAGE_BODY_BUDGET = 524_288;
 
@@ -44,6 +47,7 @@ export function registerProjectMethods(router: StreamRpcRouter, ctx: Context): (
     router.register(projectResourcesMethod, unary(input => listResources(ctx, input.projectId))),
     router.register(projectTurnMethod, createProjectTurnHandler(ctx)),
     router.register(projectNodeReviewMethod, unary(input => reviewNode(ctx, input))),
+    router.register(projectFollowMethod, createProjectFollowHandler(ctx)),
   ];
   return () => { for (const dispose of unregister) dispose(); };
 }
@@ -63,20 +67,6 @@ async function createProject(ctx: Context, input: ProjectCreateInput): Promise<P
     throw error;
   }
   return summarize(ctx, project);
-}
-
-async function getProject(ctx: Context, projectId: string): Promise<ProjectDetailV1> {
-  const project = requireProject(ctx, projectId);
-  const roadmap = ctx.roadmaps.get(project.id) === undefined ? undefined : ctx.roadmaps.map(project.id);
-  return {
-    project: await summarize(ctx, project),
-    main: { sessionId: project.mainSessionId, turnActive: ctx.projectRuntime.isMainActive(project.id) },
-    roadmap: roadmap === undefined ? null : {
-      revision: roadmap.roadmapRevision,
-      nodes: roadmap.nodes.map(node => describeNode(ctx, project.id, node)),
-      edges: roadmap.edges.map(edge => ({ from: edge.from, to: edge.to })),
-    },
-  };
 }
 
 function readMailbox(ctx: Context, input: ProjectMailboxInput): ProjectMailboxV1 {
@@ -116,65 +106,6 @@ function reviewNode(ctx: Context, input: NodeReviewInput): NodeV1 {
     ? ctx.projectRuntime.confirmCompletion(projectId, nodeId, confirmation)
     : ctx.projectRuntime.skipNode(projectId, nodeId, confirmation);
   return describeNode(ctx, projectId, node);
-}
-
-async function summarize(ctx: Context, project: ProjectSnapshot): Promise<ProjectSummaryV1> {
-  const workspace = await ctx.projectWorkspaces.get(project.id);
-  return {
-    projectId: project.id,
-    name: project.name,
-    goal: project.goal,
-    workspaceRoot: workspace?.root ?? null,
-    status: project.status,
-    revision: project.revision,
-    createdAt: project.createdAt,
-  };
-}
-
-function describeNode(ctx: Context, projectId: ProjectId, snapshot: NodeSnapshot): NodeV1 {
-  const { node } = snapshot;
-  return {
-    nodeId: node.id,
-    revision: snapshot.revision,
-    kind: node.kind,
-    requirement: node.requirement,
-    status: snapshot.status,
-    title: node.kind === "work" ? node.objective.title : node.title,
-    description: node.kind === "work" ? node.objective.description : "",
-    acceptanceCriteria: node.kind === "work" ? [...node.objective.acceptanceCriteria] : [],
-    controlPurpose: node.kind === "control" ? node.purpose : null,
-    hasSession: snapshot.sessionId !== undefined,
-    turnActive: ctx.projectRuntime.isNodeActive(node.id),
-    actions: { ...ctx.projectRuntime.nodeActions(projectId, node.id) },
-    confirmation: snapshot.confirmation === undefined ? null : { ...snapshot.confirmation },
-  };
-}
-
-function describeResource(resource: ProjectResource): ProjectResourcesV1["resources"][number] {
-  return {
-    resourceId: resource.id,
-    owner: participant(resource.owner),
-    name: resource.name,
-    description: resource.description,
-    type: resource.type,
-    entryRef: resource.entryRef,
-    access: resource.access.kind === "shared"
-      ? { kind: "shared", nodeIds: [...resource.access.nodeIds] }
-      : { kind: resource.access.kind },
-    revision: resource.revision,
-    createdAt: resource.createdAt,
-    updatedAt: resource.updatedAt,
-  };
-}
-
-function participant(value: MailboxParticipant): ProjectParticipantV1 {
-  return value.kind === "main" ? { kind: "main" } : { kind: "node", nodeId: value.nodeId };
-}
-
-function requireProject(ctx: Context, projectId: string): ProjectSnapshot {
-  const project = ctx.projects.get(createProjectId(projectId));
-  if (project === undefined) throw projectFailure("project-not-found", "Project was not found.");
-  return project;
 }
 
 function unary<TInput, TOutput>(

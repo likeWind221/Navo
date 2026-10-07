@@ -6,6 +6,7 @@ import { createProjectTurnOutputValidator } from "./project/turn.js";
 import {
   parseProjectCreateInput,
   parseProjectDetail,
+  parseProjectFollow,
   parseProjectList,
   parseProjectMailbox,
   parseProjectMailboxInput,
@@ -65,6 +66,24 @@ export const projectNodeReviewMethod: RpcMethod<NodeReviewInput, NodeV1> = Objec
   parseInput: parseNodeReviewInput,
   parseOutput: parseNode,
   createOutputValidator: () => singleOutput(parseNode),
+});
+
+export const projectFollowMethod: RpcMethod<ProjectRefInput, ProjectFollowV1> = Object.freeze({
+  name: "project.follow.v1",
+  parseInput: parseProjectRefInput,
+  parseOutput: parseProjectFollow,
+  createOutputValidator: () => {
+    let received = false;
+    return {
+      parse(value: unknown) {
+        received = true;
+        return parseProjectFollow(value);
+      },
+      end() {
+        if (!received) throw new RpcError("invalid-output", "Project follow ended before its baseline");
+      },
+    };
+  },
 });
 
 export type ProjectFailureCode =
@@ -135,6 +154,12 @@ export interface ProjectDetailV1 {
   readonly project: ProjectSummaryV1;
   readonly main: ProjectMainV1;
   readonly roadmap: RoadmapV1 | null;
+}
+
+export interface ProjectFollowV1 {
+  readonly detail: ProjectDetailV1;
+  readonly mailboxSequence: number;
+  readonly resourceRevision: number;
 }
 
 export interface ProjectMainV1 {

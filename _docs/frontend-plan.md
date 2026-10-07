@@ -220,7 +220,7 @@ F5.1 正式入口使用当前真实会话，项目及多会话仅在独立预览
 
 F4.1–F4.4 已全部完成。2026-09-14 用户明确确认 Navo Electron 体验验收成功，F4 正式收尾，没有剩余验收项。自动检查与用户验收分别记录于 [F4 验收收尾](54-devlog-tool-result-rows.md)。
 
-文本过程、活动摘要、工具结果、主题图标、高亮动画及单 HTML 演示的实现记录已合并至 [F4 实现汇总](52-devlog-f4-4-text-process.md)。工具列表配置诊断独立保留于 [工具列表排查](53-devlog-message-demo-tool-audit.md)，不扩展本次后端交付范围。F5.1 已通过用户验收。F5.2 已获授权。后端 F9.9a（交由 `backend-plan.md` 实施）已定义项目创建、列表、详情、Mailbox 与 Resource 只读接口：项目名称与目标独立、工作目录在创建时绑定、数据在 F10 前只存在内存中、Host 重启后项目列表为空；既有回合方法线上名改为 `agent.turn.v1`，前端通过共享 `rpc/` 自动跟随。该交付合并后前端再开始接入；交接见 [F5.2 接入核对](58-devlog-f5-2-project-handoff.md)，不以 Mock 代替真实项目。
+文本过程、活动摘要、工具结果、主题图标、高亮动画及单 HTML 演示的实现记录已合并至 [F4 实现汇总](52-devlog-f4-4-text-process.md)。工具列表配置诊断独立保留于 [工具列表排查](53-devlog-message-demo-tool-audit.md)，不扩展本次后端交付范围。F5.1 已通过用户验收。F5.2 已获授权。后端 F9.9a（交由 `backend-plan.md` 实施）已定义项目创建、列表、详情、Mailbox 与 Resource 只读接口：项目名称与目标独立、工作目录在创建时绑定、数据在 F10 前只存在内存中、Host 重启后项目列表为空；既有回合方法线上名改为 `agent.turn.v1`，前端通过共享 `rpc/` 自动跟随。F9.9b 增加 `project.turn.v1`：启动或继续 Main / Node 回合，复用 v2 内容事件，cancel 帧只取消该回合；还增加 `project.node.review.v1`，用于完成或跳过节点。F9.9c 增加 `project.follow.v1`，提供基线和整份替换帧，用于实时刷新地图。上述交付合并后前端再开始接入；交接见 [F5.2 接入核对](58-devlog-f5-2-project-handoff.md)，不以 Mock 代替真实项目。
 
 F3 阶段已全部收口：F3.10 Markdown 与 F3.11 数学公式的代码、测试、Electron 自动验收与真实模型人工桌面验收均已通过，详见 [F3.11 开发记录](42-devlog-f3-11-math.md) 与 [F3.10 开发记录](41-devlog-f3-10-markdown.md)。F4 之后仍未固化的候选方向有 `/compact`、`/model`、`/clear` 等真实命令，多会话与持久化，以及学习地图与 Node 内容面板。
 

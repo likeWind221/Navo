@@ -5,6 +5,7 @@ import type {
   NodeV1,
   ProjectCreateInput,
   ProjectDetailV1,
+  ProjectFollowV1,
   ProjectListInput,
   ProjectListV1,
   ProjectMailboxInput,
@@ -116,6 +117,15 @@ export function parseProjectDetail(value: unknown): ProjectDetailV1 {
     project: parseProjectSummary(detail.project),
     main: { sessionId: id(main.sessionId, "sessionId"), turnActive: flag(main.turnActive, "turnActive") },
     roadmap: detail.roadmap === null ? null : parseRoadmap(detail.roadmap),
+  };
+}
+
+export function parseProjectFollow(value: unknown): ProjectFollowV1 {
+  const follow = shape(value, ["detail", "mailboxSequence", "resourceRevision"], "project follow frame");
+  return {
+    detail: parseProjectDetail(follow.detail),
+    mailboxSequence: count(follow.mailboxSequence, "mailboxSequence"),
+    resourceRevision: count(follow.resourceRevision, "resourceRevision"),
   };
 }
 

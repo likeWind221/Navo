@@ -22,7 +22,9 @@ export class ProjectStore extends Service {
       type: "project-created",
       data: { name: input.name, goal: input.goal, mainSessionId: createSessionId(randomUUID()) },
     };
-    return this.restore(projectId, [event]);
+    const snapshot = this.restore(projectId, [event]);
+    this.ctx.emit("project/changed", projectId);
+    return snapshot;
   }
 
   get(projectId: ProjectId): ProjectSnapshot | undefined {
@@ -42,6 +44,7 @@ export class ProjectStore extends Service {
       throw new ProjectError("invalid-event-stream", "Only a newly created Project can be discarded.");
     }
     this.histories.delete(projectId);
+    this.ctx.emit("project/changed", projectId);
   }
 
   getByMainSession(sessionId: SessionId): ProjectSnapshot | undefined {
@@ -110,6 +113,7 @@ export class ProjectStore extends Service {
     const events = Object.freeze([...this.getEvents(projectId), event]);
     const next = projectProject(projectId, events)!;
     this.histories.set(projectId, events);
+    this.ctx.emit("project/changed", projectId);
     return next;
   }
 
