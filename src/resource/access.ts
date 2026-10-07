@@ -33,7 +33,7 @@ export function normalizeResourceAccess(
   owner: ResourcePrincipal,
 ): ResourceAccess {
   if (value.kind === "private") return Object.freeze({ kind: "private" });
-  if (value.kind === "project") return Object.freeze({ kind: "project" });
+  if (value.kind === "public") return Object.freeze({ kind: "public" });
   if (value.kind !== "shared" || !Array.isArray(value.nodeIds) || value.nodeIds.length === 0) {
     throw new ResourceError(
       "invalid-access",
@@ -80,7 +80,7 @@ export function canReadResource(
 ): boolean {
   if (viewer.kind === "main") return true;
   if (sameResourcePrincipal(resource.owner, viewer)) return true;
-  if (resource.access.kind === "project") return true;
+  if (resource.access.kind === "public") return true;
   if (resource.access.kind === "private") return false;
   return resource.access.nodeIds.includes(viewer.nodeId);
 }

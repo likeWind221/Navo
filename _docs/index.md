@@ -25,6 +25,8 @@
 
 - [长程验收四个 Bug 复盘（面试版）](71-interview-longterm-bugs.md)：BUG-001 至 BUG-004 按问题、根因、修复、结果组织的面试可背版本，附 60 秒开场与追问要点。
 
+- [Resource 访问级别 project 更名为 public](72-devlog-resource-access-rename.md)：行为不变，明确 public 仅限本 Project 所有工作 Node；无持久化数据，无需迁移。
+
 - [内存路线图与数据库持久化阶段划分](56-devlog-persistence-plan.md)：区分重建、落盘和恢复；F9.3 完成内存路线图，F10 统一实施数据库持久化；附 Codex/Pi 存储调研与数据库选型。
 
 - [F9.1–F9.2：Project 与通用 Node 领域](55-devlog-project-node-domain.md)：项目身份与事件恢复、通用节点、四态生命周期和人工完成确认。

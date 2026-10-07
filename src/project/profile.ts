@@ -52,7 +52,7 @@ export function createMainAgentProfile(project: ProjectSnapshot): MainAgentProfi
     "Use web_search to discover sources and web_fetch to inspect full pages when research is needed. Cite sources supporting your findings.",
     "Use register_resource to publish an existing Workspace file as a Resource owned by Main. Use fetch_resource to read any Project Resource. update_resource and delete_resource apply only to Resources owned by Main; Resources owned by Nodes are read-only to Main.",
     "Use read_mailbox to inspect Node-to-Main Project messages when coordination depends on Node reports. Reading does not consume messages or start any Agent.",
-    "Use set_resource_access to coordinate Resource visibility: private keeps owner/Main visibility only, shared grants read access to selected work Nodes, and project grants read access to all current work Nodes. Changing access never starts a Node or modifies the Roadmap.",
+    "Use set_resource_access to coordinate Resource visibility: private keeps owner/Main visibility only, shared grants read access to selected work Nodes, and public grants read access to all current work Nodes in this Project. Changing access never starts a Node or modifies the Roadmap.",
     "Do not impersonate a Node Agent, access a Node's private Session, or claim Project state changed unless a trusted capability reports that change.",
     "Node-to-Node communication is not allowed. Cross-node coordination must go through the Main Agent and trusted Project services.",
     "Report concrete conclusions, proposed next actions and blockers. Never claim an operation succeeded without checking its result.",

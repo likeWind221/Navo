@@ -31,7 +31,8 @@ const schema: JsonObject = {
       properties: {
         kind: {
           type: "string",
-          enum: ["private", "shared", "project"],
+          enum: ["private", "shared", "public"],
+          description: "private: owner and Main only; shared: also the listed node_ids; public: every work Node in this Project. Access never reaches outside the Project.",
         },
         node_ids: {
           type: "array",
@@ -107,7 +108,7 @@ function parseAccess(value: JsonValue | undefined): ResourceAccess {
   }
   const access = value as Record<string, JsonValue>;
   const kind = access.kind;
-  if (kind === "private" || kind === "project") {
+  if (kind === "private" || kind === "public") {
     if (access.node_ids !== undefined) {
       throw invalidResourceTool(
         `access.node_ids is not allowed when access.kind is '${kind}'.`,
@@ -117,7 +118,7 @@ function parseAccess(value: JsonValue | undefined): ResourceAccess {
   }
   if (kind !== "shared") {
     throw invalidResourceTool(
-      "access.kind must be private, shared, or project.",
+      "access.kind must be private, shared, or public.",
     );
   }
   if (

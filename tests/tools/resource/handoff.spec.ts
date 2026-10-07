@@ -70,13 +70,13 @@ describe("Main Resource handoff capability", () => {
       {
         resource_id: id,
         expected_revision: 2,
-        access: { kind: "project" },
+        access: { kind: "public" },
       },
     );
     expect(projectWide.kind).toBe("success");
     expect(resourceArtifact(projectWide)).toMatchObject({
       revision: 3,
-      access: { kind: "project" },
+      access: { kind: "public" },
     });
 
     const privateAgain = await callResourceTool(
@@ -125,7 +125,7 @@ describe("Main Resource handoff capability", () => {
       {
         resource_id: id,
         expected_revision: 1,
-        access: { kind: "project" },
+        access: { kind: "public" },
       },
     );
 
