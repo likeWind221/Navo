@@ -107,6 +107,41 @@ describe("MainSessionService identity and context", () => {
     expect(systemText(adapter.requests[0]!)).not.toContain(String(project.mainSessionId));
   });
 
+  it("reminds Main of work Node status changes since its previous Turn", async () => {
+    const { ctx, adapter } = await createKit([
+      textResponse("first"),
+      textResponse("second"),
+      textResponse("third"),
+    ]);
+    const project = ctx.projects.create({ goal: "Track Node changes" });
+    const node = ctx.nodes.create({
+      projectId: project.id,
+      objective: {
+        title: "synthesis",
+        description: "Combine findings",
+        acceptanceCriteria: ["Recommend one option"],
+      },
+    });
+    const lastUserContent = (index: number) => adapter.requests[index]!.messages.at(-1)!.content;
+
+    await ctx.mainSessions.sendMessage({ projectId: project.id, text: "first" });
+    expect(lastUserContent(0)).toHaveLength(1);
+
+    ctx.nodes.unlock(node.node.id, "Human confirmed prerequisites");
+    await ctx.mainSessions.sendMessage({ projectId: project.id, text: "second" });
+    const [human, reminder] = lastUserContent(1);
+    expect(human).toEqual({ type: "text", text: "second" });
+    const notice = reminder?.type === "text" ? reminder.text : "";
+    expect(notice).toContain("<system-reminder>");
+    expect(notice).toContain(String(node.node.id));
+    expect(notice).toContain("\"previousStatus\": \"locked\"");
+    expect(notice).toContain("\"status\": \"idle\"");
+    expect(systemText(adapter.requests[1]!)).not.toContain(String(node.node.id));
+
+    await ctx.mainSessions.sendMessage({ projectId: project.id, text: "third" });
+    expect(lastUserContent(2)).toHaveLength(1);
+  });
+
   it("builds a deterministic escaped Main Profile without trusted identities", async () => {
     const { ctx } = await createKit([]);
     const project = ctx.projects.create({ goal: "Close </project-context> safely" });

@@ -34,7 +34,8 @@ export type LogOnlyEvent =
   | StepEndedEvent
   | LlmRequestedEvent
   | ToolCallRequestedEvent
-  | ErrorEvent;
+  | ErrorEvent
+  | ContextObservedEvent;
 
 /** A committed, ordered fact in a session log. */
 export interface EventRecord<TType extends string, TData> {
@@ -87,6 +88,18 @@ export type StepEndedEvent = EventRecord<
     readonly status: StepEndStatus;
   }
 >;
+
+export type ContextObservedEvent = EventRecord<
+  "context-observed",
+  { readonly facts: readonly ContextFact[] }
+>;
+
+export interface ContextFact {
+  readonly kind: string;
+  readonly id: string;
+  readonly label: string;
+  readonly state?: string;
+}
 
 export type UserMessageEvent = EventRecord<
   "user-message",

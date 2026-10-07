@@ -34,7 +34,9 @@
 | run 8 | + 名称解析与 resource_id 枚举 | 续接回合以名称 `validation.txt` 读到 validation 并给出正确结论；旧断言只比对参数中的 ID，判为失败（误报） | `navo-evidence-8/09-9-resume.json`、`failure.json` |
 | run 9 | 同 run 8 | 9 回合全部通过，1 个已恢复工具错误 | `navo-evidence-9/09-9-resume.json` |
 | run 10 | + 断言改为核对返回的 Resource（最终代码） | 9 回合全部通过，0 个工具错误 | `navo-evidence-10/09-9-resume.json` |
-| run 11 | 最终代码 | 9 回合全部通过，0 个工具错误 | `navo-evidence-11/09-9-resume.json` |
+| run 11 | 同 run 10 | 9 回合全部通过，0 个工具错误 | `navo-evidence-11/09-9-resume.json` |
+| run 12 | + system-reminder 重构与 Main 节点状态通知（最终代码） | 9 回合全部通过，0 个工具错误 | `navo-evidence-12/03-3-handoff.json`、`07-7-handoff.json`、`08-8-status.json`、`09-9-resume.json` |
+| run 13 | 最终代码 | 9 回合全部通过，0 个工具错误 | `navo-evidence-13/08-8-status.json`、`09-9-resume.json` |
 
 - BUG-001 根因（已证实为模型选择问题，而非上下文缺失）：
   - run 2 `08-8-resume.json` 首个请求的系统提示 `<available-resources>` 同时列出 evidence 与 validation（`f197ae94…`，name `supplied-validation`），并包含“Turn 起点快照优先于早先陈述”的规则；模型仍声称快照中只有一个 Resource，并把名称 `independent-validation`、`supplied-validation`、`validation` 当作 `resource_id` 调用 `fetch_resource`，三次均失败。
@@ -44,7 +46,7 @@
 - BUG-003：
   - run 2、run 3 的第 3/7 回合 Main 未陈述节点状态；但 run 3 `07-7-handoff` 回答称 synthesis“可以启动”，实际仍为 locked 且本回合未读取，属于未经核实的可运行性陈述。
   - run 4 `03-3-handoff` 明确写出“本回合未重新核实节点状态”；run 4/5 的 `08-8-status` 均在本回合调用 `read_node` 后回答 `idle`，run 4 还说明之前的 locked 已过时。
-- 最终代码复验：run 6、run 7 的 `09-9-resume.json` 中最后一条 user 消息均含两个文本块（人工指令 + `<resource-changes>`，列出 validation 的 id 与 name），synthesis 首次调用即以该 ID 成功 `fetch_resource`，以 125 ms / 93.5% 等数值推荐 A，并保留“小样本合成数据、生产负载未测”的限制；Session 与 Human Gate 断言全部通过。run 6 `03-3-handoff` 中 Main 先 `read_roadmap` 再陈述状态；run 7 两次交接回答未陈述节点状态。
+- 最终代码复验：run 6、run 7 的 `09-9-resume.json` 中最后一条 user 消息均含两个文本块（人工指令 + 资源变化提醒，列出 validation 的 id 与 name），synthesis 首次调用即以该 ID 成功 `fetch_resource`，以 125 ms / 93.5% 等数值推荐 A，并保留“小样本合成数据、生产负载未测”的限制；Session 与 Human Gate 断言全部通过。run 6 `03-3-handoff` 中 Main 先 `read_roadmap` 再陈述状态；run 7 两次交接回答未陈述节点状态。
 - Resource 引用加固复验（run 8-11）：
   - 所有回合中带 `resource_id` 的调用均成功，无一失败。
   - run 8 的名称最终解析到 validation（`97cf43e5…`），回答引用 125 / 93.5。
@@ -56,7 +58,7 @@
 ### DeepSeek Harness 参考
 
 - `deepseek-harness/packages/fs/tool-fs/src/error.ts`：在模型边界为可恢复错误附加唯一正确的补救动作，保留机器错误码并以 `cause` 链接原始错误。采用于 BUG-002 的 path/errno 消息与 BUG-001 的“名称不是 ID”提示；未采用其 FsError 码体系，Navo 继续使用 `ResourceError` 与 `ToolExecutionError`。
-- `deepseek-harness/packages/plan/plan-mode/src/index.ts`（`agent/pre-step` 中追加 narration）：模式在回合之间变化时，既更新提示分区，又在本步消息末尾追加一条说明变化的消息。采用为 Node 续接回合的 `<resource-changes>` 通知；未采用其事件日志折叠与 pending intent 机制，Navo 只在 Human 启动 Turn 时生成一次。
+- `deepseek-harness/packages/plan/plan-mode/src/index.ts`（`agent/pre-step` 中追加 narration）：模式在回合之间变化时，既更新提示分区，又在本步消息末尾追加一条说明变化的消息。采用为 Node 与 Main 续接回合的 `<system-reminder>` 通知；未采用其事件日志折叠与 pending intent 机制，Navo 只在 Human 启动 Turn 时生成一次。
 - 同文件第 65 行说明 Harness 刻意保持请求工具目录稳定，以避免模式切换改变工具定义。Navo 的 `resource_id` 枚举会随可见 Resource 变化，与此不同。取舍依据：Navo 的系统提示本来每个 Turn 都会重建，提示前缀缓存在 Turn 边界已经失效；枚举只在 Turn 内可见集合变化（如注册或删除 Resource）时才额外变化，成本有限。
 
 ### 代码改动
@@ -65,7 +67,12 @@
 - BUG-002（错误可诊断）：`src/resource/path.ts` 发布来源失败时按 errno 生成含 Workspace 相对 path 的消息（不含绝对路径）；`src/tools/builtins/resource/common.ts` 将其传给模型；`src/tools/service.ts` 在工具失败 `details.causes` 中记录 cause 链的 name/code。
 - BUG-001（续接读取新资源）：
   - `src/node/profile.ts` 系统提示声明 Turn 起点快照优先于早先陈述；新增 `formatResourceChanges`。
-  - `src/node/session.ts` 记录每个 Session 上一 Turn 可见的 Resource ID，续接 Turn 把新增可见 Resource 的 id 与 name 作为 `<resource-changes>` 文本块附在人工消息之后；首个 Turn 或无变化时不附加。该记录为进程内状态，与 Phase 9 其他内存状态一致，进程重启后首个续接 Turn 不产生通知。
+  - 续接变化通知（system-reminder 机制）：
+    - `src/session/types.ts` 新增仅记日志、不进入模型历史的 `context-observed` 事件，记录每个 Turn 开始时告知 Agent 的外部事实（kind、id、label、state）。
+    - `src/session/reminder.ts` 负责从 Session 日志读取上一条快照（`lastObservedFacts`），按 kind+id 求出新增与状态变化（`changedFacts`），并统一渲染、转义 `<system-reminder>` 块（`formatSystemReminder`）。
+    - `src/node/context.ts` 的 Context Builder 保持无状态：输入当前领域状态和上次快照，输出完整快照、facts 以及新增可见 Resource。Node 自己拥有的 Resource 不计入 facts，不会被当作“新增”。
+    - `src/node/session.ts` 只做编排：读取上次快照 → 构建上下文 → 追加 `context-observed` → 把 `formatResourceChanges` 生成的提醒块附在人工消息后。首个 Turn 或没有变化时不附加。
+    - 第一版曾用 NodeSessionService 内的 Map 记录上次可见资源，现已删除。状态归 Session 事件日志所有，F10 持久化事件时会自动带上；该事件写在 `turn-started` 之前。
   - 名称解析（`src/tools/builtins/resource/common.ts` 的 `resolveResourceRef`）：四个 Resource 工具的 `resource_id` 同时接受 ID 和唯一名称。
     - 解析只在调用方可见的 Resource 中进行：先按 ID 精确匹配，再按名称匹配（忽略首尾空白与大小写）。
     - 名称唯一时解析为对应 ID；重名时返回错误，并列出候选 ID；没有匹配时按 ID 交给领域层，报告不可用。
@@ -76,7 +83,9 @@
     - 四个 Resource 工具借助 `withVisibleResourceRefs`，把当前可见 Resource 的 ID 与唯一名称写入 `resource_id` 的 `enum`。
     - 没有可见 Resource、Session 未绑定或生成失败时，回退为静态 schema。
     - 执行期仍按静态 schema 校验，引用解析统一由 `resolveResourceRef` 负责，避免两处规则不一致。
-- BUG-003（状态陈述）：`src/project/profile.ts` 规定 Main 陈述节点状态或“能否运行”前必须在本回合调用 `read_roadmap` / `read_node`，否则说明状态未核实。
+- BUG-003（状态陈述）：
+  - `src/project/profile.ts` 规定 Main 陈述节点状态或“能否运行”前必须在本回合调用 `read_roadmap` / `read_node`，否则说明状态未核实。
+  - `src/project/session.ts` 每个 Turn 记录 work 节点的 id、标题和状态，并与上次快照比较；新增节点或状态变化通过 `formatNodeChanges` 以 `<system-reminder>` 附在人工消息后，声明其优先于先前陈述。system prompt 仍不放节点细节，原有测试约束不变。
 - 验收口径（`scripts/longterm.ts`）：
   - 由“回合内不得有任何错误”改为“不得有未恢复错误”：工具错误之后同回合同名工具成功视为已恢复；LLM、运行时错误及未恢复的工具错误仍判失败。原始 `errors` 全量写入证据，不被隐藏。
   - 续接回合必须成功 `fetch_resource` 到 validation：按工具结果中返回的 Resource 身份判断，ID 或唯一名称都可以。
@@ -84,7 +93,7 @@
 
 ## 验证结果与边界
 
-- 本机 Node v24.14.0：`pnpm typecheck` 通过；`scripts/**` 额外纳入 tsc 检查通过；`pnpm test` 78 个文件、460 项全部通过（云端曾有 5 个仅与环境相关的 shell/process 失败，本机未出现）。
+- 本机 Node v24.14.0：`pnpm typecheck` 通过；`scripts/**` 额外纳入 tsc 检查通过；`pnpm test` 78 个文件、461 项全部通过（云端曾有 5 个仅与环境相关的 shell/process 失败，本机未出现）。
 - 枚举约束探针：直接向 Qwen 服务发请求，要求模型传入不在 enum 中的值。
   - `tool_choice: required` 时，参数被限制在 enum 内；
   - `tool_choice: auto`（Navo 当前的默认）时，模型同样选择了 enum 内的值；
@@ -93,15 +102,17 @@
   - 缺失来源返回 path 与 ENOENT，不泄露绝对路径，随后以正确路径恢复；
   - 唯一名称可以读取，重名时报错并列出候选 ID，私有名称不会匹配；
   - 每个 Session 的 enum 只包含其可见的 ID 与唯一名称，不带 sessionId 或 Session 未绑定时没有 enum；
-  - 续接 Turn 仅在新增可见 Resource 时附加 `<resource-changes>`；
+  - 续接 Turn 仅在新增可见 Resource 时附加 `<system-reminder>`；
+  - Main 首个 Turn 不附加提醒，节点状态变化后的下一个 Turn 附加一次（含 previousStatus 与 status），状态不变时不再附加；
   - Main / Node 提示包含新规则。
 - 真实运行：
   - 续接回合在只有系统提示规则时为 2/4（run 2-5）；
-  - 加入续接资源变化通知后，续接回合全部读到 validation，共 6/6（run 6-11，其中 run 8 为断言误报，行为正确）；
-  - 状态探针 8/8（run 4-11）均在本回合读取后回答 `idle`。
+  - 加入续接资源变化通知后，续接回合全部读到 validation，共 8/8（run 6-13，其中 run 8 为断言误报，行为正确）；
+  - 状态探针 10/10（run 4-13）均在本回合读取后回答 `idle`；
+  - run 12、13 中 Main 在第 3、7、8 回合收到节点状态提醒，synthesis 在第 9 回合收到资源提醒，两次运行均为 0 个工具错误。
 - 各项结果：
   - BUG-001：已修复。证据确认上下文已送达，失败来自模型被历史中“缺失”的结论压过及把名称当 ID；变化通知后续接 6/6 真实成功，名称解析与枚举加固后 Resource 工具调用零失败。
-  - BUG-002：可诊断性与验收口径已落地；原错误在 run 2-11 中未复现，真实 path/errno 未取得，保持未勾选，待用户决定关闭条件或等待复现。
+  - BUG-002：可诊断性与验收口径已落地；原错误在 run 2-13 中未复现，真实 path/errno 未取得，保持未勾选，待用户决定关闭条件或等待复现。
   - BUG-003：已修复。探针 4/4 正确，交接回答不再给出与事实不符的状态。残余观察：run 6 `07-7-handoff` 称“validation 确认前 synthesis 保持 locked”，属于依赖推理，与事实一致但未在该回合读取。
   - BUG-004：已修复。run 2、run 5 的 `failure.json` 与回合文件足以区分上下文缺失、模型选择与 I/O 错误；证据中无 reasoning 与凭据。
 - 边界：模型具有随机性，少量运行只能证明修复后出现失败的概率下降，不能证明不再发生；BUG-002 原错误未复现，真实 path/errno 未取得；未覆盖进程重启后的续接通知、桌面 UI 与数据库持久化。
@@ -109,9 +120,9 @@
 ## 后续
 
 - BUG-002：若再次出现来源不可用，直接读取对应回合 `register_resource` 的 path 参数与 `details.causes` 中的 errno 定性；在用户决定关闭条件前保持未勾选。
-- 续接资源变化记录目前在进程内，F10 持久化时随 Session 状态一起落盘恢复。
+- `context-observed` 随 Session 事件日志持久化；F10 落地后，进程重启也能正确求差。
 - 待办：提供 `list_resources` 工具，让模型在怀疑时可以现查（用户决定延后）。
-- 待议：把 `<resource-changes>` 抽成通用 system-reminder 机制，同时为 Main 推送节点状态变化，用以加强 BUG-003；需用户确认。
+- 可扩展：Mailbox 新消息等其他“对话外变化”，可以作为新的 fact kind 接入同一个 reminder 机制。
 - 真实验收仍为手动脚本，不进入 CI；后续可扩充为多次复跑并统计成功率。
 - F9.8 是否据此改为完成由用户决定。
 

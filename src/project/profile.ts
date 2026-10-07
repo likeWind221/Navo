@@ -10,6 +10,8 @@ import { REGISTER_RESOURCE_TOOL_NAME } from "../tools/builtins/resource/register
 import { UPDATE_RESOURCE_TOOL_NAME } from "../tools/builtins/resource/update.js";
 import { SET_RESOURCE_ACCESS_TOOL_NAME } from "../tools/builtins/resource/access.js";
 import { READ_MAILBOX_TOOL_NAME } from "../tools/builtins/mailbox/read.js";
+import { formatSystemReminder } from "../session/reminder.js";
+import type { ContextChange } from "../session/reminder.js";
 import type { ProjectSnapshot } from "./model.js";
 
 export interface MainAgentProfile {
@@ -56,4 +58,16 @@ export function createMainAgentProfile(project: ProjectSnapshot): MainAgentProfi
     "Report concrete conclusions, proposed next actions and blockers. Never claim an operation succeeded without checking its result.",
   ].join("\n");
   return Object.freeze({ systemPrompt, toolNames: MAIN_AGENT_TOOL_NAMES });
+}
+
+export function formatNodeChanges(changes: readonly ContextChange[]): string {
+  return formatSystemReminder(
+    "these work Nodes changed since your previous Turn started, including changes made by humans outside this conversation. They supersede earlier statements about these Nodes; use read_roadmap or read_node for details.",
+    changes.map(({ fact, previous }) => ({
+      id: fact.id,
+      title: fact.label,
+      status: fact.state ?? null,
+      previousStatus: previous?.state ?? null,
+    })),
+  );
 }

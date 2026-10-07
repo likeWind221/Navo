@@ -104,7 +104,7 @@ describe("Node Turn Resource context integration", () => {
     expect(human).toEqual({ type: "text", text: "Check again after the human starts this Turn." });
     expect(changes).toMatchObject({ type: "text" });
     const notice = changes?.type === "text" ? changes.text : "";
-    expect(notice).toContain("<resource-changes>");
+    expect(notice).toContain("<system-reminder>");
     expect(notice).toContain(String(resource.id));
     expect(notice).toContain("Handoff evidence");
     expect(notice).not.toContain("Metadata visible after Main grants access");

@@ -1,6 +1,8 @@
 import type { Context } from "cordis";
 
 import type { ResourceId } from "../brand/ids.js";
+import { changedFacts } from "../session/reminder.js";
+import type { ContextFact } from "../session/types.js";
 import type { NodeObjective, NodeSnapshot, NodeStatus } from "./model.js";
 import { NodeError } from "./errors.js";
 
@@ -9,6 +11,8 @@ export interface NodeTurnContext {
   readonly objective: NodeObjective;
   readonly status: NodeStatus;
   readonly resources: readonly NodeTurnResourceContext[];
+  readonly addedResources: readonly NodeTurnResourceContext[];
+  readonly facts: readonly ContextFact[];
 }
 
 export interface NodeTurnResourceContext {
@@ -23,7 +27,10 @@ export interface NodeTurnResourceContext {
 export class NodeTurnContextBuilder {
   constructor(private readonly ctx: Context) {}
 
-  build(snapshot: NodeSnapshot): NodeTurnContext {
+  build(
+    snapshot: NodeSnapshot,
+    observed?: readonly ContextFact[],
+  ): NodeTurnContext {
     if (snapshot.node.kind !== "work") {
       throw new NodeError(
         "invalid-state",
@@ -52,11 +59,20 @@ export class NodeTurnContextBuilder {
         && resource.owner.nodeId === snapshot.node.id,
     }));
 
+    const facts = resources
+      .filter(resource => !resource.ownedByCurrentAgent)
+      .map(resource => Object.freeze({ kind: "resource", id: String(resource.id), label: resource.name }));
+    const added = new Set(changedFacts(observed, facts)
+      .filter(change => change.previous === undefined)
+      .map(change => change.fact.id));
+
     return Object.freeze({
       projectGoal: project.goal,
       objective: Object.freeze(structuredClone(snapshot.node.objective)),
       status: snapshot.status,
       resources: Object.freeze(resources),
+      addedResources: Object.freeze(resources.filter(resource => added.has(String(resource.id)))),
+      facts: Object.freeze(facts),
     });
   }
 }

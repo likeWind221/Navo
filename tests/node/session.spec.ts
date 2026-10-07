@@ -135,6 +135,8 @@ describe("NodeSessionService identity and context", () => {
       objective: created.node.kind === "work" ? created.node.objective : neverObjective(),
       status: created.status,
       resources: [],
+      addedResources: [],
+      facts: [],
     } as const;
     const profile = createNodeAgentProfile(context);
 
@@ -268,7 +270,7 @@ describe("NodeSessionService scheduling and lifecycle", () => {
     expect(result.turn).toMatchObject({ status: "failed", failure: { code: "MODEL" } });
     expect(ctx.nodes.get(node.node.id)?.status).toBe("idle");
     const types = ctx.sessions.getEvents(result.sessionId).map((event) => event.type);
-    expect(types[0]).toBe("turn-started");
+    expect(types.slice(0, 2)).toEqual(["context-observed", "turn-started"]);
     expect(types.at(-1)).toBe("turn-ended");
     expect(types.filter((type) => type === "step-started")).toHaveLength(1);
     expect(types.filter((type) => type === "step-ended")).toHaveLength(1);

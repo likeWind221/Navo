@@ -6,10 +6,11 @@ import type { Context } from "cordis";
 import type { TurnModelConfig, TurnResult } from "../agent/types.js";
 import { createMessageId } from "../brand/ids.js";
 import type { ProjectId, SessionId } from "../brand/ids.js";
+import { changedFacts, lastObservedFacts } from "../session/reminder.js";
 import { requireMainBinding } from "./binding.js";
 import { ProjectError } from "./errors.js";
 import type { ProjectSnapshot } from "./model.js";
-import { createMainAgentProfile } from "./profile.js";
+import { createMainAgentProfile, formatNodeChanges } from "./profile.js";
 
 export interface MainSessionServiceConfig {
   readonly model: TurnModelConfig;
@@ -34,7 +35,7 @@ declare module "cordis" {
 }
 
 export class MainSessionService extends Service {
-  static inject = ["projects", "nodes", "agentRuntime"];
+  static inject = ["projects", "nodes", "agentRuntime", "sessions"];
 
   private readonly model: TurnModelConfig;
 
@@ -48,12 +49,20 @@ export class MainSessionService extends Service {
     const project = this.requireProject(input.projectId);
     const binding = requireMainBinding(this.ctx, project.mainSessionId, project.id);
     const profile = createMainAgentProfile(project);
+    const facts = this.ctx.nodes.getByProject(project.id).flatMap(value => value.node.kind === "work"
+      ? [{ kind: "node", id: String(value.node.id), label: value.node.objective.title, state: value.status }]
+      : []);
+    const changes = changedFacts(lastObservedFacts(this.ctx.sessions, binding.sessionId), facts);
+    this.ctx.sessions.append({ type: "context-observed", sessionId: binding.sessionId, data: { facts } });
     const turn = await this.ctx.agentRuntime.runTurn({
       sessionId: binding.sessionId,
       userMessage: {
         id: createMessageId(randomUUID()),
         role: "user",
-        content: [{ type: "text", text }],
+        content: [
+          { type: "text", text },
+          ...(changes.length === 0 ? [] : [{ type: "text" as const, text: formatNodeChanges(changes) }]),
+        ],
       },
       model: this.model,
       systemPrompt: profile.systemPrompt,

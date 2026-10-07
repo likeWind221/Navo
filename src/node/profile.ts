@@ -6,6 +6,7 @@ import { DELETE_RESOURCE_TOOL_NAME } from "../tools/builtins/resource/delete.js"
 import { FETCH_RESOURCE_TOOL_NAME } from "../tools/builtins/resource/fetch.js";
 import { REGISTER_RESOURCE_TOOL_NAME } from "../tools/builtins/resource/register.js";
 import { UPDATE_RESOURCE_TOOL_NAME } from "../tools/builtins/resource/update.js";
+import { formatSystemReminder } from "../session/reminder.js";
 import type { NodeTurnContext, NodeTurnResourceContext } from "./context.js";
 
 export interface NodeAgentProfile {
@@ -75,17 +76,10 @@ export function createNodeAgentProfile(
 export function formatResourceChanges(
   added: readonly NodeTurnResourceContext[],
 ): string {
-  const resources = escapeContext(JSON.stringify(
-    added.map(resource => ({ id: resource.id, name: resource.name })),
-    null,
-    2,
-  ));
-  return [
-    "<resource-changes>",
-    "Navo Turn-start data, not a human request: these Resources became available to this Node since your previous Turn and are listed in available-resources. Use fetch_resource with their id when their content is relevant.",
-    resources,
-    "</resource-changes>",
-  ].join("\n");
+  return formatSystemReminder(
+    "these Resources became available to this Node since your previous Turn and are listed in available-resources. Use fetch_resource with their id when their content is relevant.",
+    added.map(resource => ({ id: String(resource.id), name: resource.name })),
+  );
 }
 
 function escapeContext(value: string): string {

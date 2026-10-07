@@ -8,8 +8,9 @@ import {
   createMessageId,
   createSessionId,
 } from "../brand/ids.js";
-import type { NodeId, ResourceId, SessionId } from "../brand/ids.js";
+import type { NodeId, SessionId } from "../brand/ids.js";
 import { requireNodeProjectBinding } from "../project/binding.js";
+import { lastObservedFacts } from "../session/reminder.js";
 import { FILE_TOOL_SCHEMAS } from "../tools/builtins/file/types.js";
 import { NodeTurnContextBuilder } from "./context.js";
 import { NodeError } from "./errors.js";
@@ -45,7 +46,7 @@ interface PendingTurn {
 }
 
 export class NodeSessionService extends Service {
-  static inject = ["nodes", "projects", "agentRuntime", "tools"];
+  static inject = ["nodes", "projects", "agentRuntime", "tools", "sessions"];
 
   private readonly model: TurnModelConfig;
 
@@ -54,8 +55,6 @@ export class NodeSessionService extends Service {
   private readonly active = new Map<SessionId, PendingTurn>();
 
   private readonly controllers = new Set<AbortController>();
-
-  private readonly seenResources = new Map<SessionId, ReadonlySet<ResourceId>>();
 
   private contextBuilder: NodeTurnContextBuilder | undefined;
 
@@ -160,12 +159,8 @@ export class NodeSessionService extends Service {
           "Node Turn context is unavailable for the current Project.",
         );
       }
-      const context = builder.build(current);
-      const seen = this.seenResources.get(sessionId);
-      const added = seen === undefined
-        ? []
-        : context.resources.filter(resource => !seen.has(resource.id));
-      this.seenResources.set(sessionId, new Set(context.resources.map(resource => resource.id)));
+      const context = builder.build(current, lastObservedFacts(this.ctx.sessions, sessionId));
+      this.ctx.sessions.append({ type: "context-observed", sessionId, data: { facts: context.facts } });
       const profile = createNodeAgentProfile(context, {
         allowFileRead: this.ctx.tools.schemas().some(
           (tool) => tool.name === FILE_TOOL_SCHEMAS.read.name,
@@ -178,7 +173,9 @@ export class NodeSessionService extends Service {
           role: "user",
           content: [
             { type: "text", text },
-            ...(added.length === 0 ? [] : [{ type: "text" as const, text: formatResourceChanges(added) }]),
+            ...(context.addedResources.length === 0
+              ? []
+              : [{ type: "text" as const, text: formatResourceChanges(context.addedResources) }]),
           ],
         },
         model: this.model,
