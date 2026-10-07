@@ -250,24 +250,58 @@ Phase 9 明确不做：
 - 不让 Node 的 `result` 报告自动改变为人工确认后的终态；
 - 不在消息工具调用中递归同步启动 Main 或另一个 Node；
 - 不让 LLM 直接提交未经验证的 Roadmap 最终状态；
-- 不在 Phase 9 完整实现 Evidence、Verifier、评分器或“任务真的完成”的最终判定；
+- 不在 Phase 9 实现 Evidence、Verifier、评分器或“任务真的完成”的最终判定；验证闭环已排入 F10，见第 8 节；
 - F9.6 不加入 RAG、向量检索、动态 Skill / Tool / Resource reload、Claim-Evidence Graph 或长期 Research Memory；
 - 不在 F9.9 之前改动 Host / RPC / 前端共享 Project 协议；
 - Phase 9 不为 Project / Node / Roadmap / Mailbox / Resource Registry 元数据加入数据库持久化；Project Workspace 从 F9.6b 起承载真实文件，本阶段所说的领域状态恢复仍只指给定历史后的内存重建，不是进程重启恢复；
 - F9.6 只借鉴显式 Message / Artifact 的 A2A 思想，不实现标准 A2A 的 Agent Card、网络发现或跨服务 Transport。
 
-## 8. 后续阶段
+## 8. Phase 10（F10）：可恢复、可验证的长期 Project
+
+**阶段目标：** 让 Project 在应用退出并重新启动后仍能继续推进，并让“节点是否真的完成”由独立的验证结论支撑：执行者不能自行宣布完成，验证不通过时 Main 能据此修改 Roadmap，形成 PRD 中“执行 -> 验证 -> 再规划”的闭环。Human Gate 不变：保存、恢复、验证结论和 Roadmap 变化都不会自动启动任何 Agent Turn。
+
+**进入条件：** F9.8 的真实验收收口（BUG-001 至 BUG-004 按 [Bug 跟踪表](bug-plan.md) 关闭或经用户明确处置）后开始 F10.1；F10.0 设计调研可以提前进行。F9.9 公共契约交接与 F10 相互独立；F10 若需要向桌面公开验证或恢复状态，仍先停止并按共享契约流程确认。
+
+**阶段验收场景：** Human 启动 Node 完成工作并发布产物；Human 启动验证，验证结论为不通过并给出理由与证据引用；Human 启动 Main，Main 读取该结论并修改 Roadmap；此时关闭并重新启动后端，Project、Roadmap、会话、消息、资源与验证结论均可读取，退出时进行中的 Turn 处于明确的已中断状态；Human 继续执行与验证，结论通过后才能确认节点完成。
+
+```text
+Human start Node ---> Node works / publishes Resource
+                              |
+Human start Verify ---> Verifier (read-only) ---> Verdict (node version + pass|fail + reason + evidence)
+                                                    |
+                    +-------------------------------+---------------------------+
+                    | pass                                                      | fail
+                    v                                                           v
+     Human confirm completion                       Human start Main ---> read Verdict ---> modify Roadmap
+     (requires pass on current version)                                                  |
+                                                                                         v
+                                                                       Human starts related Node again
+
+[ all facts above survive restart; interrupted Turns are never resumed automatically ]
+```
+
+| 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
+|---|---|---|---|---|
+| ⬜ | F10.0 持久化与验证设计收口 | 后端设计记录 | 确定持久保存的范围、写入成功的含义、重启恢复与中断处理规则，以及验证结论的含义、失效条件、验证者权限和对完成确认的约束 | 设计记录经用户确认；参考 DeepSeek Harness 与既有存储调研，写明采用与不采用的机制；不修改生产代码 |
+| ⬜ | F10.1 Project 状态持久保存与重启恢复 | Project / Node / Roadmap / Mailbox / Resource 元数据 | 让 Project、节点、Roadmap 及其变更历史、Project 消息和资源登记在应用退出后仍然存在，重新启动后恢复为与退出前一致的状态 | 实际关闭并重新启动后端后读取到旧数据；只有保存成功的变更才对调用方表现为成功；不能用同进程内存或仅序列化测试替代 |
+| ⬜ | F10.2 会话与执行记录恢复 | Main / Node Session 与工具记录 | 让 Main 与 Node 的会话消息、工具调用与结果在重启后可以继续使用，后续 Turn 能接着原上下文工作 | 重启后同一 Session 可继续发起 Turn 且上下文完整；恢复过程不重新执行任何工具副作用 |
+| ⬜ | F10.3 中断处理 | Project 执行控制面 | 让应用退出时正在进行的 Main / Node Turn 在重启后处于明确、可解释的稳定状态，由用户决定是否继续 | 重启后无悬挂的执行中状态；中断记录可见；不会自动续跑或自动标记完成 |
+| ⬜ | F10.4 验证结论记录 | 验证领域 | 让系统能为某个节点的某个版本记录“通过 / 不通过”的验证结论、理由和所引用的资源证据，并可随 Project 一起保存与恢复 | 结论可追加、查询与按历史重建；节点版本变化后旧结论不再视为当前有效；结论本身不改变节点状态 |
+| ⬜ | F10.5 独立验证者 | 验证 Agent 角色 | 让用户可以启动一个独立的验证回合，由只读的验证者根据节点目标和可见资源检查工作成果并提交验证结论 | 验证者不能修改文件、资源或 Roadmap，不能给其他 Agent 发消息；只能为被指定的节点提交结论；验证回合同样受取消、失败释放和 Human Gate 约束 |
+| ⬜ | F10.6 验证门禁与失败重规划 | 完成确认 / Main 协调 | 让节点只有在当前版本获得通过结论后才能被确认完成；让 Main 能读取验证结论，并在不通过时修改 Roadmap 安排补救 | 无通过结论时完成确认被拒绝，跳过节点不受影响；Main 能看到不通过的理由与证据并通过既有 Roadmap 修改完成重规划；任何结论都不自动启动 Agent |
+| ⬜ | F10.7 F10 长程集成验收 | 后端集成测试与阶段记录 | 用一个包含验证失败、重规划、重启恢复和最终通过的完整长程场景证明 F10 能力共同工作 | 离线完整场景可重复通过；真实模型验收保留完整记录，失败现场可用于定位 |
+
+## 9. 后续阶段
 
 | Phase | 核心问题 | 目标产物 |
 |---|---|---|
-| Phase 10（F10） | 应用退出后如何保留并恢复项目与执行上下文？ | Project、Node、Roadmap、Session、Mailbox、Resource Registry 元数据和工具记录的数据库持久化、启动恢复与中断处理；Project Workspace 继续承载实际文件 |
-| 后续待排期 | 系统如何判断节点和项目真的完成？ | 保留 Evidence + Verification 目标，在 F10 持久化之后、Research 完整闭环验收之前安排 |
+| Phase 10（F10） | 应用退出后如何继续推进项目？系统如何判断节点真的完成？ | 见第 8 节：持久保存与重启恢复、中断处理、验证结论、独立验证者、验证门禁与失败重规划 |
 | Phase 11 | Research Workspace 如何使用通用 Core？ | Research Agent Profile、Claim / Evidence、RAG 与研究领域适配 |
 | Phase 12 | 系统如何与研究者长期共同演进？ | Research Memory、长期反馈与 Human-AI Co-evolution |
 
 Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Phase 9 同时恢复为独立产品主线。
 
-## 9. 当前下一步
+## 10. 当前下一步
 
 F9.5 已完成并收口：Main Agent 通过 `read_roadmap`、`read_node`、`write_roadmap`、`modify_roadmap` 建立完整规划闭环，Roadmap / Node version 与可信 Binding 继续作为确定性授权边界；统一实现记录见 [62：F9.5 Main Agent Planning](62-devlog-f9.5-main-agent-planning.md)。
 
@@ -277,9 +311,11 @@ F9.1 与 F9.2 已完成，记录见 [55：Project 与通用 Node 领域](55-devl
 
 F9.3 的图结构、required/optional、Node 五态、RoadmapStore、依赖 lock/unlock、历史重建与地图查询已经合并为统一记录 [59：F9.3 In-Memory Roadmap](59-devlog-f9.3-roadmap.md)。F9.4 已建立 Main / Node 的可信 Session Binding 与 Profile 边界；F9.5 已完成 Main Agent Roadmap 规划工具闭环。
 
+F10 规划已完成（2026-10-07）：按用户决定，Evidence / Verification 不作为 Phase 9 的追加 Step，而与持久化一起纳入 F10，暂不实施；规划与取舍见 [69：F10 持久化与验证规划](69-devlog-f10-plan.md)。当前优先事项仍是按 [Bug 跟踪表](bug-plan.md) 处理 BUG-001 至 BUG-004，使 F9.8 真实验收收口。
+
 Node 当前状态约定：新建 locked，解锁后 idle，实际执行时 working，回合结束回到 idle；人工可将 idle 确认为 completing，或将 locked/idle 确认为 skipped；两种终态均满足后续依赖。RoadmapStore 在同一批 Node 事件中追加 node-unlocked，手动 unlock 不能绕过必选祖先；没有路线的独立 Node 仍可使用 NodeStore 原有生命周期。Main 不新增 locked/idle/working 等持久状态机：Project 创建时固定拥有 Main Session，F9.7 只维护“当前是否存在 active Main Turn”的瞬时运行时事实。F9.6 / F9.7 统一遵守 Human Gate：Main / Node 即使具备执行条件，也必须由用户明确触发下一次 Turn。
 
-## 10. 后端维护记录：桌面工具可用性排查（2026-09-14）
+## 11. 后端维护记录：桌面工具可用性排查（2026-09-14）
 
 - 做了什么：按用户要求排查现有工具注册与桌面模型可见性，修复配置 Exa 后普通桌面回合仅能看到 `web_search` 的问题。修改 `src/host/config.ts`、`tests/host/turn.spec.ts`，新增 `tests/host/tools.spec.ts`。属于既有能力修复，不推进 Phase 9 Step。
 - 关键决策：普通桌面回合显式开放 `web_fetch`；配置 Exa 时增加 `web_search`；配置 `NAVO_FILE_CWD` 时增加 `read`、`shell`、`edit`、`write`。保留 Node 专属工具的作用域，不将整个注册表直接暴露给普通会话。复用现有注册与回合链路，不修改前端或 RPC 契约。
