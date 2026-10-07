@@ -4,7 +4,7 @@
 
 前端采用独立的 Electron + React + TypeScript 工程。工程骨架、产品信息架构、视觉基线、真实流式对话（F2）与 F3 助手内容和命令反馈链路均已完成：桌面可以启动后端 Agent、与真实模型多轮流式对话，并展示工具、思考和命令状态。
 
-F3.1–F3.9 已完成，F3.10 Markdown 消息展示与 F3.11 数学公式展示的代码、自动验收和人工桌面验收均已完成。学习地图、DAG、多会话等能力仍未预先固化。
+F3 与 F4 已全部完成并通过用户验收，F5.1 工作区布局与导航已通过验收。后端 F9.9 项目公共接口已于 2026-10-07 合入 master（交由 `backend-plan.md` 实施），当前前端步骤为 F5.2 真实项目入口；学习地图、多会话与历史恢复等能力仍未预先固化。
 
 ## 2. 开发方式
 
@@ -226,7 +226,7 @@ F3 阶段已全部收口：F3.10 Markdown 与 F3.11 数学公式的代码、测�
 
 F3.7 思考内容修正已交由 `backend-plan.md` 实施并完成：真实模型的思考文本已接入既有事件链路，默认启用 thinking。F3.8 已修正滚动条导致的消息列水平偏移；F3.9 让消息滚动区覆盖顶部栏以下的完整窗口高度，并将输入框作为底部覆盖层，移除其顶部外间距。两项布局修正均通过 Electron 几何断言和截图验收；见 [F3.7 开发记录](38-devlog-f3-7-reasoning.md)、[F3.8 开发记录](39-devlog-f3-8-message-alignment.md)与 [F3.9 开发记录](40-devlog-f3-9-scroll-layout.md)。
 
-**F3.1 公共事件契约已完成**：`agent.turn.v2` 与 `session.command.v1` 已冻结并通过校验测试，F2 入口继续兼容；详见 [F3.1 开发与交接记录](22-devlog-step-f3-1-public-events.md)。**F3.2 后端事件与 RPC 对齐已完成**，具体状态以 [backend-plan.md](backend-plan.md) 为准。**F3.3 桌面桥接与会话状态已完成**，详见 [F3.3 开发记录](33-devlog-f3-3-desktop-bridge-state.md)。**F3.4 助手内容展示已完成**，详见 [F3.4 开发记录](34-devlog-f3-4-assistant-content-display.md)。**F3.5 命令入口与通知展示已完成**，详见 [F3.5 开发记录](35-devlog-f3-5-command-notifications.md)。**F3.6 完整链路验收已完成**，详见 [F3.6 开发记录](36-devlog-f3-6-full-chain-acceptance.md)。F3 之后的前端阶段已由 F4 承接，F4 已完成用户验收，当前 F5.2 等待公共项目接口交接。
+**F3.1 公共事件契约已完成**：`agent.turn.v2` 与 `session.command.v1` 已冻结并通过校验测试，F2 入口继续兼容；详见 [F3.1 开发与交接记录](22-devlog-step-f3-1-public-events.md)。**F3.2 后端事件与 RPC 对齐已完成**，具体状态以 [backend-plan.md](backend-plan.md) 为准。**F3.3 桌面桥接与会话状态已完成**，详见 [F3.3 开发记录](33-devlog-f3-3-desktop-bridge-state.md)。**F3.4 助手内容展示已完成**，详见 [F3.4 开发记录](34-devlog-f3-4-assistant-content-display.md)。**F3.5 命令入口与通知展示已完成**，详见 [F3.5 开发记录](35-devlog-f3-5-command-notifications.md)。**F3.6 完整链路验收已完成**，详见 [F3.6 开发记录](36-devlog-f3-6-full-chain-acceptance.md)。F3 之后的前端阶段已由 F4 承接，F4 已完成用户验收；F5.2 依赖的公共项目接口已交付，可开始接入。
 
 ## 源码目录整理
 

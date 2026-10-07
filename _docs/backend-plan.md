@@ -191,7 +191,7 @@ GitHub CI
 Project
   |
   +--> Goal
-  +--> Roadmap Board <-------------------------------+
+  +--> Roadmap <-------------------------------------+
   |                                                  |
   +--> Main Profile + Project Binding + Session      |
   |                  |                               |
@@ -255,7 +255,7 @@ Phase 9 明确不做：
 - 不让 LLM 直接提交未经验证的 Roadmap 最终状态；
 - 不在 Phase 9 实现 Evidence、Verifier、评分器或“任务真的完成”的最终判定；验证闭环已排入 F10，见第 8 节；
 - F9.6 不加入 RAG、向量检索、动态 Skill / Tool / Resource reload、Claim-Evidence Graph 或长期 Research Memory；
-- 不在 F9.9 之前改动 Host / RPC / 前端共享 Project 协议；
+- F9.9 之前不改动 Host / RPC / 前端共享 Project 协议（历史约束，F9.9 已按共享契约流程交付 `project.*.v1`）；
 - Phase 9 不为 Project / Node / Roadmap / Mailbox / Resource Registry 元数据加入数据库持久化；Project Workspace 从 F9.6b 起承载真实文件，本阶段所说的领域状态恢复仍只指给定历史后的内存重建，不是进程重启恢复；
 - F9.6 只借鉴显式 Message / Artifact 的 A2A 思想，不实现标准 A2A 的 Agent Card、网络发现或跨服务 Transport。
 
@@ -306,17 +306,11 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Pha
 
 ## 10. 当前下一步
 
-F9.5 已完成并收口：Main Agent 通过 `read_roadmap`、`read_node`、`write_roadmap`、`modify_roadmap` 建立完整规划闭环，Roadmap / Node version 与可信 Binding 继续作为确定性授权边界；统一实现记录见 [62：F9.5 Main Agent Planning](62-devlog-f9.5-main-agent-planning.md)。
+Phase 9 已全部完成（2026-10-07）：F9.0–F9.9c 均为 ✅，最后由 [PR #35](https://github.com/likeWind221/Navo/pull/35)、[#36](https://github.com/likeWind221/Navo/pull/36)、[#37](https://github.com/likeWind221/Navo/pull/37) 交付项目公共契约（记录见 [73](73-devlog-f9.9a-project-query.md)、[74](74-devlog-f9.9b-human-control.md)、[75](75-devlog-f9.9c-project-follow.md)）。各 Step 的实现、验证与 PR 经过见第 6 节表格及 [文档索引](index.md) 中对应开发记录。
 
-F9.6 已正式收口：Project 直接绑定用户真实 Workspace，Navo 内部文件统一进入 `.navo/`；Resource 由稳定 ResourceId、Main/Node ownership、revision 与 `private | shared | public` ACL 管理；Node 通过 `send_to_main` 报告，Main 通过 `read_mailbox` 与 `set_resource_access` 完成协调；Node Turn 由 Context Builder 在 Human-start 时注入可见 Resource metadata，正文通过 `fetch_resource` 按需读取。任何消息、Resource 或依赖变化都不会自动启动 Node。统一实现与验收记录见 [63：F9.6 Project Workspace 与 Resource Handoff](63-devlog-f9.6-workspace-resource-handoff.md)。F9.7a 已建立薄的 Human-controlled `ProjectRuntime` Node start 入口，不新增状态机并阻止同 Node 双重 Human start；实现记录见 [64：F9.7a ProjectRuntime Core](64-devlog-f9.7a-project-runtime-core.md)。F9.7 的范围现已明确为 **Main + Node 的统一 Human Control**：Project 创建时 Main Session 已存在，但 Main Turn 不自动执行；Mailbox / Resource / Roadmap 等 Project 事实只改变可执行条件，不触发 Agent。F9.7b 已实现 Main Turn 启动/取消、Node 首次与后续 Turn/取消及 Human completion / skip；本机完整验证及 PR #28 GitHub CI 已通过，已在 F9.7c 整体验证通过后合入 master。记录见 [65：F9.7b 人工执行控制](65-devlog-f9.7b-human-control.md)。F9.7c 已完成异常恢复场景与释放缺陷修复，本机 456 项测试与 PR #29 CI 通过，F9.7 开发与验证完成；记录见 [66：F9.7c 异常恢复](66-devlog-f9.7c-runtime-recovery.md)。本次按用户要求等待 F9.7 整体通过后串行收口两个 PR。F9.8 离线完整场景、本机 457 项测试和 PR #30 CI 已通过；追加真实 Qwen 验收后发现续接未读取新资源与文件来源不可用，两次有效尝试均未全程通过，根因待定位。用户已明确授权先合并本阶段成果，BUG-001 至 BUG-004 转入 [Bug 跟踪表](bug-plan.md)；见 [67：F9.8 长程 Core 集成验收](67-devlog-f9.8-longterm-acceptance.md)。2026-10-07 [PR #33](https://github.com/likeWind221/Navo/pull/33) 合入后，BUG-001、003、004 关闭，真实 Qwen 续接 8/8、状态探针 10/10 通过，master（7d14acb）本机 79 文件、462 项测试通过；BUG-002 经用户处置保持未关闭、等待复现。用户据此确认 F9.8 收口为 ✅，记录见 [70：BUG-001 至 BUG-004 修复](70-bugfix-bug-001-004-longterm.md)。当前下一步为 F9.9 公共接口交接，开始前须先停下并与用户确认跨端契约。
+下一步为 F10.0 持久化与验证设计收口，规划与取舍见 [69：F10 持久化与验证规划](69-devlog-f10-plan.md)；前端 F5.2 可开始接入项目公共接口。Phase 9 的 Project / Roadmap / Mailbox / Resource 元数据仍只存在内存中，进程重启后不保留。
 
-F9.9 契约提案已经用户确认（2026-10-07）：按 F9.9a / F9.9b / F9.9c 依次进行，每个子 Step 独立分支与 PR，项目方法与既有 `agent.turn` 统一带 `.v1` 版本名。F9.9a 已在本机完成实现与完整验证，等待 Draft PR 审核与 CI；记录见 [73：F9.9a 项目查询与创建](73-devlog-f9.9a-project-query.md)。F9.9b 已在本机完成实现与完整验证，等待 Draft PR 审核与 CI；记录见 [74：F9.9b Human 操作入口](74-devlog-f9.9b-human-control.md)。F9.9c 同样已在本机完成实现与完整验证，记录见 [75：F9.9c 变化跟随](75-devlog-f9.9c-project-follow.md)。三个子 Step 分别对应 [PR #35](https://github.com/likeWind221/Navo/pull/35)、[#36](https://github.com/likeWind221/Navo/pull/36)、[#37](https://github.com/likeWind221/Navo/pull/37)。2026-10-07 经用户授权，三个 PR 依次 squash 合入 master（b6f23e0、14c1d09、bb7ae4b）；每次合并前 GitHub CI 均通过，rebase 后本机测试分别为 475 项与 478 项通过。F9.9 收口为 ✅。下一步为 F10.0 持久化与验证设计收口；前端 F5.2 可开始接入项目公共接口。
-
-F9.1 与 F9.2 已完成，记录见 [55：Project 与通用 Node 领域](55-devlog-project-node-domain.md)。整个 Phase 9 的 Project / Roadmap / Mailbox / Resource Registry 元数据继续保持内存状态；Project Workspace 从 F9.6b 开始作为实际文件承载层存在。F10 再统一实施项目状态与 Registry 元数据的数据库持久化、启动恢复和中断处理。调研与拆分方案见 [56：内存与持久化阶段划分](56-devlog-persistence-plan.md)。
-
-F9.3 的图结构、required/optional、Node 五态、RoadmapStore、依赖 lock/unlock、历史重建与地图查询已经合并为统一记录 [59：F9.3 In-Memory Roadmap](59-devlog-f9.3-roadmap.md)。F9.4 已建立 Main / Node 的可信 Session Binding 与 Profile 边界；F9.5 已完成 Main Agent Roadmap 规划工具闭环。
-
-F10 规划已完成（2026-10-07）：按用户决定，Evidence / Verification 不作为 Phase 9 的追加 Step，而与持久化一起纳入 F10，暂不实施；规划与取舍见 [69：F10 持久化与验证规划](69-devlog-f10-plan.md)。F9.8 已收口，F10 进入条件已满足（BUG-002 经用户明确处置）；F9.9 与 F10 相互独立。
+BUG-002 经用户决定保持未关闭、等待复现，不阻塞 F10，状态见 [Bug 跟踪表](bug-plan.md)。
 
 Node 当前状态约定：新建 locked，解锁后 idle，实际执行时 working，回合结束回到 idle；人工可将 idle 确认为 completing，或将 locked/idle 确认为 skipped；两种终态均满足后续依赖。RoadmapStore 在同一批 Node 事件中追加 node-unlocked，手动 unlock 不能绕过必选祖先；没有路线的独立 Node 仍可使用 NodeStore 原有生命周期。Main 不新增 locked/idle/working 等持久状态机：Project 创建时固定拥有 Main Session，F9.7 只维护“当前是否存在 active Main Turn”的瞬时运行时事实。F9.6 / F9.7 统一遵守 Human Gate：Main / Node 即使具备执行条件，也必须由用户明确触发下一次 Turn。
 

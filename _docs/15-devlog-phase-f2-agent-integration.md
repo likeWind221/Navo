@@ -7,7 +7,7 @@ F2 已完成：桌面默认入口通过 Renderer → Preload → Electron Main �
 本文合并 F2 规划、F2.1 和 F2.3–F2.7 开发记录，保留实现决策、问题与历史验收证据。F2.2 属于后端交付，原记录保留在 [Backend Kernel Host 与真实模型](17-devlog-step-f2-2-kernel-host.md)。合并文档编号接续 24 号；其他阶段文档保留现有编号。
 
 - 阶段状态与后续步骤以 [前端开发计划](frontend-plan.md) 为准。
-- 当前能力与安全边界见 [前端开发进度总览](20-frontend-progress.md)。
+- 当前能力与后续边界见 [前端开发计划](frontend-plan.md)。
 - 下文测试数量和 QA 数据均为各步骤完成时的记录，本次文档合并未重新运行代码测试或桌面验收。
 
 ## F3 开发承接基线
