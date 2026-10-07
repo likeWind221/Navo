@@ -21,8 +21,8 @@ async function store(): Promise<ProjectStore> {
 describe("Project domain", () => {
   it("owns a fixed main session and rebuilds a lifecycle in a fresh store", async () => {
     const source = await store();
-    const first = source.create({ goal: "Investigate reproducible agent execution" });
-    const second = source.create({ goal: "Separate project" });
+    const first = source.create({ name: "Project", goal: "Investigate reproducible agent execution" });
+    const second = source.create({ name: "Project", goal: "Separate project" });
     expect(first).toMatchObject({ status: "active", revision: 1 });
     expect(first.id).not.toBe(second.id);
     expect(first.mainSessionId).not.toBe(second.mainSessionId);
@@ -43,8 +43,8 @@ describe("Project domain", () => {
 
   it("rejects invalid commands without committing or changing prior snapshots", async () => {
     const projects = await store();
-    expect(() => projects.create({ goal: "  " })).toThrow("goal must be non-empty");
-    const created = projects.create({ goal: "Valid goal" });
+    expect(() => projects.create({ name: "Project", goal: "  " })).toThrow("goal must be non-empty");
+    const created = projects.create({ name: "Project", goal: "Valid goal" });
     const before = projects.getEvents(created.id);
     expect(() => projects.reopen(created.id, "Already active")).toThrow("current Project state");
     expect(() => projects.archive(created.id, " ")).toThrow("lifecycle reason");
@@ -59,7 +59,7 @@ describe("Project domain", () => {
 
   it("restores atomically and reserves a main session even for archived projects", async () => {
     const projects = await store();
-    const first = projects.create({ goal: "First" });
+    const first = projects.create({ name: "Project", goal: "First" });
     projects.archive(first.id, "Archive");
     const other = createProjectId("other");
     const duplicate = projects.getEvents(first.id).map(event => ({ ...event, projectId: other }));
@@ -74,7 +74,7 @@ describe("Project domain", () => {
 
   it("detaches imported history and freezes stored facts", async () => {
     const source = await store();
-    const created = source.create({ goal: "Original goal" });
+    const created = source.create({ name: "Project", goal: "Original goal" });
     const imported = JSON.parse(JSON.stringify(source.getEvents(created.id)));
     const target = await store();
     const snapshot = target.restore(created.id, imported);
@@ -89,7 +89,7 @@ describe("Project domain", () => {
   it("is mounted in the app and keeps project state separate from conversation history", async () => {
     const ctx = await createApp({ node: { session: { model: { provider: "mock", model: "test" } } } });
     contexts.push(ctx);
-    const project = ctx.projects.create({ goal: "Long-running goal" });
+    const project = ctx.projects.create({ name: "Project", goal: "Long-running goal" });
     expect(ctx.sessions.getEvents(project.mainSessionId)).toEqual([]);
     ctx.sessions.append({
       type: "user-message",
@@ -100,5 +100,22 @@ describe("Project domain", () => {
     });
     expect(ctx.projects.get(project.id)).toEqual(project);
     expect(ctx.sessions.deriveMessages(project.mainSessionId)).toHaveLength(1);
+  });
+  it("keeps a name and creation time, lists Projects and discards only fresh ones", async () => {
+    const projects = await store();
+    expect(() => projects.create({ name: " ", goal: "Goal" })).toThrow("name must be non-empty");
+    const first = projects.create({ name: "Paper", goal: "Survey" });
+    const second = projects.create({ name: "Code", goal: "Build" });
+    expect(first).toMatchObject({ name: "Paper", goal: "Survey" });
+    expect(first.createdAt).toBe(projects.getEvents(first.id)[0]?.timestamp);
+    expect(projects.list()).toEqual([first, second]);
+
+    projects.discard(second.id);
+    expect(projects.get(second.id)).toBeUndefined();
+    expect(projects.getByMainSession(second.mainSessionId)).toBeUndefined();
+    projects.archive(first.id, "Paused");
+    expect(() => projects.discard(first.id)).toThrow("newly created");
+    expect(() => projects.discard(second.id))
+      .toThrow(expect.objectContaining({ code: "project-not-found" }));
   });
 });

@@ -20,13 +20,28 @@ export class ProjectStore extends Service {
     const event: ProjectEvent = {
       ...this.header(projectId, 1),
       type: "project-created",
-      data: { goal: input.goal, mainSessionId: createSessionId(randomUUID()) },
+      data: { name: input.name, goal: input.goal, mainSessionId: createSessionId(randomUUID()) },
     };
     return this.restore(projectId, [event]);
   }
 
   get(projectId: ProjectId): ProjectSnapshot | undefined {
     return projectProject(projectId, this.getEvents(projectId));
+  }
+
+  list(): readonly ProjectSnapshot[] {
+    return Object.freeze([...this.histories.keys()].map(projectId => this.get(projectId)!));
+  }
+
+  discard(projectId: ProjectId): void {
+    const project = this.get(projectId);
+    if (project === undefined) {
+      throw new ProjectError("project-not-found", "Project was not found.");
+    }
+    if (project.revision !== 1) {
+      throw new ProjectError("invalid-event-stream", "Only a newly created Project can be discarded.");
+    }
+    this.histories.delete(projectId);
   }
 
   getByMainSession(sessionId: SessionId): ProjectSnapshot | undefined {
@@ -62,7 +77,7 @@ export class ProjectStore extends Service {
         timestamp: event.timestamp,
         type: event.type,
         data: Object.freeze(event.type === "project-created"
-          ? { goal: event.data.goal, mainSessionId: event.data.mainSessionId }
+          ? { name: event.data.name, goal: event.data.goal, mainSessionId: event.data.mainSessionId }
           : { reason: event.data.reason }),
       }) as ProjectEvent;
     });
@@ -110,6 +125,7 @@ export class ProjectStore extends Service {
 }
 
 export interface CreateProjectInput {
+  readonly name: string;
   readonly goal: string;
 }
 

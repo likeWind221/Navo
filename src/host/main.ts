@@ -5,6 +5,7 @@ import { createFileEnvironment } from "../tools/builtins/file/path.js";
 import { ExaSearchAdapter } from "../tools/builtins/search/adapters/exa.js";
 import type { ToolsPluginConfig } from "../tools/plugin.js";
 import { createSessionCommandHandler } from "./command.js";
+import { registerProjectMethods } from "./project.js";
 import { resolveKernelHostConfig } from "./config.js";
 import { StdioRpcServerTransport } from "./stdio.js";
 import { createAgentTurnHandler } from "./turn.js";
@@ -38,6 +39,7 @@ export async function runKernelHost(): Promise<void> {
   router.register(agentTurnMethod, createAgentTurnHandler(ctx, config.agent));
   router.register(agentTurnV2Method, createAgentTurnV2Handler(ctx, config.agent));
   router.register(sessionCommandMethod, createSessionCommandHandler(ctx));
+  registerProjectMethods(router, ctx);
   const server = new StreamRpcServer(transport, router);
   const stop = (): void => { void server.dispose(); };
   process.once("SIGINT", stop);

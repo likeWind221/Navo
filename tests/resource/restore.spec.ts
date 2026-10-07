@@ -67,7 +67,7 @@ describe("Resource history replay v3", () => {
   it("replays Main and Node ownership, updates, access and delete", async () => {
     const source = await domain();
     const root = await fixture();
-    const project = source.projects.create({ goal: "Replay" });
+    const project = source.projects.create({ name: "Project", goal: "Replay" });
     await source.projectWorkspaces.create(project.id, root);
     const nodeA = source.nodes.create({ projectId: project.id, objective: objective("A") });
     const nodeB = source.nodes.create({ projectId: project.id, objective: objective("B") });
@@ -131,7 +131,7 @@ describe("Resource history replay v3", () => {
   it("rejects v2 history and invalid owner atomically", async () => {
     const source = await domain();
     const root = await fixture();
-    const project = source.projects.create({ goal: "Strict replay" });
+    const project = source.projects.create({ name: "Project", goal: "Strict replay" });
     await source.projectWorkspaces.create(project.id, root);
     await writeFile(join(root, "main.md"), "main\n", "utf8");
     await source.resources.publish({
@@ -165,8 +165,8 @@ describe("Resource history replay v3", () => {
     const source = await domain();
     const rootA = await fixture();
     const rootB = await fixture();
-    const projectA = source.projects.create({ goal: "A" });
-    const projectB = source.projects.create({ goal: "B" });
+    const projectA = source.projects.create({ name: "Project", goal: "A" });
+    const projectB = source.projects.create({ name: "Project", goal: "B" });
     await source.projectWorkspaces.create(projectA.id, rootA);
     await source.projectWorkspaces.create(projectB.id, rootB);
     await writeFile(join(rootA, "a.md"), "a\n", "utf8");

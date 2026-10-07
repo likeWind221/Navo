@@ -15,7 +15,7 @@ async function kit() {
   contexts.push(ctx);
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
-  return { ctx, projectId: ctx.projects.create({ goal: "Research" }).id };
+  return { ctx, projectId: ctx.projects.create({ name: "Project", goal: "Research" }).id };
 }
 
 describe("control nodes", () => {

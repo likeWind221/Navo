@@ -64,7 +64,7 @@ const initialProposal = {
 describe("write_roadmap", () => {
   it("creates the initial Roadmap and its Nodes atomically with Navo-generated identities", async () => {
     const ctx = await createContext();
-    const project = ctx.projects.create({ goal: "Ship a backend" });
+    const project = ctx.projects.create({ name: "Project", goal: "Ship a backend" });
 
     const result = await ctx.tools.execute(
       toolCall("write-roadmap", WRITE_ROADMAP_TOOL_NAME, initialProposal),
@@ -118,7 +118,7 @@ describe("write_roadmap", () => {
 
   it("rejects cyclic dependencies without leaving orphan Nodes or a partial Roadmap", async () => {
     const ctx = await createContext();
-    const project = ctx.projects.create({ goal: "Protected plan" });
+    const project = ctx.projects.create({ name: "Project", goal: "Protected plan" });
 
     const result = await ctx.tools.execute(
       toolCall("cyclic-roadmap", WRITE_ROADMAP_TOOL_NAME, {
@@ -146,7 +146,7 @@ describe("write_roadmap", () => {
 
   it("does not replace an existing Roadmap", async () => {
     const ctx = await createContext();
-    const project = ctx.projects.create({ goal: "Stable plan" });
+    const project = ctx.projects.create({ name: "Project", goal: "Stable plan" });
 
     const first = await ctx.tools.execute(
       toolCall("first-roadmap", WRITE_ROADMAP_TOOL_NAME, initialProposal),
@@ -177,7 +177,7 @@ describe("write_roadmap", () => {
 
   it("rejects a Node Session even if write_roadmap is dispatched directly", async () => {
     const ctx = await createContext();
-    const project = ctx.projects.create({ goal: "Protected Project" });
+    const project = ctx.projects.create({ name: "Project", goal: "Protected Project" });
     const node = ctx.nodes.create({
       projectId: project.id,
       objective: {

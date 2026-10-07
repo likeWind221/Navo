@@ -7,7 +7,7 @@ const id = createProjectId("project");
 const created = {
   version: 1, id: "event-1", projectId: id, revision: 1,
   timestamp: "2026-09-14T00:00:00.000Z", type: "project-created",
-  data: { goal: "Goal", mainSessionId: "main-session" },
+  data: { name: "Project", goal: "Goal", mainSessionId: "main-session" },
 };
 const archived = {
   ...created, id: "event-2", revision: 2, type: "project-archived", data: { reason: "Archive" },
@@ -30,8 +30,8 @@ describe("Project history validation", () => {
     [{ ...created, timestamp: "not-a-date" }],
     [{ ...created, type: "unknown" }],
     [{ ...created, data: null }],
-    [{ ...created, data: { goal: " ", mainSessionId: "main" } }],
-    [{ ...created, data: { goal: "Goal", mainSessionId: 1 } }],
+    [{ ...created, data: { name: "Project", goal: " ", mainSessionId: "main" } }],
+    [{ ...created, data: { name: "Project", goal: "Goal", mainSessionId: 1 } }],
     [{ ...archived, revision: 1 }],
     [created, { ...created, id: "event-2", revision: 2 }],
     [created, { ...archived, id: created.id }],

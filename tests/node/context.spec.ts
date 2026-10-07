@@ -36,7 +36,7 @@ async function fixture() {
 
   const root = await mkdtemp(join(tmpdir(), "navo-node-context-"));
   roots.push(root);
-  const project = ctx.projects.create({ goal: "Synthesize evidence" });
+  const project = ctx.projects.create({ name: "Project", goal: "Synthesize evidence" });
   await ctx.projectWorkspaces.create(project.id, root);
   const nodeA = ctx.nodes.create({
     projectId: project.id,

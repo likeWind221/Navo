@@ -229,7 +229,7 @@ describe("Main Resource handoff capability", () => {
       purpose: "checkpoint",
       title: "review",
     });
-    const otherProject = app.projects.create({ goal: "Other Project" });
+    const otherProject = app.projects.create({ name: "Project", goal: "Other Project" });
     const otherNode = app.nodes.create({
       projectId: otherProject.id,
       objective: {

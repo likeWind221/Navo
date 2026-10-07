@@ -24,7 +24,7 @@ describe("Project Agent application wiring", () => {
       modelResponse([{ type: "text", text: "node done" }]),
     ]);
     app.llm.registerAdapter("mock", adapter);
-    const project = app.projects.create({ goal: "Ship the Project" });
+    const project = app.projects.create({ name: "Project", goal: "Ship the Project" });
     const created = app.nodes.create({
       projectId: project.id,
       objective: {

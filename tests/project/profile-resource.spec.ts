@@ -13,10 +13,12 @@ describe("Main Agent Resource profile", () => {
   it("exposes owner Resource CRUD but not Node-to-Main messaging", () => {
     const profile = createMainAgentProfile({
       id: createProjectId("project"),
+      name: "Project",
       goal: "Coordinate the Project",
       mainSessionId: createSessionId("main"),
       status: "active",
       revision: 1,
+      createdAt: "2026-10-07T00:00:00.000Z",
     });
 
     expect(profile.toolNames).toEqual(expect.arrayContaining([

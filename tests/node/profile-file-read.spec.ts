@@ -22,7 +22,7 @@ describe("NodeAgent file capability", () => {
     ctx = new Context();
     await ctx.plugin(ProjectStore);
     await ctx.plugin(NodeStore);
-    const project = ctx.projects.create({ goal: "Research" });
+    const project = ctx.projects.create({ name: "Project", goal: "Research" });
     const node = ctx.nodes.create({
       projectId: project.id,
       objective: {

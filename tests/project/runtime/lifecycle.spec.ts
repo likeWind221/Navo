@@ -8,7 +8,7 @@ const done = () => modelResponse([{ type: "text", text: "done" }]);
 describe("ProjectRuntime Human lifecycle", () => {
   it("keeps Main dormant until Human start and reuses its Session across Turns", async () => {
     const { ctx, adapter } = await createKit([done(), done()]);
-    const project = ctx.projects.create({ goal: "Main lifecycle" });
+    const project = ctx.projects.create({ name: "Project", goal: "Main lifecycle" });
     await Promise.resolve();
     expect(adapter.requests).toHaveLength(0);
     expect(ctx.projectRuntime.canStartMain(project.id)).toBe(true);
@@ -25,7 +25,7 @@ describe("ProjectRuntime Human lifecycle", () => {
 
   it("rejects duplicate Main Turns through cancellation settlement and allows another Human Turn", async () => {
     const { ctx, adapter } = await createKit([{ kind: "hang" }, done()]);
-    const project = ctx.projects.create({ goal: "No queue" });
+    const project = ctx.projects.create({ name: "Project", goal: "No queue" });
     const input = { projectId: project.id, text: "Run" };
     const pending = ctx.projectRuntime.startMain(input);
     expect(() => ctx.projectRuntime.startMain(input)).toThrow(expect.objectContaining({ code: "turn-active" }));
@@ -41,7 +41,7 @@ describe("ProjectRuntime Human lifecycle", () => {
 
   it("distinguishes first Node start from continuation without implicit FIFO", async () => {
     const { ctx, adapter } = await createKit([done(), { kind: "hang" }, done()]);
-    const project = ctx.projects.create({ goal: "Continue" });
+    const project = ctx.projects.create({ name: "Project", goal: "Continue" });
     const node = createWorkNode(ctx, project.id, "Work");
     addRoadmap(ctx, project.id, [node.node.id]);
     const input = { projectId: project.id, nodeId: node.node.id, text: "First" };
@@ -63,8 +63,8 @@ describe("ProjectRuntime Human lifecycle", () => {
 
   it("cancels only the selected active Agent while Main and different Nodes run concurrently", async () => {
     const { ctx, adapter } = await createKit([{ kind: "hang" }, { kind: "hang" }, { kind: "hang" }]);
-    const project = ctx.projects.create({ goal: "Independent cancellation" });
-    const other = ctx.projects.create({ goal: "Other" });
+    const project = ctx.projects.create({ name: "Project", goal: "Independent cancellation" });
+    const other = ctx.projects.create({ name: "Project", goal: "Other" });
     const a = createWorkNode(ctx, project.id, "A").node.id;
     const b = createWorkNode(ctx, project.id, "B").node.id;
     addRoadmap(ctx, project.id, [a, b]);
@@ -87,7 +87,7 @@ describe("ProjectRuntime Human lifecycle", () => {
 
   it("supports cancellation before Node dispatch and releases synchronous validation failures", async () => {
     const { ctx, adapter } = await createKit([]);
-    const project = ctx.projects.create({ goal: "Early cancellation" });
+    const project = ctx.projects.create({ name: "Project", goal: "Early cancellation" });
     const nodeId = createWorkNode(ctx, project.id, "Work").node.id;
     addRoadmap(ctx, project.id, [nodeId]);
     const input = { projectId: project.id, nodeId, text: "" };
@@ -106,7 +106,7 @@ describe("ProjectRuntime Human lifecycle", () => {
 
   it("forwards caller cancellation and blocks new Main Turns on archived or missing Projects", async () => {
     const { ctx, adapter } = await createKit([{ kind: "hang" }]);
-    const project = ctx.projects.create({ goal: "Caller cancellation" });
+    const project = ctx.projects.create({ name: "Project", goal: "Caller cancellation" });
     const controller = new AbortController();
     const pending = ctx.projectRuntime.startMain({ projectId: project.id, text: "Run", signal: controller.signal });
     await flushUntil(() => adapter.requests.length === 1);

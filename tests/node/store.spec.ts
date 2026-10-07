@@ -14,7 +14,7 @@ async function kit() {
   contexts.push(ctx);
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
-  const project = ctx.projects.create({ goal: "Research" });
+  const project = ctx.projects.create({ name: "Project", goal: "Research" });
   const objective = { title: "Sources", description: "Inspect sources", acceptanceCriteria: ["Cite primary sources"] };
   return { ctx, project, objective };
 }

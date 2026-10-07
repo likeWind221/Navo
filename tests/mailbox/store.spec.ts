@@ -30,7 +30,7 @@ async function domain(): Promise<Context> {
 describe("Project Mailbox domain", () => {
   it("records only Node-to-Main and Main-to-Node messages in Project order", async () => {
     const ctx = await domain();
-    const project = ctx.projects.create({ goal: "Coordinate a research project" });
+    const project = ctx.projects.create({ name: "Project", goal: "Coordinate a research project" });
     const node = ctx.nodes.create({ projectId: project.id, objective: objective("survey A2A") });
 
     const report = ctx.mailbox.postFromNode({
@@ -63,8 +63,8 @@ describe("Project Mailbox domain", () => {
 
   it("rejects cross-Project Nodes, control Nodes, archived Projects, and empty bodies", async () => {
     const ctx = await domain();
-    const first = ctx.projects.create({ goal: "First" });
-    const second = ctx.projects.create({ goal: "Second" });
+    const first = ctx.projects.create({ name: "Project", goal: "First" });
+    const second = ctx.projects.create({ name: "Project", goal: "Second" });
     const otherNode = ctx.nodes.create({ projectId: second.id, objective: objective("other work") });
     const control = ctx.nodes.create({
       projectId: first.id,
@@ -100,7 +100,7 @@ describe("Project Mailbox domain", () => {
 
   it("restores a detached immutable history and continues its sequence", async () => {
     const source = await domain();
-    const project = source.projects.create({ goal: "Replay mailbox" });
+    const project = source.projects.create({ name: "Project", goal: "Replay mailbox" });
     const node = source.nodes.create({ projectId: project.id, objective: objective("collect evidence") });
     source.mailbox.postFromNode({ projectId: project.id, nodeId: node.node.id, body: "Evidence collected" });
     source.mailbox.postFromMain({ projectId: project.id, nodeId: node.node.id, body: "Preserve references" });
@@ -131,7 +131,7 @@ describe("Project Mailbox domain", () => {
 
   it("rejects invalid replay routes and malformed histories atomically", async () => {
     const source = await domain();
-    const project = source.projects.create({ goal: "Validate replay" });
+    const project = source.projects.create({ name: "Project", goal: "Validate replay" });
     const first = source.nodes.create({ projectId: project.id, objective: objective("first") });
     const second = source.nodes.create({ projectId: project.id, objective: objective("second") });
     const message = source.mailbox.postFromNode({
@@ -164,7 +164,7 @@ describe("Project Mailbox domain", () => {
 
   it("is mounted in NavoApp without requiring AgentRuntime to post messages", async () => {
     const bare = await domain();
-    const bareProject = bare.projects.create({ goal: "No runtime dependency" });
+    const bareProject = bare.projects.create({ name: "Project", goal: "No runtime dependency" });
     const bareNode = bare.nodes.create({ projectId: bareProject.id, objective: objective("local") });
     expect(bare.mailbox.postFromNode({
       projectId: bareProject.id,
@@ -174,7 +174,7 @@ describe("Project Mailbox domain", () => {
 
     const app = await createApp({ node: { session: { model: { provider: "mock", model: "test" } } } });
     contexts.push(app);
-    const project = app.projects.create({ goal: "Mounted mailbox" });
+    const project = app.projects.create({ name: "Project", goal: "Mounted mailbox" });
     const node = app.nodes.create({ projectId: project.id, objective: objective("app work") });
     expect(app.mailbox.postFromMain({
       projectId: project.id,

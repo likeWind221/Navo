@@ -32,7 +32,7 @@ async function createContext(): Promise<Context> {
 describe("read_roadmap", () => {
   it("returns empty as normal Project state when no roadmap exists", async () => {
     const ctx = await createContext();
-    const project = ctx.projects.create({ goal: "Plan a Project" });
+    const project = ctx.projects.create({ name: "Project", goal: "Plan a Project" });
 
     const result = await ctx.tools.execute(
       toolCall("empty-roadmap", READ_ROADMAP_TOOL_NAME, {}),
@@ -50,7 +50,7 @@ describe("read_roadmap", () => {
 
   it("returns a concise topological roadmap view without private Node state", async () => {
     const ctx = await createContext();
-    const project = ctx.projects.create({ goal: "Ship a backend" });
+    const project = ctx.projects.create({ name: "Project", goal: "Ship a backend" });
     const research = ctx.nodes.create({
       projectId: project.id,
       objective: {
@@ -120,7 +120,7 @@ describe("read_roadmap", () => {
 
   it("rejects a Node Session even if the tool is dispatched directly", async () => {
     const ctx = await createContext();
-    const project = ctx.projects.create({ goal: "Protected Project" });
+    const project = ctx.projects.create({ name: "Project", goal: "Protected Project" });
     const node = ctx.nodes.create({
       projectId: project.id,
       objective: {

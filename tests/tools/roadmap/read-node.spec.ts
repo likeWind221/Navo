@@ -32,7 +32,7 @@ async function createContext(): Promise<Context> {
 describe("read_node", () => {
   it("returns the current work Node definition and revision without private execution state", async () => {
     const ctx = await createContext();
-    const project = ctx.projects.create({ goal: "Ship a backend" });
+    const project = ctx.projects.create({ name: "Project", goal: "Ship a backend" });
     const created = ctx.nodes.create({
       projectId: project.id,
       requirement: "optional",
@@ -78,7 +78,7 @@ describe("read_node", () => {
 
   it("projects control Nodes without inventing work fields", async () => {
     const ctx = await createContext();
-    const project = ctx.projects.create({ goal: "Run checkpoints" });
+    const project = ctx.projects.create({ name: "Project", goal: "Run checkpoints" });
     const node = ctx.nodes.create({
       projectId: project.id,
       kind: "control",
@@ -106,8 +106,8 @@ describe("read_node", () => {
 
   it("does not reveal a Node owned by another Project", async () => {
     const ctx = await createContext();
-    const projectA = ctx.projects.create({ goal: "Project A" });
-    const projectB = ctx.projects.create({ goal: "Project B" });
+    const projectA = ctx.projects.create({ name: "Project", goal: "Project A" });
+    const projectB = ctx.projects.create({ name: "Project", goal: "Project B" });
     const foreignNode = ctx.nodes.create({
       projectId: projectB.id,
       objective: {
@@ -131,7 +131,7 @@ describe("read_node", () => {
 
   it("rejects a Node Session even if the tool is dispatched directly", async () => {
     const ctx = await createContext();
-    const project = ctx.projects.create({ goal: "Protected Project" });
+    const project = ctx.projects.create({ name: "Project", goal: "Protected Project" });
     const node = ctx.nodes.create({
       projectId: project.id,
       objective: {

@@ -39,7 +39,7 @@ function toolReady() {
 
 describe("F3 turn stream contract", () => {
   it("retains the F2 method and rejects new events on it", () => {
-    expect(agentTurnMethod.name).toBe("agent.turn");
+    expect(agentTurnMethod.name).toBe("agent.turn.v1");
     expect(agentTurnV2Method.name).toBe("agent.turn.v2");
     expect(() => agentTurnMethod.parseOutput({ ...turn, type: "turn-started" })).toThrow();
   });

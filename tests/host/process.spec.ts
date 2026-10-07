@@ -1,10 +1,15 @@
 import { spawn } from "node:child_process";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import {
   agentTurnV2Method,
   encodeNdjson,
   NdjsonDecoder,
   parseRpcServerFrame,
+  projectCreateMethod,
+  projectGetMethod,
   sessionCommandMethod,
   StreamRpcClient,
 } from "../../rpc/index.js";
@@ -38,7 +43,7 @@ describe("Kernel Host process lifecycle", () => {
       version: 1,
       type: "open",
       id: "rpc-crash",
-      method: "agent.turn",
+      method: "agent.turn.v1",
       params: { sessionId: "session", requestId: "request", text: "hello" },
     })}\n`);
 
@@ -100,6 +105,25 @@ describe("Kernel Host process lifecycle", () => {
       await client.dispose();
     }
     await expect(exitOf(child)).resolves.toEqual({ code: 0, signal: null });
+  });
+
+  it("creates and reads a Project through the real stdio boundary", async () => {
+    const root = await mkdtemp(join(tmpdir(), "navo-process-project-"));
+    const child = startHost("scripts/host/mock.ts");
+    const stderr = capture(child.stderr);
+    await waitUntil(() => stderr.value.includes("[mock-kernel-host] ready"));
+    const client = new StreamRpcClient(new ChildRpcTransport(child));
+    try {
+      const [created] = await collect(client.stream(projectCreateMethod, {
+        name: "Process project", goal: "Cross the stdio boundary", workspaceRoot: root,
+      }));
+      const [detail] = await collect(client.stream(projectGetMethod, { projectId: created!.projectId }));
+      expect(detail).toMatchObject({ project: { name: "Process project" }, roadmap: null });
+    } finally {
+      await client.dispose();
+      await exitOf(child);
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it("forwards a model failure as one terminal v2 event", async () => {

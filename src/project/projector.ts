@@ -34,10 +34,12 @@ export function projectProject(
         if (snapshot !== undefined) invalid("Project was already created.");
         snapshot = {
           id: createProjectId(projectId),
+          name: text(data.name, "name"),
           goal: text(data.goal, "goal"),
           mainSessionId: createSessionId(text(data.mainSessionId, "main session id")),
           status: "active",
           revision: 1,
+          createdAt: timestamp,
         };
         break;
       case "project-archived":

@@ -10,6 +10,12 @@ import type {
 import { ProjectError } from "./errors.js";
 import type { MainSessionMessageInput, MainSessionTurnResult } from "./session.js";
 
+export interface NodeActions {
+  readonly run: boolean;
+  readonly complete: boolean;
+  readonly skip: boolean;
+}
+
 export interface ProjectNodeTurnInput {
   readonly projectId: ProjectId;
   readonly nodeId: NodeId;
@@ -103,6 +109,26 @@ export class ProjectRuntime extends Service {
     this.requireStartableNode(input.projectId, input.nodeId);
     return this.runReserved(this.activeNodes, input.nodeId, input.signal,
       signal => this.ctx.nodeSessions.sendMessage({ nodeId: input.nodeId, text: input.text, signal }));
+  }
+
+  isMainActive(projectId: ProjectId): boolean {
+    return this.activeMains.has(projectId);
+  }
+
+  isNodeActive(nodeId: NodeId): boolean {
+    return this.activeNodes.has(nodeId);
+  }
+
+  nodeActions(projectId: ProjectId, nodeId: NodeId): NodeActions {
+    const node = this.ctx.nodes.get(nodeId);
+    const reviewable = !this.unavailable && !this.activeNodes.has(nodeId)
+      && this.ctx.projects.get(projectId)?.status === "active"
+      && node?.node.projectId === projectId;
+    return {
+      run: this.canStartNode(projectId, nodeId) || this.canContinueNode(projectId, nodeId),
+      complete: reviewable && node.status === "idle",
+      skip: reviewable && (node.status === "locked" || node.status === "idle"),
+    };
   }
 
   stopNode(projectId: ProjectId, nodeId: NodeId): boolean {

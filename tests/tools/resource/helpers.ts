@@ -38,7 +38,7 @@ export async function resourceToolFixture() {
     },
   });
   apps.push(app);
-  const project = app.projects.create({ goal: "Resource capabilities" });
+  const project = app.projects.create({ name: "Project", goal: "Resource capabilities" });
   const workspace = await app.projectWorkspaces.create(project.id, root);
   return { app, project, workspace, root };
 }

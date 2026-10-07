@@ -200,7 +200,7 @@ describe("web_search Runtime closed loop", () => {
       response({ type: "text", text: "Used the cited source." }, "stop"),
     ]);
     const node = ctx.nodes.create({
-      projectId: ctx.projects.create({ goal: "Research" }).id,
+      projectId: ctx.projects.create({ name: "Project", goal: "Research" }).id,
       objective: {
         title: "DAG planning",
         description: "Plan with dependencies",

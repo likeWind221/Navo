@@ -2,6 +2,7 @@ import type { EventId, ProjectId, SessionId } from "../brand/ids.js";
 
 export type ProjectEvent =
   | ProjectEventRecord<"project-created", {
+      readonly name: string;
       readonly goal: string;
       readonly mainSessionId: SessionId;
     }>

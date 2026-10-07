@@ -84,6 +84,8 @@ export class StreamRpcServer {
     } catch (error: unknown) {
       if (controller.signal.aborted) {
         await this.transport.send({ version: RPC_PROTOCOL_VERSION, type: "end", id });
+      } else if (error instanceof RpcError && error.code === "remote-error" && error.failure !== undefined) {
+        await this.sendError(id, error.failure);
       } else {
         await this.sendError(id, failure("stream-failed", "RPC stream handler failed"));
       }

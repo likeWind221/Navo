@@ -47,7 +47,7 @@ describe("Node Turn Resource context integration", () => {
     ]);
     app.llm.registerAdapter("mock", adapter);
 
-    const project = app.projects.create({ goal: "Use a handed-off Resource" });
+    const project = app.projects.create({ name: "Project", goal: "Use a handed-off Resource" });
     await app.projectWorkspaces.create(project.id, root);
     const node = app.nodes.create({
       projectId: project.id,

@@ -74,7 +74,7 @@ export async function createKit(
 }
 
 export function createActor(ctx: Context, kind: "main" | "node") {
-  const project = ctx.projects.create({ goal: `${kind} recovery` });
+  const project = ctx.projects.create({ name: "Project", goal: `${kind} recovery` });
   const nodeId = kind === "node" ? createWorkNode(ctx, project.id, "Work").node.id : undefined;
   if (nodeId !== undefined) addRoadmap(ctx, project.id, [nodeId]);
   const runtime = ctx.projectRuntime;
