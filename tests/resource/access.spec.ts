@@ -101,7 +101,7 @@ describe("Resource ownership, access and content boundary", () => {
     })).toThrow(expect.objectContaining({ code: "resource-not-owned" }));
   });
 
-  it("supports private, shared and project access for Main-owned Resources", async () => {
+  it("supports private, shared and public access for Main-owned Resources", async () => {
     const ctx = await domain();
     const root = await fixture();
     const project = ctx.projects.create({ goal: "Main assets" });
@@ -141,7 +141,7 @@ describe("Resource ownership, access and content boundary", () => {
       actor: { kind: "main" },
       resourceId: resource.id,
       expectedRevision: 2,
-      access: { kind: "project" },
+      access: { kind: "public" },
     });
     expect(ctx.resources.getVisible(project.id, resource.id, {
       kind: "node", nodeId: nodeB.node.id,

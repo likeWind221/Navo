@@ -206,8 +206,8 @@ function parseHistoryAccess(
     if (access.kind === "private" && Object.keys(access).length === 1) {
       return normalizeResourceAccess({ kind: "private" }, owner);
     }
-    if (access.kind === "project" && Object.keys(access).length === 1) {
-      return normalizeResourceAccess({ kind: "project" }, owner);
+    if (access.kind === "public" && Object.keys(access).length === 1) {
+      return normalizeResourceAccess({ kind: "public" }, owner);
     }
     if (
       access.kind === "shared"

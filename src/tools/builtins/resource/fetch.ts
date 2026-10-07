@@ -37,7 +37,7 @@ const schema: JsonObject = {
 export function createFetchResourceTool(ctx: Context): ToolDefinition {
   return {
     name: FETCH_RESOURCE_TOOL_NAME,
-    description: "Read the main text entry of a Resource visible to the current Main or Node Agent. Shared and Project-visible Resources are read-only unless the current Agent is the owner.",
+    description: "Read the main text entry of a Resource visible to the current Main or Node Agent. Shared and public Resources are read-only unless the current Agent is the owner.",
     parameters: schema,
     parametersFor: sessionId => withVisibleResourceRefs(ctx, schema, sessionId),
     async execute(arguments_, execution) {

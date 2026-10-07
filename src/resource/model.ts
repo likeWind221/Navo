@@ -21,7 +21,7 @@ export type ResourcePrincipal =
 export type ResourceAccess =
   | { readonly kind: "private" }
   | { readonly kind: "shared"; readonly nodeIds: readonly NodeId[] }
-  | { readonly kind: "project" };
+  | { readonly kind: "public" };
 
 export interface PublishResourceInput {
   readonly projectId: ProjectId;
