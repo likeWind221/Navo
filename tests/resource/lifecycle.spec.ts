@@ -50,7 +50,7 @@ async function domain(): Promise<Context> {
 
 async function projectFixture(ctx: Context) {
   const root = await fixture();
-  const project = ctx.projects.create({ goal: "Resource project" });
+  const project = ctx.projects.create({ name: "Project", goal: "Resource project" });
   const workspace = await ctx.projectWorkspaces.create(project.id, root);
   await mkdir(join(root, "sources"));
   return { project, workspace, root };
@@ -222,7 +222,7 @@ describe("Resource Service lifecycle", () => {
       node: { session: { model: { provider: "mock", model: "test" } } },
     });
     contexts.push(app);
-    const project = app.projects.create({ goal: "Mounted Resource Service" });
+    const project = app.projects.create({ name: "Project", goal: "Mounted Resource Service" });
     await app.projectWorkspaces.create(project.id, root);
 
     const resource = await app.resources.publish({

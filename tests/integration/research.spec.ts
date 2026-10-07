@@ -45,7 +45,7 @@ describe("generic Node research loop", () => {
       },
     });
     app.llm.registerAdapter("mock", adapter);
-    const project = app.projects.create({ goal: "Investigate sources" });
+    const project = app.projects.create({ name: "Project", goal: "Investigate sources" });
     const node = app.nodes.create({ projectId: project.id, objective: {
       title: "Inspect source", description: "Read primary material", acceptanceCriteria: ["Cite checked sources"],
     } });

@@ -23,7 +23,7 @@ export async function createScenario() {
   await writeFile(join(root, "validation.txt"), "VALIDATION_BODY: independent check confirms the observation.");
   const app = await createApp({ node: { session: { model: { provider: "mock", model: "longterm" } } } });
   apps.push(app);
-  const project = app.projects.create({ goal: "Deliver an evidence-backed recommendation" });
+  const project = app.projects.create({ name: "Project", goal: "Deliver an evidence-backed recommendation" });
   await app.projectWorkspaces.create(project.id, root);
   const script = scenario();
   const adapter = new MockLLMAdapter(script.entries);

@@ -17,9 +17,9 @@ describe("Stream RPC protocol", () => {
       version: RPC_PROTOCOL_VERSION,
       type: "open",
       id: "rpc-1",
-      method: "agent.turn",
+      method: "agent.turn.v1",
       params: { text: "hello" },
-    })).toMatchObject({ type: "open", id: "rpc-1", method: "agent.turn" });
+    })).toMatchObject({ type: "open", id: "rpc-1", method: "agent.turn.v1" });
 
     expect(parseRpcServerFrame({
       version: RPC_PROTOCOL_VERSION,

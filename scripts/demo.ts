@@ -31,7 +31,7 @@ export async function runDemo(print: (line: string) => void = console.log): Prom
     const script = demoScript();
     const adapter = new MockLLMAdapter(script.entries);
     app.llm.registerAdapter("mock", adapter);
-    const project = app.projects.create({ goal });
+    const project = app.projects.create({ name: "Project", goal });
     await app.projectWorkspaces.create(project.id, root);
     const projectId = project.id;
     const nodeId = (key: string) => createNodeId(script.id(key));

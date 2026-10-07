@@ -57,7 +57,7 @@ async function createKit(entries: ConstructorParameters<typeof MockLLMAdapter>[0
 
 function createNode(ctx: Context, title = "Capability") {
   const node = ctx.nodes.create({
-    projectId: ctx.projects.create({ goal: title }).id,
+    projectId: ctx.projects.create({ name: "Project", goal: title }).id,
     objective: {
       title,
       description: `Learn ${title}`,
@@ -100,7 +100,7 @@ async function flushUntil(condition: () => boolean): Promise<void> {
 describe("NodeSessionService identity and context", () => {
   it("rejects control nodes before session creation or model execution", async () => {
     const { ctx, adapter } = await createKit([]);
-    const projectId = ctx.projects.create({ goal: "Project" }).id;
+    const projectId = ctx.projects.create({ name: "Project", goal: "Project" }).id;
     const id = ctx.nodes.create({ projectId, kind: "control", purpose: "start", title: "Start" }).node.id;
     ctx.nodes.unlock(id, "Ready");
     expect(() => ctx.nodeSessions.start({ nodeId: id, text: "Execute" }))

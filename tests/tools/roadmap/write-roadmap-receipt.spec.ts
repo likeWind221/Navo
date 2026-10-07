@@ -31,7 +31,7 @@ async function createContext(): Promise<Context> {
 describe("write_roadmap creation receipt", () => {
   it("maps proposal-local keys to persistent Node IDs without persisting the keys", async () => {
     const ctx = await createContext();
-    const project = ctx.projects.create({ goal: "Ship a backend" });
+    const project = ctx.projects.create({ name: "Project", goal: "Ship a backend" });
 
     const result = await ctx.tools.execute(
       toolCall("write-roadmap-receipt", WRITE_ROADMAP_TOOL_NAME, {

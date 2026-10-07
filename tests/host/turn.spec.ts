@@ -14,7 +14,7 @@ import { createRuntime, disposeRuntimes } from "../helpers/runtime.js";
 
 afterEach(disposeRuntimes);
 
-describe("Kernel Host agent.turn", () => {
+describe("Kernel Host agent.turn.v1", () => {
   it("emits started, visible deltas and one completed terminal while hiding reasoning", async () => {
     const kit = await createRuntime([{
       kind: "events",
@@ -130,7 +130,7 @@ describe("stdio RPC transport and scripted Mock Host", () => {
       version: 1,
       type: "open",
       id: "rpc-1",
-      method: "agent.turn",
+      method: "agent.turn.v1",
       params: { sessionId: "s", requestId: "r", text: "go" },
     })}\n`);
     await ended.promise;
@@ -178,7 +178,7 @@ describe("stdio RPC transport and scripted Mock Host", () => {
       version: 1,
       type: "open",
       id: "rpc-after-invalid",
-      method: "agent.turn",
+      method: "agent.turn.v1",
       params: { sessionId: "s", requestId: "r", text: "go" },
     })}\n`);
     await ended.promise;

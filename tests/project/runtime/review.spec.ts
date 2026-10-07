@@ -4,7 +4,7 @@ import { createKit, createWorkNode, flushUntil } from "./helpers.js";
 describe("ProjectRuntime Human review", () => {
   it("preserves revision and control-node rules and only unlocks downstream work", async () => {
     const { ctx, adapter } = await createKit([]);
-    const project = ctx.projects.create({ goal: "Review" });
+    const project = ctx.projects.create({ name: "Project", goal: "Review" });
     const control = ctx.nodes.create({ projectId: project.id, kind: "control", purpose: "checkpoint", title: "Review" });
     const next = createWorkNode(ctx, project.id, "Next");
     ctx.roadmaps.create({
@@ -26,8 +26,8 @@ describe("ProjectRuntime Human review", () => {
 
   it("checks Project ownership and allows skip of locked Nodes with current revision", async () => {
     const { ctx } = await createKit([]);
-    const project = ctx.projects.create({ goal: "Review" });
-    const other = ctx.projects.create({ goal: "Other" });
+    const project = ctx.projects.create({ name: "Project", goal: "Review" });
+    const other = ctx.projects.create({ name: "Project", goal: "Other" });
     const node = createWorkNode(ctx, project.id, "Locked");
     const confirmation = { confirmedBy: "human", reason: "Skip", reviewedRevision: node.revision };
     expect(() => ctx.projectRuntime.confirmCompletion(project.id, node.node.id, confirmation)).toThrow();
@@ -46,7 +46,7 @@ describe("ProjectRuntime Human review", () => {
 
   it("rejects review during the pre-working reservation and active Turn", async () => {
     const { ctx, adapter } = await createKit([{ kind: "hang" }]);
-    const project = ctx.projects.create({ goal: "No review race" });
+    const project = ctx.projects.create({ name: "Project", goal: "No review race" });
     const nodeId = createWorkNode(ctx, project.id, "Work").node.id;
     ctx.nodes.unlock(nodeId, "Ready");
     const pending = ctx.projectRuntime.startNode({ projectId: project.id, nodeId, text: "Run" });

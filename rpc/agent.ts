@@ -52,7 +52,7 @@ export const AGENT_TEXT_MAX_CHARS = 32_768;
 export const AGENT_DELTA_MAX_CHARS = 16_384;
 
 export const agentTurnMethod: RpcMethod<AgentTurnInput, AgentTurnEvent> = Object.freeze({
-  name: "agent.turn",
+  name: "agent.turn.v1",
   parseInput: parseAgentTurnInput,
   parseOutput: parseAgentTurnEvent,
   createOutputValidator: createAgentTurnOutputValidator,

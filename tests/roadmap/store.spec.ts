@@ -12,7 +12,7 @@ const objective = { title: "Research", description: "Inspect sources", acceptanc
 async function kit() {
   const ctx = new Context(); contexts.push(ctx);
   await ctx.plugin(ProjectStore); await ctx.plugin(NodeStore); await ctx.plugin(RoadmapStore);
-  const projectId = ctx.projects.create({ goal: "Research project" }).id;
+  const projectId = ctx.projects.create({ name: "Project", goal: "Research project" }).id;
   const a = ctx.nodes.create({ projectId, objective }).node.id;
   const b = ctx.nodes.create({ projectId, objective }).node.id;
   ctx.roadmaps.create({ definition: { projectId, nodes: [a, b], edges: [{ from: a, to: b }] }, reason: "Initial" });

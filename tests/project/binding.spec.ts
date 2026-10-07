@@ -110,8 +110,8 @@ function expectBindingError(
 describe("trusted Agent bindings", () => {
   it("derives Main and Node identity from Store ownership instead of caller claims", async () => {
     const ctx = await createBindingContext();
-    const first = ctx.projects.create({ goal: "First" });
-    const second = ctx.projects.create({ goal: "Second" });
+    const first = ctx.projects.create({ name: "Project", goal: "First" });
+    const second = ctx.projects.create({ name: "Project", goal: "Second" });
     const nodeA = createWorkNode(ctx, first.id, "A");
     const nodeB = createWorkNode(ctx, first.id, "B");
     const nodeSession = createSessionId("node-a-session");
@@ -150,7 +150,7 @@ describe("trusted Agent bindings", () => {
 
   it("blocks a Node Session from a Main-only tool even when the tool is exposed by mistake", async () => {
     const ctx = await createRuntimeContext();
-    const project = ctx.projects.create({ goal: "Protected Project" });
+    const project = ctx.projects.create({ name: "Project", goal: "Protected Project" });
     const node = createWorkNode(ctx, project.id, "Node work");
     const nodeSession = createSessionId("bound-node-session");
     ctx.nodes.bindSession(node.node.id, nodeSession);
@@ -189,7 +189,7 @@ describe("trusted Agent bindings", () => {
 
   it("allows the owning Main Session through the same trusted tool boundary", async () => {
     const ctx = await createRuntimeContext();
-    const project = ctx.projects.create({ goal: "Main Project" });
+    const project = ctx.projects.create({ name: "Project", goal: "Main Project" });
     const adapter = new MockLLMAdapter([
       modelResponse([toolCall(project.id)], "tool-calls"),
       modelResponse([{ type: "text", text: "done" }]),

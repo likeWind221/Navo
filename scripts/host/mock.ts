@@ -9,6 +9,7 @@ import { createApp } from "../../src/app.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import type { ModelEvent } from "../../src/llm/types.js";
 import { createSessionCommandHandler } from "../../src/host/command.js";
+import { registerProjectMethods } from "../../src/host/project.js";
 import {
   createMockAgentTurnHandler,
   resolveMockAgentTurnConfig,
@@ -29,6 +30,7 @@ async function main(): Promise<void> {
     model: { provider: "mock", model: "mock" },
   }));
   router.register(sessionCommandMethod, createSessionCommandHandler(ctx));
+  registerProjectMethods(router, ctx);
   const server = new StreamRpcServer(transport, router);
   const stop = (): void => { void server.dispose(); };
   process.once("SIGINT", stop);

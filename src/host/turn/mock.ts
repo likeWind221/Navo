@@ -11,7 +11,7 @@ export interface MockAgentTurnConfig {
   readonly crash?: () => never;
 }
 
-/** Deterministic agent.turn stream for Electron transport and lifecycle tests. */
+/** Deterministic agent.turn.v1 stream for Electron transport and lifecycle tests. */
 export function createMockAgentTurnHandler(
   config: MockAgentTurnConfig,
 ): RpcStreamHandler<AgentTurnInput, AgentTurnEvent> {

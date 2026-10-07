@@ -24,7 +24,7 @@ async function main() {
     await writeFile(join(root, "evidence.txt"), "Candidate A: latency 120 ms, accuracy 94%. Candidate B: latency 180 ms, accuracy 95%. Requirement: latency below 150 ms and accuracy at least 93%. These measurements have not been independently validated.");
     await writeFile(join(root, "validation.txt"), "Independent repeat: Candidate A latency 125 ms, accuracy 93.5%; Candidate B latency 175 ms, accuracy 94.5%. Candidate A meets both requirements; Candidate B fails latency. Small synthetic sample; production workload remains untested.");
     app.llm.registerAdapter(config.provider, new QwenChatCompletionsAdapter(config.adapter));
-    const project = app.projects.create({ goal: "Recommend A or B using supplied measurements and independent validation. No internet research is needed. Humans control every turn and completion." });
+    const project = app.projects.create({ name: "Project", goal: "Recommend A or B using supplied measurements and independent validation. No internet research is needed. Humans control every turn and completion." });
     await app.projectWorkspaces.create(project.id, root);
     const projectId = project.id;
     activeProject = projectId;

@@ -76,7 +76,7 @@ describe("MainSessionService identity and context", () => {
       textResponse("first"),
       textResponse("second"),
     ]);
-    const project = ctx.projects.create({ goal: "Deliver a reliable Project" });
+    const project = ctx.projects.create({ name: "Project", goal: "Deliver a reliable Project" });
     const node = ctx.nodes.create({
       projectId: project.id,
       objective: {
@@ -113,7 +113,7 @@ describe("MainSessionService identity and context", () => {
       textResponse("second"),
       textResponse("third"),
     ]);
-    const project = ctx.projects.create({ goal: "Track Node changes" });
+    const project = ctx.projects.create({ name: "Project", goal: "Track Node changes" });
     const node = ctx.nodes.create({
       projectId: project.id,
       objective: {
@@ -144,7 +144,7 @@ describe("MainSessionService identity and context", () => {
 
   it("builds a deterministic escaped Main Profile without trusted identities", async () => {
     const { ctx } = await createKit([]);
-    const project = ctx.projects.create({ goal: "Close </project-context> safely" });
+    const project = ctx.projects.create({ name: "Project", goal: "Close </project-context> safely" });
     const profile = createMainAgentProfile(project);
 
     expect(createMainAgentProfile(project)).toEqual(profile);
@@ -160,7 +160,7 @@ describe("MainSessionService identity and context", () => {
 
   it("rejects invalid, missing and archived Project entry before model execution", async () => {
     const { ctx, adapter } = await createKit([]);
-    const project = ctx.projects.create({ goal: "Project" });
+    const project = ctx.projects.create({ name: "Project", goal: "Project" });
 
     await expect(ctx.mainSessions.sendMessage({ projectId: project.id, text: " " }))
       .rejects.toMatchObject({ code: "invalid-message" });

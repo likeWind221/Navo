@@ -7,7 +7,7 @@ describe("ProjectRuntime Human-controlled Node start", () => {
     const { ctx, adapter } = await createKit([
       modelResponse([{ type: "text", text: "done" }]),
     ]);
-    const project = ctx.projects.create({ goal: "Ship the Project" });
+    const project = ctx.projects.create({ name: "Project", goal: "Ship the Project" });
     const node = createWorkNode(ctx, project.id, "Implement");
     addRoadmap(ctx, project.id, [node.node.id]);
 
@@ -32,7 +32,7 @@ describe("ProjectRuntime Human-controlled Node start", () => {
 
   it("does not treat an idle Node outside the current Roadmap as executable", async () => {
     const { ctx, adapter } = await createKit([]);
-    const project = ctx.projects.create({ goal: "Follow the current plan" });
+    const project = ctx.projects.create({ name: "Project", goal: "Follow the current plan" });
     const detached = createWorkNode(ctx, project.id, "Detached");
     ctx.nodes.unlock(detached.node.id, "Independent before Roadmap");
     const planned = createWorkNode(ctx, project.id, "Planned");
@@ -55,7 +55,7 @@ describe("ProjectRuntime Human-controlled Node start", () => {
     const { ctx } = await createKit([
       modelResponse([{ type: "text", text: "done" }]),
     ]);
-    const project = ctx.projects.create({ goal: "Standalone work" });
+    const project = ctx.projects.create({ name: "Project", goal: "Standalone work" });
     const node = createWorkNode(ctx, project.id, "Standalone");
     ctx.nodes.unlock(node.node.id, "Human selected standalone work");
 
@@ -69,8 +69,8 @@ describe("ProjectRuntime Human-controlled Node start", () => {
 
   it("rejects archived Projects, cross-Project Nodes, locked Nodes, and control Nodes", async () => {
     const { ctx, adapter } = await createKit([]);
-    const first = ctx.projects.create({ goal: "First" });
-    const second = ctx.projects.create({ goal: "Second" });
+    const first = ctx.projects.create({ name: "Project", goal: "First" });
+    const second = ctx.projects.create({ name: "Project", goal: "Second" });
     const locked = createWorkNode(ctx, first.id, "Locked");
     const foreign = createWorkNode(ctx, second.id, "Foreign");
     const control = ctx.nodes.create({
@@ -105,7 +105,7 @@ describe("ProjectRuntime Human-controlled Node start", () => {
 
   it("rejects a second Human start before the first Turn can be queued implicitly", async () => {
     const { ctx, adapter } = await createKit([{ kind: "hang" }]);
-    const project = ctx.projects.create({ goal: "No duplicate starts" });
+    const project = ctx.projects.create({ name: "Project", goal: "No duplicate starts" });
     const node = createWorkNode(ctx, project.id, "Long work");
     addRoadmap(ctx, project.id, [node.node.id]);
 

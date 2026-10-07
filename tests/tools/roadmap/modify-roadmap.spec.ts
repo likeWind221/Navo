@@ -32,7 +32,7 @@ async function createContext(): Promise<Context> {
 
 async function createRoadmap() {
   const ctx = await createContext();
-  const project = ctx.projects.create({ goal: "Ship a backend" });
+  const project = ctx.projects.create({ name: "Project", goal: "Ship a backend" });
   const design = ctx.nodes.create({
     projectId: project.id,
     objective: {

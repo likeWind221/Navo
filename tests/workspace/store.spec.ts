@@ -52,7 +52,7 @@ describe("Project Workspace root migration", () => {
     await mkdir(join(root, "src"));
     await writeFile(join(root, "README.txt"), "user content\n", "utf8");
     const ctx = await domain();
-    const project = ctx.projects.create({ goal: "Use an existing repository" });
+    const project = ctx.projects.create({ name: "Project", goal: "Use an existing repository" });
 
     const workspace = await ctx.projectWorkspaces.create(project.id, root);
     const repeated = await ctx.projectWorkspaces.create(project.id, root);
@@ -78,8 +78,8 @@ describe("Project Workspace root migration", () => {
     const firstRoot = await fixture();
     const secondRoot = await fixture();
     const ctx = await domain();
-    const first = ctx.projects.create({ goal: "First" });
-    const second = ctx.projects.create({ goal: "Second" });
+    const first = ctx.projects.create({ name: "Project", goal: "First" });
+    const second = ctx.projects.create({ name: "Project", goal: "Second" });
 
     await ctx.projectWorkspaces.create(first.id, firstRoot);
 
@@ -95,7 +95,7 @@ describe("Project Workspace root migration", () => {
   it("resolves internal refs from .navo and preserves portable Resource refs", async () => {
     const root = await fixture();
     const ctx = await domain();
-    const project = ctx.projects.create({ goal: "Resolve resources" });
+    const project = ctx.projects.create({ name: "Project", goal: "Resolve resources" });
     const workspace = await ctx.projectWorkspaces.create(project.id, root);
     await writeFile(join(workspace.assetsRoot, "report.md"), "report\n", "utf8");
 
@@ -131,7 +131,7 @@ describe("Project Workspace root migration", () => {
     const root = await fixture();
     const outside = await fixture("navo-workspace-outside-");
     const ctx = await domain();
-    const project = ctx.projects.create({ goal: "Contain internal files" });
+    const project = ctx.projects.create({ name: "Project", goal: "Contain internal files" });
     const workspace = await ctx.projectWorkspaces.create(project.id, root);
     await writeFile(join(outside, "secret.txt"), "secret\n", "utf8");
 
@@ -148,7 +148,7 @@ describe("Project Workspace root migration", () => {
   it("cleanup removes only .navo and never deletes the user Workspace", async () => {
     const root = await fixture();
     const ctx = await domain();
-    const project = ctx.projects.create({ goal: "Cleanup Navo state" });
+    const project = ctx.projects.create({ name: "Project", goal: "Cleanup Navo state" });
     const workspace = await ctx.projectWorkspaces.create(project.id, root);
     await writeFile(join(root, "user.txt"), "keep", "utf8");
     await writeFile(join(workspace.assetsRoot, "asset.txt"), "remove", "utf8");
@@ -167,7 +167,7 @@ describe("Project Workspace root migration", () => {
     await expect(ctx.projectWorkspaces.create(createProjectId("missing"), root))
       .rejects.toMatchObject({ code: "project-not-found" });
 
-    const project = ctx.projects.create({ goal: "Validate root" });
+    const project = ctx.projects.create({ name: "Project", goal: "Validate root" });
     await expect(ctx.projectWorkspaces.create(project.id, join(root, "missing")))
       .rejects.toMatchObject({ code: "not-found" });
 
@@ -183,7 +183,7 @@ describe("Project Workspace root migration", () => {
       node: { session: { model: { provider: "mock", model: "test" } } },
     });
     contexts.push(app);
-    const project = app.projects.create({ goal: "Mounted Workspace" });
+    const project = app.projects.create({ name: "Project", goal: "Mounted Workspace" });
     const workspace = await app.projectWorkspaces.create(project.id, root);
 
     expect(workspace.root).toBe(await realpath(root));
@@ -203,7 +203,7 @@ describe("Project Workspace root migration", () => {
       tools: { file: { resolveFileEnvironment: () => hostEnvironment } },
     });
     contexts.push(app);
-    const project = app.projects.create({ goal: "Bounded Node files" });
+    const project = app.projects.create({ name: "Project", goal: "Bounded Node files" });
     await app.projectWorkspaces.create(project.id, projectRoot);
     const node = app.nodes.create({
       projectId: project.id,

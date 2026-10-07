@@ -10,7 +10,7 @@ afterEach(async () => {
 
 const config = { model: { provider: "mock", model: "test" } };
 
-describe("Kernel Host agent.turn retries", () => {
+describe("Kernel Host agent.turn.v1 retries", () => {
   it("fails an incomplete visible stream without retrying", async () => {
     const kit = await createRuntime([
       {

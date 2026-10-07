@@ -122,7 +122,7 @@ describe("Stream RPC core", () => {
       version: 1,
       type: "open",
       id: "rpc-drain",
-      method: "agent.turn",
+      method: "agent.turn.v1",
       params: { sessionId: "session-1", requestId: "request-drain", text: "drain" },
     });
     await entered.promise;

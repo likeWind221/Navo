@@ -64,7 +64,7 @@ describe("F9.7 ProjectRuntime Resource handoff recovery", () => {
       node: { session: { model: { provider: "mock", model: "project-agent" } } },
     });
     apps.push(app);
-    const project = app.projects.create({ goal: "Pass Node A evidence to Node B" });
+    const project = app.projects.create({ name: "Project", goal: "Pass Node A evidence to Node B" });
     await app.projectWorkspaces.create(project.id, root);
     const nodeA = app.nodes.create({
       projectId: project.id,

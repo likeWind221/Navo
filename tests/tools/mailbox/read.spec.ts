@@ -19,7 +19,7 @@ describe("Main mailbox read capability", () => {
       node: { session: { model: { provider: "mock", model: "test" } } },
     });
     apps.push(app);
-    const project = app.projects.create({ goal: "Coordinate messages" });
+    const project = app.projects.create({ name: "Project", goal: "Coordinate messages" });
     const node = app.nodes.create({
       projectId: project.id,
       objective: {
@@ -63,7 +63,7 @@ describe("Main mailbox read capability", () => {
       node: { session: { model: { provider: "mock", model: "test" } } },
     });
     apps.push(app);
-    const project = app.projects.create({ goal: "Protect mailbox" });
+    const project = app.projects.create({ name: "Project", goal: "Protect mailbox" });
     const node = app.nodes.create({
       projectId: project.id,
       objective: {

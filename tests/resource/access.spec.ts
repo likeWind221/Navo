@@ -48,7 +48,7 @@ describe("Resource ownership, access and content boundary", () => {
   it("keeps owner CRUD separate from Main-controlled read distribution", async () => {
     const ctx = await domain();
     const root = await fixture();
-    const project = ctx.projects.create({ goal: "Access project" });
+    const project = ctx.projects.create({ name: "Project", goal: "Access project" });
     await ctx.projectWorkspaces.create(project.id, root);
     await writeFile(join(root, "report.md"), "report\n", "utf8");
     const owner = ctx.nodes.create({ projectId: project.id, objective: objective("owner") });
@@ -104,7 +104,7 @@ describe("Resource ownership, access and content boundary", () => {
   it("supports private, shared and public access for Main-owned Resources", async () => {
     const ctx = await domain();
     const root = await fixture();
-    const project = ctx.projects.create({ goal: "Main assets" });
+    const project = ctx.projects.create({ name: "Project", goal: "Main assets" });
     await ctx.projectWorkspaces.create(project.id, root);
     await writeFile(join(root, "main.md"), "main\n", "utf8");
     const nodeA = ctx.nodes.create({ projectId: project.id, objective: objective("A") });
@@ -151,7 +151,7 @@ describe("Resource ownership, access and content boundary", () => {
   it("rejects invalid shared membership and implicit Node owner duplication", async () => {
     const ctx = await domain();
     const root = await fixture();
-    const project = ctx.projects.create({ goal: "Membership" });
+    const project = ctx.projects.create({ name: "Project", goal: "Membership" });
     await ctx.projectWorkspaces.create(project.id, root);
     await writeFile(join(root, "report.md"), "report\n", "utf8");
     const owner = ctx.nodes.create({ projectId: project.id, objective: objective("owner") });
@@ -190,7 +190,7 @@ describe("Resource ownership, access and content boundary", () => {
   it("rejects an entry symlink that escapes into another Resource root", async () => {
     const ctx = await domain();
     const root = await fixture();
-    const project = ctx.projects.create({ goal: "Content boundary" });
+    const project = ctx.projects.create({ name: "Project", goal: "Content boundary" });
     const workspace = await ctx.projectWorkspaces.create(project.id, root);
     await writeFile(join(root, "first.md"), "first\n", "utf8");
     await writeFile(join(root, "second.md"), "second\n", "utf8");
