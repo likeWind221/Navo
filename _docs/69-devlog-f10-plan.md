@@ -15,7 +15,7 @@
 
 ## 坑与发现
 
-- 现有 PRD 第 6 节 Phase 10 只写 Evidence + Verification，未包含持久化；PRD 属共享控制面，本次未修改，是否同步待用户确认。
+- 原 PRD 第 6 节 Phase 10 只写 Evidence + Verification，未包含持久化；经用户确认，已同步改为“Durable Project（持久化与恢复）+ Evidence + Verification”。
 - 跳过节点不需要验证结论，否则会阻断用户主动放弃的可选路径；已写入 F10.6 完成标准。
 - 节点版本变化后旧结论失效，防止“先验证再修改”绕过门禁；具体版本口径在 F10.0 设计时确认。
 

@@ -116,7 +116,7 @@ Research Workspace 后续可包含：
 | Phase | 核心问题 | 目标产物 |
 |---|---|---|
 | Phase 9 | Agent 如何可靠执行长程任务？ | Adaptive Roadmap Runtime |
-| Phase 10 | 系统如何知道任务真的完成？ | Evidence + Verification |
+| Phase 10 | 项目如何跨重启持续推进，系统如何知道任务真的完成？ | Durable Project（持久化与恢复）+ Evidence + Verification |
 | Phase 11 | Research 如何形成可用闭环？ | Research Agent + Claim/Evidence + RAG |
 | Phase 12 | 系统如何与研究者长期共同改进？ | Research Memory + Human-AI Co-evolution |
 
