@@ -77,7 +77,7 @@ function buildRequest(
     provider: input.model.provider,
     model: input.model.model,
     messages: ctx.sessions.deriveMessages(input.sessionId, input.systemPrompt),
-    tools: ctx.tools.schemas(input.toolNames),
+    tools: ctx.tools.schemas(input.toolNames, input.sessionId),
     signal,
     ...(input.model.temperature === undefined
       ? {} : { temperature: input.model.temperature }),

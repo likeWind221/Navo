@@ -6,8 +6,9 @@ import {
   positiveRevision,
   requireResourceToolCaller,
   RESOURCE_ID_PARAMETER,
-  resourceId,
+  resolveResourceRef,
   resourceToolFailure,
+  withVisibleResourceRefs,
 } from "./common.js";
 
 export const DELETE_RESOURCE_TOOL_NAME = "delete_resource";
@@ -27,11 +28,12 @@ export function createDeleteResourceTool(ctx: Context): ToolDefinition {
     name: DELETE_RESOURCE_TOOL_NAME,
     description: "Delete the Resource fact owned by the current Main or Node Agent at the exact current revision. Physical Resource content is retained for audit and later cleanup.",
     parameters: schema,
+    parametersFor: sessionId => withVisibleResourceRefs(ctx, schema, sessionId),
     execute(arguments_, execution) {
       try {
         execution.signal.throwIfAborted();
         const caller = requireResourceToolCaller(ctx, execution.sessionId);
-        const id = resourceId(arguments_.resource_id);
+        const id = resolveResourceRef(ctx, caller, arguments_.resource_id);
         ctx.resources.delete({
           projectId: caller.projectId,
           actor: caller.principal,

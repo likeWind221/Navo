@@ -20,7 +20,7 @@ import { ToolExecutionError } from "../../errors.js";
 
 export const RESOURCE_ID_PARAMETER: JsonObject = {
   type: "string",
-  description: "Resource ID exactly as listed in available-resources or returned by a Resource tool, never the Resource name.",
+  description: "Resource ID as listed in available-resources or returned by a Resource tool. A Resource name is accepted only when exactly one visible Resource has it.",
 };
 
 export interface ResourceToolCaller {
@@ -41,11 +41,54 @@ export function requireResourceToolCaller(
   });
 }
 
-export function resourceId(value: JsonValue | undefined): ResourceId {
+export function resolveResourceRef(
+  ctx: Context,
+  caller: ResourceToolCaller,
+  value: JsonValue | undefined,
+): ResourceId {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw invalidResourceTool("resource_id must be a non-empty string.");
   }
+  const visible = ctx.resources.listVisible(caller.projectId, caller.principal);
+  if (visible.some(resource => resource.id === value)) return createResourceId(value);
+  const named = visible.filter(resource => nameKey(resource.name) === nameKey(value));
+  if (named.length === 1) return named[0]!.id;
+  if (named.length > 1) {
+    throw invalidResourceTool(
+      `'${value}' matches several Resource names; use one of these Resource IDs: ${named.map(resource => resource.id).join(", ")}.`,
+    );
+  }
   return createResourceId(value);
+}
+
+export function withVisibleResourceRefs(
+  ctx: Context,
+  parameters: JsonObject,
+  sessionId: SessionId,
+): JsonObject {
+  const caller = requireResourceToolCaller(ctx, sessionId);
+  const visible = ctx.resources.listVisible(caller.projectId, caller.principal);
+  const counts = new Map<string, number>();
+  for (const resource of visible) {
+    counts.set(nameKey(resource.name), (counts.get(nameKey(resource.name)) ?? 0) + 1);
+  }
+  const refs = [...new Set([
+    ...visible.map(resource => String(resource.id)),
+    ...visible.filter(resource => counts.get(nameKey(resource.name)) === 1).map(resource => resource.name),
+  ])];
+  if (refs.length === 0) return parameters;
+  const properties = parameters.properties as JsonObject;
+  return {
+    ...parameters,
+    properties: {
+      ...properties,
+      resource_id: { ...(properties.resource_id as JsonObject), enum: refs },
+    },
+  };
+}
+
+function nameKey(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 export function positiveRevision(

@@ -12,7 +12,7 @@ export interface TurnEvidence {
   readonly answers: readonly string[];
   readonly errors: readonly unknown[];
   readonly unrecovered: readonly unknown[];
-  readonly succeeded: readonly { readonly name: string; readonly arguments: string }[];
+  readonly succeeded: readonly { readonly name: string; readonly arguments: string; readonly result: string }[];
   readonly record: Record<string, unknown>;
 }
 
@@ -39,7 +39,12 @@ export function captureTurn(
     answers: assistant.flatMap(message => message.content.flatMap(block => block.type === "text" ? [block.text] : [])),
     errors,
     unrecovered,
-    succeeded: calls.flatMap(call => results.get(call.id)?.isError === false ? [{ name: call.name, arguments: call.arguments }] : []),
+    succeeded: calls.flatMap(call => {
+      const result = results.get(call.id);
+      return result?.isError === false
+        ? [{ name: call.name, arguments: call.arguments, result: result.content.flatMap(block => block.type === "text" ? [block.text] : []).join("") }]
+        : [];
+    }),
     record: {
       sessionId,
       turnId,

@@ -5,16 +5,15 @@ import { ResourceError } from "../../../resource/errors.js";
 import { createFileEnvironment } from "../file/path.js";
 import { readTextFile } from "../file/read.js";
 import { FILE_LIMITS } from "../file/types.js";
-import { ToolExecutionError } from "../../errors.js";
 import type { ToolDefinition } from "../../types.js";
 import {
   requireResourceToolCaller,
+  resolveResourceRef,
   resourceArtifact,
   RESOURCE_ID_PARAMETER,
-  resourceId,
   resourceToolFailure,
+  withVisibleResourceRefs,
 } from "./common.js";
-import type { ResourceToolCaller } from "./common.js";
 
 export const FETCH_RESOURCE_TOOL_NAME = "fetch_resource";
 
@@ -40,18 +39,22 @@ export function createFetchResourceTool(ctx: Context): ToolDefinition {
     name: FETCH_RESOURCE_TOOL_NAME,
     description: "Read the main text entry of a Resource visible to the current Main or Node Agent. Shared and Project-visible Resources are read-only unless the current Agent is the owner.",
     parameters: schema,
+    parametersFor: sessionId => withVisibleResourceRefs(ctx, schema, sessionId),
     async execute(arguments_, execution) {
       try {
         execution.signal.throwIfAborted();
         const caller = requireResourceToolCaller(ctx, execution.sessionId);
-        const id = resourceId(arguments_.resource_id);
+        const id = resolveResourceRef(ctx, caller, arguments_.resource_id);
         const resource = ctx.resources.getVisible(
           caller.projectId,
           id,
           caller.principal,
         );
         if (resource === undefined) {
-          throw unavailableResource(ctx, caller, String(id));
+          throw new ResourceError(
+            "resource-unavailable",
+            "Resource is unavailable to the current caller.",
+          );
         }
         const target = await ctx.resources.resolveEntry(
           caller.projectId,
@@ -98,27 +101,6 @@ export function createFetchResourceTool(ctx: Context): ToolDefinition {
       }
     },
   };
-}
-
-function unavailableResource(
-  ctx: Context,
-  caller: ResourceToolCaller,
-  requested: string,
-): ResourceError | ToolExecutionError {
-  const error = new ResourceError(
-    "resource-unavailable",
-    "Resource is unavailable to the current caller.",
-  );
-  const key = requested.trim().toLowerCase();
-  const named = ctx.resources.listVisible(caller.projectId, caller.principal)
-    .filter(resource => resource.name.trim().toLowerCase() === key);
-  if (named.length === 0) return error;
-  const ids = named.map(resource => `'${resource.name}' has Resource ID ${resource.id}`).join("; ");
-  return new ToolExecutionError(
-    error.message,
-    `No Resource has ID '${requested}'. resource_id must be a Resource ID, not a name: ${ids}. Retry with that ID.`,
-    { cause: error },
-  );
 }
 
 export const FetchResourceTool = Object.assign(

@@ -14,8 +14,9 @@ import {
   positiveRevision,
   resourceArtifact,
   RESOURCE_ID_PARAMETER,
-  resourceId,
+  resolveResourceRef,
   resourceToolFailure,
+  withVisibleResourceRefs,
 } from "./common.js";
 
 export const SET_RESOURCE_ACCESS_TOOL_NAME = "set_resource_access";
@@ -50,6 +51,7 @@ export function createSetResourceAccessTool(ctx: Context): ToolDefinition {
     name: SET_RESOURCE_ACCESS_TOOL_NAME,
     description: "Change who may read a Project Resource. Only the current Project Main Agent may use this capability. Set private, share with specific work Nodes, or share with every work Node in the Project.",
     parameters: schema,
+    parametersFor: sessionId => withVisibleResourceRefs(ctx, schema, sessionId),
     execute(arguments_, execution) {
       try {
         execution.signal.throwIfAborted();
@@ -57,7 +59,11 @@ export function createSetResourceAccessTool(ctx: Context): ToolDefinition {
         const resource = ctx.resources.setAccess({
           projectId: binding.projectId,
           actor: { kind: "main" },
-          resourceId: resourceId(arguments_.resource_id),
+          resourceId: resolveResourceRef(
+            ctx,
+            { projectId: binding.projectId, principal: { kind: "main" } },
+            arguments_.resource_id,
+          ),
           expectedRevision: positiveRevision(arguments_.expected_revision),
           access: parseAccess(arguments_.access),
         });

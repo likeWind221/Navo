@@ -10,8 +10,9 @@ import {
   requireResourceToolCaller,
   resourceArtifact,
   RESOURCE_ID_PARAMETER,
-  resourceId,
+  resolveResourceRef,
   resourceToolFailure,
+  withVisibleResourceRefs,
 } from "./common.js";
 
 export const UPDATE_RESOURCE_TOOL_NAME = "update_resource";
@@ -34,6 +35,7 @@ export function createUpdateResourceTool(ctx: Context): ToolDefinition {
     name: UPDATE_RESOURCE_TOOL_NAME,
     description: "Update mutable metadata of a Resource owned by the current Main or Node Agent. Shared Resources owned by another Agent are read-only. Published file content is an immutable snapshot; register a new Resource for new content.",
     parameters: schema,
+    parametersFor: sessionId => withVisibleResourceRefs(ctx, schema, sessionId),
     execute(arguments_, execution) {
       try {
         execution.signal.throwIfAborted();
@@ -55,7 +57,7 @@ export function createUpdateResourceTool(ctx: Context): ToolDefinition {
         const resource = ctx.resources.update({
           projectId: caller.projectId,
           actor: caller.principal,
-          resourceId: resourceId(arguments_.resource_id),
+          resourceId: resolveResourceRef(ctx, caller, arguments_.resource_id),
           expectedRevision: positiveRevision(arguments_.expected_revision),
           changes,
         });

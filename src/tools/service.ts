@@ -1,7 +1,7 @@
 import { Service } from "cordis";
 import type { Context } from "cordis";
 
-import type { ToolCallId } from "../brand/ids.js";
+import type { SessionId, ToolCallId } from "../brand/ids.js";
 import type {
   JsonObject,
   JsonValue,
@@ -76,12 +76,15 @@ export class ToolService extends Service {
     };
   }
 
-  schemas(allowedNames?: readonly string[]): readonly ToolSchema[] {
+  schemas(
+    allowedNames?: readonly string[],
+    sessionId?: SessionId,
+  ): readonly ToolSchema[] {
     const allowed = this.allowedNames(allowedNames);
     return Object.freeze(
       [...this.tools.entries()]
         .filter(([name]) => allowed === undefined || allowed.has(name))
-        .map(([, { schema }]) => deepFreeze(structuredClone(schema))),
+        .map(([, tool]) => deepFreeze(structuredClone(presentedSchema(tool, sessionId)))),
     );
   }
 
@@ -151,7 +154,20 @@ export class ToolService extends Service {
 
 interface RegisteredTool {
   readonly schema: ToolSchema;
+  readonly parametersFor?: ToolDefinition["parametersFor"];
   readonly execute: ToolDefinition["execute"];
+}
+
+function presentedSchema(tool: RegisteredTool, sessionId: SessionId | undefined): ToolSchema {
+  if (tool.parametersFor === undefined || sessionId === undefined) return tool.schema;
+  try {
+    return {
+      ...tool.schema,
+      parameters: snapshotParameters(tool.parametersFor(sessionId), tool.schema.name),
+    };
+  } catch {
+    return tool.schema;
+  }
 }
 
 function snapshotDefinition(definition: ToolDefinition): RegisteredTool {
@@ -174,7 +190,11 @@ function snapshotDefinition(definition: ToolDefinition): RegisteredTool {
       : { description: definition.description }),
     parameters: snapshotParameters(definition.parameters, name),
   });
-  return Object.freeze({ schema, execute: definition.execute });
+  return Object.freeze({
+    schema,
+    ...(definition.parametersFor === undefined ? {} : { parametersFor: definition.parametersFor }),
+    execute: definition.execute,
+  });
 }
 
 interface NormalizedOutput {

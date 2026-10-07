@@ -108,7 +108,7 @@ async function main() {
     assert.equal(app.roadmaps.get(projectId)?.revision, roadmapBeforeStatus);
     const final = await run("9-resume", () => app.projectRuntime.continueNode({ projectId, nodeId: synthesisId, text: "The Human confirmed validation. Fetch the newly shared independent validation resource and continue your earlier analysis. Give a concise final recommendation with numerical support and the supplied limitation. Do not invent further research." }));
     assert.equal(final.result.sessionId, blocked.result.sessionId);
-    assert(final.succeeded.some(call => call.name === "fetch_resource" && call.arguments.includes(validation.id)), "9-resume did not fetch the validation Resource");
+    assert(final.succeeded.some(call => call.name === "fetch_resource" && call.result.includes(`(${validation.id})`)), "9-resume did not fetch the validation Resource");
     assert.match(final.answer, /125/);
     assert.match(final.answer, /93\.5/);
     assert.equal(node("synthesis").status, "idle");
