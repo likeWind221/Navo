@@ -1,6 +1,6 @@
 # 70：BUG-001 至 BUG-004 长程真实验收排查与修复
 
-关联：[Bug 跟踪表](bug-plan.md)、[67：F9.8 长程验收](67-devlog-f9.8-longterm-acceptance.md)、[68：Bug 跟踪机制](68-devlog-bug-tracking.md)。分支 `fix/bug-001-004-longterm`，[Draft PR #33](https://github.com/likeWind221/Navo/pull/33)。
+关联：[Bug 跟踪表](bug-plan.md)、[67：F9.8 长程验收](67-devlog-f9.8-longterm-acceptance.md)、[68：Bug 跟踪机制](68-devlog-bug-tracking.md)。分支 `fix/bug-001-004-longterm`，[PR #33](https://github.com/likeWind221/Navo/pull/33)（已 squash 合并）。
 
 ## 现象与复现
 
@@ -124,10 +124,10 @@
 - 待办：提供 `list_resources` 工具，让模型在怀疑时可以现查（用户决定延后）。
 - 可扩展：Mailbox 新消息等其他“对话外变化”，可以作为新的 fact kind 接入同一个 reminder 机制。
 - 真实验收仍为手动脚本，不进入 CI；后续可扩充为多次复跑并统计成功率。
-- F9.8 是否据此改为完成由用户决定。
+- 2026-10-07 用户确认 F9.8 据此收口为 ✅。
 
 ## 面试复盘
 
 完整的面试可背版本（问题 → 根因 → 修复 → 结果）见 [71：长程验收四个 Bug 复盘（面试版）](71-interview-longterm-bugs.md)。
 
-PR：[#33](https://github.com/likeWind221/Navo/pull/33)（Draft，待用户审核合并）
+PR：[#33](https://github.com/likeWind221/Navo/pull/33)（已 squash 合并为 31664f3）
