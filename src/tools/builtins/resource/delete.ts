@@ -5,6 +5,7 @@ import type { ToolDefinition } from "../../types.js";
 import {
   positiveRevision,
   requireResourceToolCaller,
+  RESOURCE_ID_PARAMETER,
   resourceId,
   resourceToolFailure,
 } from "./common.js";
@@ -14,7 +15,7 @@ export const DELETE_RESOURCE_TOOL_NAME = "delete_resource";
 const schema: JsonObject = {
   type: "object",
   properties: {
-    resource_id: { type: "string" },
+    resource_id: RESOURCE_ID_PARAMETER,
     expected_revision: { type: "integer" },
   },
   required: ["resource_id", "expected_revision"],

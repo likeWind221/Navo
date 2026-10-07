@@ -73,6 +73,44 @@ describe("Resource owner CRUD capabilities", () => {
     )).toBe("alpha\nbeta\ngamma\n");
   });
 
+  it("reports the missing source path and errno when registration cannot find the file", async () => {
+    const { app, project, root } = await resourceToolFixture();
+    await writeFile(join(root, "validation.txt"), "independent repeat\n", "utf8");
+    const { sessionId } = bindResourceNode(app, project.id);
+
+    const missing = await callResourceTool(app, sessionId, REGISTER_RESOURCE_TOOL_NAME, {
+      path: "supplied/validation.txt",
+      name: "Validation",
+      description: "Independent repeat",
+      type: "text/plain",
+    });
+
+    expect(missing).toMatchObject({
+      kind: "failure",
+      failure: {
+        code: "tool-failed",
+        message: "Resource source file 'supplied/validation.txt' was not found in the Workspace (ENOENT).",
+        details: {
+          causes: [
+            { name: "ResourceError", code: "resource-content-unavailable" },
+            { name: "Error", code: "ENOENT" },
+          ],
+        },
+      },
+    });
+    expect(resourceResultText(missing)).toContain("'supplied/validation.txt' was not found");
+    expect(resourceResultText(missing)).not.toContain(root);
+    expect(app.resources.listByProject(project.id)).toEqual([]);
+
+    const recovered = await callResourceTool(app, sessionId, REGISTER_RESOURCE_TOOL_NAME, {
+      path: "validation.txt",
+      name: "Validation",
+      description: "Independent repeat",
+      type: "text/plain",
+    });
+    expect(recovered.kind).toBe("success");
+  });
+
   it("allows Main to own and CRUD its own Resource", async () => {
     const { app, project, root } = await resourceToolFixture();
     await writeFile(join(root, "synthesis.md"), "main synthesis\n", "utf8");

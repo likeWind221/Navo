@@ -5,20 +5,23 @@ import { ResourceError } from "../../../resource/errors.js";
 import { createFileEnvironment } from "../file/path.js";
 import { readTextFile } from "../file/read.js";
 import { FILE_LIMITS } from "../file/types.js";
+import { ToolExecutionError } from "../../errors.js";
 import type { ToolDefinition } from "../../types.js";
 import {
   requireResourceToolCaller,
   resourceArtifact,
+  RESOURCE_ID_PARAMETER,
   resourceId,
   resourceToolFailure,
 } from "./common.js";
+import type { ResourceToolCaller } from "./common.js";
 
 export const FETCH_RESOURCE_TOOL_NAME = "fetch_resource";
 
 const schema: JsonObject = {
   type: "object",
   properties: {
-    resource_id: { type: "string" },
+    resource_id: RESOURCE_ID_PARAMETER,
     start_line: {
       type: "integer",
       description: "1-based inclusive line, default 1.",
@@ -48,10 +51,7 @@ export function createFetchResourceTool(ctx: Context): ToolDefinition {
           caller.principal,
         );
         if (resource === undefined) {
-          throw new ResourceError(
-            "resource-unavailable",
-            "Resource is unavailable to the current caller.",
-          );
+          throw unavailableResource(ctx, caller, String(id));
         }
         const target = await ctx.resources.resolveEntry(
           caller.projectId,
@@ -98,6 +98,27 @@ export function createFetchResourceTool(ctx: Context): ToolDefinition {
       }
     },
   };
+}
+
+function unavailableResource(
+  ctx: Context,
+  caller: ResourceToolCaller,
+  requested: string,
+): ResourceError | ToolExecutionError {
+  const error = new ResourceError(
+    "resource-unavailable",
+    "Resource is unavailable to the current caller.",
+  );
+  const key = requested.trim().toLowerCase();
+  const named = ctx.resources.listVisible(caller.projectId, caller.principal)
+    .filter(resource => resource.name.trim().toLowerCase() === key);
+  if (named.length === 0) return error;
+  const ids = named.map(resource => `'${resource.name}' has Resource ID ${resource.id}`).join("; ");
+  return new ToolExecutionError(
+    error.message,
+    `No Resource has ID '${requested}'. resource_id must be a Resource ID, not a name: ${ids}. Retry with that ID.`,
+    { cause: error },
+  );
 }
 
 export const FetchResourceTool = Object.assign(

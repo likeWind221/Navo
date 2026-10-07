@@ -237,13 +237,28 @@ function toolFailedResult(
   callId: ToolCallId,
   error: unknown,
 ): ToolExecutionFailure {
+  const causes = errorCauses(error);
   return failureResult(callId, {
     code: "tool-failed",
     message: errorMessage(error),
     ...(error instanceof ToolExecutionError
       ? { modelMessage: error.modelMessage }
       : {}),
+    ...(causes.length === 0 ? {} : { details: { causes } }),
   });
+}
+
+function errorCauses(error: unknown): JsonObject[] {
+  const causes: JsonObject[] = [];
+  const seen = new Set<unknown>([error]);
+  let cause = error instanceof Error ? error.cause : undefined;
+  while (cause instanceof Error && !seen.has(cause) && causes.length < 8) {
+    seen.add(cause);
+    const code = "code" in cause && typeof cause.code === "string" ? cause.code : undefined;
+    causes.push({ name: cause.name, ...(code === undefined ? {} : { code }) });
+    cause = cause.cause;
+  }
+  return causes;
 }
 
 function modelVisibleFailureMessage(failure: ToolFailure): string {

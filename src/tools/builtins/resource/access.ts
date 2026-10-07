@@ -13,6 +13,7 @@ import {
   invalidResourceTool,
   positiveRevision,
   resourceArtifact,
+  RESOURCE_ID_PARAMETER,
   resourceId,
   resourceToolFailure,
 } from "./common.js";
@@ -22,7 +23,7 @@ export const SET_RESOURCE_ACCESS_TOOL_NAME = "set_resource_access";
 const schema: JsonObject = {
   type: "object",
   properties: {
-    resource_id: { type: "string" },
+    resource_id: RESOURCE_ID_PARAMETER,
     expected_revision: { type: "integer" },
     access: {
       type: "object",

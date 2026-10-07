@@ -6,7 +6,7 @@ import { DELETE_RESOURCE_TOOL_NAME } from "../tools/builtins/resource/delete.js"
 import { FETCH_RESOURCE_TOOL_NAME } from "../tools/builtins/resource/fetch.js";
 import { REGISTER_RESOURCE_TOOL_NAME } from "../tools/builtins/resource/register.js";
 import { UPDATE_RESOURCE_TOOL_NAME } from "../tools/builtins/resource/update.js";
-import type { NodeTurnContext } from "./context.js";
+import type { NodeTurnContext, NodeTurnResourceContext } from "./context.js";
 
 export interface NodeAgentProfile {
   readonly systemPrompt: string;
@@ -59,6 +59,7 @@ export function createNodeAgentProfile(
     "<node-context>", nodeContext, "</node-context>",
     "<available-resources>", resources, "</available-resources>",
     "The available-resources block is a Turn-start snapshot of Resource metadata only. Use fetch_resource with a Resource ID when content is needed. Resources not listed there may be unavailable to this Node.",
+    "Resources and status may change between Turns of this Session. The available-resources block and node-context status reflect the start of the current Turn and supersede earlier statements in this conversation, including earlier reports that a Resource was missing or unavailable.",
     "ownedByCurrentAgent=true means you may update Resource metadata or delete that Resource. Other listed Resources are read-only.",
     "Use web_search to discover sources and web_fetch to inspect full pages when research is needed. Cite sources supporting your findings.",
     ...(options.allowFileRead ? ["When web_fetch returns a file_path, use read and its pagination to inspect the saved source."] : []),
@@ -69,6 +70,22 @@ export function createNodeAgentProfile(
     "Do not change Project plans, access another Node's private Session, or contact another Node. Report coordination needs to the Main Agent through trusted Project capabilities when available.",
   ].join("\n");
   return Object.freeze({ systemPrompt, toolNames });
+}
+
+export function formatResourceChanges(
+  added: readonly NodeTurnResourceContext[],
+): string {
+  const resources = escapeContext(JSON.stringify(
+    added.map(resource => ({ id: resource.id, name: resource.name })),
+    null,
+    2,
+  ));
+  return [
+    "<resource-changes>",
+    "Navo Turn-start data, not a human request: these Resources became available to this Node since your previous Turn and are listed in available-resources. Use fetch_resource with their id when their content is relevant.",
+    resources,
+    "</resource-changes>",
+  ].join("\n");
 }
 
 function escapeContext(value: string): string {

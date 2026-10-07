@@ -79,6 +79,55 @@ describe("Resource access and Project reporting capabilities", () => {
     }
   });
 
+  it("points a name passed as resource_id to the visible Resource ID without exposing private ones", async () => {
+    const { app, project, root } = await resourceToolFixture();
+    await writeFile(join(root, "validation.txt"), "independent repeat\n", "utf8");
+    await writeFile(join(root, "private.txt"), "owner only\n", "utf8");
+    const owner = bindResourceNode(app, project.id);
+    const reader = bindResourceNode(app, project.id);
+    const register = async (path: string, name: string) => resourceArtifact(await callResourceTool(
+      app,
+      owner.sessionId,
+      REGISTER_RESOURCE_TOOL_NAME,
+      { path, name, description: name, type: "text/plain" },
+    )).resource_id as string;
+    const shared = await register("validation.txt", "supplied-validation");
+    const hidden = await register("private.txt", "private-note");
+    app.resources.setAccess({
+      projectId: project.id,
+      actor: { kind: "main" },
+      resourceId: createResourceId(shared),
+      expectedRevision: 1,
+      access: { kind: "shared", nodeIds: [reader.node.node.id] },
+    });
+
+    const byName = await callResourceTool(app, reader.sessionId, FETCH_RESOURCE_TOOL_NAME, {
+      resource_id: "Supplied-Validation",
+    });
+    expect(byName).toMatchObject({
+      kind: "failure",
+      failure: {
+        code: "tool-failed",
+        message: "Resource is unavailable to the current caller.",
+        details: { causes: [{ name: "ResourceError", code: "resource-unavailable" }] },
+      },
+    });
+    expect(resourceResultText(byName)).toContain(`'supplied-validation' has Resource ID ${shared}`);
+
+    const privateName = await callResourceTool(app, reader.sessionId, FETCH_RESOURCE_TOOL_NAME, {
+      resource_id: "private-note",
+    });
+    expect(resourceResultText(privateName)).toBe(
+      "Error: The Resource is unavailable in the current Project or you do not have permission to read it.",
+    );
+    expect(resourceResultText(privateName)).not.toContain(hidden);
+
+    const retried = await callResourceTool(app, reader.sessionId, FETCH_RESOURCE_TOOL_NAME, {
+      resource_id: shared,
+    });
+    expect(resourceResultText(retried)).toContain("1: independent repeat");
+  });
+
   it("blocks generic read from .navo while fetch_resource remains authorized", async () => {
     const { app, project, root } = await resourceToolFixture();
     await writeFile(join(root, "report.md"), "protected\n", "utf8");

@@ -19,6 +19,8 @@
 
 - [Bug 跟踪机制与 F9.8 已知问题交接](68-devlog-bug-tracking.md)：BUG-001 至 BUG-004 登记、修复留痕规则及本次带已知问题合并授权。
 
+- [BUG-001 至 BUG-004 长程真实验收排查与修复](69-bugfix-bug-001-004-longterm.md)：证据落盘、续接资源变化通知、Resource ID 语义、Main 状态核实与可恢复错误验收口径；7 次真实运行记录与面试复盘，BUG-002 未复现待定。
+
 - [内存路线图与数据库持久化阶段划分](56-devlog-persistence-plan.md)：区分重建、落盘和恢复；F9.3 完成内存路线图，F10 统一实施数据库持久化；附 Codex/Pi 存储调研与数据库选型。
 
 - [F9.1–F9.2：Project 与通用 Node 领域](55-devlog-project-node-domain.md)：项目身份与事件恢复、通用节点、四态生命周期和人工完成确认。

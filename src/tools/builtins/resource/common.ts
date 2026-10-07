@@ -18,6 +18,11 @@ import type {
 } from "../../../resource/model.js";
 import { ToolExecutionError } from "../../errors.js";
 
+export const RESOURCE_ID_PARAMETER: JsonObject = {
+  type: "string",
+  description: "Resource ID exactly as listed in available-resources or returned by a Resource tool, never the Resource name.",
+};
+
 export interface ResourceToolCaller {
   readonly projectId: ProjectResource["projectId"];
   readonly principal: ResourcePrincipal;
@@ -133,7 +138,7 @@ function resourceErrorMessage(error: ResourceError): string {
     case "resource-unavailable":
       return "The Resource is unavailable in the current Project or you do not have permission to read it.";
     case "resource-content-unavailable":
-      return "The Resource content is unavailable or violates its file boundary.";
+      return `The Resource content is unavailable or violates its file boundary: ${error.message}`;
     case "project-unavailable":
       return "The Resource operation requires the current Project to be active.";
     case "workspace-unavailable":

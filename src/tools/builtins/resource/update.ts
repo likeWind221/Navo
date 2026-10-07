@@ -9,6 +9,7 @@ import {
   positiveRevision,
   requireResourceToolCaller,
   resourceArtifact,
+  RESOURCE_ID_PARAMETER,
   resourceId,
   resourceToolFailure,
 } from "./common.js";
@@ -18,7 +19,7 @@ export const UPDATE_RESOURCE_TOOL_NAME = "update_resource";
 const schema: JsonObject = {
   type: "object",
   properties: {
-    resource_id: { type: "string" },
+    resource_id: RESOURCE_ID_PARAMETER,
     expected_revision: { type: "integer" },
     name: { type: "string" },
     description: { type: "string" },

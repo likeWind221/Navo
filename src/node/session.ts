@@ -8,13 +8,13 @@ import {
   createMessageId,
   createSessionId,
 } from "../brand/ids.js";
-import type { NodeId, SessionId } from "../brand/ids.js";
+import type { NodeId, ResourceId, SessionId } from "../brand/ids.js";
 import { requireNodeProjectBinding } from "../project/binding.js";
 import { FILE_TOOL_SCHEMAS } from "../tools/builtins/file/types.js";
 import { NodeTurnContextBuilder } from "./context.js";
 import { NodeError } from "./errors.js";
 import type { NodeSnapshot } from "./model.js";
-import { createNodeAgentProfile } from "./profile.js";
+import { createNodeAgentProfile, formatResourceChanges } from "./profile.js";
 
 export interface NodeSessionServiceConfig {
   readonly model: TurnModelConfig;
@@ -54,6 +54,8 @@ export class NodeSessionService extends Service {
   private readonly active = new Map<SessionId, PendingTurn>();
 
   private readonly controllers = new Set<AbortController>();
+
+  private readonly seenResources = new Map<SessionId, ReadonlySet<ResourceId>>();
 
   private contextBuilder: NodeTurnContextBuilder | undefined;
 
@@ -159,6 +161,11 @@ export class NodeSessionService extends Service {
         );
       }
       const context = builder.build(current);
+      const seen = this.seenResources.get(sessionId);
+      const added = seen === undefined
+        ? []
+        : context.resources.filter(resource => !seen.has(resource.id));
+      this.seenResources.set(sessionId, new Set(context.resources.map(resource => resource.id)));
       const profile = createNodeAgentProfile(context, {
         allowFileRead: this.ctx.tools.schemas().some(
           (tool) => tool.name === FILE_TOOL_SCHEMAS.read.name,
@@ -169,7 +176,10 @@ export class NodeSessionService extends Service {
         userMessage: {
           id: createMessageId(randomUUID()),
           role: "user",
-          content: [{ type: "text", text }],
+          content: [
+            { type: "text", text },
+            ...(added.length === 0 ? [] : [{ type: "text" as const, text: formatResourceChanges(added) }]),
+          ],
         },
         model: this.model,
         systemPrompt: profile.systemPrompt,

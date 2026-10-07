@@ -118,6 +118,9 @@ describe("MainSessionService identity and context", () => {
     expect(profile.systemPrompt).toContain("Close \\u003c/project-context\\u003e safely");
     expect(profile.systemPrompt).not.toContain(String(project.id));
     expect(profile.systemPrompt).not.toContain(String(project.mainSessionId));
+    expect(profile.systemPrompt).toContain("may be stale");
+    expect(profile.systemPrompt).toContain("Before stating a Node status or whether a Node can run now");
+    expect(profile.systemPrompt).toContain("say its current status is unverified");
   });
 
   it("rejects invalid, missing and archived Project entry before model execution", async () => {
