@@ -16,6 +16,7 @@ export type ToolRegistration = () => void;
 
 /** Model-visible schema plus the same-process implementation behind it. */
 export interface ToolDefinition extends ToolSchema {
+  readonly parametersFor?: (sessionId: SessionId) => JsonObject;
   readonly execute: (
     arguments_: JsonObject,
     context: ToolExecutionContext,

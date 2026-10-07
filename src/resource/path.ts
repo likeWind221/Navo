@@ -76,7 +76,7 @@ export async function resolveResourcePublishSource(
     if (error instanceof ResourceError) throw error;
     throw new ResourceError(
       "resource-content-unavailable",
-      "Resource source file is unavailable.",
+      sourceUnavailableMessage(normalized, error),
       { cause: error },
     );
   }
@@ -167,6 +167,25 @@ function validateWorkspaceSourceRef(value: unknown): string {
     );
   }
   return value;
+}
+
+function sourceUnavailableMessage(sourceRef: string, error: unknown): string {
+  const code = errorCode(error);
+  switch (code) {
+    case "ENOENT":
+    case "ENOTDIR":
+      return `Resource source file '${sourceRef}' was not found in the Workspace (${code}).`;
+    case "EACCES":
+    case "EPERM":
+      return `Resource source file '${sourceRef}' is not readable (${code}).`;
+    default:
+      return `Resource source file '${sourceRef}' is unavailable (${code ?? "unknown error"}).`;
+  }
+}
+
+function errorCode(error: unknown): string | undefined {
+  if (error === null || typeof error !== "object" || !("code" in error)) return undefined;
+  return typeof error.code === "string" ? error.code : undefined;
 }
 
 function resourceDirectoryName(resourceId: ResourceId): string {

@@ -3,11 +3,12 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "../src/app.js";
-import type { NodeId } from "../src/brand/ids.js";
+import type { NodeId, ProjectId } from "../src/brand/ids.js";
 import { resolveKernelHostConfig } from "../src/host/config.js";
 import { QwenChatCompletionsAdapter } from "../src/llm/adapters/qwen.js";
 import { projectNode } from "../src/node/projector.js";
 import { projectRoadmap } from "../src/roadmap/projector.js";
+import { captureTurn, projectState, writeEvidence } from "./longterm/evidence.js";
 
 async function main() {
   const config = resolveKernelHostConfig();
@@ -16,6 +17,9 @@ async function main() {
     node: { session: { model: config.agent.model } },
     runtime: { maxSteps: 16, maxModelRetries: 0 },
   });
+  const evidenceDir = process.env.NAVO_EVIDENCE_DIR?.trim() || join(tmpdir(), `navo-longterm-evidence-${Date.now()}`);
+  let activeProject: ProjectId | undefined;
+  console.log(JSON.stringify({ evidenceDir }));
   try {
     await writeFile(join(root, "evidence.txt"), "Candidate A: latency 120 ms, accuracy 94%. Candidate B: latency 180 ms, accuracy 95%. Requirement: latency below 150 ms and accuracy at least 93%. These measurements have not been independently validated.");
     await writeFile(join(root, "validation.txt"), "Independent repeat: Candidate A latency 125 ms, accuracy 93.5%; Candidate B latency 175 ms, accuracy 94.5%. Candidate A meets both requirements; Candidate B fails latency. Small synthetic sample; production workload remains untested.");
@@ -23,6 +27,7 @@ async function main() {
     const project = app.projects.create({ goal: "Recommend A or B using supplied measurements and independent validation. No internet research is needed. Humans control every turn and completion." });
     await app.projectWorkspaces.create(project.id, root);
     const projectId = project.id;
+    activeProject = projectId;
     type Execution = Pick<Awaited<ReturnType<typeof app.projectRuntime.startMain>>, "sessionId" | "turn">;
     const turns: Execution[] = [];
     const node = (title: string) => {
@@ -33,25 +38,19 @@ async function main() {
     const confirm = (nodeId: NodeId) => app.projectRuntime.confirmCompletion(projectId, nodeId, {
       confirmedBy: "human", reason: "Live acceptance harness reviewed asserted output", reviewedRevision: app.nodes.get(nodeId)!.revision,
     });
+    let sequence = 0;
     const run = async (label: string, action: () => Promise<Execution>) => {
       const started = Date.now();
       console.log(`START ${label}`);
       const result = await action();
       turns.push(result);
-      const events = app.sessions.getEvents(result.sessionId).filter(event => "turnId" in event.data && event.data.turnId === result.turn.turnId);
-      const calls = events.flatMap(event => event.type === "assistant-message"
-        ? event.data.message.content.filter(block => block.type === "tool-call").map(block => block.name) : []);
-      const answers = events.flatMap(event => event.type === "assistant-message"
-        ? event.data.message.content.filter(block => block.type === "text").map(block => block.text) : []);
-      const errors = events.filter(event => event.type === "error").map(event => event.data);
-      const resourceSnapshots = events.filter(event => event.type === "llm-requested").map(event => {
-        const system = JSON.stringify(event.data.messages.find(message => message.role === "system"));
-        return app.resources.listByProject(projectId).filter(resource => system?.includes(resource.id)).map(resource => resource.id);
-      });
-      console.log(JSON.stringify({ label, seconds: (Date.now() - started) / 1000, result: result.turn, calls, errors, resourceSnapshots, answer: answers.at(-1) }));
+      const seconds = (Date.now() - started) / 1000;
+      const { calls, answers, errors, unrecovered, succeeded, record } = captureTurn(app, projectId, result.sessionId, result.turn.turnId);
+      const file = await writeEvidence(evidenceDir, `${String(++sequence).padStart(2, "0")}-${label}`, { label, seconds, result: result.turn, ...record });
+      console.log(JSON.stringify({ label, seconds, result: result.turn, calls, errors, unrecovered: unrecovered.length, evidence: file, answer: answers.at(-1) }));
       assert.equal(result.turn.status, "completed", `${label} did not complete`);
-      assert.equal(errors.length, 0, `${label} reported errors`);
-      return { result, calls, answer: answers.at(-1) ?? "" };
+      assert.equal(unrecovered.length, 0, `${label} reported unrecovered errors`);
+      return { result, calls, succeeded, answer: answers.at(-1) ?? "" };
     };
     const mainTurn = (text: string) => app.projectRuntime.startMain({ projectId, text });
     console.log(JSON.stringify({ model: config.agent.model.model, thinking: config.adapter.enableThinking, maxTokens: config.agent.model.maxTokens }));
@@ -101,10 +100,15 @@ async function main() {
     assert(app.resources.getVisible(projectId, validation.id, { kind: "node", nodeId: synthesisId }));
     assert.equal(node("synthesis").status, "locked");
     confirm(validationId);
+    const roadmapBeforeStatus = app.roadmaps.get(projectId)?.revision;
     assert.equal(node("synthesis").status, "idle");
-    const final = await run("8-resume", () => app.projectRuntime.continueNode({ projectId, nodeId: synthesisId, text: "The Human confirmed validation. Fetch the newly shared independent validation resource and continue your earlier analysis. Give a concise final recommendation with numerical support and the supplied limitation. Do not invent further research." }));
+    const status = await run("8-status", () => mainTurn("What is the synthesis Node's status right now? Answer with its exact current status value. Do not change anything."));
+    assert(status.succeeded.some(call => call.name === "read_roadmap" || call.name === "read_node"), "8-status answered without reading current status");
+    assert.match(status.answer, /\bidle\b/i);
+    assert.equal(app.roadmaps.get(projectId)?.revision, roadmapBeforeStatus);
+    const final = await run("9-resume", () => app.projectRuntime.continueNode({ projectId, nodeId: synthesisId, text: "The Human confirmed validation. Fetch the newly shared independent validation resource and continue your earlier analysis. Give a concise final recommendation with numerical support and the supplied limitation. Do not invent further research." }));
     assert.equal(final.result.sessionId, blocked.result.sessionId);
-    assert(final.calls.includes("fetch_resource"));
+    assert(final.succeeded.some(call => call.name === "fetch_resource" && call.result.includes(`(${validation.id})`)), "9-resume did not fetch the validation Resource");
     assert.match(final.answer, /125/);
     assert.match(final.answer, /93\.5/);
     assert.equal(node("synthesis").status, "idle");
@@ -117,6 +121,12 @@ async function main() {
     assert.equal(new Set(turns.map(value => value.sessionId)).size, 4);
     assert.equal(app.projects.get(projectId)?.status, "active");
     console.log(JSON.stringify({ outcome: "passed", humanTurns: turns.length, modelSteps: turns.reduce((total, value) => total + value.turn.steps, 0), sessions: 4, roadmapRevision: app.roadmaps.get(projectId)?.revision, nodes: app.nodes.getByProject(projectId).map(value => ({ id: value.node.id, status: value.status })), projectStatus: app.projects.get(projectId)?.status }));
+  } catch (error: unknown) {
+    await writeEvidence(evidenceDir, "failure", {
+      error: error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : String(error),
+      state: activeProject === undefined ? null : projectState(app, activeProject),
+    });
+    throw error;
   } finally {
     await app.fiber.dispose();
     await rm(root, { recursive: true, force: true });

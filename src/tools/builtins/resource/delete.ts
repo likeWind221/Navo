@@ -5,8 +5,10 @@ import type { ToolDefinition } from "../../types.js";
 import {
   positiveRevision,
   requireResourceToolCaller,
-  resourceId,
+  RESOURCE_ID_PARAMETER,
+  resolveResourceRef,
   resourceToolFailure,
+  withVisibleResourceRefs,
 } from "./common.js";
 
 export const DELETE_RESOURCE_TOOL_NAME = "delete_resource";
@@ -14,7 +16,7 @@ export const DELETE_RESOURCE_TOOL_NAME = "delete_resource";
 const schema: JsonObject = {
   type: "object",
   properties: {
-    resource_id: { type: "string" },
+    resource_id: RESOURCE_ID_PARAMETER,
     expected_revision: { type: "integer" },
   },
   required: ["resource_id", "expected_revision"],
@@ -26,11 +28,12 @@ export function createDeleteResourceTool(ctx: Context): ToolDefinition {
     name: DELETE_RESOURCE_TOOL_NAME,
     description: "Delete the Resource fact owned by the current Main or Node Agent at the exact current revision. Physical Resource content is retained for audit and later cleanup.",
     parameters: schema,
+    parametersFor: sessionId => withVisibleResourceRefs(ctx, schema, sessionId),
     execute(arguments_, execution) {
       try {
         execution.signal.throwIfAborted();
         const caller = requireResourceToolCaller(ctx, execution.sessionId);
-        const id = resourceId(arguments_.resource_id);
+        const id = resolveResourceRef(ctx, caller, arguments_.resource_id);
         ctx.resources.delete({
           projectId: caller.projectId,
           actor: caller.principal,

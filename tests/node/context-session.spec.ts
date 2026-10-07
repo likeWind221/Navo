@@ -43,6 +43,7 @@ describe("Node Turn Resource context integration", () => {
     const adapter = new MockLLMAdapter([
       modelResponse([{ type: "text", text: "first turn" }]),
       modelResponse([{ type: "text", text: "second turn" }]),
+      modelResponse([{ type: "text", text: "third turn" }]),
     ]);
     app.llm.registerAdapter("mock", adapter);
 
@@ -72,6 +73,7 @@ describe("Node Turn Resource context integration", () => {
     });
     expect(adapter.requests).toHaveLength(1);
     expect(systemText(adapter.requests[0]!)).not.toContain(String(resource.id));
+    expect(adapter.requests[0]!.messages.at(-1)!.content).toHaveLength(1);
 
     const eventsBeforeGrant = app.nodes.getEvents(node.node.id).length;
     app.resources.setAccess({
@@ -95,5 +97,22 @@ describe("Node Turn Resource context integration", () => {
     expect(second).toContain("ownedByCurrentAgent");
     expect(second).not.toContain("resource body stays out of prompt");
     expect(second).not.toContain("handoff.md");
+    expect(second).toContain("supersede earlier statements in this conversation");
+    expect(adapter.requests[1]!.messages.map(message => message.role))
+      .toEqual(["system", "user", "assistant", "user"]);
+    const [human, changes] = adapter.requests[1]!.messages.at(-1)!.content;
+    expect(human).toEqual({ type: "text", text: "Check again after the human starts this Turn." });
+    expect(changes).toMatchObject({ type: "text" });
+    const notice = changes?.type === "text" ? changes.text : "";
+    expect(notice).toContain("<system-reminder>");
+    expect(notice).toContain(String(resource.id));
+    expect(notice).toContain("Handoff evidence");
+    expect(notice).not.toContain("Metadata visible after Main grants access");
+
+    await app.nodeSessions.start({
+      nodeId: node.node.id,
+      text: "Continue without new Resources.",
+    });
+    expect(adapter.requests[2]!.messages.at(-1)!.content).toHaveLength(1);
   });
 });

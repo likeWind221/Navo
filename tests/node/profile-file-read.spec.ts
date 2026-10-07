@@ -38,6 +38,8 @@ describe("NodeAgent file capability", () => {
       objective: node.node.objective,
       status: node.status,
       resources: [],
+      addedResources: [],
+      facts: [],
     } as const;
     const withoutFiles = createNodeAgentProfile(context);
     const withRead = createNodeAgentProfile(context, { allowFileRead: true });
