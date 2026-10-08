@@ -1,8 +1,8 @@
 {
   "mode": "mock",
   "emptyNotice": "暂无项目。项目目前只保存在内存中，Host 重启后会清空。",
-  "name": "QA 项目 1791445579594",
-  "detail": "QA 项目 1791445579594目标验证创建、列表与打开链路工作目录C:\\Users\\likeW\\AppData\\Local\\Temp\\navo-f5-2-workspace-cUzZHd状态进行中创建时间2026/10/8 15:46:20",
+  "name": "QA 项目 1791445978661",
+  "detail": "QA 项目 1791445978661目标验证创建、列表与打开链路工作目录C:\\Users\\likeW\\AppData\\Local\\Temp\\navo-f5-2-workspace-B6Qo8V状态进行中创建时间2026/10/8 15:52:59",
   "conflict": "该目录已被其他项目绑定，请选择其他目录。",
   "overflow": {
     "viewport": 391,
@@ -20,5 +20,32 @@
     "lastVisible": true,
     "viewport": 391,
     "scrollWidth": 391
+  },
+  "fadeAtEnd": {
+    "tabCount": 3,
+    "start": "true",
+    "end": "false",
+    "fadeStart": "28px",
+    "fadeEnd": "0px",
+    "navLeft": 131.9921875,
+    "activeLeft": 194.9921875
+  },
+  "fadeAtStart": {
+    "tabCount": 3,
+    "start": "false",
+    "end": "true",
+    "fadeStart": "0px",
+    "fadeEnd": "28px",
+    "navLeft": 131.9921875,
+    "activeLeft": 473.9921875
+  },
+  "fadeDesktop": {
+    "tabCount": 1,
+    "start": "false",
+    "end": "false",
+    "fadeStart": "0px",
+    "fadeEnd": "0px",
+    "navLeft": 149.9921875,
+    "activeLeft": 149.9921875
   }
 }

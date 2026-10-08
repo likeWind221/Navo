@@ -4,6 +4,9 @@
 .brand span { color:var(--accent); }
 .tabs { display:flex; gap:4px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; min-width:0; align-self:stretch; align-items:center; }
 .tabs::-webkit-scrollbar { display:none; }
+.tabs { --fade-start:0px; --fade-end:0px; scroll-padding-inline:32px; mask-image:linear-gradient(to right, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%); }
+.tabs[data-overflow-start="true"] { --fade-start:28px; }
+.tabs[data-overflow-end="true"] { --fade-end:28px; }
 .tab { display:flex; align-items:center; flex-shrink:0; border-radius:8px; padding-right:4px; color:var(--text-secondary); }
 .tab[data-active="true"] { background:var(--surface-muted); color:var(--text); }
 .tab button, .switch button, .entry, .toggle { border:0; background:transparent; color:inherit; cursor:pointer; }

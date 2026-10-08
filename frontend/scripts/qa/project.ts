@@ -159,9 +159,32 @@ async function main(): Promise<void> {
     assert.equal(tabStrip.lastActive, "true");
     assert.equal(tabStrip.lastVisible, true);
     assert.ok((tabStrip.scrollWidth as number) <= (tabStrip.viewport as number));
+    const fadeAtEnd = await fadeState(window);
+    assert.deepEqual([fadeAtEnd.start, fadeAtEnd.end], ["true", "false"]);
+    assert.equal(fadeAtEnd.fadeStart, "28px");
+    assert.ok(fadeAtEnd.activeLeft >= fadeAtEnd.navLeft + 28);
     await writeFile(join(outputDirectory, `f5-2-${mode}-tabs-narrow.png`), (await window.webContents.capturePage()).toPNG());
 
-    const result = { mode, emptyNotice, name, detail, conflict, overflow, tabStrip };
+    await window.webContents.executeJavaScript(`document.querySelector('nav[aria-label="已打开的标签页"]').scrollLeft = 0`);
+    await delay(200);
+    const fadeAtStart = await fadeState(window);
+    assert.deepEqual([fadeAtStart.start, fadeAtStart.end], ["false", "true"]);
+    assert.equal(fadeAtStart.fadeEnd, "28px");
+    await writeFile(join(outputDirectory, `f5-2-${mode}-tabs-narrow-start.png`), (await window.webContents.capturePage()).toPNG());
+
+    window.setContentSize(1280, 800);
+    await click(window, `nav[aria-label="已打开的标签页"] button[aria-label]`, `关闭 ${secondName}`);
+    await click(window, `nav[aria-label="已打开的标签页"] button[aria-label]`, `关闭 ${name}`);
+    await delay(400);
+    const fadeDesktop = await fadeState(window);
+    assert.equal(fadeDesktop.tabCount, 1);
+    assert.deepEqual(
+      [fadeDesktop.start, fadeDesktop.end, fadeDesktop.fadeStart, fadeDesktop.fadeEnd],
+      ["false", "false", "0px", "0px"],
+    );
+    await writeFile(join(outputDirectory, `f5-2-${mode}-tabs-desktop.png`), (await window.webContents.capturePage()).toPNG());
+
+    const result = { mode, emptyNotice, name, detail, conflict, overflow, tabStrip, fadeAtEnd, fadeAtStart, fadeDesktop };
     await writeFile(join(outputDirectory, `f5-2-${mode}-results.json`), JSON.stringify(result, null, 2));
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } finally {
@@ -173,6 +196,32 @@ async function main(): Promise<void> {
     await host.close();
     await rm(workspaceRoot, { recursive: true, force: true });
   }
+}
+
+async function fadeState(window: BrowserWindow): Promise<FadeState> {
+  return window.webContents.executeJavaScript(`(() => {
+    const nav = document.querySelector('nav[aria-label="已打开的标签页"]');
+    const style = getComputedStyle(nav);
+    return {
+      tabCount: nav.querySelectorAll('[data-active]').length,
+      start: nav.dataset.overflowStart ?? '',
+      end: nav.dataset.overflowEnd ?? '',
+      fadeStart: style.getPropertyValue('--fade-start').trim(),
+      fadeEnd: style.getPropertyValue('--fade-end').trim(),
+      navLeft: nav.getBoundingClientRect().left,
+      activeLeft: nav.querySelector('[data-active="true"]').getBoundingClientRect().left,
+    };
+  })()`);
+}
+
+interface FadeState {
+  readonly tabCount: number;
+  readonly start: string;
+  readonly end: string;
+  readonly fadeStart: string;
+  readonly fadeEnd: string;
+  readonly navLeft: number;
+  readonly activeLeft: number;
 }
 
 async function click(window: BrowserWindow, selector: string, label?: string): Promise<void> {

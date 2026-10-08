@@ -29,7 +29,21 @@ export function WorkspaceShell({ children, entries, create, notice, openRequest 
   }, [openRequest]);
 
   useEffect(() => {
-    tabs.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const strip = tabs.current;
+    if (strip === null) return;
+    const markOverflow = (): void => {
+      strip.dataset.overflowStart = String(strip.scrollLeft > 1);
+      strip.dataset.overflowEnd = String(strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 1);
+    };
+    strip.querySelector('[data-active="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    markOverflow();
+    strip.addEventListener("scroll", markOverflow, { passive: true });
+    const resize = new ResizeObserver(markOverflow);
+    resize.observe(strip);
+    return () => {
+      strip.removeEventListener("scroll", markOverflow);
+      resize.disconnect();
+    };
   }, [active, opened]);
 
   function open(id: string): void {
