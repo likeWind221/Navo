@@ -7,7 +7,7 @@ import type { NodeObjective, NodeSnapshot, NodeStatus } from "./model.js";
 import { NodeError } from "./errors.js";
 
 export interface NodeTurnContext {
-  readonly projectGoal: string;
+  readonly projectGoal: string | null;
   readonly objective: NodeObjective;
   readonly status: NodeStatus;
   readonly resources: readonly NodeTurnResourceContext[];

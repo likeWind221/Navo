@@ -175,6 +175,24 @@ describe("write_roadmap", () => {
     expect(ctx.nodes.getByProject(project.id).map((node) => node.node.id)).toEqual(nodeIds);
   });
 
+  it("refuses to plan before the Project goal is confirmed, even through the store", async () => {
+    const ctx = await createContext();
+    const project = ctx.projects.create({ name: "Project", goal: null });
+
+    const result = await ctx.tools.execute(
+      toolCall("early-roadmap", WRITE_ROADMAP_TOOL_NAME, initialProposal),
+      signal,
+      { sessionId: project.mainSessionId, allowedTools: [WRITE_ROADMAP_TOOL_NAME] },
+    );
+
+    if (result.kind !== "failure") throw new Error("write_roadmap unexpectedly planned without a goal");
+    expect(JSON.stringify(result.block.content)).toContain("goal is not confirmed yet");
+    expect(ctx.roadmaps.get(project.id)).toBeUndefined();
+    expect(ctx.nodes.getByProject(project.id)).toEqual([]);
+    expect(() => ctx.roadmaps.create({ definition: { projectId: project.id, nodes: [], edges: [] }, reason: "Bypass" }))
+      .toThrow(expect.objectContaining({ code: "goal-required" }));
+  });
+
   it("rejects a Node Session even if write_roadmap is dispatched directly", async () => {
     const ctx = await createContext();
     const project = ctx.projects.create({ name: "Project", goal: "Protected Project" });

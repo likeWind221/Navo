@@ -9,9 +9,10 @@ declare module "cordis" {
 export type ProjectEvent =
   | ProjectEventRecord<"project-created", {
       readonly name: string;
-      readonly goal: string;
+      readonly goal: string | null;
       readonly mainSessionId: SessionId;
     }>
+  | ProjectEventRecord<"project-goal-set", { readonly goal: string }>
   | ProjectEventRecord<"project-archived", { readonly reason: string }>
   | ProjectEventRecord<"project-reopened", { readonly reason: string }>;
 

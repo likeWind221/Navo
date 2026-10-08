@@ -27,7 +27,9 @@ export class RoadmapStore extends Service {
   create(input: CreateRoadmapInput): RoadmapSnapshot {
     const projectId = input.definition.projectId;
     if (this.snapshots.has(projectId)) throw new RoadmapError("already-exists", "Project already owns a roadmap");
-    if (this.ctx.projects.get(projectId)?.status !== "active") throw new RoadmapError("project-unavailable", "Creating a roadmap requires an active project");
+    const project = this.ctx.projects.get(projectId);
+    if (project?.status !== "active") throw new RoadmapError("project-unavailable", "Creating a roadmap requires an active project");
+    if (project.goal === null) throw new RoadmapError("goal-required", "Creating a roadmap requires a confirmed project goal");
     const nodeEvents = (input.newNodes ?? []).map(value => this.ctx.nodes.creation(value));
     const nodeBatch = this.ctx.nodes.prepare(nodeEvents);
     const catalog = [...this.ctx.nodes.getByProject(projectId).map(value => value.node), ...nodeEvents.map(event => nodeBatch.get(event.nodeId)!.node)];

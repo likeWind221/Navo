@@ -1,6 +1,7 @@
 import { createProjectId, createSessionId } from "../brand/ids.js";
 import type { ProjectId } from "../brand/ids.js";
 import { ProjectError } from "./errors.js";
+import { PROJECT_GOAL_MAX_CHARS } from "./model.js";
 import type { ProjectSnapshot } from "./model.js";
 
 export function projectProject(
@@ -35,12 +36,18 @@ export function projectProject(
         snapshot = {
           id: createProjectId(projectId),
           name: text(data.name, "name"),
-          goal: text(data.goal, "goal"),
+          goal: data.goal === null ? null : goal(data.goal),
           mainSessionId: createSessionId(text(data.mainSessionId, "main session id")),
           status: "active",
           revision: 1,
           createdAt: timestamp,
         };
+        break;
+      case "project-goal-set":
+        if (snapshot === undefined || snapshot.status !== "active") {
+          invalid("Cannot set the goal of a missing or archived Project.");
+        }
+        snapshot = { ...snapshot, goal: goal(data.goal), revision: snapshot.revision + 1 };
         break;
       case "project-archived":
       case "project-reopened": {
@@ -73,6 +80,12 @@ function record(value: unknown): Record<string, unknown> {
 function text(value: unknown, name: string): string {
   if (typeof value !== "string" || !value.trim()) invalid(`${name} must be non-empty text.`);
   return value;
+}
+
+function goal(value: unknown): string {
+  const result = text(value, "goal");
+  if (result.length > PROJECT_GOAL_MAX_CHARS) invalid("goal exceeds the maximum length.");
+  return result;
 }
 
 function invalid(message: string): never {

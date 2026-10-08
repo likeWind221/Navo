@@ -24,6 +24,7 @@ import { ProjectWorkspaceStore } from "../../../src/workspace/store.js";
 
 import { MainSessionService } from "../../../src/project/session.js";
 import { ReadMailboxTool } from "../../../src/tools/builtins/mailbox/read.js";
+import { SetProjectGoalTool } from "../../../src/tools/builtins/project/goal.js";
 import { RoadmapToolsPlugin } from "../../../src/tools/builtins/roadmap/plugin.js";
 
 const contexts = new Set<Context>();
@@ -65,6 +66,7 @@ export async function createKit(
   await ctx.plugin(RoadmapStore);
   await ctx.plugin(ReadMailboxTool);
   await ctx.plugin(RoadmapToolsPlugin);
+  await ctx.plugin(SetProjectGoalTool);
   const mainFiber = ctx.plugin(MainSessionService, { model: { provider: "mock", model: "project-runtime-test" } });
   await mainFiber;
   const runtimeFiber = ctx.plugin(ProjectRuntime);

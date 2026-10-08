@@ -103,7 +103,7 @@ export type ProjectListInput = Readonly<Record<string, never>>;
 
 export interface ProjectCreateInput {
   readonly name: string;
-  readonly goal: string;
+  readonly goal: string | null;
   readonly workspaceRoot: string;
 }
 
@@ -143,7 +143,7 @@ export interface ProjectListV1 {
 export interface ProjectSummaryV1 {
   readonly projectId: string;
   readonly name: string;
-  readonly goal: string;
+  readonly goal: string | null;
   readonly workspaceRoot: string | null;
   readonly status: "active" | "archived";
   readonly revision: number;

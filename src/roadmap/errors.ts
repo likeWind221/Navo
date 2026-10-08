@@ -9,6 +9,7 @@ export class RoadmapError extends Error {
       | "already-exists"
       | "stale-revision"
       | "project-unavailable"
+      | "goal-required"
       | "working-node"
       | "invalid-event-stream",
     message: string,

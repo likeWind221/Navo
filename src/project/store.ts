@@ -5,6 +5,7 @@ import { createEventId, createProjectId, createSessionId } from "../brand/ids.js
 import type { ProjectId, SessionId } from "../brand/ids.js";
 import type { ProjectEvent } from "./events.js";
 import { ProjectError } from "./errors.js";
+import { PROJECT_GOAL_MAX_CHARS } from "./model.js";
 import type { ProjectSnapshot } from "./model.js";
 import { projectProject } from "./projector.js";
 
@@ -79,9 +80,7 @@ export class ProjectStore extends Service {
         revision: event.revision,
         timestamp: event.timestamp,
         type: event.type,
-        data: Object.freeze(event.type === "project-created"
-          ? { name: event.data.name, goal: event.data.goal, mainSessionId: event.data.mainSessionId }
-          : { reason: event.data.reason }),
+        data: Object.freeze(freezeData(event)),
       }) as ProjectEvent;
     });
     this.histories.set(projectId, Object.freeze(events));
@@ -89,27 +88,36 @@ export class ProjectStore extends Service {
   }
 
   archive(projectId: ProjectId, reason: string): ProjectSnapshot {
-    return this.transition(projectId, "project-archived", reason);
+    return this.append(projectId, { type: "project-archived", data: { reason } });
   }
 
   reopen(projectId: ProjectId, reason: string): ProjectSnapshot {
-    return this.transition(projectId, "project-reopened", reason);
+    return this.append(projectId, { type: "project-reopened", data: { reason } });
   }
 
-  private transition(
-    projectId: ProjectId,
-    type: "project-archived" | "project-reopened",
-    reason: string,
-  ): ProjectSnapshot {
+  setGoal(projectId: ProjectId, goal: string): ProjectSnapshot {
+    if (!goal.trim() || goal.length > PROJECT_GOAL_MAX_CHARS) {
+      throw new ProjectError(
+        "invalid-goal",
+        `Project goal must be non-blank text of at most ${PROJECT_GOAL_MAX_CHARS} characters.`,
+      );
+    }
+    if (this.get(projectId)?.status === "archived") {
+      throw new ProjectError("project-unavailable", "Cannot set the goal of an archived Project.");
+    }
+    return this.append(projectId, { type: "project-goal-set", data: { goal } });
+  }
+
+  private append(projectId: ProjectId, change: ProjectChange): ProjectSnapshot {
     const current = this.get(projectId);
     if (current === undefined) {
       throw new ProjectError("project-not-found", "Project was not found.");
     }
-    const event: ProjectEvent = Object.freeze({
+    const event = Object.freeze({
       ...this.header(projectId, current.revision + 1),
-      type,
-      data: Object.freeze({ reason }),
-    });
+      type: change.type,
+      data: Object.freeze({ ...change.data }),
+    }) as ProjectEvent;
     const events = Object.freeze([...this.getEvents(projectId), event]);
     const next = projectProject(projectId, events)!;
     this.histories.set(projectId, events);
@@ -130,7 +138,21 @@ export class ProjectStore extends Service {
 
 export interface CreateProjectInput {
   readonly name: string;
-  readonly goal: string;
+  readonly goal: string | null;
+}
+
+type ProjectChange<TEvent = Exclude<ProjectEvent, { type: "project-created" }>> =
+  TEvent extends ProjectEvent ? Pick<TEvent, "type" | "data"> : never;
+
+function freezeData(event: ProjectEvent): ProjectEvent["data"] {
+  switch (event.type) {
+    case "project-created":
+      return { name: event.data.name, goal: event.data.goal, mainSessionId: event.data.mainSessionId };
+    case "project-goal-set":
+      return { goal: event.data.goal };
+    default:
+      return { reason: event.data.reason };
+  }
 }
 
 declare module "cordis" {

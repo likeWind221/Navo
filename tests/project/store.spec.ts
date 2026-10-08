@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createApp } from "../../src/app.js";
 import { createMessageId, createProjectId } from "../../src/brand/ids.js";
 import { ProjectStore } from "../../src/project/store.js";
+import { PROJECT_GOAL_MAX_CHARS } from "../../src/project/model.js";
 import { projectProject } from "../../src/project/projector.js";
 
 const contexts: Context[] = [];
@@ -101,6 +102,34 @@ describe("Project domain", () => {
     expect(ctx.projects.get(project.id)).toEqual(project);
     expect(ctx.sessions.deriveMessages(project.mainSessionId)).toHaveLength(1);
   });
+  it("creates without a goal, sets it once confirmed and rebuilds it from history", async () => {
+    const source = await store();
+    const changed: string[] = [];
+    contexts.at(-1)!.on("project/changed", projectId => { changed.push(projectId); });
+    const draft = source.create({ name: "Draft", goal: null });
+    expect(draft).toMatchObject({ goal: null, revision: 1 });
+
+    expect(() => source.setGoal(draft.id, " \t ")).toThrow(expect.objectContaining({ code: "invalid-goal" }));
+    expect(() => source.setGoal(draft.id, "x".repeat(PROJECT_GOAL_MAX_CHARS + 1)))
+      .toThrow(expect.objectContaining({ code: "invalid-goal" }));
+    expect(() => source.setGoal(createProjectId("missing"), "Goal"))
+      .toThrow(expect.objectContaining({ code: "project-not-found" }));
+    expect(source.getEvents(draft.id)).toHaveLength(1);
+
+    const set = source.setGoal(draft.id, "Survey agent memory");
+    expect(set).toMatchObject({ goal: "Survey agent memory", revision: 2 });
+    expect(changed).toEqual([draft.id, draft.id]);
+    const history = JSON.parse(JSON.stringify(source.getEvents(draft.id)));
+    expect(history.map((event: { type: string }) => event.type)).toEqual(["project-created", "project-goal-set"]);
+    expect((await store()).restore(draft.id, history)).toEqual(set);
+
+    source.archive(draft.id, "Pause");
+    expect(() => source.setGoal(draft.id, "Late")).toThrow(expect.objectContaining({ code: "project-unavailable" }));
+    const [created, goalSet] = history;
+    expect(() => projectProject(draft.id, [{ ...goalSet, revision: 1 }])).toThrow("missing or archived");
+    expect(() => projectProject(draft.id, [created, { ...goalSet, data: { goal: " " } }])).toThrow("goal must be non-empty");
+  });
+
   it("keeps a name and creation time, lists Projects and discards only fresh ones", async () => {
     const projects = await store();
     expect(() => projects.create({ name: " ", goal: "Goal" })).toThrow("name must be non-empty");
