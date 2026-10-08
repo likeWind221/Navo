@@ -84,7 +84,7 @@ All agents share one AgentRuntime -> LLMService -> ToolService
 | Mailbox | `src/mailbox/` | 只允许 Node -> Main；Main -> Node 通过 Resource 共享与 Human 启动的 Turn 完成 |
 | Resource ACL | `src/resource/` | owner 来自 Binding；只有 Main 能修改访问权限；文件工具无法读取 `.navo/` |
 | LLM / Tools | `src/llm/`、`src/tools/` | 模型适配（含 Mock 与 Qwen）与工具注册、策略、执行 |
-| 桌面端 | `frontend/`、RPC | Electron + React，经 stdio NDJSON RPC 连接后端；Project / Roadmap 视图尚未接入（F9.9） |
+| 桌面端 | `frontend/`、RPC | Electron + React，经 stdio NDJSON RPC 连接后端；已接入项目创建、列表与详情（F5.2）；项目内 Main 对话与 Roadmap 视图尚未接入 |
 
 ### 运行
 
@@ -167,7 +167,7 @@ Guardrails exercised: forbidden-replan, stale-connect
 - 所有状态只在内存中，持久化属于 Phase 10。
 - 节点完成由 Human 确认，尚无自动 Evidence / Verification；Replanning 由 Main 在 Human 启动的 Turn 中完成。
 - 同一场景的真实模型验收仍在进行中，见 [_docs/bug-plan.md](_docs/bug-plan.md)。
-- 桌面端目前是单 Session 聊天界面，F9.9 尚未开始。
+- 桌面端可创建、列出和打开项目（项目公共接口 F9.9 已交付）；项目内 Main 对话与 Roadmap 视图尚未接入。
 
 ### 文档
 
@@ -199,7 +199,7 @@ See the architecture diagram above.
 | Mailbox | `src/mailbox/` | Node -> Main only; Main reaches Nodes through Resource sharing and Human-started turns |
 | Resource ACL | `src/resource/` | Owner comes from the Binding; only Main changes access; file tools cannot read `.navo/` |
 | LLM / Tools | `src/llm/`, `src/tools/` | Model adapters (Mock, Qwen) and tool registry, policy and execution |
-| Desktop | `frontend/`, RPC | Electron + React over stdio NDJSON RPC; Project / Roadmap views not wired yet (F9.9) |
+| Desktop | `frontend/`, RPC | Electron + React over stdio NDJSON RPC; project create / list / detail wired (F5.2); in-project Main chat and Roadmap views not wired yet |
 
 ### Running
 
@@ -225,7 +225,7 @@ See [scripts/demo.ts](scripts/demo.ts), [scripts/demo/script.ts](scripts/demo/sc
 - State is in memory only; persistence is Phase 10.
 - Completion is Human-confirmed; there is no automatic Evidence / Verification yet, and replanning happens in Human-started Main turns.
 - Real-model acceptance of the same scenario is still in progress; see [_docs/bug-plan.md](_docs/bug-plan.md).
-- The desktop app is a single-session chat; F9.9 has not started.
+- The desktop app can create, list and open projects (project public API delivered in F9.9); in-project Main chat and Roadmap views are not wired yet.
 
 ### Docs
 

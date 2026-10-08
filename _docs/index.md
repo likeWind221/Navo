@@ -45,6 +45,7 @@
 - [F9.9a 项目查询与创建](73-devlog-f9.9a-project-query.md)：项目名称与列表、5 个 `project.*.v1` 公共方法、`agent.turn.v1` 更名、业务失败经 error 帧转发。
 - [F9.9b Human 操作入口](74-devlog-f9.9b-human-control.md)：`project.turn.v1` 复用 v2 事件流式执行 Main / Node 回合、cancel 帧只取消目标回合、`project.node.review.v1` 完成与跳过。
 - [F9.9c 变化跟随](75-devlog-f9.9c-project-follow.md)：`project.follow.v1` 先推完整基线再推整份替换帧，各状态所有者在提交点发出 `project/changed`。
+- [F9.10 项目目标确认与规划前置](76-devlog-f9.10-goal-confirm.md)：目标可选、`set_project_goal` 与 Roadmap 后锁定、无目标不能规划、Main 规划前须经用户同意，以及真实模型五场景与长程验收。
 
 ## Phase 10 规划
 
@@ -87,6 +88,7 @@
 - [F4 验收与收尾](54-devlog-tool-result-rows.md)：自动验证与用户验收通过，阶段正式关闭。
 - [F5.1 工作区布局与导航](57-devlog-f5-1-workspace.md)：侧栏双视图、顶部标签、状态保留与滑动过渡。
 - [F5.2 真实项目入口接入核对](58-devlog-f5-2-project-handoff.md)：公共项目接口缺口、领域字段边界与后端交接目标。
+- [F5.2 真实项目入口](77-devlog-f5-2-project-entry.md)：项目创建 / 列表 / 详情的桌面桥接、失败码中文提示、目标可选、标签栏隐藏滚动条与两端淡出，以及 Electron 自动验收与用户人工验收。
 
 ## 工程治理与迁移
 
