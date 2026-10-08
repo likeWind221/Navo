@@ -117,7 +117,51 @@ async function main(): Promise<void> {
     assert.ok(overflow.panelScrollWidth <= overflow.panelClientWidth);
     await writeFile(join(outputDirectory, `f5-2-${mode}-narrow.png`), (await window.webContents.capturePage()).toPNG());
 
-    const result = { mode, emptyNotice, name, detail, conflict, overflow };
+    const secondRoot = join(workspaceRoot, "second");
+    await mkdir(secondRoot);
+    nextChoice = secondRoot;
+    const secondName = `${name} 第二个项目`;
+    await click(window, `button[aria-controls]`, "展开侧栏");
+    await click(window, `button[class*="create"]`);
+    await waitFor(window, `document.querySelector('dialog[open]') !== null`);
+    await fill(window, `dialog input[name="name"]`, secondName);
+    await fill(window, `dialog textarea[name="goal"]`, goal);
+    await click(window, `dialog button`, "选择目录");
+    await waitFor(window, `document.querySelector('dialog code')?.textContent === ${JSON.stringify(secondRoot)}`);
+    await click(window, `dialog button[type="submit"]`);
+    const secondPanel = `section[data-active="true"] article[aria-label=${JSON.stringify(`项目 ${secondName}`)}]`;
+    await waitFor(window, `document.querySelector(${JSON.stringify(secondPanel)}) !== null`);
+    await waitFor(window, `document.querySelector('aside')?.getAttribute('data-open') === 'false'`);
+    await click(window, `nav[aria-label="已打开的标签页"] button[aria-controls]`, "当前会话");
+    await delay(300);
+    await click(window, `nav[aria-label="已打开的标签页"] button[aria-controls]`, secondName);
+    await delay(400);
+    const tabStrip = await window.webContents.executeJavaScript(`(() => {
+      const nav = document.querySelector('nav[aria-label="已打开的标签页"]');
+      const last = [...nav.querySelectorAll('[data-active]')].at(-1);
+      const navBox = nav.getBoundingClientRect();
+      const lastBox = last.getBoundingClientRect();
+      return {
+        tabCount: nav.querySelectorAll('[data-active]').length,
+        offsetHeight: nav.offsetHeight,
+        clientHeight: nav.clientHeight,
+        scrollbarWidth: getComputedStyle(nav).scrollbarWidth,
+        scrollable: nav.scrollWidth > nav.clientWidth,
+        lastActive: last.getAttribute('data-active'),
+        lastVisible: lastBox.left >= navBox.left - 1 && lastBox.right <= navBox.right + 1,
+        viewport: window.innerWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      };
+    })()`) as Record<string, unknown>;
+    assert.ok((tabStrip.tabCount as number) >= 3);
+    assert.equal(tabStrip.offsetHeight, tabStrip.clientHeight);
+    assert.equal(tabStrip.scrollbarWidth, "none");
+    assert.equal(tabStrip.lastActive, "true");
+    assert.equal(tabStrip.lastVisible, true);
+    assert.ok((tabStrip.scrollWidth as number) <= (tabStrip.viewport as number));
+    await writeFile(join(outputDirectory, `f5-2-${mode}-tabs-narrow.png`), (await window.webContents.capturePage()).toPNG());
+
+    const result = { mode, emptyNotice, name, detail, conflict, overflow, tabStrip };
     await writeFile(join(outputDirectory, `f5-2-${mode}-results.json`), JSON.stringify(result, null, 2));
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } finally {

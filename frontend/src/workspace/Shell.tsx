@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Icon } from "../ui/Icon";
 import styles from "./navigation/style.module.css";
@@ -20,12 +20,17 @@ export function WorkspaceShell({ children, entries, create, notice, openRequest 
   const [section, setSection] = useState<"project" | "session">("session");
   const [expanded, setExpanded] = useState(() => !window.matchMedia("(max-width: 600px)").matches);
   const prefix = useId();
+  const tabs = useRef<HTMLElement>(null);
   const onCreate = create?.[section];
   const sectionNotice = notice?.[section];
 
   useEffect(() => {
     if (openRequest) open(openRequest.id);
   }, [openRequest]);
+
+  useEffect(() => {
+    tabs.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [active, opened]);
 
   function open(id: string): void {
     setOpened(previous => previous.includes(id) ? previous : [...previous, id]);
@@ -46,7 +51,7 @@ export function WorkspaceShell({ children, entries, create, notice, openRequest 
         <span className={styles.brand}>NAVO<span>.</span></span>
         <span className={styles.sidebarIcon} data-open={expanded}><Icon name="sidebar" /></span>
       </button>
-      <nav className={styles.tabs} aria-label="已打开的标签页">
+      <nav ref={tabs} className={styles.tabs} aria-label="已打开的标签页">
         {opened.map(id => {
           const item = items.find(entry => entry.id === id);
           return item && <div key={id} className={styles.tab} data-active={active === id}>

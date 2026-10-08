@@ -2,7 +2,8 @@
 .header { height:64px; display:flex; align-items:center; gap:16px; padding:0 20px; flex-shrink:0; border-bottom:1px solid var(--border); }
 .brand { flex-shrink:0; font-weight:650; letter-spacing:2.5px; font-size:16px; }
 .brand span { color:var(--accent); }
-.tabs { display:flex; gap:4px; overflow-x:auto; min-width:0; align-self:stretch; align-items:center; }
+.tabs { display:flex; gap:4px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; min-width:0; align-self:stretch; align-items:center; }
+.tabs::-webkit-scrollbar { display:none; }
 .tab { display:flex; align-items:center; flex-shrink:0; border-radius:8px; padding-right:4px; color:var(--text-secondary); }
 .tab[data-active="true"] { background:var(--surface-muted); color:var(--text); }
 .tab button, .switch button, .entry, .toggle { border:0; background:transparent; color:inherit; cursor:pointer; }
