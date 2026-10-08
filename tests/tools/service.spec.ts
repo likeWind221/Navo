@@ -190,6 +190,53 @@ describe("ToolService execution results", () => {
     expect(result.block.content[0]).toMatchObject({ type: "text" });
   });
 
+  it("separates malformed names from unselected tools and lists callable names", async () => {
+    const ctx = await kit.createContext();
+    await ctx.plugin(TestTools);
+    const options = { allowedTools: [TEST_TOOL_NAMES.echo] };
+
+    const malformed = await ctx.tools.execute(
+      toolCall("malformed", "write_\n<parameter=reason", {}),
+      signal,
+      options,
+    );
+    const unselected = await ctx.tools.execute(
+      toolCall("unselected", TEST_TOOL_NAMES.fail, {}),
+      signal,
+      options,
+    );
+    const none = await ctx.tools.execute(
+      toolCall("none", TEST_TOOL_NAMES.echo, { text: "x" }),
+      signal,
+      { allowedTools: [] },
+    );
+
+    expect(malformed).toMatchObject({
+      kind: "failure",
+      failure: { code: "unknown-tool" },
+      block: { content: [{
+        type: "text",
+        text: "Error: Unknown tool \"write_\\n<parameter=reason\": no tool with this name exists. "
+          + `Callable tools: ${TEST_TOOL_NAMES.echo}. Correct the tool name and call it again.`,
+      }] },
+    });
+    expect(unselected).toMatchObject({
+      kind: "failure",
+      failure: { code: "tool-not-allowed" },
+      block: { content: [{
+        type: "text",
+        text: `Error: Tool "${TEST_TOOL_NAMES.fail}" is not allowed for this Turn. `
+          + `Callable tools: ${TEST_TOOL_NAMES.echo}.`,
+      }] },
+    });
+    expect(none).toMatchObject({
+      failure: { code: "tool-not-allowed" },
+      block: { content: [{
+        text: `Error: Tool "${TEST_TOOL_NAMES.echo}" is not allowed for this Turn. No tools are callable in this Turn.`,
+      }] },
+    });
+  });
+
   it("normalizes business exceptions and invalid outputs", async () => {
     const ctx = await kit.createContext();
     await ctx.plugin(TestTools);

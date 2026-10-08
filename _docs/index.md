@@ -55,6 +55,7 @@
 
 - [Bug 跟踪机制与 F9.8 已知问题交接](68-devlog-bug-tracking.md)：BUG-001 至 BUG-004 登记、修复留痕规则及本次带已知问题合并授权。
 - [BUG-001 至 BUG-004 长程真实验收排查与修复](70-bugfix-bug-001-004-longterm.md)：证据落盘、续接资源变化通知、Resource 引用加固、通用 system-reminder 与 Main 状态通知、可恢复错误验收口径；13 次真实运行记录，BUG-002 保持未关闭。
+- [BUG-005 未知工具名报错被误读为权限拦截](78-bugfix-bug-005-unknown-tool.md)：ToolService 先查注册表再判白名单，未知名字返回 `unknown-tool` 与本回合可调用列表；去掉提示词规避后真实复验 5 轮，3 次残缺工具名均同回合恢复。
 - [长程验收四个 Bug 复盘（面试版）](71-interview-longterm-bugs.md)：BUG-001 至 BUG-004 按问题、根因、修复、结果组织的面试可背版本，附 60 秒开场与追问要点。
 
 ## 前端记录

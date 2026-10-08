@@ -275,7 +275,7 @@ describe("Kernel Host agent.turn.v2", () => {
       type: "tool-result",
       toolCallId,
       status: "failed",
-      failure: { code: "tool-not-allowed" },
+      failure: { code: "unknown-tool" },
     });
   });
 });
