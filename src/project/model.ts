@@ -3,7 +3,7 @@ import type { ProjectId, SessionId } from "../brand/ids.js";
 export interface ProjectSnapshot {
   readonly id: ProjectId;
   readonly name: string;
-  readonly goal: string;
+  readonly goal: string | null;
   readonly mainSessionId: SessionId;
   readonly status: ProjectStatus;
   readonly revision: number;
@@ -11,3 +11,5 @@ export interface ProjectSnapshot {
 }
 
 export type ProjectStatus = "active" | "archived";
+
+export const PROJECT_GOAL_MAX_CHARS = 8_000;

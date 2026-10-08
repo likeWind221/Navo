@@ -11,6 +11,7 @@ export type ProjectErrorCode =
   | "project-not-found"
   | "project-already-exists"
   | "project-unavailable"
+  | "invalid-goal"
   | "session-already-owned"
   | "invalid-message"
   | "invalid-event-stream";

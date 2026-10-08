@@ -20,6 +20,7 @@ import { createFileEnvironment } from "./tools/builtins/file/path.js";
 import type { FileEnvironment } from "./tools/builtins/file/path.js";
 import { ReadMailboxTool } from "./tools/builtins/mailbox/read.js";
 import { SendToMainTool } from "./tools/builtins/mailbox/send.js";
+import { SetProjectGoalTool } from "./tools/builtins/project/goal.js";
 import { RoadmapToolsPlugin } from "./tools/builtins/roadmap/plugin.js";
 import { ResourceToolsPlugin } from "./tools/builtins/resource/plugin.js";
 import type { ToolsPluginConfig } from "./tools/plugin.js";
@@ -81,6 +82,7 @@ export async function NavoApp(
   await ctx.plugin(RoadmapStore);
   await ctx.plugin(ProjectRuntime);
   await ctx.plugin(RoadmapToolsPlugin);
+  await ctx.plugin(SetProjectGoalTool);
 }
 
 export async function createApp(

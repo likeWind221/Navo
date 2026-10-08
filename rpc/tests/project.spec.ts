@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   PROJECT_MAILBOX_PAGE_MAX,
+  PROJECT_GOAL_MAX_CHARS,
   PROJECT_NAME_MAX_CHARS,
   RpcError,
   StreamRpcClient,
@@ -46,12 +47,17 @@ describe("F9.9a project contract", () => {
     expect(projectListMethod.parseInput({})).toEqual({});
     expect(projectCreateMethod.parseInput({ name: "Paper", goal: "Survey", workspaceRoot: "D:/work" }))
       .toEqual({ name: "Paper", goal: "Survey", workspaceRoot: "D:/work" });
+    expect(projectCreateMethod.parseInput({ name: "Paper", goal: null, workspaceRoot: "D:/work" }))
+      .toEqual({ name: "Paper", goal: null, workspaceRoot: "D:/work" });
     expect(projectMailboxMethod.parseInput({ projectId: "p", afterSequence: null, limit: 1 }))
       .toEqual({ projectId: "p", afterSequence: null, limit: 1 });
     for (const [method, value] of [
       [projectListMethod, { extra: true }],
       [projectCreateMethod, { name: "Paper", goal: "Survey" }],
       [projectCreateMethod, { name: "  ", goal: "Survey", workspaceRoot: "D:/work" }],
+      [projectCreateMethod, { name: "Paper", goal: " \t ", workspaceRoot: "D:/work" }],
+      [projectCreateMethod, { name: "Paper", goal: "x".repeat(PROJECT_GOAL_MAX_CHARS + 1), workspaceRoot: "D:/work" }],
+      [projectCreateMethod, { name: "Paper", goal: undefined, workspaceRoot: "D:/work" }],
       [projectCreateMethod, { name: "x".repeat(PROJECT_NAME_MAX_CHARS + 1), goal: "Survey", workspaceRoot: "D:/work" }],
       [projectGetMethod, { projectId: "" }],
       [projectMailboxMethod, { projectId: "p", limit: 1 }],
@@ -67,7 +73,10 @@ describe("F9.9a project contract", () => {
     expect(projectGetMethod.parseOutput({ ...detail, roadmap: null })).toEqual({ ...detail, roadmap: null });
     expect(projectListMethod.parseOutput({ projects: [{ ...summary, workspaceRoot: null }] }).projects[0]?.workspaceRoot)
       .toBeNull();
+    expect(projectListMethod.parseOutput({ projects: [{ ...summary, goal: null }] }).projects[0]?.goal)
+      .toBeNull();
     for (const candidate of [
+      { ...detail, project: { ...summary, goal: "" } },
       { ...detail, extra: 1 },
       { ...detail, project: { ...summary, status: "deleted" } },
       { ...detail, roadmap: { ...detail.roadmap, nodes: [{ ...node, controlPurpose: "start" }] } },

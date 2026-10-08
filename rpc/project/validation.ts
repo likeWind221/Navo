@@ -42,7 +42,7 @@ export function parseProjectCreateInput(value: unknown): ProjectCreateInput {
   const input = shape(value, ["name", "goal", "workspaceRoot"], "project create input");
   return {
     name: visibleText(input.name, "name", PROJECT_NAME_MAX_CHARS),
-    goal: visibleText(input.goal, "goal", PROJECT_GOAL_MAX_CHARS),
+    goal: optionalGoal(input.goal),
     workspaceRoot: visibleText(input.workspaceRoot, "workspaceRoot", PROJECT_WORKSPACE_ROOT_MAX_CHARS),
   };
 }
@@ -101,7 +101,7 @@ export function parseProjectSummary(value: unknown): ProjectSummaryV1 {
   return {
     projectId: id(project.projectId, "projectId"),
     name: visibleText(project.name, "name", PROJECT_NAME_MAX_CHARS),
-    goal: visibleText(project.goal, "goal", PROJECT_GOAL_MAX_CHARS),
+    goal: optionalGoal(project.goal),
     workspaceRoot: project.workspaceRoot === null ? null
       : visibleText(project.workspaceRoot, "workspaceRoot", PROJECT_WORKSPACE_ROOT_MAX_CHARS),
     status: oneOf(project.status, ["active", "archived"] as const, "project status"),
@@ -262,6 +262,10 @@ function visibleText(value: unknown, label: string, maximum: number): string {
   const result = requireBoundedString(value, label, maximum);
   if (!result.trim()) invalid(`${label} must not be blank`);
   return result;
+}
+
+function optionalGoal(value: unknown): string | null {
+  return value === null ? null : visibleText(value, "goal", PROJECT_GOAL_MAX_CHARS);
 }
 
 function text(value: unknown, label: string): string {

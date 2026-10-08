@@ -18,6 +18,7 @@ import { ProjectWorkspaceStore } from "../../src/workspace/store.js";
 import { SessionStore } from "../../src/session/store.js";
 import { MockFetchCore } from "../../src/tools/builtins/fetch/mock.js";
 import { FetchTool } from "../../src/tools/builtins/fetch/tool.js";
+import { SetProjectGoalTool } from "../../src/tools/builtins/project/goal.js";
 import { RoadmapToolsPlugin } from "../../src/tools/builtins/roadmap/plugin.js";
 import { ResourceToolsPlugin } from "../../src/tools/builtins/resource/plugin.js";
 import { MockSearchAdapter } from "../../src/tools/builtins/search/adapters/mock.js";
@@ -50,6 +51,7 @@ async function createKit(entries: ConstructorParameters<typeof MockLLMAdapter>[0
   await ctx.plugin(FetchTool, { core: new MockFetchCore([]) });
   await ctx.plugin(RoadmapStore);
   await ctx.plugin(RoadmapToolsPlugin);
+  await ctx.plugin(SetProjectGoalTool);
   const adapter = new MockLLMAdapter(entries);
   ctx.llm.registerAdapter("mock", adapter);
   await ctx.plugin(MainSessionService, {
@@ -156,6 +158,23 @@ describe("MainSessionService identity and context", () => {
     expect(profile.systemPrompt).toContain("may be stale");
     expect(profile.systemPrompt).toContain("Before stating a Node status or whether a Node can run now");
     expect(profile.systemPrompt).toContain("say its current status is unverified");
+    expect(profile.systemPrompt).toContain("\"goalStatus\": \"recorded\"");
+  });
+
+  it("tells Main that planning waits for an explicitly agreed goal", async () => {
+    const { ctx } = await createKit([]);
+    const prompt = createMainAgentProfile(ctx.projects.create({ name: "Project", goal: null })).systemPrompt;
+
+    expect(prompt).toContain("\"goal\": null");
+    expect(prompt).toContain("\"goalStatus\": \"not yet confirmed\"");
+    expect(prompt).toContain("Greetings, small talk and questions never start planning");
+    expect(prompt).toContain("If the request is vague or ambiguous, ask clarifying questions and do not propose a goal yet");
+    expect(prompt).toContain("restate the recorded goal and ask whether to start planning with it");
+    expect(prompt).toContain("list the differences, propose a revised goal and ask the user to confirm it");
+    expect(prompt).toContain("If no goal is recorded and the user describes a task, extract a concise goal");
+    expect(prompt).toContain("One explicit user agreement covers both adopting the restated goal and starting planning");
+    expect(prompt).toContain("set_project_goal fails once a Roadmap exists");
+    expect(prompt).not.toContain("When read_roadmap reports that no Roadmap exists, use write_roadmap to create the initial plan.");
   });
 
   it("rejects invalid, missing and archived Project entry before model execution", async () => {
