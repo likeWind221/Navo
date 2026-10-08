@@ -1,0 +1,13 @@
+{
+  "mode": "mock",
+  "emptyNotice": "暂无项目。项目目前只保存在内存中，Host 重启后会清空。",
+  "name": "QA 项目 1791444773778",
+  "detail": "QA 项目 1791444773778目标验证创建、列表与打开链路工作目录C:\\Users\\likeW\\AppData\\Local\\Temp\\navo-f5-2-workspace-da3R9S状态进行中创建时间2026/10/8 15:32:54",
+  "conflict": "该目录已被其他项目绑定，请选择其他目录。",
+  "overflow": {
+    "viewport": 391,
+    "scrollWidth": 391,
+    "panelScrollWidth": 391,
+    "panelClientWidth": 391
+  }
+}

@@ -39,6 +39,8 @@
 .create, .settings { display:flex; align-items:center; gap:10px; padding:11px 12px; border:0; border-radius:8px; background:transparent; color:var(--text-secondary); text-align:left; }
 
 .create:disabled, .settings:disabled { cursor:not-allowed; }
+.create:not(:disabled) { cursor:pointer; color:var(--text); }
+.create:not(:disabled):hover { background:var(--surface-muted); }
 .list, .create span { animation:sectionEnter 220ms ease; }
 @keyframes sectionEnter { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
 @media(prefers-reduced-motion:reduce) { .switch::before, .direction { transition:none; } .list, .create span { animation:none; } }
