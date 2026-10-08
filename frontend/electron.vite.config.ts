@@ -12,6 +12,7 @@ export default defineConfig({
           chat: resolve("scripts/qa/chat.ts"),
           f36: resolve("scripts/qa/f36.ts"),
           markdown: resolve("scripts/qa/markdown.ts"),
+          project: resolve("scripts/qa/project.ts"),
         },
       },
     },

@@ -6,6 +6,7 @@ import { resolveHostLaunchConfig } from "./host/launch.js";
 import { AgentCommandController } from "./ipc/command/controller.js";
 import { AgentTurnV2Controller } from "./ipc/agent/v2.js";
 import { cancelAgentSessionOwner, registerAgentSessionIpc } from "./ipc/session.js";
+import { registerProjectIpc } from "./ipc/project.js";
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 let quittingAfterCleanup = false;
@@ -13,6 +14,7 @@ let kernelHost: KernelHostProcess | undefined;
 let agentTurns: AgentTurnV2Controller | undefined;
 let agentCommands: AgentCommandController | undefined;
 let unregisterAgentSessionIpc: (() => void) | undefined;
+let unregisterProjectIpc: (() => void) | undefined;
 
 function createWindow(): void {
   const window = new BrowserWindow({
@@ -67,6 +69,7 @@ if (!hasSingleInstanceLock) {
     agentTurns = new AgentTurnV2Controller(kernelHost);
     agentCommands = new AgentCommandController(kernelHost);
     unregisterAgentSessionIpc = registerAgentSessionIpc(agentTurns, agentCommands);
+    unregisterProjectIpc = registerProjectIpc(kernelHost);
     void kernelHost.start().catch((error: unknown) => {
       const message = error instanceof Error ? error.message : "Unknown Kernel Host startup failure";
       console.error(`[electron-main] ${message}`);
@@ -82,6 +85,7 @@ if (!hasSingleInstanceLock) {
     event.preventDefault();
     quittingAfterCleanup = true;
     unregisterAgentSessionIpc?.();
+    unregisterProjectIpc?.();
     agentTurns?.dispose();
     agentCommands?.dispose();
     void kernelHost.close().finally(() => app.quit());

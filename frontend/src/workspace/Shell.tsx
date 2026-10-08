@@ -1,13 +1,18 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Icon } from "../ui/Icon";
 import styles from "./navigation/style.module.css";
 
-export type WorkspaceEntry = { id: string; title: string; kind: "project" | "session"; content: ReactNode };
+export type WorkspaceEntry = { id: string; title: string; kind: WorkspaceKind; content: ReactNode };
 
-export function WorkspaceShell({ children, entries }: {
+export type WorkspaceKind = "project" | "session";
+
+export function WorkspaceShell({ children, entries, create, notice, openRequest }: {
   children?: ReactNode;
   entries?: WorkspaceEntry[];
+  create?: Partial<Record<WorkspaceKind, () => void>>;
+  notice?: Partial<Record<WorkspaceKind, ReactNode>>;
+  openRequest?: { readonly id: string } | null;
 }): React.JSX.Element {
   const items = entries ?? [{ id: "current", title: "当前会话", kind: "session", content: children }];
   const [opened, setOpened] = useState<string[]>(() => items.slice(0, 1).map(item => item.id));
@@ -15,6 +20,31 @@ export function WorkspaceShell({ children, entries }: {
   const [section, setSection] = useState<"project" | "session">("session");
   const [expanded, setExpanded] = useState(() => !window.matchMedia("(max-width: 600px)").matches);
   const prefix = useId();
+  const tabs = useRef<HTMLElement>(null);
+  const onCreate = create?.[section];
+  const sectionNotice = notice?.[section];
+
+  useEffect(() => {
+    if (openRequest) open(openRequest.id);
+  }, [openRequest]);
+
+  useEffect(() => {
+    const strip = tabs.current;
+    if (strip === null) return;
+    const markOverflow = (): void => {
+      strip.dataset.overflowStart = String(strip.scrollLeft > 1);
+      strip.dataset.overflowEnd = String(strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 1);
+    };
+    strip.querySelector('[data-active="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    markOverflow();
+    strip.addEventListener("scroll", markOverflow, { passive: true });
+    const resize = new ResizeObserver(markOverflow);
+    resize.observe(strip);
+    return () => {
+      strip.removeEventListener("scroll", markOverflow);
+      resize.disconnect();
+    };
+  }, [active, opened]);
 
   function open(id: string): void {
     setOpened(previous => previous.includes(id) ? previous : [...previous, id]);
@@ -35,7 +65,7 @@ export function WorkspaceShell({ children, entries }: {
         <span className={styles.brand}>NAVO<span>.</span></span>
         <span className={styles.sidebarIcon} data-open={expanded}><Icon name="sidebar" /></span>
       </button>
-      <nav className={styles.tabs} aria-label="已打开的标签页">
+      <nav ref={tabs} className={styles.tabs} aria-label="已打开的标签页">
         {opened.map(id => {
           const item = items.find(entry => entry.id === id);
           return item && <div key={id} className={styles.tab} data-active={active === id}>
@@ -54,17 +84,17 @@ export function WorkspaceShell({ children, entries }: {
             <button aria-pressed={section === "project"} onClick={() => setSection("project")}>项目</button>
             <button aria-pressed={section === "session"} onClick={() => setSection("session")}>会话</button>
           </div>
-          <button className={styles.create} disabled title="将在后续项目与会话接入中开放"><Icon name="plus" /><span key={section}>新增{section === "project" ? "项目" : "会话"}</span></button>
+          <button className={styles.create} disabled={onCreate === undefined} title={onCreate === undefined ? "将在后续项目与会话接入中开放" : undefined} onClick={onCreate}><Icon name="plus" /><span key={section}>新增{section === "project" ? "项目" : "会话"}</span></button>
           <nav key={section} className={styles.list} aria-label={section === "project" ? "项目列表" : "会话列表"}>
             {items.filter(item => item.kind === section).map(item => <button key={item.id} className={styles.entry} title={item.title} aria-current={active === item.id ? "page" : undefined} onClick={() => open(item.id)}><EntryIcon kind={item.kind} /><span>{item.title}</span></button>)}
-            {!items.some(item => item.kind === section) && <p className={styles.empty}>暂无{section === "project" ? "项目" : "会话"}</p>}
+            {sectionNotice ?? (!items.some(item => item.kind === section) && <p className={styles.empty}>暂无{section === "project" ? "项目" : "会话"}</p>)}
           </nav>
           <button className={styles.settings} disabled title="设置功能尚未接入"><Icon name="settings" />设置</button>
         </div>
       </aside>
       <main className={styles.main}>
-        {items.map(item => <section key={item.id} id={`${prefix}-${item.id}`} className={styles.panel} data-active={active === item.id} aria-label={item.title} aria-hidden={active !== item.id} inert={active !== item.id}>{item.content}</section>)}
-        {active === null && <div className={styles.placeholder}>从侧栏打开一个项目或会话</div>}
+        {items.filter(item => item.kind === "session" || opened.includes(item.id)).map(item => <section key={item.id} id={`${prefix}-${item.id}`} className={styles.panel} data-active={active === item.id} aria-label={item.title} aria-hidden={active !== item.id} inert={active !== item.id}>{item.content}</section>)}
+        {!items.some(item => item.id === active) && <div className={styles.placeholder}>从侧栏打开一个项目或会话</div>}
       </main>
     </div>
   </div>;

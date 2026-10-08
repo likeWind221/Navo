@@ -1,0 +1,52 @@
+{
+  "mode": "real",
+  "emptyNotice": "暂无项目。项目目前只保存在内存中，Host 重启后会清空。",
+  "name": "QA 项目 1791464342798",
+  "detail": "QA 项目 1791464342798目标验证创建、列表与打开链路工作目录C:\\Users\\likeW\\AppData\\Local\\Temp\\navo-f5-2-workspace-NWmBSa状态进行中创建时间2026/10/8 20:59:03",
+  "conflict": "该目录已被其他项目绑定，请选择其他目录。",
+  "overflow": {
+    "viewport": 391,
+    "scrollWidth": 391,
+    "panelScrollWidth": 391,
+    "panelClientWidth": 391
+  },
+  "tabStrip": {
+    "tabCount": 3,
+    "offsetHeight": 63,
+    "clientHeight": 63,
+    "scrollbarWidth": "none",
+    "scrollable": true,
+    "lastActive": "true",
+    "lastVisible": true,
+    "viewport": 391,
+    "scrollWidth": 391
+  },
+  "fadeAtEnd": {
+    "tabCount": 3,
+    "start": "true",
+    "end": "false",
+    "fadeStart": "28px",
+    "fadeEnd": "0px",
+    "navLeft": 131.9921875,
+    "activeLeft": 194.9921875
+  },
+  "fadeAtStart": {
+    "tabCount": 3,
+    "start": "false",
+    "end": "true",
+    "fadeStart": "0px",
+    "fadeEnd": "28px",
+    "navLeft": 131.9921875,
+    "activeLeft": 473.9921875
+  },
+  "fadeDesktop": {
+    "tabCount": 1,
+    "start": "false",
+    "end": "false",
+    "fadeStart": "0px",
+    "fadeEnd": "0px",
+    "navLeft": 149.9921875,
+    "activeLeft": 149.9921875
+  },
+  "pendingGoalDetail": "QA 项目 1791464342798 第二个项目目标目标待确定工作目录C:\\Users\\likeW\\AppData\\Local\\Temp\\navo-f5-2-workspace-NWmBSa\\second状态进行中创建时间2026/10/8 20:59:05"
+}
