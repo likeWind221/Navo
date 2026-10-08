@@ -17,6 +17,10 @@ describe("parseDesktopProjectResult", () => {
   it("parses success values with the contract parser", () => {
     expect(parseDesktopProjectResult({ type: "ok", value: summary }, parseProjectSummary))
       .toEqual({ type: "ok", value: summary });
+    expect(parseDesktopProjectResult({ type: "ok", value: { ...summary, goal: null } }, parseProjectSummary))
+      .toEqual({ type: "ok", value: { ...summary, goal: null } });
+    expect(() => parseDesktopProjectResult({ type: "ok", value: { ...summary, goal: " " } }, parseProjectSummary))
+      .toThrow();
     expect(() => parseDesktopProjectResult({ type: "ok", value: { ...summary, extra: 1 } }, parseProjectSummary))
       .toThrow();
   });

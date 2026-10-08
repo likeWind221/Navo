@@ -3,7 +3,7 @@ import type { DesktopProjectFailure } from "../../../shared/project.js";
 export function projectFailureMessage(failure: DesktopProjectFailure): string {
   switch (failure.code) {
     case "invalid-request":
-      return "名称、目标或工作目录不符合要求，请检查后重试。";
+      return "名称、目标或工作目录不符合要求（名称必填，目标可留空），请检查后重试。";
     case "workspace-conflict":
       return "该目录已被其他项目绑定，请选择其他目录。";
     case "workspace-invalid":

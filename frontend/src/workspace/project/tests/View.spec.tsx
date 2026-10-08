@@ -29,6 +29,15 @@ describe("ProjectDetailView", () => {
     expect(markup).toContain("dateTime=\"2026-10-08T00:00:00.000Z\"");
   });
 
+  it("shows a pending goal when the goal is not confirmed", () => {
+    const markup = renderToStaticMarkup(<ProjectDetailView onRetry={vi.fn()} state={{
+      status: "ready",
+      detail: { project: { ...project, goal: null }, main: { sessionId: "s-1", turnActive: false }, roadmap: null },
+    }} />);
+
+    expect(markup).toContain("目标待确定");
+  });
+
   it("shows a readable failure with retry", () => {
     const markup = renderToStaticMarkup(<ProjectDetailView onRetry={vi.fn()} state={{
       status: "failed", failure: { code: "project-not-found", message: "missing" },
@@ -58,6 +67,8 @@ describe("ProjectCreate", () => {
     expect(markup).toContain("新建项目");
     expect(markup).toContain("maxLength=\"80\"");
     expect(markup).toContain("maxLength=\"8000\"");
+    expect(markup).toContain("项目目标（可选）");
+    expect(markup).toContain("可留空，之后在对话中与 Main 确认");
     expect(markup).toContain("尚未选择");
     expect(markup).toContain("创建项目");
   });

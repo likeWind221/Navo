@@ -79,9 +79,9 @@ export function ProjectCreate({ api, create, onCreated, onClose }: {
           autoComplete="off" onChange={event => update({ name: event.target.value })} />
       </label>
       <label className={styles.field}>
-        <span>项目目标</span>
+        <span>项目目标（可选）</span>
         <textarea name="goal" value={draft.goal} rows={5} maxLength={PROJECT_GOAL_MAX_CHARS} disabled={submitting}
-          placeholder="描述这个项目希望达成什么" onChange={event => update({ goal: event.target.value })} />
+          placeholder="可留空，之后在对话中与 Main 确认" onChange={event => update({ goal: event.target.value })} />
       </label>
       <div className={styles.field}>
         <span>工作目录</span>

@@ -56,7 +56,7 @@ export function ProjectDetailView({ state, onRetry }: {
     <h2>{project.name}</h2>
     <dl className={styles.facts}>
       <dt>目标</dt>
-      <dd className={styles.goal}>{project.goal}</dd>
+      <dd className={styles.goal}>{project.goal ?? "目标待确定"}</dd>
       <dt>工作目录</dt>
       <dd><code>{project.workspaceRoot ?? "绑定中"}</code></dd>
       <dt>状态</dt>

@@ -25,6 +25,15 @@ describe("createProjectHandlers", () => {
     expect(host.calls).toEqual([["project.create.v1", createInput]]);
   });
 
+  it("passes a null goal through to the Host", async () => {
+    const pending = { ...summary, goal: null };
+    const host = new FakeHost(async function* () { yield pending; });
+
+    expect(await createProjectHandlers(host).create({ ...createInput, goal: null }))
+      .toEqual({ type: "ok", value: pending });
+    expect(host.calls).toEqual([["project.create.v1", { ...createInput, goal: null }]]);
+  });
+
   it("rejects invalid input before calling the Host", async () => {
     const host = new FakeHost(async function* () { yield summary; });
     const handlers = createProjectHandlers(host);
@@ -32,6 +41,8 @@ describe("createProjectHandlers", () => {
     expect(await handlers.create({ ...createInput, goal: "   " })).toMatchObject({
       type: "failed", failure: { code: "invalid-input" },
     });
+    expect(await handlers.create({ name: createInput.name, workspaceRoot: createInput.workspaceRoot }))
+      .toMatchObject({ type: "failed", failure: { code: "invalid-input" } });
     expect(await handlers.get({ projectId: "" })).toMatchObject({ type: "failed", failure: { code: "invalid-input" } });
     expect(await handlers.list({ extra: true })).toMatchObject({ type: "failed", failure: { code: "invalid-input" } });
     expect(host.calls).toEqual([]);

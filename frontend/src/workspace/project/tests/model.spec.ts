@@ -17,9 +17,12 @@ const project: ProjectSummaryV1 = {
 };
 
 describe("checkDraft", () => {
-  it("requires a name, a goal and a chosen workspace", () => {
+  it("requires a name and a chosen workspace but lets the goal stay empty", () => {
     expect(checkDraft({ name: " ", goal: "g", workspaceRoot: "D:\\w" })).toEqual({ type: "problem", message: "请填写项目名称。" });
-    expect(checkDraft({ name: "n", goal: "  ", workspaceRoot: "D:\\w" })).toEqual({ type: "problem", message: "请填写项目目标。" });
+    expect(checkDraft({ name: "n", goal: "  ", workspaceRoot: "D:\\w" })).toEqual({
+      type: "ready", input: { name: "n", goal: null, workspaceRoot: "D:\\w" },
+    });
+    expect(checkDraft({ name: "n", goal: "", workspaceRoot: "D:\\w" })).toMatchObject({ type: "ready", input: { goal: null } });
     expect(checkDraft({ name: "n", goal: "g", workspaceRoot: null })).toEqual({ type: "problem", message: "请选择工作目录。" });
   });
 

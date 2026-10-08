@@ -125,12 +125,12 @@ async function main(): Promise<void> {
     await click(window, `button[class*="create"]`);
     await waitFor(window, `document.querySelector('dialog[open]') !== null`);
     await fill(window, `dialog input[name="name"]`, secondName);
-    await fill(window, `dialog textarea[name="goal"]`, goal);
     await click(window, `dialog button`, "选择目录");
     await waitFor(window, `document.querySelector('dialog code')?.textContent === ${JSON.stringify(secondRoot)}`);
     await click(window, `dialog button[type="submit"]`);
     const secondPanel = `section[data-active="true"] article[aria-label=${JSON.stringify(`项目 ${secondName}`)}]`;
-    await waitFor(window, `document.querySelector(${JSON.stringify(secondPanel)}) !== null`);
+    await waitFor(window, `document.querySelector(${JSON.stringify(secondPanel)})?.textContent.includes('目标待确定')`);
+    const pendingGoalDetail = await text(window, secondPanel);
     await waitFor(window, `document.querySelector('aside')?.getAttribute('data-open') === 'false'`);
     await click(window, `nav[aria-label="已打开的标签页"] button[aria-controls]`, "当前会话");
     await delay(300);
@@ -184,7 +184,7 @@ async function main(): Promise<void> {
     );
     await writeFile(join(outputDirectory, `f5-2-${mode}-tabs-desktop.png`), (await window.webContents.capturePage()).toPNG());
 
-    const result = { mode, emptyNotice, name, detail, conflict, overflow, tabStrip, fadeAtEnd, fadeAtStart, fadeDesktop };
+    const result = { mode, emptyNotice, name, detail, conflict, overflow, tabStrip, fadeAtEnd, fadeAtStart, fadeDesktop, pendingGoalDetail };
     await writeFile(join(outputDirectory, `f5-2-${mode}-results.json`), JSON.stringify(result, null, 2));
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } finally {
