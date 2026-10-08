@@ -24,7 +24,7 @@ const schema: JsonObject = {
 export function createSetProjectGoalTool(ctx: Context): ToolDefinition {
   return {
     name: SET_PROJECT_GOAL_TOOL_NAME,
-    description: "Record the goal of the current Project after the user has explicitly agreed to it in this conversation. The goal can be set only before the initial Roadmap exists; afterwards it is locked.",
+    description: "Record the goal of the current Project after the user has explicitly agreed to it in this conversation. Record only what the user agreed to, without unconfirmed scope choices or answers to open questions, and quote the recorded goal verbatim to the user afterwards. The goal can be set only before the initial Roadmap exists; afterwards it is locked.",
     parameters: schema,
     execute(arguments_, execution) {
       try {

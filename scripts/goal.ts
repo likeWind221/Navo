@@ -8,6 +8,7 @@ import { createApp } from "../src/app.js";
 import type { ProjectId } from "../src/brand/ids.js";
 import { resolveKernelHostConfig } from "../src/host/config.js";
 import { QwenChatCompletionsAdapter } from "../src/llm/adapters/qwen.js";
+import { SET_PROJECT_GOAL_TOOL_NAME } from "../src/tools/builtins/project/goal.js";
 import { captureTurn, writeEvidence } from "./longterm/evidence.js";
 
 interface Scenario {
@@ -19,6 +20,7 @@ interface Scenario {
 interface Step {
   readonly text: string;
   readonly expect: { readonly planned: boolean; readonly goal: string | null | "changed" };
+  readonly unconfirmed?: readonly string[];
 }
 
 const PREFILLED = "调研 RAG 系统的检索质量评测方法，并给出适合本团队的评测方案推荐。";
@@ -36,8 +38,8 @@ const scenarios: readonly Scenario[] = [
     { text: "确认，采用你建议的新目标并开始规划。", expect: { planned: true, goal: "changed" } },
   ] },
   { name: "extract-goal", goal: null, turns: [
-    { text: "我想写一份关于 LLM Agent 长期记忆机制的综述，覆盖主流方法和评测基准，帮我规划一下。", expect: { planned: false, goal: null } },
-    { text: "对，就按这个目标开始规划。", expect: { planned: true, goal: "changed" } },
+    { text: "我想写一份关于 LLM Agent 长期记忆机制的综述，覆盖主流方法和评测基准，帮我规划一下。可以先给我一个目标草案，有不确定的范围问题也一并问我。", expect: { planned: false, goal: null } },
+    { text: "对，就按这个目标开始规划。", expect: { planned: true, goal: "changed" }, unconfirmed: ["中文", "英文", "2023", "2024", "2025", "主线"] },
   ] },
   { name: "ambiguous", goal: null, turns: [
     { text: "帮我搞点东西吧。", expect: { planned: false, goal: null } },
@@ -56,7 +58,11 @@ async function runScenario(app: Context, scenario: Scenario, evidenceDir: string
     const goalOk = step.expect.goal === "changed"
       ? state.goal !== null && state.goal !== scenario.goal
       : state.goal === step.expect.goal;
-    const ok = result.turn.status === "completed" && state.planned === step.expect.planned && goalOk;
+    const answer = evidence.answers.at(-1) ?? "";
+    const goalSet = evidence.succeeded.some(call => call.name === SET_PROJECT_GOAL_TOOL_NAME);
+    const echoed = !goalSet || (state.goal !== null && normalize(answer).includes(normalize(state.goal)));
+    const scopeFlags = goalSet && state.goal !== null ? (step.unconfirmed ?? []).filter(term => state.goal!.includes(term)) : [];
+    const ok = result.turn.status === "completed" && state.planned === step.expect.planned && goalOk && echoed;
     passed &&= ok;
     const file = await writeEvidence(evidenceDir, `${scenario.name}-${index + 1}`, {
       scenario: scenario.name, user: step.text, expect: step.expect, state, ok, ...evidence.record,
@@ -70,11 +76,18 @@ async function runScenario(app: Context, scenario: Scenario, evidenceDir: string
       user: step.text,
       calls: evidence.calls,
       state,
-      answer: evidence.answers.at(-1) ?? "",
+      goalSet,
+      echoed,
+      scopeFlags,
+      answer,
       evidence: file,
     }));
   }
   return passed;
+}
+
+function normalize(text: string): string {
+  return text.replace(/[*_`>"“”「」]/g, "").replace(/\s+/g, "");
 }
 
 function observe(app: Context, projectId: ProjectId) {

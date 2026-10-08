@@ -54,8 +54,15 @@ async function main() {
     };
     const mainTurn = (text: string) => app.projectRuntime.startMain({ projectId, text });
     console.log(JSON.stringify({ model: config.agent.model.model, thinking: config.adapter.enableThinking, maxTokens: config.agent.model.maxTokens }));
-    await run("1-plan", () => mainTurn("Read the roadmap, then create exactly two required work nodes with titles evidence and synthesis. evidence publishes supplied measurements; synthesis recommends a candidate after reviewing evidence and independent validation, reporting a blocker if validation is missing. synthesis depends on evidence. Use tools to persist the plan, then stop. Do not add validation yet."));
+    const planRequest = "Read the roadmap, then create exactly two required work nodes with titles evidence and synthesis. evidence publishes supplied measurements; synthesis recommends a candidate after reviewing evidence and independent validation, reporting a blocker if validation is missing. synthesis depends on evidence. Use tools to persist the plan, then stop. Do not add validation yet.";
+    const recordedGoal = app.projects.get(projectId)?.goal;
+    await run("1a-confirm", () => mainTurn(planRequest));
+    assert.equal(app.roadmaps.get(projectId), undefined, "1a-confirm planned before the Human agreed");
+    assert.equal(app.nodes.getByProject(projectId).length, 0);
+    assert.equal(app.projects.get(projectId)?.goal, recordedGoal);
+    await run("1b-plan", () => mainTurn(`I agree: plan with the recorded goal exactly as you restated it, and create the two nodes as requested above. ${planRequest}`));
     assert.equal(app.nodes.getByProject(projectId).length, 2);
+    assert.equal(app.projects.get(projectId)?.goal, recordedGoal);
     assert.equal(node("evidence").status, "idle");
     assert.equal(node("synthesis").status, "locked");
     const evidenceId = node("evidence").node.id;

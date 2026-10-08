@@ -168,12 +168,19 @@ describe("MainSessionService identity and context", () => {
     expect(prompt).toContain("\"goal\": null");
     expect(prompt).toContain("\"goalStatus\": \"not yet confirmed\"");
     expect(prompt).toContain("Greetings, small talk and questions never start planning");
+    expect(prompt).toContain("A request that itself tells you to plan, create Nodes or persist the plan is not that agreement");
     expect(prompt).toContain("If the request is vague or ambiguous, ask clarifying questions and do not propose a goal yet");
     expect(prompt).toContain("restate the recorded goal and ask whether to start planning with it");
     expect(prompt).toContain("list the differences, propose a revised goal and ask the user to confirm it");
     expect(prompt).toContain("If no goal is recorded and the user describes a task, extract a concise goal");
     expect(prompt).toContain("One explicit user agreement covers both adopting the restated goal and starting planning");
+    expect(prompt).toContain("The agreement stays valid for the whole Turn");
     expect(prompt).toContain("set_project_goal fails once a Roadmap exists");
+    expect(prompt).toContain("Keep any open questions separate from the proposed goal");
+    expect(prompt).toContain("it must not add scope choices, assumptions, defaults or answers to open questions that the user did not explicitly confirm");
+    expect(prompt).toContain("leave unanswered questions and your own suggested leanings out of the goal");
+    expect(prompt).toContain("After set_project_goal succeeds, tell the user in the same reply what was recorded");
+    expect(prompt).toContain("quoting the recorded text verbatim");
     expect(prompt).not.toContain("When read_roadmap reports that no Roadmap exists, use write_roadmap to create the initial plan.");
   });
 
