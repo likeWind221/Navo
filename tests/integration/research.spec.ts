@@ -54,7 +54,8 @@ describe("generic Node research loop", () => {
     const result = await app.nodeSessions.start({ nodeId: node.node.id, text: "Research the source" });
     expect(result.turn).toMatchObject({ status: "completed", steps: 4 });
     expect(JSON.stringify(adapter.requests[2]?.messages)).toContain("Verified source details");
-    expect(JSON.stringify(adapter.requests[3]?.messages)).toContain("not allowed");
+    expect(JSON.stringify(adapter.requests[3]?.messages))
+      .toContain("Unknown tool \\\"confirm_completion\\\": no tool with this name exists.");
     expect(app.tools.schemas().map(tool => tool.name).sort())
       .toEqual([
         "web_fetch", "web_search",

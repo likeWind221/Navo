@@ -94,20 +94,10 @@ export class ToolService extends Service {
     options: ToolExecutionOptions = {},
   ): Promise<ToolExecutionResult> {
     if (signal.aborted) return cancelledResult(call.id);
-    if (options.allowedTools !== undefined
-      && !options.allowedTools.includes(call.name)) {
-      return failureResult(call.id, {
-        code: "tool-not-allowed",
-        message: `Tool '${call.name}' is not allowed for this Turn.`,
-      });
-    }
-
     const tool = this.tools.get(call.name);
-    if (!tool) {
-      return failureResult(call.id, {
-        code: "unknown-tool",
-        message: `Unknown tool '${call.name}'.`,
-      });
+    const callable = options.allowedTools ?? [...this.tools.keys()];
+    if (!tool || !callable.includes(call.name)) {
+      return uncallableToolResult(call.id, call.name, tool !== undefined, callable);
     }
 
     const parsed = parseToolArguments(call, tool.schema.parameters);
@@ -244,6 +234,28 @@ function failureResult(
     },
     failure,
   });
+}
+
+function uncallableToolResult(
+  callId: ToolCallId,
+  name: string,
+  registered: boolean,
+  callable: readonly string[],
+): ToolExecutionFailure {
+  const quoted = JSON.stringify(name);
+  const choices = callable.length === 0
+    ? "No tools are callable in this Turn."
+    : `Callable tools: ${callable.join(", ")}.`;
+  return failureResult(callId, registered
+    ? {
+      code: "tool-not-allowed",
+      message: `Tool ${quoted} is not allowed for this Turn. ${choices}`,
+    }
+    : {
+      code: "unknown-tool",
+      message: `Unknown tool ${quoted}: no tool with this name exists. ${choices}`
+        + (callable.length === 0 ? "" : " Correct the tool name and call it again."),
+    });
 }
 
 function cancelledResult(callId: ToolCallId): ToolExecutionFailure {
