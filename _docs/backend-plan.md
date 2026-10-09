@@ -309,7 +309,7 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Pha
 
 Phase 9 已全部完成（2026-10-07）：F9.0–F9.9c 均为 ✅，最后由 [PR #35](https://github.com/likeWind221/Navo/pull/35)、[#36](https://github.com/likeWind221/Navo/pull/36)、[#37](https://github.com/likeWind221/Navo/pull/37) 交付项目公共契约（记录见 [73](73-devlog-f9.9a-project-query.md)、[74](74-devlog-f9.9b-human-control.md)、[75](75-devlog-f9.9c-project-follow.md)）。各 Step 的实现、验证与 PR 经过见第 6 节表格及 [文档索引](index.md) 中对应开发记录。
 
-F9.10 项目目标确认与规划前置已于 2026-10-08 合入（[PR #38](https://github.com/likeWind221/Navo/pull/38)，记录见 [76](76-devlog-f9.10-goal-confirm.md)）：目标可选、Main 规划前须经用户同意、无目标不能生成 Roadmap；前端 F5.2 已据此完成接入（[PR #39](https://github.com/likeWind221/Navo/pull/39)）。真实验收中发现的 BUG-005、BUG-006 已登记于 [Bug 跟踪表](bug-plan.md)。下一步为 F10.0 持久化与验证设计收口（`project-goal-set` 事件纳入持久化范围），规划与取舍见 [69：F10 持久化与验证规划](69-devlog-f10-plan.md)。Phase 9 的 Project / Roadmap / Mailbox / Resource 元数据仍只存在内存中，进程重启后不保留。
+F9.10 项目目标确认与规划前置已于 2026-10-08 合入（[PR #38](https://github.com/likeWind221/Navo/pull/38)，记录见 [76](76-devlog-f9.10-goal-confirm.md)）：目标可选、Main 规划前须经用户同意、无目标不能生成 Roadmap；前端 F5.2 已据此完成接入（[PR #39](https://github.com/likeWind221/Navo/pull/39)）。真实验收中发现的 BUG-005、BUG-006 已于 2026-10-09 修复合入（[PR #40](https://github.com/likeWind221/Navo/pull/40)、[#41](https://github.com/likeWind221/Navo/pull/41)），BUG-007 经用户决定搁置，见 [Bug 跟踪表](bug-plan.md)。下一步为 F10.0 持久化与验证设计收口（`project-goal-set` 事件纳入持久化范围），规划与取舍见 [69：F10 持久化与验证规划](69-devlog-f10-plan.md)。Phase 9 的 Project / Roadmap / Mailbox / Resource 元数据仍只存在内存中，进程重启后不保留。
 
 BUG-002 经用户决定保持未关闭、等待复现，不阻塞 F10，状态见 [Bug 跟踪表](bug-plan.md)。
 
