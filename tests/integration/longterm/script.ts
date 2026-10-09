@@ -38,7 +38,7 @@ export function scenario(): Scenario {
     }),
     step(request => {
       expect(resultText(request, "plan-read")).toContain("Roadmap is empty");
-      return call("plan-write", "write_roadmap", { reason: "Initial plan", nodes: [work("evidence", []), work("synthesis", ["evidence"])] });
+      return call("plan-write", "create_roadmap", { reason: "Initial plan", nodes: [work("evidence", []), work("synthesis", ["evidence"])] });
     }),
     step(request => {
       mapping(request, "plan-write", "evidence");

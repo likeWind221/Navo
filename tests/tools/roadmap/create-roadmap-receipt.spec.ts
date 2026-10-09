@@ -5,7 +5,7 @@ import { NodeStore } from "../../../src/node/store.js";
 import { ProjectStore } from "../../../src/project/store.js";
 import { RoadmapStore } from "../../../src/roadmap/store.js";
 import { RoadmapToolsPlugin } from "../../../src/tools/builtins/roadmap/plugin.js";
-import { WRITE_ROADMAP_TOOL_NAME } from "../../../src/tools/builtins/roadmap/write-roadmap.js";
+import { CREATE_ROADMAP_TOOL_NAME } from "../../../src/tools/builtins/roadmap/create-roadmap.js";
 import { ToolService } from "../../../src/tools/service.js";
 import { toolCall } from "../../helpers/tools.js";
 
@@ -28,13 +28,13 @@ async function createContext(): Promise<Context> {
   return ctx;
 }
 
-describe("write_roadmap creation receipt", () => {
+describe("create_roadmap creation receipt", () => {
   it("maps proposal-local keys to persistent Node IDs without persisting the keys", async () => {
     const ctx = await createContext();
     const project = ctx.projects.create({ name: "Project", goal: "Ship a backend" });
 
     const result = await ctx.tools.execute(
-      toolCall("write-roadmap-receipt", WRITE_ROADMAP_TOOL_NAME, {
+      toolCall("create-roadmap-receipt", CREATE_ROADMAP_TOOL_NAME, {
         reason: "Initial plan",
         nodes: [
           {
@@ -58,10 +58,10 @@ describe("write_roadmap creation receipt", () => {
         ],
       }),
       signal,
-      { sessionId: project.mainSessionId, allowedTools: [WRITE_ROADMAP_TOOL_NAME] },
+      { sessionId: project.mainSessionId, allowedTools: [CREATE_ROADMAP_TOOL_NAME] },
     );
 
-    if (result.kind !== "success") throw new Error("write_roadmap unexpectedly failed");
+    if (result.kind !== "success") throw new Error("create_roadmap unexpectedly failed");
     const roadmap = ctx.roadmaps.get(project.id)!;
     const [designId, buildId] = roadmap.graph.definition.nodes.map(String);
 

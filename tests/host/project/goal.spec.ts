@@ -4,7 +4,7 @@ import type { AgentTurnV2Event, ProjectFollowV1 } from "../../../rpc/index.js";
 import { projectCreateMethod, projectFollowMethod, projectGetMethod, projectTurnMethod } from "../../../rpc/index.js";
 import { createProjectId } from "../../../src/brand/ids.js";
 import { SET_PROJECT_GOAL_TOOL_NAME } from "../../../src/tools/builtins/project/goal.js";
-import { WRITE_ROADMAP_TOOL_NAME } from "../../../src/tools/builtins/roadmap/write-roadmap.js";
+import { CREATE_ROADMAP_TOOL_NAME } from "../../../src/tools/builtins/roadmap/create-roadmap.js";
 import { modelResponse } from "../../helpers/runtime.js";
 import { toolCall } from "../../helpers/tools.js";
 import { call, host, workspace } from "./helpers.js";
@@ -26,9 +26,9 @@ async function collect(stream: AsyncIterable<AgentTurnV2Event>): Promise<AgentTu
 describe("Kernel Host Project goal confirmation", () => {
   it("creates without a goal, records the agreed goal before planning and then locks it", async () => {
     const { ctx, client, adapter } = await host([
-      modelResponse([toolCall("early", WRITE_ROADMAP_TOOL_NAME, plan)], "tool-calls"),
+      modelResponse([toolCall("early", CREATE_ROADMAP_TOOL_NAME, plan)], "tool-calls"),
       modelResponse([toolCall("goal", SET_PROJECT_GOAL_TOOL_NAME, { goal: "  Survey agent memory  " })], "tool-calls"),
-      modelResponse([toolCall("plan", WRITE_ROADMAP_TOOL_NAME, plan)], "tool-calls"),
+      modelResponse([toolCall("plan", CREATE_ROADMAP_TOOL_NAME, plan)], "tool-calls"),
       modelResponse([{ type: "text", text: "Planned." }]),
       modelResponse([toolCall("late", SET_PROJECT_GOAL_TOOL_NAME, { goal: "Something else" })], "tool-calls"),
       modelResponse([{ type: "text", text: "Goal is locked." }]),

@@ -49,7 +49,7 @@ Verification --(fail)--> Replanning / Roadmap Mutation
 |   + Project Binding        |    |   + Node Binding           |
 |   + Main Session           |    |   + own Session            |
 | tools: read_roadmap        |    | tools: file tools          |
-|   write_roadmap            |    |   web search / fetch       |
+|   create_roadmap            |    |   web search / fetch       |
 |   modify_roadmap           |    |   register_resource        |
 |   read_node read_mailbox   |    |   fetch_resource           |
 |   set_resource_access      |    |   update/delete_resource   |
