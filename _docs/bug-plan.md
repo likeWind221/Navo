@@ -14,7 +14,7 @@
 - [x] BUG-004：真实验收的失败现场留存不足（已修复：逐回合证据落盘）
 - [x] BUG-005：未知工具名的报错被模型误读为权限拦截（已修复：先查注册表再判白名单，未知名字返回 unknown-tool 与可调用列表）
 - [x] BUG-006：真实模型频繁产生格式错误的工具名（已处理：定位为模型输出；改名 `create_roadmap` 降低触发，`unknown-tool` 反馈保证同回合恢复）
-- [ ] BUG-007：thinking 推理耗尽输出 token 上限导致回合 blocked（2026-10-09 登记，仅登记，未排查）
+- [ ] BUG-007：thinking 推理耗尽输出 token 上限导致回合 blocked（2026-10-09 登记，未排查；同日用户决定搁置：大概率是 qwen3.8-27b 思考过长的模型特性）
 
 2026-10-08：F9.10 真实模型验收中发现 BUG-005、BUG-006，当前仅靠 Main 提示词“同意后失败调用修正重试”规避，未修改内核或适配层。证据见 [76：F9.10 开发记录](76-devlog-f9.10-goal-confirm.md)。
 
@@ -38,7 +38,7 @@
 | BUG-006 | P2 / 后端 | 真实模型多次输出形如 `write_\n<parameter=...` 的残缺工具名，导致调用失败，需模型重试；F9.10 最终版两轮出现 4 次 | F9.10 五场景与 F9.10 首轮记录均有出现；BUG-005 复验又见 `write_
 oadmap` 形态（[78](78-bugfix-bug-005-unknown-tool.md)）。2026-10-09 已定位：原始 SSE 显示 vLLM 单个 delta 整段下发残缺名，排除适配层拼接；非流式 logprobs 显示模型在 `write_` 后以 0.65–1.00 概率生成 `
 `，温度 0 下 3/3 复现；服务端 parser 不校验函数名、残缺调用参数丢失；重命名为 `create_roadmap` 后对照 3/3 正常。模型为何对该前缀敏感未证实。2026-10-09 改名为 `create_roadmap` 后，受控对照 0/6，全流程出现 1 次 `create_` 残缺名并同回合恢复 | 定位残缺工具名的产生环节（保留原始流片段）；若属适配层问题则修复并以真实模型复验；若属模型行为则明确恢复策略与验收口径 | [76：F9.10 开发记录](76-devlog-f9.10-goal-confirm.md)、[排查与修复笔记](79-bugfix-bug-006-malformed-tool-name.md) |
-| BUG-007 | P2 / 后端 | 开启 thinking 时，模型在单步内推理约 3.1 万字符，耗尽 8192 输出 token，没有调用工具也没有回答，回合以 `max-tokens` 结束为 blocked；用户已同意的规划没有执行 | BUG-006 复验 goal 第 2 轮 `extract-goal` 第 2 回合（证据为本机 scratchpad 的 `probe/after/goal-2/extract-goal-2.json` 与对应原始 SSE）。仅出现 1 次；推理过长的诱因、上限配置是否合理、blocked 后的恢复路径均未排查 | 明确 thinking 模式下的输出预算与超限处理；真实场景中不因推理耗尽而丢失用户已同意的操作，或能给出可恢复的提示；保留复验记录 | [79：BUG-006 笔记](79-bugfix-bug-006-malformed-tool-name.md) |
+| BUG-007 | P2 / 后端 | 开启 thinking 时，模型在单步内推理约 3.1 万字符，耗尽 8192 输出 token，没有调用工具也没有回答，回合以 `max-tokens` 结束为 blocked；用户已同意的规划没有执行 | BUG-006 复验 goal 第 2 轮 `extract-goal` 第 2 回合（证据为本机 scratchpad 的 `probe/after/goal-2/extract-goal-2.json` 与对应原始 SSE）。仅出现 1 次；推理过长的诱因、上限配置是否合理、blocked 后的恢复路径均未排查。2026-10-09 用户决定搁置：判断大概率是 `qwen3.8-27b` 思考过长的模型特性，暂不排查；更换模型或再次出现时重新评估 | 明确 thinking 模式下的输出预算与超限处理；真实场景中不因推理耗尽而丢失用户已同意的操作，或能给出可恢复的提示；保留复验记录 | [79：BUG-006 笔记](79-bugfix-bug-006-malformed-tool-name.md) |
 
 ## 修复记录规则
 
