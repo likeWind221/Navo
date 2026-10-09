@@ -123,7 +123,7 @@ export function createModifyRoadmapTool(ctx: Context): ToolDefinition {
         if (ctx.roadmaps.get(binding.projectId) === undefined) {
           throw new ToolExecutionError(
             `Project '${binding.projectId}' does not own a Roadmap.`,
-            "No Roadmap exists for this Project. Use write_roadmap to create the initial plan first.",
+            "No Roadmap exists for this Project. Use create_roadmap to create the initial plan first.",
           );
         }
 
@@ -370,7 +370,7 @@ function roadmapFailureMessage(error: RoadmapError): string {
     case "stale-revision":
       return "The Roadmap changed since the version you read. Call read_roadmap again and retry against the current version.";
     case "not-found":
-      return "No Roadmap exists for this Project. Use write_roadmap to create the initial plan first.";
+      return "No Roadmap exists for this Project. Use create_roadmap to create the initial plan first.";
     case "cycle":
       return "The Roadmap modification was rejected because it would create a dependency cycle.";
     case "duplicate-reference":

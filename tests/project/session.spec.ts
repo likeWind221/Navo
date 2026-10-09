@@ -181,7 +181,7 @@ describe("MainSessionService identity and context", () => {
     expect(prompt).toContain("leave unanswered questions and your own suggested leanings out of the goal");
     expect(prompt).toContain("After set_project_goal succeeds, tell the user in the same reply what was recorded");
     expect(prompt).toContain("quoting the recorded text verbatim");
-    expect(prompt).not.toContain("When read_roadmap reports that no Roadmap exists, use write_roadmap to create the initial plan.");
+    expect(prompt).not.toContain("When read_roadmap reports that no Roadmap exists, use create_roadmap to create the initial plan.");
   });
 
   it("rejects invalid, missing and archived Project entry before model execution", async () => {

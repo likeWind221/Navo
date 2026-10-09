@@ -33,7 +33,7 @@ export function demoScript(): DemoScript {
 
   return { id, entries: [
     step(() => call("plan-read", "read_roadmap", {})),
-    step(() => call("plan-write", "write_roadmap", { reason: "Initial plan", nodes: [
+    step(() => call("plan-write", "create_roadmap", { reason: "Initial plan", nodes: [
       work("evidence", "Publish the supplied measurements as a Resource", []),
       work("synthesis", "Recommend A or B from shared evidence", ["evidence"]),
     ] })),

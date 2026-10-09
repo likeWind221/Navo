@@ -2,7 +2,7 @@
 
 关联：[Bug 跟踪表](bug-plan.md)、[76：F9.10 开发记录](76-devlog-f9.10-goal-confirm.md)、[78：BUG-005 修复笔记](78-bugfix-bug-005-unknown-tool.md)。
 
-**状态：仅排查，未修复。** 根因环节已定位（模型输出），处置方案待用户决定。
+**状态：** 2026-10-09 完成根因定位；同日按方案 B 将工具改名为 `create_roadmap`，以 BUG-005 的 `unknown-tool` 反馈作为恢复策略，达到关闭条件。分支 `fix/bug-006-roadmap-rename`。
 
 ## 现象与复现
 
@@ -65,6 +65,40 @@
 - 原始 SSE、请求体和重放结果保存在本机 scratchpad 的 `probe/keep/`，不入库。
 - 后台抓包在 `extract-goal` / `prefilled-conflict` 各跑约 2 轮后提前停止，期间抓到 2 次残缺名；遗留的 tsx 子进程已手动清理。
 
-## 后续
 
-- 用户确认处置方案后，在 `fix/bug-006-*` 分支实施，并以 `scripts/goal.ts` 多轮真实复验。
+## 修复内容（方案 B + A）
+
+- 工具 `write_roadmap` 改名为 `create_roadmap`，与描述 "Create the initial Roadmap" 一致：
+  - 导出符号和文件一并改名：`CREATE_ROADMAP_TOOL_NAME`、`CreateRoadmapTool`、`createCreateRoadmapTool`、`src/tools/builtins/roadmap/create-roadmap.ts`；
+  - Main 提示词、`modify_roadmap` 的引导文案、demo / longterm 脚本、测试、README 和 `backend-plan.md` 同步更新；
+  - 历史开发记录保持原名不改；前端没有引用这个工具名；运行时没有持久化的旧会话，不需要迁移。
+- 工厂函数沿用 `create` + 工具名的约定（同目录有 `createModifyRoadmapTool`、`createReadRoadmapTool`），所以名为 `createCreateRoadmapTool`。
+- 恢复策略：模型仍可能产生残缺名，此时由 BUG-005 修复后的 `unknown-tool` 报错（附可调用列表与重试提示）引导模型在同一回合重试。验收口径：残缺名允许出现，但必须在同回合恢复，不得出现未恢复错误。
+- 未采用：适配层猜测修复名字（方案 D）。推理服务侧校验函数名或约束解码（方案 C）不在本仓库控制范围内，作为上游改进建议保留。
+
+## 修复后验证
+
+- 本机：`pnpm typecheck` 通过；`pnpm test` 84 个文件、485 个用例全部通过；`rg` 确认 `src`、`tests`、`scripts`、README 中没有旧名残留。
+- 受控对照（使用同一个稳定复现的请求，只替换工具名）：
+
+| 条件 | `write_roadmap` | `create_roadmap` |
+|---|---|---|
+| 默认温度，各 6 次 | 6/6 残缺 | 0/6 |
+| 温度 0，各 3 次 | 3/3 残缺 | 0/3 |
+
+- 全流程真实验收（`qwen3.8-27b`，thinking 开启，Main 提示词规则 2 保留，抓包钩子检查全部工具名，共 119 次模型请求）：
+
+| 运行 | 结果 | 残缺名 |
+|---|---|---|
+| goal 第 1、3、4、5 轮 | 8/8 回合通过 | 第 4 轮 `extract-goal` 第 2 回合出现 1 次 `create_
+<parameter=reason`，同回合恢复 |
+| goal 第 2 轮 | 7/8；`extract-goal` 第 2 回合 blocked | 0；失败原因是推理耗尽 8192 输出 token（max-tokens），与本 Bug 无关，另登记为 BUG-007 |
+| longterm | 10/10 回合通过，0 个未恢复错误 | 0 |
+
+- 对比：改名前同口径 5 轮共 15 个规划回合，出现 3 次残缺名；改名后 14 个进入规划的回合中出现 1 次。样本量不足以给出精确比率；降幅的主要证据是受控对照。
+- 结论：改名大幅降低了触发率，但没有根治。同样的形态以 `create_` 前缀出现了一次，说明模型在“动词 + 下划线”之后插入换行的倾向仍然存在。残缺名出现时，已由 `unknown-tool` 反馈在同一回合内恢复。
+
+## 剩余边界
+
+- 只验证了 `qwen3.8-27b` 和单一部署；换模型后可能对其他名字敏感。
+- 如需根治，需要推理服务侧对函数名做校验或约束解码。

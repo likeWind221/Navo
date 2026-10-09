@@ -6,7 +6,7 @@ import { NodeStore } from "../../../src/node/store.js";
 import { ProjectStore } from "../../../src/project/store.js";
 import { RoadmapStore } from "../../../src/roadmap/store.js";
 import { RoadmapToolsPlugin } from "../../../src/tools/builtins/roadmap/plugin.js";
-import { WRITE_ROADMAP_TOOL_NAME } from "../../../src/tools/builtins/roadmap/write-roadmap.js";
+import { CREATE_ROADMAP_TOOL_NAME } from "../../../src/tools/builtins/roadmap/create-roadmap.js";
 import { ToolService } from "../../../src/tools/service.js";
 import { toolCall } from "../../helpers/tools.js";
 
@@ -61,18 +61,18 @@ const initialProposal = {
   ],
 } as const;
 
-describe("write_roadmap", () => {
+describe("create_roadmap", () => {
   it("creates the initial Roadmap and its Nodes atomically with Navo-generated identities", async () => {
     const ctx = await createContext();
     const project = ctx.projects.create({ name: "Project", goal: "Ship a backend" });
 
     const result = await ctx.tools.execute(
-      toolCall("write-roadmap", WRITE_ROADMAP_TOOL_NAME, initialProposal),
+      toolCall("create-roadmap", CREATE_ROADMAP_TOOL_NAME, initialProposal),
       signal,
-      { sessionId: project.mainSessionId, allowedTools: [WRITE_ROADMAP_TOOL_NAME] },
+      { sessionId: project.mainSessionId, allowedTools: [CREATE_ROADMAP_TOOL_NAME] },
     );
 
-    if (result.kind !== "success") throw new Error("write_roadmap unexpectedly failed");
+    if (result.kind !== "success") throw new Error("create_roadmap unexpectedly failed");
     const roadmap = ctx.roadmaps.get(project.id);
     const nodes = ctx.nodes.getByProject(project.id);
     expect(roadmap?.revision).toBe(1);
@@ -121,7 +121,7 @@ describe("write_roadmap", () => {
     const project = ctx.projects.create({ name: "Project", goal: "Protected plan" });
 
     const result = await ctx.tools.execute(
-      toolCall("cyclic-roadmap", WRITE_ROADMAP_TOOL_NAME, {
+      toolCall("cyclic-roadmap", CREATE_ROADMAP_TOOL_NAME, {
         reason: "Bad cycle",
         nodes: [
           {
@@ -135,10 +135,10 @@ describe("write_roadmap", () => {
         ],
       }),
       signal,
-      { sessionId: project.mainSessionId, allowedTools: [WRITE_ROADMAP_TOOL_NAME] },
+      { sessionId: project.mainSessionId, allowedTools: [CREATE_ROADMAP_TOOL_NAME] },
     );
 
-    if (result.kind !== "failure") throw new Error("cyclic write_roadmap unexpectedly succeeded");
+    if (result.kind !== "failure") throw new Error("cyclic create_roadmap unexpectedly succeeded");
     expect(JSON.stringify(result.block.content)).toContain("dependencies contain a cycle");
     expect(ctx.roadmaps.get(project.id)).toBeUndefined();
     expect(ctx.nodes.getByProject(project.id)).toEqual([]);
@@ -149,16 +149,16 @@ describe("write_roadmap", () => {
     const project = ctx.projects.create({ name: "Project", goal: "Stable plan" });
 
     const first = await ctx.tools.execute(
-      toolCall("first-roadmap", WRITE_ROADMAP_TOOL_NAME, initialProposal),
+      toolCall("first-roadmap", CREATE_ROADMAP_TOOL_NAME, initialProposal),
       signal,
-      { sessionId: project.mainSessionId, allowedTools: [WRITE_ROADMAP_TOOL_NAME] },
+      { sessionId: project.mainSessionId, allowedTools: [CREATE_ROADMAP_TOOL_NAME] },
     );
-    if (first.kind !== "success") throw new Error("initial write_roadmap unexpectedly failed");
+    if (first.kind !== "success") throw new Error("initial create_roadmap unexpectedly failed");
     const before = ctx.roadmaps.get(project.id)!;
     const nodeIds = ctx.nodes.getByProject(project.id).map((node) => node.node.id);
 
     const second = await ctx.tools.execute(
-      toolCall("replace-roadmap", WRITE_ROADMAP_TOOL_NAME, {
+      toolCall("replace-roadmap", CREATE_ROADMAP_TOOL_NAME, {
         reason: "Replace it",
         nodes: [{
           key: "replacement", kind: "work", title: "Replacement", goal: "Replace plan",
@@ -166,10 +166,10 @@ describe("write_roadmap", () => {
         }],
       }),
       signal,
-      { sessionId: project.mainSessionId, allowedTools: [WRITE_ROADMAP_TOOL_NAME] },
+      { sessionId: project.mainSessionId, allowedTools: [CREATE_ROADMAP_TOOL_NAME] },
     );
 
-    if (second.kind !== "failure") throw new Error("write_roadmap unexpectedly replaced an existing Roadmap");
+    if (second.kind !== "failure") throw new Error("create_roadmap unexpectedly replaced an existing Roadmap");
     expect(JSON.stringify(second.block.content)).toContain("already exists");
     expect(ctx.roadmaps.get(project.id)).toBe(before);
     expect(ctx.nodes.getByProject(project.id).map((node) => node.node.id)).toEqual(nodeIds);
@@ -180,12 +180,12 @@ describe("write_roadmap", () => {
     const project = ctx.projects.create({ name: "Project", goal: null });
 
     const result = await ctx.tools.execute(
-      toolCall("early-roadmap", WRITE_ROADMAP_TOOL_NAME, initialProposal),
+      toolCall("early-roadmap", CREATE_ROADMAP_TOOL_NAME, initialProposal),
       signal,
-      { sessionId: project.mainSessionId, allowedTools: [WRITE_ROADMAP_TOOL_NAME] },
+      { sessionId: project.mainSessionId, allowedTools: [CREATE_ROADMAP_TOOL_NAME] },
     );
 
-    if (result.kind !== "failure") throw new Error("write_roadmap unexpectedly planned without a goal");
+    if (result.kind !== "failure") throw new Error("create_roadmap unexpectedly planned without a goal");
     expect(JSON.stringify(result.block.content)).toContain("goal is not confirmed yet");
     expect(ctx.roadmaps.get(project.id)).toBeUndefined();
     expect(ctx.nodes.getByProject(project.id)).toEqual([]);
@@ -193,7 +193,7 @@ describe("write_roadmap", () => {
       .toThrow(expect.objectContaining({ code: "goal-required" }));
   });
 
-  it("rejects a Node Session even if write_roadmap is dispatched directly", async () => {
+  it("rejects a Node Session even if create_roadmap is dispatched directly", async () => {
     const ctx = await createContext();
     const project = ctx.projects.create({ name: "Project", goal: "Protected Project" });
     const node = ctx.nodes.create({
@@ -205,16 +205,16 @@ describe("write_roadmap", () => {
       },
     });
     ctx.nodes.unlock(node.node.id, "Ready");
-    const nodeSession = createSessionId("node-write-roadmap");
+    const nodeSession = createSessionId("node-create-roadmap");
     ctx.nodes.bindSession(node.node.id, nodeSession);
 
     const result = await ctx.tools.execute(
-      toolCall("node-write-roadmap", WRITE_ROADMAP_TOOL_NAME, initialProposal),
+      toolCall("node-create-roadmap", CREATE_ROADMAP_TOOL_NAME, initialProposal),
       signal,
-      { sessionId: nodeSession, allowedTools: [WRITE_ROADMAP_TOOL_NAME] },
+      { sessionId: nodeSession, allowedTools: [CREATE_ROADMAP_TOOL_NAME] },
     );
 
-    if (result.kind !== "failure") throw new Error("Node Session unexpectedly used write_roadmap");
+    if (result.kind !== "failure") throw new Error("Node Session unexpectedly used create_roadmap");
     expect(JSON.stringify(result.block.content)).toContain("available only to the Main Agent");
     expect(ctx.roadmaps.get(project.id)).toBeUndefined();
   });
