@@ -287,7 +287,11 @@ Human start Verify ---> Verifier (read-only) ---> Verdict (node version + pass|f
 | 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
 |---|---|---|---|---|
 | ✅ | F10.0 持久化与验证设计收口 | 后端设计记录 | 确定持久保存的范围、写入成功的含义、重启恢复与中断处理规则，以及验证结论的含义、失效条件、验证者权限和对完成确认的约束 | 设计记录经用户确认；参考 DeepSeek Harness 与既有存储调研，写明采用与不采用的机制；不修改生产代码 |
-| ⬜ | F10.1 Project 状态持久保存与重启恢复 | Project / Node / Roadmap / Mailbox / Resource 元数据 | 让 Project、节点、Roadmap 及其变更历史、Project 消息和资源登记在应用退出后仍然存在，重新启动后恢复为与退出前一致的状态 | 实际关闭并重新启动后端后读取到旧数据；只有保存成功的变更才对调用方表现为成功；不能用同进程内存或仅序列化测试替代 |
+| ⬜ | F10.1 Project 状态持久保存与重启恢复 | Project / Node / Roadmap / Mailbox / Resource 元数据 | 让 Project、节点、Roadmap 及其变更历史、Project 消息和资源登记在应用退出后仍然存在，重新启动后恢复为与退出前一致的状态；按下列 F10.1a–F10.1d 分步交付 | 子步骤全部完成；实际关闭并重新启动后端后读取到旧数据；只有保存成功的变更才对调用方表现为成功；不能用同进程内存或仅序列化测试替代 |
+| ⬜ | F10.1a 项目与工作目录持久保存 | Project 与 Workspace 绑定 | 让已创建的 Project、项目目标、归档 / 重新打开状态和 Workspace 绑定在重启后仍然存在，项目列表与退出前一致 | 真实关闭并重启后端后列表一致；数据库无法打开或版本不认识时拒绝启动；保存失败时调用方收到失败且状态不变；Workspace 目录丢失时 Project 仍恢复，但使用 Workspace 处报告不可用 |
+| ⬜ | F10.1b 节点与 Roadmap 持久保存 | Node 与 Roadmap | 让 Roadmap、其变更历史以及各 Node 的状态与解锁结果在重启后保持一致 | 一次 Roadmap 变更连同新节点和自动解锁要么全部保存、要么全部不保存；手动解锁、开始 / 结束工作、确认完成与跳过在重启后状态一致 |
+| ⬜ | F10.1c 消息与资源登记持久保存 | Mailbox 与 Resource 元数据 | 让 Project 消息与资源登记（含访问范围与版本）在重启后仍然存在 | 重启后消息顺序连续、资源可读；资源只有在实体内容写好后才登记成功；登记保存失败时调用方看不到该资源 |
+| ⬜ | F10.1d 损坏隔离与整体重启验收 | 恢复流程与集成验收 | 让单个 Project 的数据损坏只影响该 Project，其他 Project 照常恢复，并证明五类数据在完整场景下共同重启恢复 | 人为损坏一个 Project 后后端仍能启动、其他 Project 可用、该 Project 不加载且原始数据不变；完整场景真实重启验收通过；“无法恢复”状态的公开展示按共享契约流程另行提出并交由前端计划 |
 | ⬜ | F10.2 会话与执行记录恢复 | Main / Node Session 与工具记录 | 让 Main 与 Node 的会话消息、工具调用与结果在重启后可以继续使用，后续 Turn 能接着原上下文工作 | 重启后同一 Session 可继续发起 Turn 且上下文完整；恢复过程不重新执行任何工具副作用 |
 | ⬜ | F10.3 中断处理 | Project 执行控制面 | 让应用退出时正在进行的 Main / Node Turn 在重启后处于明确、可解释的稳定状态，由用户决定是否继续 | 重启后无悬挂的执行中状态；中断记录可见；不会自动续跑或自动标记完成 |
 | ⬜ | F10.4 验证结论记录 | 验证领域 | 让系统能为某个节点的某个版本记录“通过 / 不通过”的验证结论、理由和所引用的资源证据，并可随 Project 一起保存与恢复 | 结论可追加、查询与按历史重建；节点版本变化后旧结论不再视为当前有效；结论本身不改变节点状态 |
@@ -309,7 +313,7 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Pha
 
 Phase 9 已全部完成（2026-10-07）：F9.0–F9.9c 均为 ✅，最后由 [PR #35](https://github.com/likeWind221/Navo/pull/35)、[#36](https://github.com/likeWind221/Navo/pull/36)、[#37](https://github.com/likeWind221/Navo/pull/37) 交付项目公共契约（记录见 [73](73-devlog-f9.9a-project-query.md)、[74](74-devlog-f9.9b-human-control.md)、[75](75-devlog-f9.9c-project-follow.md)）。各 Step 的实现、验证与 PR 经过见第 6 节表格及 [文档索引](index.md) 中对应开发记录。
 
-F9.10 项目目标确认与规划前置已于 2026-10-08 合入（[PR #38](https://github.com/likeWind221/Navo/pull/38)，记录见 [76](76-devlog-f9.10-goal-confirm.md)）：目标可选、Main 规划前须经用户同意、无目标不能生成 Roadmap；前端 F5.2 已据此完成接入（[PR #39](https://github.com/likeWind221/Navo/pull/39)）。真实验收中发现的 BUG-005、BUG-006 已于 2026-10-09 修复合入（[PR #40](https://github.com/likeWind221/Navo/pull/40)、[#41](https://github.com/likeWind221/Navo/pull/41)），BUG-007 经用户决定搁置，见 [Bug 跟踪表](bug-plan.md)。F10.0 持久化与验证设计收口已于 2026-10-10 经用户确认（[80](80-devlog-f10-0-design.md)）：只用 SQLite 并存于 `~/.navo/`，`project-goal-set` 与 Workspace 绑定纳入持久化范围，单个 Project 损坏只隔离该 Project，验证结论只作参考、不设完成门禁。下一步为 F10.1 Project 状态持久保存与重启恢复；阶段规划见 [69：F10 持久化与验证规划](69-devlog-f10-plan.md)。Phase 9 的 Project / Roadmap / Mailbox / Resource 元数据仍只存在内存中，进程重启后不保留。
+F9.10 项目目标确认与规划前置已于 2026-10-08 合入（[PR #38](https://github.com/likeWind221/Navo/pull/38)，记录见 [76](76-devlog-f9.10-goal-confirm.md)）：目标可选、Main 规划前须经用户同意、无目标不能生成 Roadmap；前端 F5.2 已据此完成接入（[PR #39](https://github.com/likeWind221/Navo/pull/39)）。真实验收中发现的 BUG-005、BUG-006 已于 2026-10-09 修复合入（[PR #40](https://github.com/likeWind221/Navo/pull/40)、[#41](https://github.com/likeWind221/Navo/pull/41)），BUG-007 经用户决定搁置，见 [Bug 跟踪表](bug-plan.md)。F10.0 持久化与验证设计收口已于 2026-10-10 经用户确认（[80](80-devlog-f10-0-design.md)）：只用 SQLite 并存于 `~/.navo/`，`project-goal-set` 与 Workspace 绑定纳入持久化范围，单个 Project 损坏只隔离该 Project，验证结论只作参考、不设完成门禁。F10.1 于 2026-10-10 经用户确认拆为 F10.1a–F10.1d（项目与工作目录 → 节点与 Roadmap → 消息与资源 → 损坏隔离与整体验收），每个子 Step 独立分支、PR 与真实重启验收；已实测 Electron 44.2.0 自带 Node 24.20.0 支持 `node:sqlite`。下一步为 F10.1a 项目与工作目录持久保存；阶段规划见 [69：F10 持久化与验证规划](69-devlog-f10-plan.md)。Phase 9 的 Project / Roadmap / Mailbox / Resource 元数据仍只存在内存中，进程重启后不保留。
 
 BUG-002 经用户决定保持未关闭、等待复现，不阻塞 F10，状态见 [Bug 跟踪表](bug-plan.md)。
 
