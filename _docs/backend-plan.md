@@ -286,20 +286,20 @@ Human start Verify ---> Verifier (read-only) ---> Verdict (node version + pass|f
 
 | 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
 |---|---|---|---|---|
-| ⬜ | F10.0 持久化与验证设计收口 | 后端设计记录 | 确定持久保存的范围、写入成功的含义、重启恢复与中断处理规则，以及验证结论的含义、失效条件、验证者权限和对完成确认的约束 | 设计记录经用户确认；参考 DeepSeek Harness 与既有存储调研，写明采用与不采用的机制；不修改生产代码 |
+| ✅ | F10.0 持久化与验证设计收口 | 后端设计记录 | 确定持久保存的范围、写入成功的含义、重启恢复与中断处理规则，以及验证结论的含义、失效条件、验证者权限和对完成确认的约束 | 设计记录经用户确认；参考 DeepSeek Harness 与既有存储调研，写明采用与不采用的机制；不修改生产代码 |
 | ⬜ | F10.1 Project 状态持久保存与重启恢复 | Project / Node / Roadmap / Mailbox / Resource 元数据 | 让 Project、节点、Roadmap 及其变更历史、Project 消息和资源登记在应用退出后仍然存在，重新启动后恢复为与退出前一致的状态 | 实际关闭并重新启动后端后读取到旧数据；只有保存成功的变更才对调用方表现为成功；不能用同进程内存或仅序列化测试替代 |
 | ⬜ | F10.2 会话与执行记录恢复 | Main / Node Session 与工具记录 | 让 Main 与 Node 的会话消息、工具调用与结果在重启后可以继续使用，后续 Turn 能接着原上下文工作 | 重启后同一 Session 可继续发起 Turn 且上下文完整；恢复过程不重新执行任何工具副作用 |
 | ⬜ | F10.3 中断处理 | Project 执行控制面 | 让应用退出时正在进行的 Main / Node Turn 在重启后处于明确、可解释的稳定状态，由用户决定是否继续 | 重启后无悬挂的执行中状态；中断记录可见；不会自动续跑或自动标记完成 |
 | ⬜ | F10.4 验证结论记录 | 验证领域 | 让系统能为某个节点的某个版本记录“通过 / 不通过”的验证结论、理由和所引用的资源证据，并可随 Project 一起保存与恢复 | 结论可追加、查询与按历史重建；节点版本变化后旧结论不再视为当前有效；结论本身不改变节点状态 |
 | ⬜ | F10.5 独立验证者 | 验证 Agent 角色 | 让用户可以启动一个独立的验证回合，由只读的验证者根据节点目标和可见资源检查工作成果并提交验证结论 | 验证者不能修改文件、资源或 Roadmap，不能给其他 Agent 发消息；只能为被指定的节点提交结论；验证回合同样受取消、失败释放和 Human Gate 约束 |
-| ⬜ | F10.6 验证门禁与失败重规划 | 完成确认 / Main 协调 | 让节点只有在当前版本获得通过结论后才能被确认完成；让 Main 能读取验证结论，并在不通过时修改 Roadmap 安排补救 | 无通过结论时完成确认被拒绝，跳过节点不受影响；Main 能看到不通过的理由与证据并通过既有 Roadmap 修改完成重规划；任何结论都不自动启动 Agent |
+| ⬜ | F10.6 验证结论可见与失败重规划 | Main 协调 / 项目查询 | 让 Main 与用户能看到节点当前的验证结论及其是否过期，并让 Main 在不通过时修改 Roadmap 安排补救；验证结论只作参考，完成与否始终由用户决定 | Main 能看到不通过的理由与证据并通过既有 Roadmap 修改完成重规划；用户确认完成与跳过不受验证结论约束；任何结论都不自动启动 Agent |
 | ⬜ | F10.7 F10 长程集成验收 | 后端集成测试与阶段记录 | 用一个包含验证失败、重规划、重启恢复和最终通过的完整长程场景证明 F10 能力共同工作 | 离线完整场景可重复通过；真实模型验收保留完整记录，失败现场可用于定位 |
 
 ## 9. 后续阶段
 
 | Phase | 核心问题 | 目标产物 |
 |---|---|---|
-| Phase 10（F10） | 应用退出后如何继续推进项目？系统如何判断节点真的完成？ | 见第 8 节：持久保存与重启恢复、中断处理、验证结论、独立验证者、验证门禁与失败重规划 |
+| Phase 10（F10） | 应用退出后如何继续推进项目？系统如何判断节点真的完成？ | 见第 8 节：持久保存与重启恢复、中断处理、验证结论、独立验证者、验证结论可见与失败重规划 |
 | Phase 11 | Research Workspace 如何使用通用 Core？ | Research Agent Profile、Claim / Evidence、RAG 与研究领域适配 |
 | Phase 12 | 系统如何与研究者长期共同演进？ | Research Memory、长期反馈与 Human-AI Co-evolution |
 
@@ -309,7 +309,7 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Pha
 
 Phase 9 已全部完成（2026-10-07）：F9.0–F9.9c 均为 ✅，最后由 [PR #35](https://github.com/likeWind221/Navo/pull/35)、[#36](https://github.com/likeWind221/Navo/pull/36)、[#37](https://github.com/likeWind221/Navo/pull/37) 交付项目公共契约（记录见 [73](73-devlog-f9.9a-project-query.md)、[74](74-devlog-f9.9b-human-control.md)、[75](75-devlog-f9.9c-project-follow.md)）。各 Step 的实现、验证与 PR 经过见第 6 节表格及 [文档索引](index.md) 中对应开发记录。
 
-F9.10 项目目标确认与规划前置已于 2026-10-08 合入（[PR #38](https://github.com/likeWind221/Navo/pull/38)，记录见 [76](76-devlog-f9.10-goal-confirm.md)）：目标可选、Main 规划前须经用户同意、无目标不能生成 Roadmap；前端 F5.2 已据此完成接入（[PR #39](https://github.com/likeWind221/Navo/pull/39)）。真实验收中发现的 BUG-005、BUG-006 已于 2026-10-09 修复合入（[PR #40](https://github.com/likeWind221/Navo/pull/40)、[#41](https://github.com/likeWind221/Navo/pull/41)），BUG-007 经用户决定搁置，见 [Bug 跟踪表](bug-plan.md)。下一步为 F10.0 持久化与验证设计收口（`project-goal-set` 事件纳入持久化范围），规划与取舍见 [69：F10 持久化与验证规划](69-devlog-f10-plan.md)。Phase 9 的 Project / Roadmap / Mailbox / Resource 元数据仍只存在内存中，进程重启后不保留。
+F9.10 项目目标确认与规划前置已于 2026-10-08 合入（[PR #38](https://github.com/likeWind221/Navo/pull/38)，记录见 [76](76-devlog-f9.10-goal-confirm.md)）：目标可选、Main 规划前须经用户同意、无目标不能生成 Roadmap；前端 F5.2 已据此完成接入（[PR #39](https://github.com/likeWind221/Navo/pull/39)）。真实验收中发现的 BUG-005、BUG-006 已于 2026-10-09 修复合入（[PR #40](https://github.com/likeWind221/Navo/pull/40)、[#41](https://github.com/likeWind221/Navo/pull/41)），BUG-007 经用户决定搁置，见 [Bug 跟踪表](bug-plan.md)。F10.0 持久化与验证设计收口已于 2026-10-10 经用户确认（[80](80-devlog-f10-0-design.md)）：只用 SQLite 并存于 `~/.navo/`，`project-goal-set` 与 Workspace 绑定纳入持久化范围，单个 Project 损坏只隔离该 Project，验证结论只作参考、不设完成门禁。下一步为 F10.1 Project 状态持久保存与重启恢复；阶段规划见 [69：F10 持久化与验证规划](69-devlog-f10-plan.md)。Phase 9 的 Project / Roadmap / Mailbox / Resource 元数据仍只存在内存中，进程重启后不保留。
 
 BUG-002 经用户决定保持未关闭、等待复现，不阻塞 F10，状态见 [Bug 跟踪表](bug-plan.md)。
 
