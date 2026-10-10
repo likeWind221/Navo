@@ -1,10 +1,10 @@
 # 80：F10.0 持久化与验证设计收口
 
-> 状态：设计记录，待用户确认。本 Step 不修改生产代码。
+> 状态：设计记录，2026-10-10 经用户确认（D2 位置、D4 损坏处理、D7/D9 验证语义按用户意见修订）。本 Step 不修改生产代码。
 
 ## 做了什么
 
-只读盘点 Navo 当前内存状态与领域事件，并调研 DeepSeek Harness 的会话持久化、检查点与崩溃恢复源码，确定 F10.1–F10.6 的设计约束：持久化范围、写入成功的含义、重启恢复与中断处理规则、验证结论的含义与失效条件、验证者权限和完成确认门禁。
+只读盘点 Navo 当前内存状态与领域事件，并调研 DeepSeek Harness 的会话持久化、检查点与崩溃恢复源码，确定 F10.1–F10.6 的设计约束：持久化范围、写入成功的含义、重启恢复与中断处理规则、验证结论的含义与失效条件、验证者权限，以及验证结论与 Human 完成确认的关系。
 
 ### 现状盘点（2026-10-09 master）
 
@@ -63,9 +63,18 @@
 
 ### D2 存储介质与位置
 
-- **单一 SQLite 文件**，使用 Node 内置 `node:sqlite` 的同步驱动，不引入原生依赖。
-- 位置在**应用数据目录**，不放在各 Project 的 `.navo/` 中，由 Host 配置提供，Electron 传入 `app.getPath("userData")` 下的路径。理由：项目列表必须在打开任何 Workspace 之前就能读出；跨 Project 的唯一性检查（同一根目录只绑定一个 Project）需要一个全局事实源；Roadmap 与 Node 必须在同一事务中提交。
-- 不采用 JSONL：Navo 的一次变更跨多个领域（Roadmap + 多个 Node），需要跨表事务。不采用“每 Project 一个库 + 全局索引”：这会形成两个可以各自修改的事实源。
+- **只用单一 SQLite 文件**，使用 Node 内置 `node:sqlite` 的同步驱动，不引入原生依赖。选型条件：单用户单机、只有一个 Host 进程写入；一次操作跨多个领域需要原子提交；不能给用户增加安装与运维负担。
+
+| 选项 | 结论 | 理由 |
+|---|---|---|
+| SQLite | 采用 | 嵌入式零服务；支持跨表事务；WAL + `synchronous=FULL` 保证提交后断电不丢；单个本地用户的写入量远低于其上限 |
+| MySQL | 不需要 | 解决多客户端、多用户经网络共享写入，Navo 没有此需求；需要用户安装并维护独立服务，不适合桌面应用。未来做云端协作或多设备同步时再评估服务端数据库 |
+| Redis | 不需要 | 主要用于缓存与短期协调；Navo 读模型已是进程内 Map，再加缓存层没有收益；RDB/AOF 不提供跨领域关系事务，不适合作主存储 |
+| 纯 JSONL | 不单独采用 | 适合“一会话一份日志”（Codex、Claude Code 的会话存储），但 Navo 一次变更跨多个领域，无法多文件原子提交 |
+
+- 位置仿照 Codex（`~/.codex`）与 Claude Code（`~/.claude`），放在**用户主目录 `~/.navo/navo.db`**，可用环境变量 `NAVO_HOME` 覆盖（测试与真实模型验收使用）。数据归属用户而非某个前端外壳，Host 脱离 Electron 单独运行时也能读到同一份数据。
+- 与 Project 工作目录下的 `<workspace>/.navo/` 区分：`~/.navo/` 保存全局状态（项目列表、各领域事件、会话、验证结论）；Workspace 的 `.navo/` 仍只保存该项目的 Resource 实体文件。
+- 不采用“每 Project 一个库 + 全局索引”：项目列表必须在打开任何 Workspace 之前读出，跨 Project 的根目录唯一性需要全局事实源，两套库会形成可以各自修改的事实源。代价是 Project 目录拷贝到别处时不会带走项目历史。
 - 表的形态（按领域分表，还是一张事件表加 `domain` 列）在 F10.1 决定，不在这里固定。约束是：事件以 JSON 文档保存原样结构；按 `(所有者 ID, revision/sequence)` 唯一，并在写入时强制连续。
 
 ### D3 写入成功的含义
@@ -81,10 +90,11 @@
 
 ### D4 重启恢复
 
-- Host 启动时打开数据库并检查 schema 版本；版本未知或更高时拒绝启动并报告，不自动迁移。
+- Host 启动时打开数据库并检查 schema 版本；数据库无法打开、版本未知或更高时拒绝启动并报告，不自动迁移。这一层失败意味着没有任何数据可信，继续运行可能写坏数据。
 - 按依赖顺序重放：Project → Workspace 绑定 → Node → Roadmap → Mailbox → Resource → Session → 验证结论。全部经过各 Store 现有的可信 `restore` 入口，复用其校验。
 - 重放过程不调用模型、不执行工具、不 emit 业务变更通知，也不产生任何新事件，唯一例外是 D6 的中断收尾。
-- **任何事件校验失败都让 Host 启动失败**，并报告 Project ID 和事件位置。不跳过、不截断、不自动修复。数据库只由 Navo 在事务内写入，校验失败意味着程序缺陷，静默丢弃会掩盖它。
+- **单个 Project 的事件校验失败只隔离该 Project**：不加载进内存，原始数据保持不动，不截断、不自动修复；其他 Project 正常工作。该 Project 在列表中显示为“无法恢复”并附原因（领域、事件位置、错误码）。SQLite 事务不会留下半写记录，校验失败只可能来自程序缺陷或手工改库，影响范围应限制在出问题的 Project，而不是让整个桌面应用无法启动。
+- 列表中的“无法恢复”状态属于公共契约变更，F10.1 实施时按共享契约流程单独提出，并交由前端计划展示。
 - Workspace 根目录在重启后丢失或被移动时，Project 照常恢复，但在使用 Workspace 的位置返回 `workspace-unavailable`；不重新创建用户目录。
 - Host 进入 ready 状态之前恢复必须全部完成，前端看到的第一份项目列表就是恢复后的状态。
 
@@ -107,6 +117,8 @@
 
 ### D7 验证结论的含义（F10.4）
 
+**含义**：“通过”是独立只读验证者的**参考意见**——它判断目标 Node 当前版本满足目标与完成标准；“不通过”同理。结论只对“这个 Node、这个 revision、验证者实际检查过的内容”负责，不是真理证明，也**不是完成的前置条件**。是否完成始终只由 Human 决定（见 D9）。
+
 验证结论是一条只追加的记录：
 
 ```
@@ -114,17 +126,17 @@ VerificationVerdict {
   id, projectId, nodeId,
   nodeRevision,                      // 验证时目标 Node 的 revision
   outcome: "pass" | "fail",
-  reason,                            // 必填，非空
-  evidence: { resourceId, resourceRevision }[],
+  reason,                            // 验证者提交时必填，由验证者自行归纳
+  evidence?: EvidenceRef[],          // 可选，仅用于追溯
   verifierSessionId, timestamp
 }
 ```
 
-- `pass` 必须引用至少一个 Resource 证据；`fail` 可以不带证据，但理由必填。没有正式产物的工作，应由 Node 把报告登记为 Resource 后再接受验证。
+- 证据可选，可以引用 Resource、Workspace 文件路径或 Mailbox 消息，只用于让 Human 与 Main 追溯验证者看了什么；不要求“通过”必须带证据，避免为通过验证而额外登记资源。
 - 结论本身不改变 Node 状态、不改变 revision、不启动任何 Agent。
 - 只有 work Node 需要验证；control Node（人工开始 / 结束 / 确认）不需要。
-- **当前有效结论**：目标 Node 最新的一条结论，且同时满足 ① `nodeRevision` 等于 Node 当前 revision；② 每个证据 Resource 未删除，且当前 revision 等于引用时的 revision。任一条件不满足，该结论就是陈旧的，只保留为历史。
-- 理由：Node 的任何新工作都会产生 `work-started` / `work-ended`，使 revision 增加，因此“先验证、再修改”会自动让结论失效；证据 Resource 的 revision 覆盖了 Node 回合之外对产物的修改。
+- **当前有效结论**：目标 Node 最新的一条结论，且其 `nodeRevision` 等于 Node 当前 revision；否则为过期结论，只保留为历史。Node 的任何新工作都会产生 `work-started` / `work-ended` 使 revision 增加，因此新工作会自动让旧结论过期。
+- 失效只看 Node revision，不追踪证据 Resource revision 或文件哈希：结论不拦截任何操作，过期只用于提示，按最简实现。
 
 ### D8 验证者的权限（F10.5）
 
@@ -136,12 +148,12 @@ VerificationVerdict {
 - 验证回合同样只能由 Human 发起，受取消、失败释放和 D6 中断规则约束。验证回合**不**产生 `work-started`，不改变目标 Node 的 revision。
 - 启动验证需要一个面向桌面的入口，属于公共契约变更，F10.5 实施时先停下来，按共享契约流程单独确认。
 
-### D9 完成门禁与失败重规划（F10.6）
+### D9 验证结论可见与失败重规划（F10.6）
 
-- 人工确认完成（`completion-confirmed`）在 work Node 上额外要求：存在当前有效（D7）的 `pass` 结论，且其 `nodeRevision` 等于确认时审阅的 revision。否则拒绝，错误码 `verification-required`。
-- 跳过节点（`node-skipped`）不受门禁影响。
-- Main 通过 `read_node` 看到当前有效结论和最近的历史结论（含理由和证据引用）。不通过时 Main 只能用既有的 `modify_roadmap` 安排补救；结论不会自动触发 Main 回合。
-- 门禁只针对 Human completion；Main 本来就没有完成权限，不受影响。
+- **不设完成门禁**：Human 确认完成与跳过都不受验证结论约束。即使没有结论、最新结论为“不通过”或已过期，用户仍可确认完成；界面最多提示当前结论状态。
+- PRD 原则“执行结果不能由执行者自行宣布为完成”仍成立：Node 不能完成自己，验证者只提交意见、不能完成 Node，Main 没有完成权限。
+- Main 通过 `read_node` 看到当前结论、是否过期和最近的历史结论（含理由与证据引用）。“不通过”时 Main 用既有 `modify_roadmap` 安排补救；结论不会自动触发 Main 回合。
+- 前端交接：`project.node.review.v1` 现要求 `reason` 为非空文本（`rpc/project/validation.ts`）。“一键完成”无需修改契约，由前端按钮自动填默认理由（如“用户确认完成”）；由后续前端 Step 落实。
 
 ## 坑与发现
 
@@ -149,12 +161,13 @@ VerificationVerdict {
 - 现有观察事件是在内存提交后才通知，订阅事件去写库会让“调用返回成功”早于落盘，违反 D3。持久化必须位于提交路径内，不能做成事件监听者。
 - Workspace 绑定没有事件，是盘点中唯一会在重启后无法推出的事实，F10.1 需要补上。
 - Harness 的中断收尾使用独立的 interrupted 状态；Navo 为不改公共契约选择了 failed + 错误码，这是有意的差异，见 D6。
+- 初稿曾设计“没有当前有效的通过结论就拒绝完成”的门禁与“通过必须引用资源”的证据要求；用户审阅指出 Human Gate 才是最终决定，验证只应提供参考意见，两者均已撤销（D7、D9）。
 
-## 待用户确认的取舍
+## 用户确认结果（2026-10-10）
 
-1. **D2 数据库位置**：放在应用数据目录的单一 SQLite，而不是各 Project 的 `.navo/`。代价是 Project 目录拷贝到别处后不会带走项目历史。
-2. **D4 损坏处理**：任何恢复校验失败都让 Host 启动失败，而不是跳过损坏的 Project。
-3. **D7 证据要求**：`pass` 至少引用一个 Resource。
+1. **D2**：只用 SQLite，位于 `~/.navo/navo.db`，可用 `NAVO_HOME` 覆盖。
+2. **D4**：仅数据库 / schema 层失败拒绝启动；单个 Project 损坏只隔离该 Project。
+3. **D7 / D9**：验证结论是参考意见，理由由验证者填写、证据可选、过期只看 Node revision；取消完成门禁，Human 一键即可完成。
 
 ## 明确不做
 
@@ -165,4 +178,4 @@ VerificationVerdict {
 
 ## 下一步
 
-用户确认本设计后，把 F10.0 标为 ✅，开始 F10.1：Project 状态持久保存与重启恢复。
+F10.0 已确认。下一步开始 F10.1：Project 状态持久保存与重启恢复（先实测 Electron 44 自带 Node 的 `node:sqlite` 支持）。
