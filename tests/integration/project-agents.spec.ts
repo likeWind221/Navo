@@ -5,6 +5,7 @@ import { createApp } from "../../src/app.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import { MockSearchAdapter } from "../../src/tools/builtins/search/adapters/mock.js";
 import { modelResponse } from "../helpers/runtime.js";
+import { MEMORY_STORAGE } from "../helpers/storage.js";
 
 let app: Context | undefined;
 
@@ -16,6 +17,7 @@ afterEach(async () => {
 describe("Project Agent application wiring", () => {
   it("runs Main and Node profiles through the same AgentRuntime", async () => {
     app = await createApp({
+      storage: MEMORY_STORAGE,
       node: { session: { model: { provider: "mock", model: "agent-test" } } },
       tools: { search: { adapter: new MockSearchAdapter([]) } },
     });

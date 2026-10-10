@@ -12,6 +12,7 @@ import { createApp } from "../../src/app.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import type { GenerateRequest } from "../../src/llm/types.js";
 import { modelResponse } from "../helpers/runtime.js";
+import { MEMORY_STORAGE } from "../helpers/storage.js";
 
 const apps: Awaited<ReturnType<typeof createApp>>[] = [];
 const roots: string[] = [];
@@ -37,6 +38,7 @@ describe("Node Turn Resource context integration", () => {
     await writeFile(join(root, "handoff.md"), "resource body stays out of prompt\n", "utf8");
 
     const app = await createApp({
+      storage: MEMORY_STORAGE,
       node: { session: { model: { provider: "mock", model: "node-test" } } },
     });
     apps.push(app);

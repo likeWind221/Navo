@@ -14,6 +14,7 @@ import { NodeStore } from "../../src/node/store.js";
 import { ProjectStore } from "../../src/project/store.js";
 import { ResourceService } from "../../src/resource/service.js";
 import { ProjectWorkspaceStore } from "../../src/workspace/store.js";
+import { memoryStorage } from "../helpers/storage.js";
 
 const contexts: Context[] = [];
 const roots: string[] = [];
@@ -37,6 +38,7 @@ async function fixture(): Promise<string> {
 async function domain(): Promise<Context> {
   const ctx = new Context();
   contexts.push(ctx);
+  await memoryStorage(ctx);
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
   await ctx.plugin(ProjectWorkspaceStore);

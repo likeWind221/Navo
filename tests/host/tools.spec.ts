@@ -20,6 +20,7 @@ import { READ_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/read.js
 import { CREATE_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/create-roadmap.js";
 import { ExaSearchAdapter } from "../../src/tools/builtins/search/adapters/exa.js";
 import { modelResponse } from "../helpers/runtime.js";
+import { MEMORY_STORAGE } from "../helpers/storage.js";
 
 describe("desktop Host tool availability", () => {
   it.each([
@@ -35,6 +36,7 @@ describe("desktop Host tool availability", () => {
     const environment = config.file === undefined
       ? undefined : await createFileEnvironment(config.file.cwd);
     const ctx = await createApp({
+      storage: MEMORY_STORAGE,
       node: { session: { model: config.agent.model } },
       tools: {
         ...(config.search === undefined ? {} : { search: { adapter: new ExaSearchAdapter(config.search) } }),

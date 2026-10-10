@@ -25,6 +25,7 @@ export async function runKernelHost(): Promise<void> {
       : { file: { resolveFileEnvironment: () => fileEnvironment } }),
   };
   const ctx = await createApp({
+    storage: config.storage,
     node: { session: { model: config.agent.model } },
     ...(config.search === undefined && fileEnvironment === undefined
       ? {}

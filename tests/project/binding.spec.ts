@@ -23,6 +23,7 @@ import { ProjectStore } from "../../src/project/store.js";
 import { SessionStore } from "../../src/session/store.js";
 import { ToolService } from "../../src/tools/service.js";
 import { modelResponse } from "../helpers/runtime.js";
+import { memoryStorage } from "../helpers/storage.js";
 
 const contexts = new Set<Context>();
 
@@ -34,6 +35,7 @@ afterEach(async () => {
 async function createBindingContext(): Promise<Context> {
   const ctx = new Context();
   contexts.add(ctx);
+  await memoryStorage(ctx);
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
   return ctx;
@@ -46,6 +48,7 @@ async function createRuntimeContext(): Promise<Context> {
   await ctx.plugin(LLMService);
   await ctx.plugin(ToolService);
   await ctx.plugin(AgentRuntime);
+  await memoryStorage(ctx);
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
   return ctx;

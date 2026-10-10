@@ -19,6 +19,7 @@ import { READ_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/read.js
 import { CREATE_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/create-roadmap.js";
 import { MockSearchAdapter } from "../../src/tools/builtins/search/adapters/mock.js";
 import { modelResponse } from "../helpers/runtime.js";
+import { MEMORY_STORAGE } from "../helpers/storage.js";
 
 let app: Context | undefined;
 
@@ -30,6 +31,7 @@ afterEach(async () => {
 describe("Navo application integration", () => {
   it("runs a model-tool-model loop and rebuilds its context from Session", async () => {
     app = await createApp({
+      storage: MEMORY_STORAGE,
       node: { session: { model: { provider: "mock", model: "node-test" } } },
       tools: { search: { adapter: new MockSearchAdapter([]) } },
     });

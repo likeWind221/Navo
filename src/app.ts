@@ -13,6 +13,8 @@ import { ProjectRuntime } from "./project/runtime.js";
 import { MainSessionService } from "./project/session.js";
 import { ResourceService } from "./resource/service.js";
 import { SessionStore } from "./session/store.js";
+import { StorageService } from "./storage/database.js";
+import type { StorageConfig } from "./storage/database.js";
 import { ProjectStore } from "./project/store.js";
 import { RoadmapStore } from "./roadmap/store.js";
 import { FileError } from "./tools/builtins/file/errors.js";
@@ -25,9 +27,11 @@ import { RoadmapToolsPlugin } from "./tools/builtins/roadmap/plugin.js";
 import { ResourceToolsPlugin } from "./tools/builtins/resource/plugin.js";
 import type { ToolsPluginConfig } from "./tools/plugin.js";
 import { ToolsPlugin } from "./tools/plugin.js";
+import { WorkspaceError } from "./workspace/errors.js";
 import { ProjectWorkspaceStore } from "./workspace/store.js";
 
 export interface NavoAppConfig {
+  readonly storage: StorageConfig;
   readonly runtime?: Partial<AgentRuntimeLimits>;
   readonly tools?: ToolsPluginConfig;
   readonly node: NodePluginConfig;
@@ -37,6 +41,7 @@ export async function NavoApp(
   ctx: Context,
   config: NavoAppConfig,
 ): Promise<void> {
+  await ctx.plugin(StorageService, config.storage);
   await Promise.all([
     ctx.plugin(SessionStore),
     ctx.plugin(ProjectStore),
@@ -51,12 +56,12 @@ export async function NavoApp(
     resolveProjectFileEnvironment = async (sessionId) => {
       const binding = resolveAgentBinding(bindingCtx, sessionId);
       if (binding === undefined) return undefined;
-      const workspace = await bindingCtx.projectWorkspaces.get(binding.projectId);
-      if (workspace === undefined) {
-        throw new FileError(
-          "path-not-allowed",
-          "Project Agent Session has no bound Project Workspace.",
-        );
+      let workspace;
+      try {
+        workspace = await bindingCtx.projectWorkspaces.require(binding.projectId);
+      } catch (error: unknown) {
+        if (error instanceof WorkspaceError) throw new FileError("path-not-allowed", error.message);
+        throw error;
       }
       return createFileEnvironment(workspace.root, workspace.root, [workspace.navoRoot]);
     };

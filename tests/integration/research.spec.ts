@@ -18,6 +18,7 @@ import { READ_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/read.js
 import { CREATE_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/create-roadmap.js";
 import { MockSearchAdapter } from "../../src/tools/builtins/search/adapters/mock.js";
 import { modelResponse } from "../helpers/runtime.js";
+import { MEMORY_STORAGE } from "../helpers/storage.js";
 
 let app: Context | undefined;
 afterEach(async () => { await app?.fiber.dispose(); app = undefined; });
@@ -34,6 +35,7 @@ describe("generic Node research loop", () => {
       modelResponse([{ type: "text", text: "All done. Sources reviewed." }]),
     ]);
     app = await createApp({
+      storage: MEMORY_STORAGE,
       node: { session: { model: { provider: "mock", model: "research" } } },
       tools: {
         search: { adapter: new MockSearchAdapter([{ kind: "result", result: {

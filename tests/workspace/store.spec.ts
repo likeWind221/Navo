@@ -21,8 +21,10 @@ import {
   createToolCallId,
 } from "../../src/brand/ids.js";
 import { ProjectStore } from "../../src/project/store.js";
+import { StorageService } from "../../src/storage/database.js";
 import { createFileEnvironment } from "../../src/tools/builtins/file/path.js";
 import { ProjectWorkspaceStore } from "../../src/workspace/store.js";
+import { MEMORY_STORAGE, memoryStorage } from "../helpers/storage.js";
 
 const contexts: Context[] = [];
 const roots: string[] = [];
@@ -38,9 +40,11 @@ async function fixture(prefix = "navo-workspace-"): Promise<string> {
   return root;
 }
 
-async function domain(): Promise<Context> {
+async function domain(path?: string): Promise<Context> {
   const ctx = new Context();
   contexts.push(ctx);
+  if (path === undefined) await memoryStorage(ctx);
+  else await ctx.plugin(StorageService, { path });
   await ctx.plugin(ProjectStore);
   await ctx.plugin(ProjectWorkspaceStore);
   return ctx;
@@ -180,6 +184,7 @@ describe("Project Workspace root migration", () => {
   it("mounts Workspace and Resource services without a global Workspace root config", async () => {
     const root = await fixture();
     const app = await createApp({
+      storage: MEMORY_STORAGE,
       node: { session: { model: { provider: "mock", model: "test" } } },
     });
     contexts.push(app);
@@ -199,6 +204,7 @@ describe("Project Workspace root migration", () => {
     const hostEnvironment = await createFileEnvironment(hostRoot);
 
     const app = await createApp({
+      storage: MEMORY_STORAGE,
       node: { session: { model: { provider: "mock", model: "test" } } },
       tools: { file: { resolveFileEnvironment: () => hostEnvironment } },
     });
@@ -248,5 +254,58 @@ describe("Project Workspace root migration", () => {
         modelMessage: "The requested path is not available in the current file environment.",
       },
     });
+  });
+});
+
+describe("Project Workspace persistence", () => {
+  async function restart(ctx: Context, path: string): Promise<Context> {
+    contexts.splice(contexts.indexOf(ctx), 1);
+    await ctx.fiber.dispose();
+    return domain(path);
+  }
+
+  it("restores bindings and root ownership after a storage restart", async () => {
+    const path = join(await fixture("navo-workspace-db-"), "navo.db");
+    const root = await fixture();
+    const other = await fixture();
+    let ctx = await domain(path);
+    const project = ctx.projects.create({ name: "Project", goal: "Persist binding" });
+    const second = ctx.projects.create({ name: "Second", goal: "Persist cleanup" });
+    const workspace = await ctx.projectWorkspaces.create(project.id, root);
+    await ctx.projectWorkspaces.create(second.id, other);
+    expect(await ctx.projectWorkspaces.cleanup(second.id)).toBe(true);
+
+    ctx = await restart(ctx, path);
+    expect(await ctx.projectWorkspaces.get(project.id)).toEqual(workspace);
+    expect(await ctx.projectWorkspaces.get(second.id)).toBeUndefined();
+    await expect(ctx.projectWorkspaces.create(project.id, other))
+      .rejects.toMatchObject({ code: "workspace-conflict" });
+    await expect(stat(join(other, ".navo"))).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(ctx.projectWorkspaces.create(second.id, root))
+      .rejects.toMatchObject({ code: "workspace-conflict" });
+    expect((await ctx.projectWorkspaces.resolve(project.id, "assets/a.txt")).exists).toBe(false);
+  });
+
+  it("restores a Project whose Workspace disappeared but reports it unavailable on use", async () => {
+    const path = join(await fixture("navo-workspace-db-"), "navo.db");
+    const root = await fixture();
+    let ctx = await domain(path);
+    const project = ctx.projects.create({ name: "Project", goal: "Survive missing root" });
+    const workspace = await ctx.projectWorkspaces.create(project.id, root);
+    await rm(root, { recursive: true, force: true });
+
+    ctx = await restart(ctx, path);
+    expect(ctx.projects.get(project.id)).toMatchObject({ name: "Project" });
+    expect(await ctx.projectWorkspaces.get(project.id)).toEqual(workspace);
+    await expect(ctx.projectWorkspaces.require(project.id))
+      .rejects.toMatchObject({ code: "workspace-unavailable" });
+    await expect(ctx.projectWorkspaces.resolve(project.id, "assets/a.txt"))
+      .rejects.toMatchObject({ code: "workspace-unavailable" });
+    await expect(stat(root)).rejects.toMatchObject({ code: "ENOENT" });
+
+    await mkdir(root);
+    await expect(ctx.projectWorkspaces.require(project.id))
+      .rejects.toMatchObject({ code: "workspace-unavailable" });
+    await expect(stat(workspace.navoRoot)).rejects.toMatchObject({ code: "ENOENT" });
   });
 });
