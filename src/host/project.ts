@@ -59,13 +59,12 @@ async function listProjects(ctx: Context): Promise<ProjectListV1> {
 }
 
 async function createProject(ctx: Context, input: ProjectCreateInput): Promise<ProjectSummaryV1> {
-  const project = ctx.projects.create({ name: input.name, goal: input.goal });
-  try {
-    await ctx.projectWorkspaces.create(project.id, input.workspaceRoot);
-  } catch (error: unknown) {
-    ctx.projects.discard(project.id);
-    throw error;
-  }
+  const workspace = await ctx.projectWorkspaces.prepare(input.workspaceRoot);
+  const project = ctx.storage.atomic(() => {
+    const created = ctx.projects.create({ name: input.name, goal: input.goal });
+    ctx.projectWorkspaces.bind(created.id, workspace);
+    return created;
+  });
   return summarize(ctx, project);
 }
 

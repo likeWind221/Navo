@@ -14,6 +14,7 @@ import type {
   SessionId,
 } from "../../../src/brand/ids.js";
 import { createFileEnvironment } from "../../../src/tools/builtins/file/path.js";
+import { MEMORY_STORAGE } from "../../helpers/storage.js";
 
 const apps: Context[] = [];
 const roots: string[] = [];
@@ -30,6 +31,7 @@ export async function resourceToolFixture() {
   roots.push(root);
   const hostEnvironment = await createFileEnvironment(root);
   const app = await createApp({
+    storage: MEMORY_STORAGE,
     node: { session: { model: { provider: "mock", model: "test" } } },
     tools: {
       file: {

@@ -1,3 +1,6 @@
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
+
 import type { AgentTurnHandlerConfig } from "./turn.js";
 import type { QwenChatAdapterConfig } from "../llm/adapters/qwen.js";
 import { WEB_SEARCH_TOOL_NAME } from "../tools/builtins/search/tool.js";
@@ -12,7 +15,12 @@ export interface KernelHostFileConfig {
   readonly cwd: string;
 }
 
+export interface KernelHostStorageConfig {
+  readonly path: string;
+}
+
 export interface KernelHostConfig {
+  readonly storage: KernelHostStorageConfig;
   readonly provider: "qwen";
   readonly adapter: QwenChatAdapterConfig;
   readonly agent: AgentTurnHandlerConfig;
@@ -52,7 +60,15 @@ export function resolveKernelHostConfig(
     throw new TypeError("NAVO_FILE_CWD must be a non-empty path when provided.");
   }
   const file = Object.freeze({ cwd: fileCwd?.trim() ?? process.cwd() });
+  const navoHome = env.NAVO_HOME;
+  if (navoHome !== undefined && !navoHome.trim()) {
+    throw new TypeError("NAVO_HOME must be a non-empty path when provided.");
+  }
+  const storage = Object.freeze({
+    path: join(resolve(navoHome?.trim() ?? join(homedir(), ".navo")), "navo.db"),
+  });
   return Object.freeze({
+    storage,
     provider: "qwen",
     adapter: Object.freeze({
       baseUrl,

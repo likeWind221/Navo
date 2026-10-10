@@ -10,6 +10,7 @@ import { UPDATE_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/upd
 import { SET_RESOURCE_ACCESS_TOOL_NAME } from "../../src/tools/builtins/resource/access.js";
 import { ProjectStore } from "../../src/project/store.js";
 import { NodeStore } from "../../src/node/store.js";
+import { memoryStorage } from "../helpers/storage.js";
 
 let ctx: Context | undefined;
 afterEach(async () => {
@@ -20,6 +21,7 @@ afterEach(async () => {
 describe("NodeAgent file capability", () => {
   it("adds only read when the host file capability is available", async () => {
     ctx = new Context();
+    await memoryStorage(ctx);
     await ctx.plugin(ProjectStore);
     await ctx.plugin(NodeStore);
     const project = ctx.projects.create({ name: "Project", goal: "Research" });

@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 
 import { describe, expect, it } from "vitest";
 
@@ -47,6 +48,23 @@ describe("Kernel Host project methods", () => {
       name: "Missing", goal: "Goal", workspaceRoot: join(root, "does-not-exist"),
     })).toMatchObject({ code: "workspace-invalid" });
     expect((await call(client, projectListMethod, {})).projects.map(project => project.name)).toEqual(["First"]);
+  });
+
+  it("saves a Project and its Workspace binding in one transaction", async () => {
+    const path = join(await workspace(), "navo.db");
+    const { client } = await host([], { path });
+    const db = new DatabaseSync(path);
+    db.exec("CREATE TRIGGER fail_bindings BEFORE INSERT ON workspace_bindings BEGIN SELECT RAISE(ABORT, 'disk full'); END");
+
+    expect(await failureOf(client, projectCreateMethod, { name: "Lost", goal: null, workspaceRoot: await workspace() }))
+      .toMatchObject({ code: "internal" });
+    expect((await call(client, projectListMethod, {})).projects).toEqual([]);
+    expect(db.prepare("SELECT count(*) AS count FROM events").get()).toEqual({ count: 0 });
+
+    db.exec("DROP TRIGGER fail_bindings");
+    db.close();
+    const saved = await call(client, projectCreateMethod, { name: "Saved", goal: null, workspaceRoot: await workspace() });
+    expect((await call(client, projectListMethod, {})).projects).toEqual([saved]);
   });
 
   it("returns Project detail without a Roadmap, then a Roadmap with node actions", async () => {

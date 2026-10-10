@@ -5,6 +5,7 @@ import { createProjectId } from "../../src/brand/ids.js";
 import { MailboxStore } from "../../src/mailbox/store.js";
 import { NodeStore } from "../../src/node/store.js";
 import { ProjectStore } from "../../src/project/store.js";
+import { MEMORY_STORAGE, memoryStorage } from "../helpers/storage.js";
 
 const contexts: Context[] = [];
 
@@ -21,6 +22,7 @@ afterEach(async () => {
 async function domain(): Promise<Context> {
   const ctx = new Context();
   contexts.push(ctx);
+  await memoryStorage(ctx);
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
   await ctx.plugin(MailboxStore);
@@ -172,7 +174,7 @@ describe("Project Mailbox domain", () => {
       body: "Stored without AgentRuntime",
     }).sequence).toBe(1);
 
-    const app = await createApp({ node: { session: { model: { provider: "mock", model: "test" } } } });
+    const app = await createApp({ storage: MEMORY_STORAGE, node: { session: { model: { provider: "mock", model: "test" } } } });
     contexts.push(app);
     const project = app.projects.create({ name: "Project", goal: "Mounted mailbox" });
     const node = app.nodes.create({ projectId: project.id, objective: objective("app work") });

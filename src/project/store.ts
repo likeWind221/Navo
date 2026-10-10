@@ -3,6 +3,7 @@ import { Service } from "cordis";
 import type { Context } from "cordis";
 import { createEventId, createProjectId, createSessionId } from "../brand/ids.js";
 import type { ProjectId, SessionId } from "../brand/ids.js";
+import { StorageError } from "../storage/errors.js";
 import type { ProjectEvent } from "./events.js";
 import { ProjectError } from "./errors.js";
 import { PROJECT_GOAL_MAX_CHARS } from "./model.js";
@@ -10,10 +11,22 @@ import type { ProjectSnapshot } from "./model.js";
 import { projectProject } from "./projector.js";
 
 export class ProjectStore extends Service {
+  static inject = ["storage"];
+
   private readonly histories = new Map<ProjectId, readonly ProjectEvent[]>();
 
   constructor(ctx: Context) {
     super(ctx, "projects");
+    for (const [projectId, history] of ctx.storage.loadEvents("project")) {
+      try {
+        this.restore(createProjectId(projectId), history);
+      } catch (error: unknown) {
+        const reason = error instanceof Error ? error.message : "unknown failure";
+        throw new StorageError("invalid-record", `Stored project history ${projectId} is invalid: ${reason}`, {
+          cause: error,
+        });
+      }
+    }
   }
 
   create(input: CreateProjectInput): ProjectSnapshot {
@@ -23,8 +36,8 @@ export class ProjectStore extends Service {
       type: "project-created",
       data: { name: input.name, goal: input.goal, mainSessionId: createSessionId(randomUUID()) },
     };
-    const snapshot = this.restore(projectId, [event]);
-    this.ctx.emit("project/changed", projectId);
+    const { snapshot, events } = this.validate(projectId, [event]);
+    this.commit(projectId, events, 1);
     return snapshot;
   }
 
@@ -34,18 +47,6 @@ export class ProjectStore extends Service {
 
   list(): readonly ProjectSnapshot[] {
     return Object.freeze([...this.histories.keys()].map(projectId => this.get(projectId)!));
-  }
-
-  discard(projectId: ProjectId): void {
-    const project = this.get(projectId);
-    if (project === undefined) {
-      throw new ProjectError("project-not-found", "Project was not found.");
-    }
-    if (project.revision !== 1) {
-      throw new ProjectError("invalid-event-stream", "Only a newly created Project can be discarded.");
-    }
-    this.histories.delete(projectId);
-    this.ctx.emit("project/changed", projectId);
   }
 
   getByMainSession(sessionId: SessionId): ProjectSnapshot | undefined {
@@ -61,29 +62,8 @@ export class ProjectStore extends Service {
   }
 
   restore(projectId: ProjectId, history: readonly unknown[]): ProjectSnapshot {
-    if (this.histories.has(projectId)) {
-      throw new ProjectError("project-already-exists", "Cannot overwrite an existing Project.");
-    }
-    const snapshot = projectProject(projectId, history);
-    if (snapshot === undefined) {
-      throw new ProjectError("invalid-event-stream", "Cannot restore an empty Project history.");
-    }
-    if (this.getByMainSession(snapshot.mainSessionId) !== undefined) {
-      throw new ProjectError("session-already-owned", "Main Session already belongs to a Project.");
-    }
-    const events = history.map(raw => {
-      const event = raw as ProjectEvent;
-      return Object.freeze({
-        version: event.version,
-        id: event.id,
-        projectId: event.projectId,
-        revision: event.revision,
-        timestamp: event.timestamp,
-        type: event.type,
-        data: Object.freeze(freezeData(event)),
-      }) as ProjectEvent;
-    });
-    this.histories.set(projectId, Object.freeze(events));
+    const { snapshot, events } = this.validate(projectId, history);
+    this.histories.set(projectId, events);
     return snapshot;
   }
 
@@ -120,9 +100,47 @@ export class ProjectStore extends Service {
     }) as ProjectEvent;
     const events = Object.freeze([...this.getEvents(projectId), event]);
     const next = projectProject(projectId, events)!;
-    this.histories.set(projectId, events);
-    this.ctx.emit("project/changed", projectId);
+    this.commit(projectId, events, event.revision);
     return next;
+  }
+
+  private commit(projectId: ProjectId, events: readonly ProjectEvent[], firstSeq: number): void {
+    this.ctx.storage.write(tx => tx.appendEvents({
+      domain: "project",
+      ownerId: projectId,
+      projectId,
+      firstSeq,
+      events: events.slice(firstSeq - 1),
+    }), () => {
+      this.histories.set(projectId, events);
+      this.ctx.emit("project/changed", projectId);
+    });
+  }
+
+  private validate(projectId: ProjectId, history: readonly unknown[]): ValidatedHistory {
+    if (this.histories.has(projectId)) {
+      throw new ProjectError("project-already-exists", "Cannot overwrite an existing Project.");
+    }
+    const snapshot = projectProject(projectId, history);
+    if (snapshot === undefined) {
+      throw new ProjectError("invalid-event-stream", "Cannot restore an empty Project history.");
+    }
+    if (this.getByMainSession(snapshot.mainSessionId) !== undefined) {
+      throw new ProjectError("session-already-owned", "Main Session already belongs to a Project.");
+    }
+    const events = history.map(raw => {
+      const event = raw as ProjectEvent;
+      return Object.freeze({
+        version: event.version,
+        id: event.id,
+        projectId: event.projectId,
+        revision: event.revision,
+        timestamp: event.timestamp,
+        type: event.type,
+        data: Object.freeze(freezeData(event)),
+      }) as ProjectEvent;
+    });
+    return { snapshot, events: Object.freeze(events) };
   }
 
   private header(projectId: ProjectId, revision: number) {
@@ -134,6 +152,11 @@ export class ProjectStore extends Service {
       timestamp: new Date().toISOString(),
     };
   }
+}
+
+interface ValidatedHistory {
+  readonly snapshot: ProjectSnapshot;
+  readonly events: readonly ProjectEvent[];
 }
 
 export interface CreateProjectInput {

@@ -24,7 +24,7 @@ const goal = "Recommend candidate A or B: latency must stay below 150 ms and acc
 
 export async function runDemo(print: (line: string) => void = console.log): Promise<DemoSummary> {
   const root = await mkdtemp(join(tmpdir(), "navo-demo-"));
-  const app = await createApp({ node: { session: { model: { provider: "mock", model: "demo" } } } });
+  const app = await createApp({ storage: { path: ":memory:" }, node: { session: { model: { provider: "mock", model: "demo" } } } });
   try {
     await writeFile(join(root, "evidence.txt"), "Candidate A: 120 ms, 94%. Candidate B: 180 ms, 95%. Not independently validated.");
     await writeFile(join(root, "validation.txt"), "Independent repeat: A 125 ms, 93.5%; B 175 ms, 94.5%. A meets both limits; B fails latency.");

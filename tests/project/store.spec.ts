@@ -1,3 +1,8 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
+
 import { Context } from "cordis";
 import { afterEach, describe, expect, it } from "vitest";
 import { createApp } from "../../src/app.js";
@@ -5,23 +10,55 @@ import { createMessageId, createProjectId } from "../../src/brand/ids.js";
 import { ProjectStore } from "../../src/project/store.js";
 import { PROJECT_GOAL_MAX_CHARS } from "../../src/project/model.js";
 import { projectProject } from "../../src/project/projector.js";
+import { StorageService } from "../../src/storage/database.js";
+import { MEMORY_STORAGE, memoryStorage } from "../helpers/storage.js";
 
 const contexts: Context[] = [];
+const roots: string[] = [];
 
 afterEach(async () => {
   await Promise.all(contexts.splice(0).map(ctx => ctx.fiber.dispose()));
+  await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true })));
 });
 
-async function store(): Promise<ProjectStore> {
+async function store(path?: string): Promise<ProjectStore> {
+  return (await domain(path)).projects;
+}
+
+async function domain(path?: string): Promise<Context> {
   const ctx = new Context();
   contexts.push(ctx);
+  if (path === undefined) await memoryStorage(ctx);
+  else await ctx.plugin(StorageService, { path });
   await ctx.plugin(ProjectStore);
-  return ctx.projects;
+  return ctx;
+}
+
+async function databasePath(): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), "navo-project-store-"));
+  roots.push(root);
+  return join(root, "navo.db");
+}
+
+async function close(ctx: Context): Promise<void> {
+  contexts.splice(contexts.indexOf(ctx), 1);
+  await ctx.fiber.dispose();
+}
+
+function raw(path: string, statement: string): void {
+  const db = new DatabaseSync(path);
+  try {
+    db.exec(statement);
+  } finally {
+    db.close();
+  }
 }
 
 describe("Project domain", () => {
-  it("owns a fixed main session and rebuilds a lifecycle in a fresh store", async () => {
-    const source = await store();
+  it("owns a fixed main session and reloads its lifecycle after reopening storage", async () => {
+    const path = await databasePath();
+    const sourceCtx = await domain(path);
+    const source = sourceCtx.projects;
     const first = source.create({ name: "Project", goal: "Investigate reproducible agent execution" });
     const second = source.create({ name: "Project", goal: "Separate project" });
     expect(first).toMatchObject({ status: "active", revision: 1 });
@@ -34,12 +71,60 @@ describe("Project domain", () => {
     const reopened = source.reopen(first.id, "Continue research");
     const history = JSON.parse(JSON.stringify(source.getEvents(first.id)));
     expect(projectProject(first.id, history)).toEqual(reopened);
-    const target = await store();
-    expect(target.restore(first.id, history)).toEqual(reopened);
+    expect((await store()).restore(first.id, history)).toEqual(reopened);
+    await close(sourceCtx);
+
+    const target = await store(path);
+    expect(target.getEvents(first.id)).toEqual(history);
     expect(target.getByMainSession(first.mainSessionId)).toEqual(reopened);
+    expect(target.get(second.id)).toEqual(second);
     expect(target.archive(first.id, "Finished this work period").revision).toBe(4);
-    expect(source.get(first.id)?.revision).toBe(3);
-    expect(source.get(second.id)).toEqual(second);
+  });
+
+  it("persists goal and lifecycle changes across a storage restart", async () => {
+    const path = await databasePath();
+    const first = await domain(path);
+    const project = first.projects.create({ name: "Project", goal: null });
+    first.projects.setGoal(project.id, "Durable goal");
+    first.projects.archive(project.id, "Pause");
+    first.projects.reopen(project.id, "Resume");
+    const before = first.projects.list();
+    await close(first);
+
+    const second = await store(path);
+    expect(second.list()).toEqual(before);
+    expect(second.get(project.id)).toMatchObject({ goal: "Durable goal", status: "active", revision: 4 });
+  });
+
+  it("reports a failed save to the caller and leaves memory unchanged", async () => {
+    const path = await databasePath();
+    const ctx = await domain(path);
+    const project = ctx.projects.create({ name: "Project", goal: "Before" });
+    const changed: string[] = [];
+    ctx.on("project/changed", projectId => changed.push(projectId));
+    raw(path, "CREATE TRIGGER fail_events BEFORE INSERT ON events BEGIN SELECT RAISE(ABORT, 'disk full'); END");
+
+    expect(() => ctx.projects.setGoal(project.id, "After"))
+      .toThrow(expect.objectContaining({ name: "StorageError", code: "write-failed" }));
+    expect(() => ctx.projects.create({ name: "Other", goal: null }))
+      .toThrow(expect.objectContaining({ code: "write-failed" }));
+    expect(ctx.projects.get(project.id)).toEqual(project);
+    expect(ctx.projects.list()).toEqual([project]);
+    expect(changed).toEqual([]);
+
+    raw(path, "DROP TRIGGER fail_events");
+    expect(ctx.projects.setGoal(project.id, "After").revision).toBe(2);
+    expect(changed).toEqual([project.id]);
+  });
+
+  it("refuses to start from a stored history that fails validation", async () => {
+    const path = await databasePath();
+    const ctx = await domain(path);
+    const project = ctx.projects.create({ name: "Project", goal: "Goal" });
+    await close(ctx);
+    raw(path, `UPDATE events SET payload = json_set(payload, '$.revision', 7) WHERE owner_id = '${project.id}'`);
+
+    await expect(domain(path)).rejects.toMatchObject({ name: "StorageError", code: "invalid-record" });
   });
 
   it("rejects invalid commands without committing or changing prior snapshots", async () => {
@@ -88,7 +173,7 @@ describe("Project domain", () => {
   });
 
   it("is mounted in the app and keeps project state separate from conversation history", async () => {
-    const ctx = await createApp({ node: { session: { model: { provider: "mock", model: "test" } } } });
+    const ctx = await createApp({ storage: MEMORY_STORAGE, node: { session: { model: { provider: "mock", model: "test" } } } });
     contexts.push(ctx);
     const project = ctx.projects.create({ name: "Project", goal: "Long-running goal" });
     expect(ctx.sessions.getEvents(project.mainSessionId)).toEqual([]);
@@ -130,7 +215,7 @@ describe("Project domain", () => {
     expect(() => projectProject(draft.id, [created, { ...goalSet, data: { goal: " " } }])).toThrow("goal must be non-empty");
   });
 
-  it("keeps a name and creation time, lists Projects and discards only fresh ones", async () => {
+  it("keeps a name and creation time and lists Projects", async () => {
     const projects = await store();
     expect(() => projects.create({ name: " ", goal: "Goal" })).toThrow("name must be non-empty");
     const first = projects.create({ name: "Paper", goal: "Survey" });
@@ -138,13 +223,5 @@ describe("Project domain", () => {
     expect(first).toMatchObject({ name: "Paper", goal: "Survey" });
     expect(first.createdAt).toBe(projects.getEvents(first.id)[0]?.timestamp);
     expect(projects.list()).toEqual([first, second]);
-
-    projects.discard(second.id);
-    expect(projects.get(second.id)).toBeUndefined();
-    expect(projects.getByMainSession(second.mainSessionId)).toBeUndefined();
-    projects.archive(first.id, "Paused");
-    expect(() => projects.discard(first.id)).toThrow("newly created");
-    expect(() => projects.discard(second.id))
-      .toThrow(expect.objectContaining({ code: "project-not-found" }));
   });
 });
