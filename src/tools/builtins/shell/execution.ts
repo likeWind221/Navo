@@ -40,10 +40,24 @@ export async function runShellCommand(
       detached: process.platform !== "win32",
     });
 
+    const diagOn = process.env.NAVO_SHELL_DIAG === "1";
+    const t0 = Date.now();
+    const diag = (line: string): void => { if (diagOn) process.stderr.write(`[shell-diag] pid=${child.pid} +${Date.now() - t0}ms ${line}
+`); };
+    let closed = false;
+    child.once("spawn", () => diag("spawn"));
+    child.once("exit", (code, sig) => diag(`exit code=${code} sig=${sig}`));
+    child.once("close", () => { closed = true; diag("close"); });
     const terminate = (): void => {
       if (child.pid === undefined) return;
       if (process.platform === "win32") {
-        spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+        diag("abort");
+        const k0 = Date.now();
+        const r = spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { encoding: "utf8" });
+        diag(`taskkill status=${r.status} ms=${Date.now() - k0} out=${JSON.stringify((r.stdout ?? "").trim())} err=${JSON.stringify((r.stderr ?? "").trim())}`);
+        if (diagOn) {
+          setTimeout(() => { if (!closed) diag(`STILL-OPEN tree-after=${descendants(child.pid as number)}`); }, 2000).unref();
+        }
         return;
       }
       signalGroup(child.pid, "SIGTERM");
@@ -117,6 +131,23 @@ class TailBuffer {
       truncated: this.dropped,
     };
   }
+}
+
+function descendants(root: number): string {
+  const r = spawnSync("powershell", ["-NoProfile", "-Command",
+    "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,CommandLine | ConvertTo-Json -Compress"],
+  { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  let rows: { ProcessId: number; ParentProcessId: number; Name: string; CommandLine: string | null }[] = [];
+  try { rows = JSON.parse(r.stdout); } catch { return `unparsed status=${r.status}`; }
+  const ids = new Set([root]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const row of rows) if (ids.has(row.ParentProcessId) && !ids.has(row.ProcessId)) { ids.add(row.ProcessId); grew = true; }
+  }
+  const tree = rows.filter(row => ids.has(row.ProcessId)).map(row => `${row.ProcessId}<${row.ParentProcessId}:${row.Name}`);
+  const sleepers = rows.filter(row => row.CommandLine?.includes("60000")).map(row => `${row.ProcessId}<${row.ParentProcessId}:${row.Name}`);
+  return JSON.stringify({ tree, sleepers });
 }
 
 function signalGroup(pid: number, signal: NodeJS.Signals): void {
