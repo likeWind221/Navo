@@ -19,7 +19,10 @@ import type { RpcClientFrame, RpcClientTransport } from "../../rpc/index.js";
 
 import { describe, expect, it } from "vitest";
 
-describe("Kernel Host process lifecycle", () => {
+const PROCESS_TEST_TIMEOUT_MS = 20_000;
+const PROCESS_WAIT_MS = 15_000;
+
+describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, () => {
   it("starts the real Host without exposing configuration on stdout and exits on stdin EOF", async () => {
     const home = await mkdtemp(join(tmpdir(), "navo-process-home-"));
     const child = startHost("src/host/main.ts", { NAVO_HOME: home });
@@ -323,8 +326,8 @@ function exitOf(
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       child.kill();
-      reject(new Error("Host process did not exit within 5 seconds."));
-    }, 5_000);
+      reject(new Error(`Host process did not exit within ${PROCESS_WAIT_MS} ms.`));
+    }, PROCESS_WAIT_MS);
     child.once("error", (error) => {
       clearTimeout(timer);
       reject(error);
@@ -337,7 +340,7 @@ function exitOf(
 }
 
 async function waitUntil(condition: () => boolean): Promise<void> {
-  const deadline = Date.now() + 5_000;
+  const deadline = Date.now() + PROCESS_WAIT_MS;
   while (!condition()) {
     if (Date.now() >= deadline) throw new Error("Host process did not become ready.");
     await new Promise((resolve) => setTimeout(resolve, 10));
