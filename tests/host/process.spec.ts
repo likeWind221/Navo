@@ -1,7 +1,8 @@
 import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import {
   agentTurnV2Method,
@@ -10,6 +11,7 @@ import {
   parseRpcServerFrame,
   projectCreateMethod,
   projectGetMethod,
+  projectListMethod,
   sessionCommandMethod,
   StreamRpcClient,
 } from "../../rpc/index.js";
@@ -17,9 +19,13 @@ import type { RpcClientFrame, RpcClientTransport } from "../../rpc/index.js";
 
 import { describe, expect, it } from "vitest";
 
-describe("Kernel Host process lifecycle", () => {
+const PROCESS_TEST_TIMEOUT_MS = 20_000;
+const PROCESS_WAIT_MS = 15_000;
+
+describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, () => {
   it("starts the real Host without exposing configuration on stdout and exits on stdin EOF", async () => {
-    const child = startHost("src/host/main.ts");
+    const home = await mkdtemp(join(tmpdir(), "navo-process-home-"));
+    const child = startHost("src/host/main.ts", { NAVO_HOME: home });
     const stderr = capture(child.stderr);
     const stdout = capture(child.stdout);
     await waitUntil(() => stderr.value.includes("[kernel-host] ready"));
@@ -28,6 +34,63 @@ describe("Kernel Host process lifecycle", () => {
     await expect(exitOf(child)).resolves.toEqual({ code: 0, signal: null });
     expect(stdout.value).toBe("");
     expect(stderr.value).not.toContain("LLM_API_KEY");
+    expect(stderr.value).not.toContain("ExperimentalWarning");
+    await rm(home, { recursive: true, force: true });
+  });
+
+  it("restores Projects and Workspace bindings after the real Host restarts", async () => {
+    const base = await mkdtemp(join(tmpdir(), "navo-process-restart-"));
+    const env = { NAVO_HOME: join(base, "home") };
+    const root = join(base, "workspace");
+    const other = join(base, "other");
+    await mkdir(root);
+    await mkdir(other);
+    try {
+      const created = await withRealHost(env, async (client) => {
+        const [project] = await collect(client.stream(projectCreateMethod, {
+          name: "Durable project", goal: "Survive a restart", workspaceRoot: root,
+        }));
+        await collect(client.stream(projectCreateMethod, {
+          name: "Second project", goal: null, workspaceRoot: other,
+        }));
+        return project!;
+      });
+      const before = await withRealHost(env, async (client) => {
+        const [list] = await collect(client.stream(projectListMethod, {}));
+        const [detail] = await collect(client.stream(projectGetMethod, { projectId: created.projectId }));
+        expect(detail).toMatchObject({ project: created, roadmap: null });
+        return list!;
+      });
+      expect(before.projects.map(project => project.name)).toEqual(["Second project", "Durable project"]);
+      expect(before.projects[1]).toEqual(created);
+
+      await rm(root, { recursive: true, force: true });
+      const after = await withRealHost(env, async (client) => (await collect(client.stream(projectListMethod, {})))[0]!);
+      expect(after).toEqual(before);
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses to start when the database schema is not recognized", async () => {
+    const home = await mkdtemp(join(tmpdir(), "navo-process-schema-"));
+    try {
+      await withRealHost({ NAVO_HOME: home }, async () => undefined);
+      const db = new DatabaseSync(join(home, "navo.db"));
+      db.exec("PRAGMA user_version = 99");
+      db.close();
+
+      const child = startHost("src/host/main.ts", { NAVO_HOME: home });
+      const stderr = capture(child.stderr);
+      const stdout = capture(child.stdout);
+      await expect(exitOf(child)).resolves.toEqual({ code: 1, signal: null });
+      expect(stderr.value).toContain("[kernel-host] fatal:");
+      expect(stderr.value).toContain("schema 99");
+      expect(stderr.value).not.toContain("[kernel-host] ready");
+      expect(stdout.value).toBe("");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
   });
 
   it("runs the scripted Mock Host and exposes a deterministic crash for Main supervision", async () => {
@@ -179,6 +242,24 @@ describe("Kernel Host process lifecycle", () => {
   });
 });
 
+async function withRealHost<T>(
+  env: Readonly<Record<string, string>>,
+  use: (client: StreamRpcClient) => Promise<T>,
+): Promise<T> {
+  const child = startHost("src/host/main.ts", env);
+  const stderr = capture(child.stderr);
+  await waitUntil(() => stderr.value.includes("[kernel-host] ready"));
+  const client = new StreamRpcClient(new ChildRpcTransport(child));
+  let result: T;
+  try {
+    result = await use(client);
+  } finally {
+    await client.dispose();
+  }
+  await expect(exitOf(child)).resolves.toEqual({ code: 0, signal: null });
+  return result;
+}
+
 class ChildRpcTransport implements RpcClientTransport {
   readonly incoming: AsyncIterable<unknown>;
 
@@ -245,8 +326,8 @@ function exitOf(
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       child.kill();
-      reject(new Error("Host process did not exit within 5 seconds."));
-    }, 5_000);
+      reject(new Error(`Host process did not exit within ${PROCESS_WAIT_MS} ms.`));
+    }, PROCESS_WAIT_MS);
     child.once("error", (error) => {
       clearTimeout(timer);
       reject(error);
@@ -259,7 +340,7 @@ function exitOf(
 }
 
 async function waitUntil(condition: () => boolean): Promise<void> {
-  const deadline = Date.now() + 5_000;
+  const deadline = Date.now() + PROCESS_WAIT_MS;
   while (!condition()) {
     if (Date.now() >= deadline) throw new Error("Host process did not become ready.");
     await new Promise((resolve) => setTimeout(resolve, 10));

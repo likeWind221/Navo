@@ -6,6 +6,7 @@ import {
   createToolCallId,
 } from "../../../src/brand/ids.js";
 import { READ_MAILBOX_TOOL_NAME } from "../../../src/tools/builtins/mailbox/read.js";
+import { MEMORY_STORAGE } from "../../helpers/storage.js";
 
 const apps: Awaited<ReturnType<typeof createApp>>[] = [];
 
@@ -16,6 +17,7 @@ afterEach(async () => {
 describe("Main mailbox read capability", () => {
   it("reads only Node-to-Main messages for the bound Project without consuming them", async () => {
     const app = await createApp({
+      storage: MEMORY_STORAGE,
       node: { session: { model: { provider: "mock", model: "test" } } },
     });
     apps.push(app);
@@ -60,6 +62,7 @@ describe("Main mailbox read capability", () => {
 
   it("rejects a Node caller even when the globally registered tool is invoked directly", async () => {
     const app = await createApp({
+      storage: MEMORY_STORAGE,
       node: { session: { model: { provider: "mock", model: "test" } } },
     });
     apps.push(app);

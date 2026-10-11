@@ -26,6 +26,7 @@ import { MainSessionService } from "../../../src/project/session.js";
 import { ReadMailboxTool } from "../../../src/tools/builtins/mailbox/read.js";
 import { SetProjectGoalTool } from "../../../src/tools/builtins/project/goal.js";
 import { RoadmapToolsPlugin } from "../../../src/tools/builtins/roadmap/plugin.js";
+import { memoryStorage } from "../../helpers/storage.js";
 
 const contexts = new Set<Context>();
 
@@ -45,6 +46,7 @@ export async function createKit(
   await ctx.plugin(LLMService);
   await ctx.plugin(ToolService);
   await ctx.plugin(AgentRuntime);
+  await memoryStorage(ctx);
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
   await ctx.plugin(ProjectWorkspaceStore);

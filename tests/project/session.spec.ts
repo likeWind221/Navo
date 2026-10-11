@@ -25,6 +25,7 @@ import { MockSearchAdapter } from "../../src/tools/builtins/search/adapters/mock
 import { SearchTool } from "../../src/tools/builtins/search/tool.js";
 import { ToolService } from "../../src/tools/service.js";
 import { modelResponse } from "../helpers/runtime.js";
+import { memoryStorage } from "../helpers/storage.js";
 
 const contexts = new Set<Context>();
 
@@ -40,6 +41,7 @@ async function createKit(entries: ConstructorParameters<typeof MockLLMAdapter>[0
   await ctx.plugin(LLMService);
   await ctx.plugin(ToolService);
   await ctx.plugin(AgentRuntime);
+  await memoryStorage(ctx);
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
   await ctx.plugin(ProjectWorkspaceStore);

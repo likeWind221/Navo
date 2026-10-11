@@ -1,6 +1,7 @@
 import type { Context } from "cordis";
 
 import type { NodeId, ProjectId } from "../brand/ids.js";
+import { WorkspaceError } from "../workspace/errors.js";
 import type { ProjectWorkspace } from "../workspace/model.js";
 import { ResourceError } from "./errors.js";
 import type {
@@ -187,10 +188,13 @@ export async function requireResourceWorkspace(
   ctx: Context,
   projectId: ProjectId,
 ): Promise<ProjectWorkspace> {
-  const workspace = await ctx.projectWorkspaces.get(projectId);
-  if (workspace !== undefined) return workspace;
-  throw new ResourceError(
-    "workspace-unavailable",
-    "Resource Service requires a bound Project Workspace.",
-  );
+  try {
+    return await ctx.projectWorkspaces.require(projectId);
+  } catch (error: unknown) {
+    if (error instanceof WorkspaceError
+      && (error.code === "workspace-not-found" || error.code === "workspace-unavailable")) {
+      throw new ResourceError("workspace-unavailable", error.message);
+    }
+    throw error;
+  }
 }

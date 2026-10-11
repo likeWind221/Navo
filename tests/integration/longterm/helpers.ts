@@ -7,6 +7,7 @@ import { createNodeId } from "../../../src/brand/ids.js";
 import type { NodeId, ProjectId } from "../../../src/brand/ids.js";
 import { MockLLMAdapter } from "../../../src/llm/adapters/mock.js";
 import { scenario } from "./script.js";
+import { MEMORY_STORAGE } from "../../helpers/storage.js";
 
 const apps: Awaited<ReturnType<typeof createApp>>[] = [];
 const roots: string[] = [];
@@ -21,7 +22,7 @@ export async function createScenario() {
   roots.push(root);
   await writeFile(join(root, "evidence.txt"), "EVIDENCE_BODY: observation supports the candidate.");
   await writeFile(join(root, "validation.txt"), "VALIDATION_BODY: independent check confirms the observation.");
-  const app = await createApp({ node: { session: { model: { provider: "mock", model: "longterm" } } } });
+  const app = await createApp({ storage: MEMORY_STORAGE, node: { session: { model: { provider: "mock", model: "longterm" } } } });
   apps.push(app);
   const project = app.projects.create({ name: "Project", goal: "Deliver an evidence-backed recommendation" });
   await app.projectWorkspaces.create(project.id, root);

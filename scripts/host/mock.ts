@@ -5,6 +5,8 @@ import {
   StreamRpcRouter,
   StreamRpcServer,
 } from "../../rpc/index.js";
+import { join } from "node:path";
+
 import { createApp } from "../../src/app.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import type { ModelEvent } from "../../src/llm/types.js";
@@ -19,7 +21,9 @@ import { StdioRpcServerTransport } from "../../src/host/stdio.js";
 
 async function main(): Promise<void> {
   const config = resolveMockAgentTurnConfig(process.env, () => process.exit(23));
+  const home = process.env.NAVO_HOME?.trim();
   const ctx = await createApp({
+    storage: { path: home ? join(home, "navo.db") : ":memory:" },
     node: { session: { model: { provider: "mock", model: "mock" } } },
   });
   const unregister = ctx.llm.registerAdapter("mock", createMockLlmAdapter(process.env));

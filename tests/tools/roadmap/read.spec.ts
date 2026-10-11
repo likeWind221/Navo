@@ -9,6 +9,7 @@ import { RoadmapToolsPlugin } from "../../../src/tools/builtins/roadmap/plugin.j
 import { READ_ROADMAP_TOOL_NAME } from "../../../src/tools/builtins/roadmap/read.js";
 import { ToolService } from "../../../src/tools/service.js";
 import { toolCall } from "../../helpers/tools.js";
+import { memoryStorage } from "../../helpers/storage.js";
 
 const contexts = new Set<Context>();
 const signal = new AbortController().signal;
@@ -21,6 +22,7 @@ afterEach(async () => {
 async function createContext(): Promise<Context> {
   const ctx = new Context();
   contexts.add(ctx);
+  await memoryStorage(ctx);
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
   await ctx.plugin(ToolService);

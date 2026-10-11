@@ -5,6 +5,7 @@ import { ProjectStore } from "../../src/project/store.js";
 import { NodeStore } from "../../src/node/store.js";
 import { projectNode } from "../../src/node/projector.js";
 import type { NodeEvent } from "../../src/node/events.js";
+import { memoryStorage } from "../helpers/storage.js";
 
 const contexts: Context[] = [];
 afterEach(async () => { await Promise.all(contexts.splice(0).map(ctx => ctx.fiber.dispose())); });
@@ -12,6 +13,7 @@ afterEach(async () => { await Promise.all(contexts.splice(0).map(ctx => ctx.fibe
 async function kit() {
   const ctx = new Context();
   contexts.push(ctx);
+  await memoryStorage(ctx);
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
   const project = ctx.projects.create({ name: "Project", goal: "Research" });

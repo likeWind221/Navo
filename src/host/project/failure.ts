@@ -36,6 +36,7 @@ const workspaceCodes: Partial<Record<WorkspaceErrorCode, ProjectFailureCode>> = 
   "not-found": "workspace-invalid",
   "not-a-directory": "workspace-invalid",
   "permission-denied": "workspace-invalid",
+  "workspace-unavailable": "workspace-invalid",
 };
 
 export function toProjectFailure(error: unknown): RpcError {

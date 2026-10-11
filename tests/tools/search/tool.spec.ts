@@ -17,6 +17,7 @@ import type { SearchAdapter, SearchResult } from "../../../src/tools/builtins/se
 import { modelResponse } from "../../helpers/runtime.js";
 import { ToolService } from "../../../src/tools/service.js";
 import { toolCall } from "../../helpers/tools.js";
+import { memoryStorage } from "../../helpers/storage.js";
 
 const contexts = new Set<Context>();
 const signal = new AbortController().signal;
@@ -35,6 +36,7 @@ async function createRuntime(adapter: SearchAdapter, entries: ConstructorParamet
   await ctx.plugin(SessionStore);
   await ctx.plugin(LLMService);
   await ctx.plugin(ToolService);
+  await memoryStorage(ctx);
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
   await ctx.plugin(SearchTool, { adapter });

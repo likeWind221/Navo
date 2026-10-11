@@ -4,6 +4,7 @@ import { createNodeId, createSessionId } from "../../src/brand/ids.js";
 import { NodeStore } from "../../src/node/store.js";
 import { ProjectStore } from "../../src/project/store.js";
 import { RoadmapStore } from "../../src/roadmap/store.js";
+import { memoryStorage } from "../helpers/storage.js";
 
 const contexts: Context[] = [];
 afterEach(async () => { await Promise.all(contexts.splice(0).map(ctx => ctx.fiber.dispose())); });
@@ -11,6 +12,7 @@ const objective = { title: "Research", description: "Inspect sources", acceptanc
 
 async function kit() {
   const ctx = new Context(); contexts.push(ctx);
+  await memoryStorage(ctx);
   await ctx.plugin(ProjectStore); await ctx.plugin(NodeStore); await ctx.plugin(RoadmapStore);
   const projectId = ctx.projects.create({ name: "Project", goal: "Research project" }).id;
   const a = ctx.nodes.create({ projectId, objective }).node.id;

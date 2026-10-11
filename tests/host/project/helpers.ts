@@ -17,6 +17,8 @@ import { createApp } from "../../../src/app.js";
 import { createNodeId, createProjectId } from "../../../src/brand/ids.js";
 import { registerProjectMethods } from "../../../src/host/project.js";
 import { MockLLMAdapter } from "../../../src/llm/adapters/mock.js";
+import type { StorageConfig } from "../../../src/storage/database.js";
+import { MEMORY_STORAGE } from "../../helpers/storage.js";
 
 const cleanups: Array<() => Promise<void>> = [];
 
@@ -24,8 +26,11 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
 });
 
-export async function host(entries: ConstructorParameters<typeof MockLLMAdapter>[0] = []) {
-  const ctx = await createApp({ node: { session: { model: { provider: "mock", model: "mock" } } } });
+export async function host(
+  entries: ConstructorParameters<typeof MockLLMAdapter>[0] = [],
+  storage: StorageConfig = MEMORY_STORAGE,
+) {
+  const ctx = await createApp({ storage, node: { session: { model: { provider: "mock", model: "mock" } } } });
   const adapter = new MockLLMAdapter(entries);
   ctx.llm.registerAdapter("mock", adapter);
   const pair = createTransportPair();

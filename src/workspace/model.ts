@@ -9,6 +9,8 @@ export interface ProjectWorkspace {
   readonly skillsRoot: string;
 }
 
+export type PreparedWorkspace = Omit<ProjectWorkspace, "projectId">;
+
 export interface WorkspaceTarget {
   readonly projectId: ProjectId;
   readonly ref: string;

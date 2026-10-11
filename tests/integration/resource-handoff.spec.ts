@@ -18,6 +18,7 @@ import { SET_RESOURCE_ACCESS_TOOL_NAME } from "../../src/tools/builtins/resource
 import { FETCH_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/fetch.js";
 import { REGISTER_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/register.js";
 import { modelError, modelResponse } from "../helpers/runtime.js";
+import { MEMORY_STORAGE } from "../helpers/storage.js";
 
 const apps: Awaited<ReturnType<typeof createApp>>[] = [];
 const roots: string[] = [];
@@ -61,6 +62,7 @@ describe("F9.7 ProjectRuntime Resource handoff recovery", () => {
     );
 
     const app = await createApp({
+      storage: MEMORY_STORAGE,
       node: { session: { model: { provider: "mock", model: "project-agent" } } },
     });
     apps.push(app);
