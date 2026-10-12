@@ -34,6 +34,7 @@ export const SHELL_LIMITS = Object.freeze({
   maxTimeoutMs: 600_000,
   maxOutputBytes: 64_000,
   graceMs: 3_000,
+  drainMs: 1_000,
 });
 
 export function shellToolSchema(

@@ -26,6 +26,7 @@ export async function runShellCommand(
   const stdout = new TailBuffer(SHELL_LIMITS.maxOutputBytes);
   const stderr = new TailBuffer(SHELL_LIMITS.maxOutputBytes);
   let graceTimer: ReturnType<typeof setTimeout> | undefined;
+  let drainTimer: ReturnType<typeof setTimeout> | undefined;
 
   try {
     if (deadline.aborted) {
@@ -55,6 +56,13 @@ export async function runShellCommand(
     child.stderr?.on("data", (chunk: Buffer) => stderr.push(chunk));
     const outcome = await new Promise<ShellOutcome>((resolve, reject) => {
       child.once("error", reject);
+      child.once("exit", (exitCode, termSignal) => {
+        drainTimer = setTimeout(() => {
+          child.stdout?.destroy();
+          child.stderr?.destroy();
+          resolve({ exitCode, signal: termSignal });
+        }, SHELL_LIMITS.drainMs);
+      });
       child.once("close", (exitCode, termSignal) => resolve({ exitCode, signal: termSignal }));
     });
     deadline.removeEventListener("abort", terminate);
@@ -79,6 +87,7 @@ export async function runShellCommand(
   } finally {
     clearTimeout(timeoutId);
     clearTimeout(graceTimer);
+    clearTimeout(drainTimer);
   }
 }
 

@@ -1,3 +1,4 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -107,6 +108,41 @@ describe("shell execution", () => {
     expect(result.aborted).toBe(false);
     expect(result.timeoutMs).toBe(500);
   });
+
+  it("returns after a bounded drain when a surviving descendant still holds the output pipes", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "navo-shell-drain-"));
+    const script = join(dir, "spawn.js");
+    await writeFile(script, [
+      "const { spawn } = require('node:child_process');",
+      "const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], { stdio: 'inherit', detached: true });",
+      "console.log('survivor=' + child.pid);",
+      "child.unref();",
+    ].join("\n"), "utf8");
+    let survivor: number | undefined;
+    try {
+      const started = Date.now();
+      const result = await runShellCommand(
+        { cwd: root },
+        { command: `node "${script}"`, timeoutMs: 30_000 },
+        signal,
+        profile,
+      );
+      survivor = Number(/survivor=(\d+)/.exec(result.stdout.text)?.[1]);
+      expect(result.exitCode).toBe(0);
+      expect(result.timedOut).toBe(false);
+      expect(survivor).toBeGreaterThan(0);
+      expect(Date.now() - started).toBeLessThan(10_000);
+    } finally {
+      if (survivor) {
+        try {
+          process.kill(survivor);
+        } catch {
+          survivor = undefined;
+        }
+      }
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 15_000);
 
   it("kills the process tree on cancellation and marks the result", async () => {
     const controller = new AbortController();
