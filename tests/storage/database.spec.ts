@@ -62,7 +62,7 @@ describe("StorageService", () => {
     db.close();
 
     const second = await open(path);
-    expect([...second.storage.loadEvents("project")]).toEqual([["p1", [{ n: 1 }, { n: 2 }]]]);
+    expect([...second.storage.loadEvents("project")]).toEqual([["p1", { projectId: "p1", events: [{ n: 1 }, { n: 2 }] }]]);
     expect(second.storage.loadWorkspaceBindings()).toEqual([{ projectId: "p1", root: "/work/p1" }]);
   });
 
@@ -120,7 +120,7 @@ describe("StorageService", () => {
     append(1);
     expect(() => append(1)).toThrow(expect.objectContaining({ code: "sequence-conflict" }));
     append(2);
-    expect(ctx.storage.loadEvents("project").get("p1")).toHaveLength(2);
+    expect(ctx.storage.loadEvents("project").get("p1")?.events).toHaveLength(2);
   });
 
   it("reports stored rows that cannot be decoded", async () => {
@@ -130,5 +130,17 @@ describe("StorageService", () => {
     const ctx = await open(path);
 
     expect(() => ctx.storage.loadEvents("project")).toThrow(expect.objectContaining({ code: "invalid-record" }));
+  });
+
+  it("reports an owner whose events are filed under different Projects", async () => {
+    const path = await databasePath();
+    await close(await open(path));
+    raw(path, "INSERT INTO events VALUES ('project', 'p1', 1, 'p1', '{}'), ('project', 'p1', 2, 'p2', '{}')");
+    const ctx = await open(path);
+
+    expect(() => ctx.storage.loadEvents("project")).toThrow(expect.objectContaining({
+      code: "invalid-record",
+      message: expect.stringContaining("project event p1#2"),
+    }));
   });
 });

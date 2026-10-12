@@ -44,24 +44,28 @@ export class StorageService extends Service {
     return result;
   }
 
-  loadEvents(domain: EventDomain): ReadonlyMap<string, readonly unknown[]> {
+  loadEvents(domain: EventDomain): ReadonlyMap<string, StoredHistory> {
     const rows = read("Stored events could not be read.", () => this.db.prepare(
-      "SELECT owner_id, seq, payload FROM events WHERE domain = ? ORDER BY owner_id, seq",
+      "SELECT owner_id, seq, project_id, payload FROM events WHERE domain = ? ORDER BY owner_id, seq",
     ).all(domain));
-    const owners = new Map<string, unknown[]>();
+    const owners = new Map<string, { readonly projectId: string; readonly events: unknown[] }>();
     for (const row of rows) {
       const ownerId = row.owner_id;
       const seq = row.seq;
       const where = `${domain} event ${String(ownerId)}#${String(seq)}`;
-      if (typeof ownerId !== "string" || typeof row.payload !== "string") {
+      const projectId = row.project_id;
+      if (typeof ownerId !== "string" || typeof projectId !== "string" || typeof row.payload !== "string") {
         throw new StorageError("invalid-record", `Stored ${where} has an invalid shape.`);
       }
-      const history = owners.get(ownerId) ?? [];
-      if (seq !== history.length + 1) {
+      const history = owners.get(ownerId) ?? { projectId, events: [] };
+      if (seq !== history.events.length + 1) {
         throw new StorageError("invalid-record", `Stored ${where} breaks the contiguous sequence.`);
       }
+      if (projectId !== history.projectId) {
+        throw new StorageError("invalid-record", `Stored ${where} belongs to a different Project than earlier events.`);
+      }
       try {
-        history.push(JSON.parse(row.payload));
+        history.events.push(JSON.parse(row.payload));
       } catch (error: unknown) {
         throw new StorageError("invalid-record", `Stored ${where} is not valid JSON.`, { cause: error });
       }
@@ -115,6 +119,11 @@ export interface EventAppend {
 }
 
 export type EventDomain = "project";
+
+export interface StoredHistory {
+  readonly projectId: string;
+  readonly events: readonly unknown[];
+}
 
 export interface WorkspaceBindingRecord {
   readonly projectId: string;
