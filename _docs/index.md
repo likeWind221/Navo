@@ -59,7 +59,7 @@
 - [BUG-001 至 BUG-004 长程真实验收排查与修复](70-bugfix-bug-001-004-longterm.md)：证据落盘、续接资源变化通知、Resource 引用加固、通用 system-reminder 与 Main 状态通知、可恢复错误验收口径；13 次真实运行记录，BUG-002 保持未关闭。
 - [BUG-005 未知工具名报错被误读为权限拦截](78-bugfix-bug-005-unknown-tool.md)：ToolService 先查注册表再判白名单，未知名字返回 `unknown-tool` 与本回合可调用列表；去掉提示词规避后真实复验 5 轮，3 次残缺工具名均同回合恢复。
 - [BUG-006 残缺工具名根因定位与修复](79-bugfix-bug-006-malformed-tool-name.md)：原始 SSE 与 logprobs 证明残缺名来自模型在 `write_` 后生成换行，vLLM tool parser 不校验函数名，适配层未参与；温度与重命名对照实验；`write_roadmap` 改名为 `create_roadmap` 后受控对照 6/6 降到 0/6，全流程仅 1 次残缺名且同回合恢复。
-- [BUG-008 shell 取消在 CI 上偶发挂起](82-bugfix-bug-008-shell-cancel.md)：仅排查，未修复。CI 上做了 3 轮诊断取证（取消时机扫描、完整套件重复运行），均未复现；记录了已证实的事实、三个根因候选，以及可重新加入的诊断代码和避免掩盖竞态的注意事项。
+- [BUG-008 shell 取消后进程树漏杀](82-bugfix-bug-008-shell-cancel.md)：已修复。2026-10-11 CI 诊断取证未复现；2026-10-12 本机冷启动复现，证实 `taskkill /T` 漏杀 pwsh 正在创建的子进程；改为 shell 先进入 `KILL_ON_JOB_CLOSE` 作业再执行命令，并加 1 秒排空兜底；含漏杀对照、单条命令耗时、冷启动多轮与 CI 结果，以及“后台进程随命令结束”的行为变化。
 - [长程验收四个 Bug 复盘（面试版）](71-interview-longterm-bugs.md)：BUG-001 至 BUG-004 按问题、根因、修复、结果组织的面试可背版本，附 60 秒开场与追问要点。
 
 ## 前端记录

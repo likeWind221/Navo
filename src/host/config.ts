@@ -13,6 +13,7 @@ export interface KernelHostSearchConfig {
 
 export interface KernelHostFileConfig {
   readonly cwd: string;
+  readonly shellJobDir: string;
 }
 
 export interface KernelHostStorageConfig {
@@ -59,14 +60,16 @@ export function resolveKernelHostConfig(
   if (fileCwd !== undefined && !fileCwd.trim()) {
     throw new TypeError("NAVO_FILE_CWD must be a non-empty path when provided.");
   }
-  const file = Object.freeze({ cwd: fileCwd?.trim() ?? process.cwd() });
   const navoHome = env.NAVO_HOME;
   if (navoHome !== undefined && !navoHome.trim()) {
     throw new TypeError("NAVO_HOME must be a non-empty path when provided.");
   }
-  const storage = Object.freeze({
-    path: join(resolve(navoHome?.trim() ?? join(homedir(), ".navo")), "navo.db"),
+  const home = resolve(navoHome?.trim() ?? join(homedir(), ".navo"));
+  const file = Object.freeze({
+    cwd: fileCwd?.trim() ?? process.cwd(),
+    shellJobDir: join(home, "cache", "shell"),
   });
+  const storage = Object.freeze({ path: join(home, "navo.db") });
   return Object.freeze({
     storage,
     provider: "qwen",

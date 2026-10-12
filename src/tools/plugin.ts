@@ -37,6 +37,7 @@ export interface FileToolsConfig {
   readonly shell?: {
     readonly kind?: ShellKind;
     readonly path?: string;
+    readonly jobDir?: string;
   };
 }
 

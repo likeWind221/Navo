@@ -20,9 +20,14 @@ export async function runKernelHost(): Promise<void> {
     ...(config.search === undefined
       ? {}
       : { search: { adapter: new ExaSearchAdapter(config.search) } }),
-    ...(fileEnvironment === undefined
+    ...(config.file === undefined || fileEnvironment === undefined
       ? {}
-      : { file: { resolveFileEnvironment: () => fileEnvironment } }),
+      : {
+          file: {
+            resolveFileEnvironment: () => fileEnvironment,
+            shell: { jobDir: config.file.shellJobDir },
+          },
+        }),
   };
   const ctx = await createApp({
     storage: config.storage,

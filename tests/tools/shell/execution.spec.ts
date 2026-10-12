@@ -1,3 +1,6 @@
+import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -15,10 +18,13 @@ import { SHELL_LIMITS } from "../../../src/tools/builtins/shell/types.js";
 const root = tmpdir();
 const profile = resolveShellProfile({});
 const signal = new AbortController().signal;
+const windowsPowerShell = profile.kind === "powershell" && process.platform === "win32";
 
 function nodeCommand(script: string): string {
   return profile.kind === "powershell" ? `node -e "${script}"` : `node -e '${script}'`;
 }
+
+const SHELL_TEST_TIMEOUT_MS = 30_000;
 
 describe("shell resolution", () => {
   it("orders candidates per platform and keeps Windows bash off PATH", () => {
@@ -48,16 +54,22 @@ describe("shell resolution", () => {
     expect(powershell[4]).toContain("Get-ChildItem");
     expect(powershell[4]?.endsWith("exit $LASTEXITCODE")).toBe(true);
     expect(shellInvocation("bash", "ls -la")).toEqual(["-c", "ls -la"]);
+    const jobbed = shellInvocation("powershell", "Get-ChildItem", "C:\\it's");
+    expect(jobbed[4]).toContain("'C:\\it''s'");
+    expect(jobbed[4]?.indexOf("NavoShellJobV1")).toBeLessThan(jobbed[4]?.indexOf("Get-ChildItem") ?? 0);
 
     const posix = resolveShellProfile({ kind: "bash", platform: "linux" });
     expect(posix.env).toMatchObject({ TERM: "dumb", NO_COLOR: "1" });
     expect(profile.env).not.toHaveProperty("TERM");
     expect(posix.name).toBe("bash");
+    expect(posix.jobDir).toBeUndefined();
+    expect(resolveShellProfile({ platform: "win32", path: "C:\\pwsh.exe", jobDir: "C:\\cache" }).jobDir)
+      .toBe("C:\\cache");
     expect(profile.name).toMatch(/PowerShell/);
   });
 });
 
-describe("shell execution", () => {
+describe("shell execution", { timeout: SHELL_TEST_TIMEOUT_MS }, () => {
   it("runs in the execution world and decodes UTF-8 output", async () => {
     const result = await runShellCommand(
       { cwd: root },
@@ -108,6 +120,41 @@ describe("shell execution", () => {
     expect(result.timeoutMs).toBe(500);
   });
 
+  it("returns after a bounded drain when a surviving descendant still holds the output pipes", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "navo-shell-drain-"));
+    const script = join(dir, "spawn.js");
+    await writeFile(script, [
+      "const { spawn } = require('node:child_process');",
+      "const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], { stdio: 'inherit', detached: true });",
+      "console.log('survivor=' + child.pid);",
+      "child.unref();",
+    ].join("\n"), "utf8");
+    let survivor: number | undefined;
+    try {
+      const started = Date.now();
+      const result = await runShellCommand(
+        { cwd: root },
+        { command: `node "${script}"`, timeoutMs: 30_000 },
+        signal,
+        { ...profile, jobDir: undefined },
+      );
+      survivor = Number(/survivor=(\d+)/.exec(result.stdout.text)?.[1]);
+      expect(result.exitCode).toBe(0);
+      expect(result.timedOut).toBe(false);
+      expect(survivor).toBeGreaterThan(0);
+      expect(Date.now() - started).toBeLessThan(10_000);
+    } finally {
+      if (survivor) {
+        try {
+          process.kill(survivor);
+        } catch {
+          survivor = undefined;
+        }
+      }
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("kills the process tree on cancellation and marks the result", async () => {
     const controller = new AbortController();
     const pending = runShellCommand(
@@ -121,6 +168,65 @@ describe("shell execution", () => {
     const result = await pending;
     expect(result.aborted).toBe(true);
     expect(result.timedOut).toBe(false);
+  });
+
+  it.skipIf(!windowsPowerShell)("leaves no descendant alive after cancellation or timeout", async () => {
+    const cancelTag = `navo-bug008-${randomUUID()}`;
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 200);
+    const cancelled = await runShellCommand(
+      { cwd: root },
+      { command: `${nodeCommand("setTimeout(() => {}, 60000)")} ${cancelTag}`, timeoutMs: 30_000 },
+      controller.signal,
+      profile,
+    );
+    const timeoutTag = `navo-bug008-${randomUUID()}`;
+    const timedOut = await runShellCommand(
+      { cwd: root },
+      { command: `${nodeCommand("setTimeout(() => {}, 60000)")} ${timeoutTag}`, timeoutMs: 500 },
+      signal,
+      profile,
+    );
+
+    expect(cancelled.aborted).toBe(true);
+    expect(timedOut.timedOut).toBe(true);
+    expect(survivingNodePids(cancelTag)).toEqual([]);
+    expect(survivingNodePids(timeoutTag)).toEqual([]);
+  });
+
+  it.skipIf(!windowsPowerShell)("ends background processes together with the command", async () => {
+    const result = await runShellCommand(
+      { cwd: root },
+      {
+        command: "(Start-Process node -ArgumentList '-e','setTimeout(()=>{},60000)' -PassThru -WindowStyle Hidden).Id",
+        timeoutMs: 30_000,
+      },
+      signal,
+      profile,
+    );
+    const pid = Number(result.stdout.text.trim());
+    expect(pid).toBeGreaterThan(0);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(processAlive(pid)).toBe(false);
+  });
+
+  it.skipIf(!windowsPowerShell)("runs the command without a job when the helper cannot be prepared", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "navo-shell-nojob-"));
+    const blocker = join(dir, "not-a-directory");
+    await writeFile(blocker, "", "utf8");
+    try {
+      const result = await runShellCommand(
+        { cwd: root },
+        { command: "[bool]('NavoShellJobV1' -as [type]); 'ran'", timeoutMs: 30_000 },
+        signal,
+        { ...profile, jobDir: blocker },
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.text.split(/\s+/).filter(Boolean)).toEqual(["False", "ran"]);
+      expect(result.stderr.text).toBe("");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
   it("reports spawn failures and already-fired deadlines", async () => {
@@ -141,3 +247,23 @@ describe("shell execution", () => {
     )).rejects.toMatchObject({ code: "aborted" });
   });
 });
+
+function survivingNodePids(tag: string): number[] {
+  const query = "Get-CimInstance Win32_Process -Filter \"Name = 'node.exe'\" "
+    + `| Where-Object { $_.CommandLine -like '*${tag}*' } | ForEach-Object { $_.ProcessId }`;
+  const listed = spawnSync("powershell.exe", ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", query], {
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  expect(listed.status).toBe(0);
+  return listed.stdout.split(/\s+/).filter(Boolean).map(Number);
+}
+
+function processAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
