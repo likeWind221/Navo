@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createEventId } from "../brand/ids.js";
-import type { NodeId } from "../brand/ids.js";
+import type { NodeId, ProjectId } from "../brand/ids.js";
 import type { NodeEvent, NodeEventDraft } from "./events.js";
 import { NodeError } from "./errors.js";
 import { immutable, projectNode } from "./projector.js";
@@ -32,13 +32,30 @@ export class NodeBatch {
     return snapshot;
   }
 
-  commit(write: (id: NodeId, history: readonly NodeEvent[]) => void, notify: (event: NodeEvent) => void): void {
+  seal(): SealedNodeBatch {
     if (this.closed) throw new NodeError("invalid-state", "Batch is closed.");
     for (const [id, history] of this.originals) {
       if (this.read(id) !== history) throw new NodeError("stale-revision", "Node changed during preparation.");
     }
     this.closed = true;
-    for (const [id, history] of this.histories) write(id, history);
-    for (const event of this.appended) notify(event);
+    const changes = [...this.histories].map(([nodeId, history]) => ({
+      nodeId,
+      projectId: projectNode(nodeId, history)!.node.projectId,
+      firstRevision: this.originals.get(nodeId)!.length + 1,
+      history,
+    }));
+    return { changes, appended: Object.freeze([...this.appended]) };
   }
+}
+
+export interface SealedNodeBatch {
+  readonly changes: readonly NodeHistoryChange[];
+  readonly appended: readonly NodeEvent[];
+}
+
+export interface NodeHistoryChange {
+  readonly nodeId: NodeId;
+  readonly projectId: ProjectId;
+  readonly firstRevision: number;
+  readonly history: readonly NodeEvent[];
 }

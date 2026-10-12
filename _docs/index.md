@@ -52,6 +52,7 @@
 - [F10 持久化与验证规划](69-devlog-f10-plan.md)：将 Evidence / Verification 与持久化合并为 F10，写入 F10.0–F10.7；独立验证者职责、先持久化后验证的顺序，验证功能暂时搁置。
 - [F10.0 持久化与验证设计收口](80-devlog-f10-0-design.md)：现状盘点与 Harness 持久化/检查点/中断收尾对照；只用 SQLite 并存于 `~/.navo/`（不选 MySQL / Redis 的理由）、写入成功即已提交事务、重启按依赖顺序重放且单个 Project 损坏只隔离、中断回合合成收尾不重试；验证结论只作参考（过期看 Node revision、证据可选）、只读验证者权限、不设完成门禁。已经用户确认。
 - [F10.1a 项目与工作目录持久保存](81-devlog-f10-1a-project-persist.md)：SQLite 存储模块（通用事件表 + 绑定表、版本与 application_id 校验、延迟 apply 的原子提交）；Project 写穿透与启动恢复；创建时事件与绑定同事务提交；Workspace 丢失时报告不可用；真实 Host 与 Electron 自带 Node 下的重启验收。
+- [F10.1b 节点与 Roadmap 持久保存](83-devlog-f10-1b-roadmap-persist.md)：复用事件表新增 node / roadmap 两类事件；自动解锁提前并入批次，Roadmap 变更与 Node 批次同一事务提交；Node 与 Roadmap 启动恢复；Mock Host 脚本化创建 Roadmap 的真实进程重启验收；退出时执行中的 Node 留给 F10.3 收尾。
 
 ## Bug 跟踪与复盘
 

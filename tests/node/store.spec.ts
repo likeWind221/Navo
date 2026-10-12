@@ -5,17 +5,33 @@ import { ProjectStore } from "../../src/project/store.js";
 import { NodeStore } from "../../src/node/store.js";
 import { projectNode } from "../../src/node/projector.js";
 import type { NodeEvent } from "../../src/node/events.js";
-import { memoryStorage } from "../helpers/storage.js";
+import { StorageService } from "../../src/storage/database.js";
+import { memoryStorage, rawSql, removeRoots, storedRows, temporaryDatabase } from "../helpers/storage.js";
 
 const contexts: Context[] = [];
-afterEach(async () => { await Promise.all(contexts.splice(0).map(ctx => ctx.fiber.dispose())); });
+const roots: string[] = [];
+afterEach(async () => {
+  await Promise.all(contexts.splice(0).map(ctx => ctx.fiber.dispose()));
+  await removeRoots(roots);
+});
 
-async function kit() {
+async function open(path?: string) {
   const ctx = new Context();
   contexts.push(ctx);
-  await memoryStorage(ctx);
+  if (path === undefined) await memoryStorage(ctx);
+  else await ctx.plugin(StorageService, { path });
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
+  return ctx;
+}
+
+async function close(ctx: Context): Promise<void> {
+  contexts.splice(contexts.indexOf(ctx), 1);
+  await ctx.fiber.dispose();
+}
+
+async function kit(path?: string) {
+  const ctx = await open(path);
   const project = ctx.projects.create({ name: "Project", goal: "Research" });
   const objective = { title: "Sources", description: "Inspect sources", acceptanceCriteria: ["Cite primary sources"] };
   return { ctx, project, objective };
@@ -77,6 +93,42 @@ describe("generic Project Nodes", () => {
     expect(() => ctx.nodes.beginWork(id)).toThrow(expect.objectContaining({ code: "invalid-state" }));
     expect(() => ctx.nodes.unlock(id, "Again")).toThrow(expect.objectContaining({ code: "invalid-state" }));
     expect(projectNode(id, JSON.parse(JSON.stringify(ctx.nodes.getEvents(id))))).toEqual(complete);
+  });
+
+  it("restores a standalone Node lifecycle after reopening storage without writing on restore", async () => {
+    const path = await temporaryDatabase(roots, "navo-node-");
+    const { ctx, project, objective } = await kit(path);
+    const id = ctx.nodes.create({ projectId: project.id, objective }).node.id;
+    ctx.nodes.unlock(id, "Ready");
+    ctx.nodes.bindSession(id, createSessionId("work"));
+    ctx.nodes.beginWork(id);
+    ctx.nodes.endWork(id);
+    ctx.nodes.setRequirement(id, "optional", ctx.nodes.get(id)!.revision, "Nice to have");
+    const before = ctx.nodes.get(id)!;
+    await close(ctx);
+
+    const restarted = await open(path);
+    expect(restarted.nodes.get(id)).toEqual(before);
+    expect(restarted.nodes.getBySession(createSessionId("work"))).toEqual(before);
+    expect(storedRows(path, "node").map(row => row.seq)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(restarted.nodes.skip(id, { confirmedBy: "human", reason: "Skip", reviewedRevision: before.revision }))
+      .toMatchObject({ status: "skipped", revision: 7 });
+  });
+
+  it("leaves a Node unchanged and silent when its event cannot be stored", async () => {
+    const path = await temporaryDatabase(roots, "navo-node-");
+    const { ctx, project, objective } = await kit(path);
+    const id = ctx.nodes.create({ projectId: project.id, objective }).node.id;
+    const before = ctx.nodes.get(id)!;
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const seen: string[] = [];
+    ctx.on("node/event", event => { seen.push(event.type); });
+    rawSql(path, "CREATE TRIGGER fail_events BEFORE INSERT ON events BEGIN SELECT RAISE(ABORT, 'disk full'); END");
+
+    expect(() => ctx.nodes.unlock(id, "Ready")).toThrow(expect.objectContaining({ name: "StorageError", code: "write-failed" }));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(ctx.nodes.get(id)).toEqual(before);
+    expect(seen).toEqual([]);
   });
 
   it("supports relocking and allows work cleanup after project archival", async () => {

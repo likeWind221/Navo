@@ -62,7 +62,7 @@ describe("StorageService", () => {
     db.close();
 
     const second = await open(path);
-    expect([...second.storage.loadEvents("project")]).toEqual([["p1", [{ n: 1 }, { n: 2 }]]]);
+    expect([...second.storage.loadEvents("project")]).toEqual([["p1", { projectId: "p1", events: [{ n: 1 }, { n: 2 }] }]]);
     expect(second.storage.loadWorkspaceBindings()).toEqual([{ projectId: "p1", root: "/work/p1" }]);
   });
 
@@ -110,6 +110,34 @@ describe("StorageService", () => {
     expect(applied).toEqual(["event", "bind"]);
   });
 
+  it("commits Node and Roadmap histories of several owners together or not at all", async () => {
+    const ctx = await open(":memory:");
+    const applied: string[] = [];
+    const append = (domain: "node" | "roadmap", ownerId: string, firstSeq: number) => ctx.storage.write(
+      tx => tx.appendEvents({ domain, ownerId, projectId: "p1", firstSeq, events: [{ ownerId, firstSeq }] }),
+      () => applied.push(`${domain}:${ownerId}#${firstSeq}`),
+    );
+
+    expect(() => ctx.storage.atomic(() => {
+      append("node", "a", 1);
+      append("node", "b", 1);
+      append("roadmap", "p1", 2);
+    })).toThrow(expect.objectContaining({ code: "sequence-conflict" }));
+    expect(applied).toEqual([]);
+    expect(ctx.storage.loadEvents("node").size).toBe(0);
+
+    ctx.storage.atomic(() => {
+      append("node", "a", 1);
+      append("node", "b", 1);
+      append("roadmap", "p1", 1);
+      append("node", "a", 2);
+    });
+    expect(applied).toEqual(["node:a#1", "node:b#1", "roadmap:p1#1", "node:a#2"]);
+    expect([...ctx.storage.loadEvents("node")].map(([id, history]) => [id, history.events.length])).toEqual([["a", 2], ["b", 1]]);
+    expect(ctx.storage.loadEvents("roadmap").get("p1")?.events).toEqual([{ ownerId: "p1", firstSeq: 1 }]);
+    expect(ctx.storage.loadEvents("project").size).toBe(0);
+  });
+
   it("rejects appends that do not continue the stored sequence", async () => {
     const ctx = await open(":memory:");
     const append = (firstSeq: number) => ctx.storage.write(tx => tx.appendEvents({
@@ -120,7 +148,7 @@ describe("StorageService", () => {
     append(1);
     expect(() => append(1)).toThrow(expect.objectContaining({ code: "sequence-conflict" }));
     append(2);
-    expect(ctx.storage.loadEvents("project").get("p1")).toHaveLength(2);
+    expect(ctx.storage.loadEvents("project").get("p1")?.events).toHaveLength(2);
   });
 
   it("reports stored rows that cannot be decoded", async () => {
@@ -130,5 +158,17 @@ describe("StorageService", () => {
     const ctx = await open(path);
 
     expect(() => ctx.storage.loadEvents("project")).toThrow(expect.objectContaining({ code: "invalid-record" }));
+  });
+
+  it("reports an owner whose events are filed under different Projects", async () => {
+    const path = await databasePath();
+    await close(await open(path));
+    raw(path, "INSERT INTO events VALUES ('project', 'p1', 1, 'p1', '{}'), ('project', 'p1', 2, 'p2', '{}')");
+    const ctx = await open(path);
+
+    expect(() => ctx.storage.loadEvents("project")).toThrow(expect.objectContaining({
+      code: "invalid-record",
+      message: expect.stringContaining("project event p1#2"),
+    }));
   });
 });

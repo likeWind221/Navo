@@ -18,8 +18,11 @@ export class ProjectStore extends Service {
   constructor(ctx: Context) {
     super(ctx, "projects");
     for (const [projectId, history] of ctx.storage.loadEvents("project")) {
+      if (history.projectId !== projectId) {
+        throw new StorageError("invalid-record", `Stored project history ${projectId} is filed under Project ${history.projectId}.`);
+      }
       try {
-        this.restore(createProjectId(projectId), history);
+        this.restore(createProjectId(projectId), history.events);
       } catch (error: unknown) {
         const reason = error instanceof Error ? error.message : "unknown failure";
         throw new StorageError("invalid-record", `Stored project history ${projectId} is invalid: ${reason}`, {

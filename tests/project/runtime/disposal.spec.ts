@@ -60,16 +60,16 @@ describe("ProjectRuntime disposal", () => {
     await flushUntil(() => adapter.requests.length === 2);
     if (phase === "tool") await vi.waitFor(() => expect(searchAdapter.requests).toHaveLength(2));
     await ctx.fiber.dispose();
-    const outcomes = await pending;
-    expect(outcomes.map(outcome => outcome.status)).toEqual(["fulfilled", "fulfilled"]);
-    expect(nodes.get(node.nodeId!)?.status).toBe("idle");
-    for (const outcome of outcomes) {
-      if (outcome.status !== "fulfilled") throw outcome.reason;
-      expect(outcome.value.turn.status).toBe("cancelled");
-      expect(sessions.getEvents(outcome.value.sessionId).filter(event => event.type === "turn-ended")).toHaveLength(1);
-      expect(sessions.getEvents(outcome.value.sessionId).filter(event => event.type === "step-ended")).toHaveLength(1);
+    const [mainOutcome, nodeOutcome] = await pending;
+    if (mainOutcome.status !== "fulfilled") throw mainOutcome.reason;
+    expect(mainOutcome.value.turn.status).toBe("cancelled");
+    expect(nodeOutcome.status).toBe("rejected");
+    expect(nodes.get(node.nodeId!)?.status).toBe("working");
+    for (const sessionId of [mainOutcome.value.sessionId, nodes.get(node.nodeId!)!.sessionId!]) {
+      expect(sessions.getEvents(sessionId).filter(event => event.type === "turn-ended")).toHaveLength(1);
+      expect(sessions.getEvents(sessionId).filter(event => event.type === "step-ended")).toHaveLength(1);
       if (phase === "tool") {
-        expect(sessions.getEvents(outcome.value.sessionId).filter(event => event.type === "tool-call-result")).toHaveLength(1);
+        expect(sessions.getEvents(sessionId).filter(event => event.type === "tool-call-result")).toHaveLength(1);
       }
     }
     expect(adapter.requests).toHaveLength(2);

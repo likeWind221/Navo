@@ -8,6 +8,7 @@ import {
 import { join } from "node:path";
 
 import { createApp } from "../../src/app.js";
+import { createToolCallId } from "../../src/brand/ids.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import type { ModelEvent } from "../../src/llm/types.js";
 import { createSessionCommandHandler } from "../../src/host/command.js";
@@ -65,6 +66,12 @@ function createMockLlmAdapter(env: NodeJS.ProcessEnv): MockLLMAdapter {
       handle: () => completedEvents(),
     }]);
   }
+  if (mode === "roadmap") {
+    return new MockLLMAdapter([
+      { kind: "events", events: createRoadmapEvents() },
+      { kind: "handler", handle: () => completedEvents() },
+    ]);
+  }
   if (mode === "hang") {
     return new MockLLMAdapter([{
       kind: "hang",
@@ -92,5 +99,23 @@ function completedEvents(): readonly ModelEvent[] {
     { type: "content-delta", contentIndex: 0, contentType: "text", delta: "mock" },
     { type: "content-completed", contentIndex: 0, contentType: "text" },
     { type: "finished", reason: { kind: "stop" } },
+  ];
+}
+
+function createRoadmapEvents(): readonly ModelEvent[] {
+  const work = (key: string, dependsOn: readonly string[]) => ({
+    key, kind: "work", title: `Step ${key}`, goal: `Finish step ${key}`,
+    done_when: [`Step ${key} is reviewed`], required: true, depends_on: dependsOn,
+  });
+  const args = JSON.stringify({ reason: "Mock plan", nodes: [work("a", []), work("b", ["a"])] });
+  const toolCallId = createToolCallId("mock-create-roadmap");
+  return [
+    { type: "content-started", contentIndex: 0, contentType: "tool-call", toolCallId },
+    {
+      type: "content-delta", contentIndex: 0, contentType: "tool-call",
+      toolCallId, toolNameDelta: "create_roadmap", delta: args,
+    },
+    { type: "content-completed", contentIndex: 0, contentType: "tool-call" },
+    { type: "finished", reason: { kind: "tool-calls" } },
   ];
 }

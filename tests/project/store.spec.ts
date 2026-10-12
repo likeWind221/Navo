@@ -127,6 +127,20 @@ describe("Project domain", () => {
     await expect(domain(path)).rejects.toMatchObject({ name: "StorageError", code: "invalid-record" });
   });
 
+  it("refuses to start when a Project history is filed under another Project", async () => {
+    const path = await databasePath();
+    const ctx = await domain(path);
+    const project = ctx.projects.create({ name: "Project", goal: "Goal" });
+    await close(ctx);
+    raw(path, `UPDATE events SET project_id = 'other' WHERE owner_id = '${project.id}'`);
+
+    await expect(domain(path)).rejects.toMatchObject({
+      name: "StorageError",
+      code: "invalid-record",
+      message: expect.stringContaining(project.id),
+    });
+  });
+
   it("rejects invalid commands without committing or changing prior snapshots", async () => {
     const projects = await store();
     expect(() => projects.create({ name: "Project", goal: "  " })).toThrow("goal must be non-empty");
