@@ -110,6 +110,34 @@ describe("StorageService", () => {
     expect(applied).toEqual(["event", "bind"]);
   });
 
+  it("commits Node and Roadmap histories of several owners together or not at all", async () => {
+    const ctx = await open(":memory:");
+    const applied: string[] = [];
+    const append = (domain: "node" | "roadmap", ownerId: string, firstSeq: number) => ctx.storage.write(
+      tx => tx.appendEvents({ domain, ownerId, projectId: "p1", firstSeq, events: [{ ownerId, firstSeq }] }),
+      () => applied.push(`${domain}:${ownerId}#${firstSeq}`),
+    );
+
+    expect(() => ctx.storage.atomic(() => {
+      append("node", "a", 1);
+      append("node", "b", 1);
+      append("roadmap", "p1", 2);
+    })).toThrow(expect.objectContaining({ code: "sequence-conflict" }));
+    expect(applied).toEqual([]);
+    expect(ctx.storage.loadEvents("node").size).toBe(0);
+
+    ctx.storage.atomic(() => {
+      append("node", "a", 1);
+      append("node", "b", 1);
+      append("roadmap", "p1", 1);
+      append("node", "a", 2);
+    });
+    expect(applied).toEqual(["node:a#1", "node:b#1", "roadmap:p1#1", "node:a#2"]);
+    expect([...ctx.storage.loadEvents("node")].map(([id, history]) => [id, history.events.length])).toEqual([["a", 2], ["b", 1]]);
+    expect(ctx.storage.loadEvents("roadmap").get("p1")?.events).toEqual([{ ownerId: "p1", firstSeq: 1 }]);
+    expect(ctx.storage.loadEvents("project").size).toBe(0);
+  });
+
   it("rejects appends that do not continue the stored sequence", async () => {
     const ctx = await open(":memory:");
     const append = (firstSeq: number) => ctx.storage.write(tx => tx.appendEvents({

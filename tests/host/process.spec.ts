@@ -12,6 +12,8 @@ import {
   projectCreateMethod,
   projectGetMethod,
   projectListMethod,
+  projectNodeReviewMethod,
+  projectTurnMethod,
   sessionCommandMethod,
   StreamRpcClient,
 } from "../../rpc/index.js";
@@ -66,6 +68,40 @@ describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, 
 
       await rm(root, { recursive: true, force: true });
       const after = await withRealHost(env, async (client) => (await collect(client.stream(projectListMethod, {})))[0]!);
+      expect(after).toEqual(before);
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
+  it("restores a Roadmap and Node review results after the Host restarts", async () => {
+    const base = await mkdtemp(join(tmpdir(), "navo-process-roadmap-"));
+    const home = join(base, "home");
+    const root = join(base, "workspace");
+    await mkdir(root);
+    try {
+      const before = await withRealHost({ NAVO_HOME: home, NAVO_MOCK_LLM_MODE: "roadmap" }, async (client) => {
+        const [project] = await collect(client.stream(projectCreateMethod, {
+          name: "Planned project", goal: "Survive a restart with a plan", workspaceRoot: root,
+        }));
+        const projectId = project!.projectId;
+        await collect(client.stream(projectTurnMethod, {
+          projectId, requestId: "plan", text: "Please plan this project.", target: { kind: "main" },
+        }));
+        const [planned] = await collect(client.stream(projectGetMethod, { projectId }));
+        expect(planned!.roadmap?.nodes.map(node => node.status)).toEqual(["idle", "locked"]);
+        const first = planned!.roadmap!.nodes[0]!;
+        await collect(client.stream(projectNodeReviewMethod, {
+          projectId, nodeId: first.nodeId, action: "complete" as const, reason: "Reviewed", reviewedRevision: first.revision,
+        }));
+        const [reviewed] = await collect(client.stream(projectGetMethod, { projectId }));
+        expect(reviewed!.roadmap?.nodes.map(node => node.status)).toEqual(["completing", "idle"]);
+        return reviewed!;
+      }, "scripts/host/mock.ts");
+
+      const after = await withRealHost({ NAVO_HOME: home }, async (client) => (
+        await collect(client.stream(projectGetMethod, { projectId: before.project.projectId }))
+      )[0]!, "scripts/host/mock.ts");
       expect(after).toEqual(before);
     } finally {
       await rm(base, { recursive: true, force: true });
@@ -245,10 +281,12 @@ describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, 
 async function withRealHost<T>(
   env: Readonly<Record<string, string>>,
   use: (client: StreamRpcClient) => Promise<T>,
+  entry: "src/host/main.ts" | "scripts/host/mock.ts" = "src/host/main.ts",
 ): Promise<T> {
-  const child = startHost("src/host/main.ts", env);
+  const child = startHost(entry, env);
   const stderr = capture(child.stderr);
-  await waitUntil(() => stderr.value.includes("[kernel-host] ready"));
+  const ready = entry === "src/host/main.ts" ? "[kernel-host] ready" : "[mock-kernel-host] ready";
+  await waitUntil(() => stderr.value.includes(ready));
   const client = new StreamRpcClient(new ChildRpcTransport(child));
   let result: T;
   try {

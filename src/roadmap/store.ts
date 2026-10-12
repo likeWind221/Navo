@@ -1,11 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { Service } from "cordis";
 import type { Context } from "cordis";
-import { createEventId } from "../brand/ids.js";
+import { createEventId, createProjectId } from "../brand/ids.js";
 import type { NodeId, ProjectId } from "../brand/ids.js";
 import type { NodeDefinitionChange, NodeEventDraft } from "../node/events.js";
 import type { NodeRequirement, NodeSnapshot } from "../node/model.js";
+import type { NodeBatch } from "../node/batch.js";
 import type { NodeStore } from "../node/store.js";
+import { StorageError } from "../storage/errors.js";
 import { buildRoadmapGraph } from "./graph.js";
 import { RoadmapError } from "./errors.js";
 import { freezeRoadmapEvent } from "./events.js";
@@ -14,7 +16,7 @@ import type { RoadmapDefinition, RoadmapGraph, RoadmapSnapshot } from "./model.j
 import { projectRoadmap } from "./projector.js";
 
 export class RoadmapStore extends Service {
-  static inject = ["projects", "nodes"];
+  static inject = ["storage", "projects", "nodes"];
   private readonly histories = new Map<ProjectId, readonly RoadmapEvent[]>();
   private readonly snapshots = new Map<ProjectId, RoadmapSnapshot>();
 
@@ -22,6 +24,16 @@ export class RoadmapStore extends Service {
     super(ctx, "roadmaps");
     const nodes = this.ctx.nodes;
     nodes.coordinate(drafts => this.commitNodeAction(nodes, drafts));
+    for (const [projectId, stored] of ctx.storage.loadEvents("roadmap")) {
+      try {
+        if (stored.projectId !== projectId) throw new RoadmapError("invalid-event-stream", `Roadmap is filed under Project ${stored.projectId}.`);
+        if (!this.ctx.projects.get(createProjectId(projectId))) throw new RoadmapError("project-unavailable", "Roadmap Project does not exist.");
+        this.restore(createProjectId(projectId), stored.events as readonly RoadmapEvent[]);
+      } catch (error: unknown) {
+        const reason = error instanceof Error ? error.message : "unknown failure";
+        throw new StorageError("invalid-record", `Stored roadmap history ${projectId} is invalid: ${reason}`, { cause: error });
+      }
+    }
   }
 
   create(input: CreateRoadmapInput): RoadmapSnapshot {
@@ -32,13 +44,13 @@ export class RoadmapStore extends Service {
     if (project.goal === null) throw new RoadmapError("goal-required", "Creating a roadmap requires a confirmed project goal");
     const nodeEvents = (input.newNodes ?? []).map(value => this.ctx.nodes.creation(value));
     const nodeBatch = this.ctx.nodes.prepare(nodeEvents);
-    const catalog = [...this.ctx.nodes.getByProject(projectId).map(value => value.node), ...nodeEvents.map(event => nodeBatch.get(event.nodeId)!.node)];
+    const candidateNodes = new Map(this.ctx.nodes.getByProject(projectId).map(value => [value.node.id, value]));
+    for (const draft of nodeEvents) candidateNodes.set(draft.nodeId, nodeBatch.get(draft.nodeId)!);
     const event = freezeRoadmapEvent({ ...this.header(projectId, 0, input.reason), type: "roadmap-created", definition: input.definition });
-    const snapshot = projectRoadmap(projectId, [event], catalog);
+    const snapshot = projectRoadmap(projectId, [event], [...candidateNodes.values()].map(value => value.node));
     if (!snapshot) throw new RoadmapError("invalid-event-stream", "Invalid roadmap event");
-    this.ctx.nodes.commit(nodeBatch);
-    this.commitHistory(projectId, Object.freeze([event]), snapshot);
-    this.unlockReady(projectId);
+    this.findUnlocks(snapshot.graph, candidateNodes, nodeBatch);
+    this.commitTogether(nodeBatch, projectId, Object.freeze([event]), snapshot);
     return snapshot;
   }
 
@@ -82,13 +94,12 @@ export class RoadmapStore extends Service {
     for (const relation of snapshot.graph.relations) {
       const currentNode = currentNodes.get(relation.nodeId);
       if (currentNode?.status === "idle" && !relation.requiredBefore.every(required => this.isTerminal(candidateNodes.get(required)))) {
-        batch.add({ type: "node-locked", nodeId: relation.nodeId, data: { reason: "Roadmap dependencies changed" } });
+        candidateNodes.set(relation.nodeId, batch.add({ type: "node-locked", nodeId: relation.nodeId, data: { reason: "Roadmap dependencies changed" } }));
       }
     }
 
-    this.ctx.nodes.commit(batch);
-    this.commitHistory(input.projectId, history, snapshot);
-    this.unlockReady(input.projectId);
+    this.findUnlocks(snapshot.graph, candidateNodes, batch);
+    this.commitTogether(batch, input.projectId, history, snapshot);
     return snapshot;
   }
 
@@ -110,6 +121,15 @@ export class RoadmapStore extends Service {
     if (!snapshot) throw new RoadmapError("invalid-event-stream", "Cannot restore an empty history");
     this.commitHistory(projectId, history, snapshot);
     return snapshot;
+  }
+
+  private commitTogether(batch: NodeBatch, projectId: ProjectId, history: readonly RoadmapEvent[], snapshot: RoadmapSnapshot): void {
+    this.ctx.storage.atomic(() => {
+      this.ctx.nodes.commit(batch);
+      this.ctx.storage.write(tx => tx.appendEvents({
+        domain: "roadmap", ownerId: projectId, projectId, firstSeq: snapshot.revision, events: history.slice(snapshot.revision - 1),
+      }), () => this.commitHistory(projectId, history, snapshot));
+    });
   }
 
   private commitHistory(projectId: ProjectId, history: readonly RoadmapEvent[], snapshot: RoadmapSnapshot): void {
@@ -150,32 +170,15 @@ export class RoadmapStore extends Service {
     nodes.commit(batch);
   }
 
-  private unlockReady(projectId: ProjectId): void {
-    const roadmap = this.get(projectId);
-    if (!roadmap) return;
-    const proposed = new Map(this.ctx.nodes.getByProject(projectId).map(value => [value.node.id, value]));
-    const graph = buildRoadmapGraph(roadmap.graph.definition, [...proposed.values()].map(value => value.node));
-    const ids = this.findUnlocks(graph, proposed);
-    if (ids.length === 0) return;
-    const batch = this.ctx.nodes.prepare(ids.map(id => ({ type: "node-unlocked" as const, nodeId: id, data: { reason: "Required dependencies resolved" } })));
-    this.ctx.nodes.commit(batch);
-  }
-
-  private findUnlocks(graph: RoadmapGraph, nodes: Map<NodeId, NodeSnapshot>, batch?: import("../node/batch.js").NodeBatch, added = new Set<NodeId>()): NodeId[] {
-    const result: NodeId[] = [];
+  private findUnlocks(graph: RoadmapGraph, nodes: Map<NodeId, NodeSnapshot>, batch: NodeBatch, added = new Set<NodeId>()): void {
     for (const id of graph.topologicalOrder) {
       const snapshot = nodes.get(id);
       const relation = graph.relations.find(value => value.nodeId === id)!;
-      if (!snapshot || snapshot.status !== "locked") continue;
+      if (!snapshot || snapshot.status !== "locked" || added.has(id)) continue;
       if (!relation.requiredBefore.every(required => this.isTerminal(nodes.get(required)))) continue;
-      result.push(id);
-      if (batch && !added.has(id)) {
-        batch.add({ type: "node-unlocked", nodeId: id, data: { reason: "Required dependencies resolved" } });
-        nodes.set(id, batch.get(id)!);
-        added.add(id);
-      }
+      nodes.set(id, batch.add({ type: "node-unlocked", nodeId: id, data: { reason: "Required dependencies resolved" } }));
+      added.add(id);
     }
-    return result;
   }
 
   private isTerminal(snapshot: NodeSnapshot | undefined): boolean {

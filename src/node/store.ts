@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Service } from "cordis";
 import type { Context } from "cordis";
 import { createNodeId } from "../brand/ids.js";
+import { StorageError } from "../storage/errors.js";
 import type { NodeId, ProjectId, SessionId } from "../brand/ids.js";
 import { NodeError } from "./errors.js";
 import type { NodeDefinitionChange, NodeEvent, NodeEventDraft } from "./events.js";
@@ -12,11 +13,24 @@ import { NodeBatch } from "./batch.js";
 const emptyHistory: readonly NodeEvent[] = Object.freeze([]);
 
 export class NodeStore extends Service {
-  static inject = ["projects"];
+  static inject = ["storage", "projects"];
   private readonly events = new Map<NodeId, readonly NodeEvent[]>();
   private coordinator: ((drafts: readonly NodeEventDraft[]) => void) | undefined;
 
-  constructor(ctx: Context) { super(ctx, "nodes"); }
+  constructor(ctx: Context) {
+    super(ctx, "nodes");
+    for (const [nodeId, stored] of ctx.storage.loadEvents("node")) {
+      try {
+        const snapshot = this.restore(createNodeId(nodeId), stored.events as readonly NodeEvent[]);
+        if (snapshot.node.projectId !== stored.projectId) {
+          throw new NodeError("invalid-state", `Node belongs to Project ${snapshot.node.projectId}, but is filed under ${stored.projectId}.`);
+        }
+      } catch (error: unknown) {
+        const reason = error instanceof Error ? error.message : "unknown failure";
+        throw new StorageError("invalid-record", `Stored node history ${nodeId} is invalid: ${reason}`, { cause: error });
+      }
+    }
+  }
 
   coordinate(handler: (drafts: readonly NodeEventDraft[]) => void): () => void {
     if (this.coordinator) throw new NodeError("invalid-state", "Node coordinator already installed.");
@@ -76,7 +90,15 @@ export class NodeStore extends Service {
   }
 
   commit(batch: NodeBatch): void {
-    batch.commit((id, history) => this.events.set(id, history), event => this.notify(event));
+    const { changes, appended } = batch.seal();
+    this.ctx.storage.write(tx => {
+      for (const { nodeId, projectId, firstRevision, history } of changes) {
+        tx.appendEvents({ domain: "node", ownerId: nodeId, projectId, firstSeq: firstRevision, events: history.slice(firstRevision - 1) });
+      }
+    }, () => {
+      for (const { nodeId, history } of changes) this.events.set(nodeId, history);
+      for (const event of appended) this.notify(event);
+    });
   }
 
   restore(nodeId: NodeId, history: readonly NodeEvent[]): NodeSnapshot {

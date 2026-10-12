@@ -118,7 +118,7 @@ export interface EventAppend {
   readonly events: readonly unknown[];
 }
 
-export type EventDomain = "project";
+export type EventDomain = "project" | "node" | "roadmap";
 
 export interface StoredHistory {
   readonly projectId: string;

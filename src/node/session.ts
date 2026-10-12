@@ -190,9 +190,9 @@ export class NodeSessionService extends Service {
       });
       return Object.freeze({ nodeId: pending.nodeId, sessionId, turn });
     } finally {
-      if (working) nodes.endWork(pending.nodeId);
       if (this.active.get(sessionId) === pending) this.active.delete(sessionId);
       this.controllers.delete(pending.controller);
+      if (working) nodes.endWork(pending.nodeId);
     }
   }
 
