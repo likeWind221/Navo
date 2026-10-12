@@ -1,7 +1,9 @@
 import { lstatSync } from "node:fs";
-import { basename, isAbsolute, posix, win32 } from "node:path";
+import { tmpdir } from "node:os";
+import { basename, isAbsolute, join, posix, win32 } from "node:path";
 
 import { ShellError } from "./errors.js";
+import { jobPrelude } from "./job.js";
 import type { ShellKind, ShellPathStyle } from "./types.js";
 
 export interface ShellResolution {
@@ -9,6 +11,7 @@ export interface ShellResolution {
   readonly path?: string | undefined;
   readonly env?: NodeJS.ProcessEnv | undefined;
   readonly platform?: NodeJS.Platform | undefined;
+  readonly jobDir?: string | undefined;
 }
 
 export interface ResolvedShellProfile {
@@ -17,6 +20,7 @@ export interface ResolvedShellProfile {
   readonly pathStyle: ShellPathStyle;
   readonly executable: string;
   readonly env: Readonly<Record<string, string>>;
+  readonly jobDir?: string | undefined;
 }
 
 const POWERSHELL_ENCODING_PREAMBLE =
@@ -47,6 +51,9 @@ export function resolveShellProfile(options: ShellResolution): ResolvedShellProf
     pathStyle: kind === "powershell" ? "windows" : "posix",
     executable,
     env: kind === "powershell" ? BASE_ENV_OVERRIDES : BASH_ENV_OVERRIDES,
+    ...(kind === "powershell" && platform === "win32"
+      ? { jobDir: options.jobDir ?? join(tmpdir(), "navo", "shell") }
+      : {}),
   });
 }
 
@@ -82,6 +89,7 @@ export function candidateShellPaths(
 export function shellInvocation(
   kind: ShellKind,
   command: string,
+  jobDir?: string,
 ): readonly string[] {
   return kind === "powershell"
     ? [
@@ -89,7 +97,7 @@ export function shellInvocation(
         "-NoProfile",
         "-NonInteractive",
         "-Command",
-        `${POWERSHELL_ENCODING_PREAMBLE}${command}${POWERSHELL_EXIT_STATUS_SUFFIX}`,
+        `${jobDir === undefined ? "" : jobPrelude(jobDir)}${POWERSHELL_ENCODING_PREAMBLE}${command}${POWERSHELL_EXIT_STATUS_SUFFIX}`,
       ]
     : ["-c", command];
 }

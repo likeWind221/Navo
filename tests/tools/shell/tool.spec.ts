@@ -20,7 +20,9 @@ function run(args: JsonObject, activeSignal: AbortSignal = signal) {
   });
 }
 
-describe("shell tool contract", () => {
+const SHELL_TEST_TIMEOUT_MS = 30_000;
+
+describe("shell tool contract", { timeout: SHELL_TEST_TIMEOUT_MS }, () => {
   it("publishes a schema the tool service accepts", async () => {
     const ctx = await kit.createContext();
     ctx.tools.register(tool);

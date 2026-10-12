@@ -33,7 +33,7 @@ export async function runShellCommand(
       throw new ShellError("aborted", "Shell command was cancelled before it started.");
     }
 
-    const child = spawn(profile.executable, [...shellInvocation(profile.kind, spec.command)], {
+    const child = spawn(profile.executable, [...shellInvocation(profile.kind, spec.command, profile.jobDir)], {
       cwd: environment.cwd,
       env: { ...scrubbedEnvironment(process.env), ...profile.env },
       stdio: ["ignore", "pipe", "pipe"],

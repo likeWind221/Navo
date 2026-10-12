@@ -18,6 +18,7 @@ export interface ShellToolConfig {
   readonly resolveFileEnvironment: (sessionId: SessionId) => FileEnvironment | Promise<FileEnvironment>;
   readonly kind?: ShellKind;
   readonly path?: string;
+  readonly jobDir?: string;
 }
 
 export function createShellTool(config: ShellToolConfig): ToolDefinition {
