@@ -18,6 +18,8 @@
 
 设计参考 `D:/Program/Miracle/kernel/packages/session/session-persistence/src/coordinator.ts` 的 prepare / validate / adopt 生命周期；本步只采用先准备再接入的边界，不引入 Session repair 或 write-behind。
 
+`src/storage/recovery.ts` 保留为单一恢复模块，原因是启动恢复生命周期、领域依赖顺序与 Project 隔离集合必须统一管理；相关 helper 就地保留以维持这条单向流程，避免引入无语义的转发层。
+
 ## 坑与发现
 
 - 原有 `loadEvents` 的严格抛错行为保留给直接 Storage API；应用启动使用容错聚合，确保单 Project 内容损坏不变成全局启动失败。
@@ -30,7 +32,7 @@
 
 - Node 24.20.0 bundled runtime：`tsc --noEmit` 通过。
 - 定向回归：`tests/node/store.spec.ts`、`tests/resource/persistence.spec.ts`、`tests/host/process.spec.ts` 共 3 个文件、32 项通过；覆盖 Node/Main Session 冲突、四类坏 JSON、Resource 末尾失败的六领域无残留、健康 Project 真实重启后继续操作及坏记录原样保留。
-- 全量测试：89 个测试文件、537 项通过。CI 在本次 review 修复后随 PR 更新执行。
+- 全量测试：89 个测试文件、537 项通过。PR #50 的 CI `verify` 已通过（[Run 38362629100](https://github.com/likeWind221/Navo/actions/runs/38362629100)）。
 
 ## 下一步
 
