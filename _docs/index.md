@@ -103,7 +103,7 @@
 ## 工程治理与迁移
 
 - [F5.3–F5.8 Project 前端闭环规划](90-devlog-f5-project-plan.md)：当前运行期间的项目执行闭环与逐步接入边界。
-- [F5.3 Project 工作区布局与交互设计](92-devlog-f5-3-workspace.md)：Roadmap 主画布与覆盖式 Main/Node 面板，原型用户验收、正式 Electron 布局接入及本地/代码 CI 已通过，PR #53 待确认合并。
+- [F5.3 Project 工作区布局与交互设计](92-devlog-f5-3-workspace.md)：Roadmap 主画布与覆盖式 Main/Node 面板，原型用户验收、正式 Electron 布局接入及本地/代码 CI 已通过，PR #53 已 squash 合入 master（e271d5b）。
 
 - [源码目录与命名整理方案](23-structure.md)：后端、RPC、前端的模块目录、单词命名与逐文件映射；已实施。
 - [源码目录与命名重构实施记录](24-structure.md)：77 条路径迁移、RPC 与共享契约拆分、用户偏好记忆和 278 项测试及 Electron 验收。
