@@ -27,6 +27,11 @@ describe("ProjectDetailView", () => {
     expect(markup).toContain("绑定中");
     expect(markup).toContain("进行中");
     expect(markup).toContain("dateTime=\"2026-10-08T00:00:00.000Z\"");
+    expect(markup).toContain("项目会话面板");
+    expect(markup).toContain("回到工作节点");
+    expect(markup).toContain("草稿 · 对话发送即将开放");
+    expect(markup).not.toContain("生成示例路线");
+    expect(markup).not.toContain("检索与整理文献");
   });
 
   it("shows a pending goal when the goal is not confirmed", () => {
@@ -45,6 +50,18 @@ describe("ProjectDetailView", () => {
 
     expect(markup).toContain("Host 重启已被清空");
     expect(markup).toContain("重试");
+  });
+
+  it("acknowledges an existing roadmap without inventing its display or progress", () => {
+    const markup = renderToStaticMarkup(<ProjectDetailView onRetry={vi.fn()} state={{
+      status: "ready",
+      detail: { project, main: { sessionId: "s-1", turnActive: true }, roadmap: { revision: 1, nodes: [], edges: [] } },
+    }} />);
+
+    expect(markup).toContain("项目路线已创建");
+    expect(markup).not.toContain("尚未规划");
+    expect(markup).not.toContain("5 个节点");
+    expect(markup).toContain("后端 Main 回合正在运行");
   });
 });
 

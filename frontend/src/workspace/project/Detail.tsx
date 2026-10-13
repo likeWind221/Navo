@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { ProjectDetailV1, ProjectSummaryV1 } from "../../../../rpc/project.js";
+import type { ProjectDetailV1 } from "../../../../rpc/project.js";
 import type { DesktopProjectApi, DesktopProjectFailure } from "../../../shared/project.js";
 import { projectFailureMessage } from "./failure";
 import { missingBridge } from "./hook";
+import { ProjectWorkspace } from "./Workspace";
 import styles from "./style.module.css";
 
 export type ProjectDetailState =
@@ -51,31 +52,5 @@ export function ProjectDetailView({ state, onRetry }: {
       <button type="button" className={styles.secondary} onClick={onRetry}>重试</button>
     </div>;
   }
-  const project = state.detail.project;
-  return <article className={styles.detail} aria-label={`项目 ${project.name}`}>
-    <h2>{project.name}</h2>
-    <dl className={styles.facts}>
-      <dt>目标</dt>
-      <dd className={styles.goal}>{project.goal ?? "目标待确定"}</dd>
-      <dt>工作目录</dt>
-      <dd><code>{project.workspaceRoot ?? "绑定中"}</code></dd>
-      <dt>状态</dt>
-      <dd>{statusLabel(project.status)}</dd>
-      <dt>创建时间</dt>
-      <dd><time dateTime={project.createdAt}>{formatTime(project.createdAt)}</time></dd>
-    </dl>
-  </article>;
-}
-
-function statusLabel(status: ProjectSummaryV1["status"]): string {
-  switch (status) {
-    case "active":
-      return "进行中";
-    case "archived":
-      return "已归档";
-  }
-}
-
-function formatTime(value: string): string {
-  return new Date(value).toLocaleString("zh-CN", { hour12: false });
+  return <ProjectWorkspace key={state.detail.project.projectId} detail={state.detail} />;
 }

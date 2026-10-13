@@ -7,17 +7,18 @@ export type WorkspaceEntry = { id: string; title: string; kind: WorkspaceKind; c
 
 export type WorkspaceKind = "project" | "session";
 
-export function WorkspaceShell({ children, entries, create, notice, openRequest }: {
+export function WorkspaceShell({ children, entries, create, notice, openRequest, initialSection = "session" }: {
   children?: ReactNode;
   entries?: WorkspaceEntry[];
   create?: Partial<Record<WorkspaceKind, () => void>>;
   notice?: Partial<Record<WorkspaceKind, ReactNode>>;
   openRequest?: { readonly id: string } | null;
+  initialSection?: WorkspaceKind;
 }): React.JSX.Element {
   const items = entries ?? [{ id: "current", title: "当前会话", kind: "session", content: children }];
   const [opened, setOpened] = useState<string[]>(() => items.slice(0, 1).map(item => item.id));
   const [active, setActive] = useState<string | null>(() => items[0]?.id ?? null);
-  const [section, setSection] = useState<"project" | "session">("session");
+  const [section, setSection] = useState<WorkspaceKind>(initialSection);
   const [expanded, setExpanded] = useState(() => !window.matchMedia("(max-width: 600px)").matches);
   const prefix = useId();
   const tabs = useRef<HTMLElement>(null);
