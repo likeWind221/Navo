@@ -12,8 +12,12 @@ const DesignSample = import.meta.env.DEV
   : null;
 
 const WorkspacePreview = import.meta.env.DEV ? lazy(() => import("./preview/Workspace")) : null;
+const ProjectPreview = import.meta.env.DEV ? lazy(() => import("./preview/Project")) : null;
 
 export function App(): React.JSX.Element {
+  if (ProjectPreview !== null && new URLSearchParams(window.location.search).get("preview") === "project") {
+    return <Suspense fallback={<p>正在加载项目原型……</p>}><ProjectPreview /></Suspense>;
+  }
   if (WorkspacePreview !== null && new URLSearchParams(window.location.search).get("preview") === "workspace") {
     return <Suspense fallback={<p>正在加载工作区……</p>}><WorkspacePreview /></Suspense>;
   }
