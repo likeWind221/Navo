@@ -311,6 +311,8 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Pha
 
 ## 10. 当前下一步
 
+模型接入补充工作 M1.1 已于 2026-10-13 获用户授权，由子 Agent 实施公共协议提取，主 Agent 串行维护文档、验证与 PR。该补充工作不替换 F10.1d 的持久化下一步；M1 后续步骤须分别确认，不提前实现。方案见 [86](86-devlog-model-protocol-design.md)，步骤见第 12 节。
+
 Phase 9 已全部完成（2026-10-07）：F9.0–F9.9c 均为 ✅，最后由 [PR #35](https://github.com/likeWind221/Navo/pull/35)、[#36](https://github.com/likeWind221/Navo/pull/36)、[#37](https://github.com/likeWind221/Navo/pull/37) 交付项目公共契约（记录见 [73](73-devlog-f9.9a-project-query.md)、[74](74-devlog-f9.9b-human-control.md)、[75](75-devlog-f9.9c-project-follow.md)）。各 Step 的实现、验证与 PR 经过见第 6 节表格及 [文档索引](index.md) 中对应开发记录。
 
 F9.10 项目目标确认与规划前置已于 2026-10-08 合入（[PR #38](https://github.com/likeWind221/Navo/pull/38)，记录见 [76](76-devlog-f9.10-goal-confirm.md)）：目标可选、Main 规划前须经用户同意、无目标不能生成 Roadmap；前端 F5.2 已据此完成接入（[PR #39](https://github.com/likeWind221/Navo/pull/39)）。真实验收中发现的 BUG-005、BUG-006 已于 2026-10-09 修复合入（[PR #40](https://github.com/likeWind221/Navo/pull/40)、[#41](https://github.com/likeWind221/Navo/pull/41)），BUG-007 经用户决定搁置，见 [Bug 跟踪表](bug-plan.md)。F10.0 持久化与验证设计收口已于 2026-10-10 经用户确认（[80](80-devlog-f10-0-design.md)）：只用 SQLite 并存于 `~/.navo/`，`project-goal-set` 与 Workspace 绑定纳入持久化范围，单个 Project 损坏只隔离该 Project，验证结论只作参考、不设完成门禁。F10.1 于 2026-10-10 经用户确认拆为 F10.1a–F10.1d（项目与工作目录 → 节点与 Roadmap → 消息与资源 → 损坏隔离与整体验收），每个子 Step 独立分支、PR 与真实重启验收；已实测 Electron 44.2.0 自带 Node 24.20.0 支持 `node:sqlite`。F10.1a 项目与工作目录持久保存已完成（[81](81-devlog-f10-1a-project-persist.md)）：Project、目标、归档状态与 Workspace 绑定保存在 `~/.navo/navo.db`（`NAVO_HOME` 可覆盖），重启后恢复。F10.1b 节点与 Roadmap 持久保存已完成（[83](83-devlog-f10-1b-roadmap-persist.md)）：Roadmap 变更连同新节点与自动解锁在同一事务中提交，人工控制结果与 Node 状态重启后一致；应用退出时仍在执行的 Node 重启后保持 working，由 F10.3 收尾。F10.1c 消息与资源登记持久保存已实现（[84](84-devlog-f10-1c-mailbox-resource-persist.md)，[PR #48](https://github.com/likeWind221/Navo/pull/48)）：消息顺序、资源访问范围与版本重启后一致，资源文件先刷盘再登记；本机与 CI 通过，等待合并。下一步为 F10.1d 损坏隔离与整体重启验收；阶段规划见 [69：F10 持久化与验证规划](69-devlog-f10-plan.md)。Session 仍只存在内存中，进程重启后不保留。
@@ -341,3 +343,16 @@ Node 当前状态约定：新建 locked，解锁后 idle，实际执行时 worki
 - 坑与发现：此前只修复白名单，仍要求手动提供目录；缺省时注册和模型可见性同时缺失。测试现覆盖有无搜索配置、有无显式目录四种组合，并通过真实 Runtime 执行 read 读取 package.json，断言成功事件和结果回传模型；模型使用 Mock。
 - 验证：相关 16 项测试与 pnpm typecheck 通过。未执行 Shell 或写文件，未验收真实模型和正在运行的 Electron。未修改前端、RPC、WebFetch 网络限制或其他进行中的领域改动。
 - 下一步：重启 Electron 使 Host 重新读取配置；无新增待落实契约，完成回复交付配置与执行链路导读。
+
+## 12. 模型接入补充工作（M1）
+
+用户已选择新 ChatGPT 订阅接入，并要求公共模型协议可供后续厂商复用。M1 不占用 F10 持久化编号；实现与验收设计见 [86](86-devlog-model-protocol-design.md)。当前只授权 M1.1，后续逐步确认；本轮不修改前端或公开 RPC 契约。
+
+| 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
+|---|---|---|---|---|
+| 🔄 | M1.1 现有模型接入可复用的协议基础 | Qwen 接入 / 公共模型协议 / 相关测试 | Qwen 继续正常工作，后续 Chat Completions 接入可直接复用消息、工具和流解析能力 | 原 Qwen 请求、事件、thinking、错误和取消断言保持；共享协议测试证明可独立复用；旧路径无运行引用；完整本机检查与 CI 通过 |
+| ⬜ | M1.2 新协议下的连续对话与工具往返 | Responses 协议 / 助手消息与会话历史 | 系统能正确理解 Responses 输出，并在下一次请求中带回足够的历史与工具结果 | 离线完整闭环验证正文、reasoning、工具往返、原生回传信息、用量、失败、断流和取消；重建 Adapter 后同一 Session 可续接，不依赖其会话缓存 |
+| ⬜ | M1.3 本机订阅授权与账号模型查询 | 本机认证 / 凭据 / 账号模型目录 | 用户可独立登录 ChatGPT、查看自己的模型、刷新凭据及登出 | 身份与授权验证、回调取消、文件权限、轮换刷新竞态通过；真实账号登录、模型目录与撤销结果明确记录；账号未获准时不标成功 |
+| ⬜ | M1.4 Navo 使用订阅模型完成工作 | OpenAI 接入 / Host / 集成验收 | 用户可通过配置选择订阅模型完成对话和现有工具闭环 | 真实文本、只读工具续接、取消与重启后凭据复用及刷新通过；Qwen 回归通过；额度失败不自动切换计费；完整本机检查与 CI 通过 |
+
+当前下一步：M1.1 本机完整验证通过，已推送 [PR #49](https://github.com/likeWind221/Navo/pull/49)，记录见 [87](87-devlog-m1-1-protocols.md)；检查最新 head 的 CI，再按项目确认规则合并。Session 的进程重启恢复仍交由 F10.2，前端登录与模型选择另行规划。

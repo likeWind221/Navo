@@ -27,6 +27,7 @@
 - [F2.2：Backend Kernel Host 与真实模型](17-devlog-step-f2-2-kernel-host.md)：记录 Qwen SSE Adapter、Agent Runtime 实时正文出口、stdio RPC Host、Mock Host 与生命周期验收。
 - [Exa Search 接入真实 Host](37-devlog-exa-host-wiring.md)：Host 按环境密钥装配 Exa adapter、向 turn 传递 `web_search` 白名单，并补充启动脱敏与配置测试。
 - [F3.7：思考内容修正](38-devlog-f3-7-reasoning.md)：Host 默认启用 thinking，Qwen Adapter 对齐真实 reasoning 字段，记录模型冒烟与展示复验边界。
+- [M1.1：公共 Chat Completions 协议基础](87-devlog-m1-1-protocols.md)：Qwen 厂商配置与公共请求/流转换分离，共享 SSE 解帧；保留原行为并验证协议独立复用。
 
 ## Phase 9 记录
 
@@ -106,6 +107,8 @@
 
 ## 研究与自动审查
 
+- [ChatGPT 订阅模型接入可行性调研](85-devlog-chatgpt-provider-research.md)：对照 Pi 新旧 OpenAI 接入与官方 Sign in with ChatGPT；记录授权、Responses 限制、Navo 适配边界及尚未实测的账号准入。
+- [公共模型协议层与 ChatGPT 订阅接入方案](86-devlog-model-protocol-design.md)：提取 Chat Completions、新增 Responses、独立订阅认证与 Host 接入；含不透明 replay、Harness 源码对照及四个实施步骤。
 - [DeepSeek Harness 参考分析](01-deepseek-harness-单对话核心与最小-agent-闭环设计.md)
 - [ChatGPT / Codex 式过程 UI 开源参考调研](43-devlog-chatgpt-codex-ui-research.md)：ai-elements、assistant-ui、lobehub、openai/codex 的思考/工具/过程折叠实现对比、许可证与可借鉴机制。
 - [图标库选型调研](46-devlog-icon-library-research.md)：reicon 与 lucide 的许可、体量、绘图一致性实测对比，结论为本阶段继续使用自绘图标。

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createMessageId } from "../../../src/brand/ids.js";
 import { LLMProviderError } from "../../../src/llm/errors.js";
 import { QwenChatCompletionsAdapter } from "../../../src/llm/adapters/qwen.js";
-import { QWEN_SSE_MAX_EVENT_CHARS } from "../../../src/llm/adapters/qwen/sse.js";
+import { SSE_MAX_EVENT_CHARS } from "../../../src/llm/protocols/sse.js";
 import type { GenerateRequest, ModelEvent } from "../../../src/llm/types.js";
 
 describe("QwenChatCompletionsAdapter", () => {
@@ -146,7 +146,7 @@ describe("QwenChatCompletionsAdapter", () => {
   });
 
   it("rejects one unterminated SSE event that exceeds the bound across chunks", async () => {
-    const half = Math.floor(QWEN_SSE_MAX_EVENT_CHARS / 2) + 1;
+    const half = Math.floor(SSE_MAX_EVENT_CHARS / 2) + 1;
     const adapter = new QwenChatCompletionsAdapter({
       baseUrl: "https://model.test/v1",
       fetch: async () => sseResponse([
