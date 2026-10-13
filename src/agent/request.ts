@@ -2,7 +2,7 @@ import type { Context } from "cordis";
 
 import type { MessageId, StepId } from "../brand/ids.js";
 import { collectStream } from "../llm/collect.js";
-import type { FinishReason, GenerateRequest } from "../llm/types.js";
+import type { FinishReason, GenerateRequest, LlmFailure } from "../llm/types.js";
 import { createDeadline } from "./limits.js";
 import type { RetryableAttempt } from "./limits.js";
 import type { ModelCompletion, TurnScope } from "./types.js";
@@ -44,11 +44,13 @@ export async function requestModel(
         failure: publishedContent && finishReason.failure.code !== "stream-incomplete"
           ? {
               code: "stream-output-interrupted",
-              message: "Model stream failed after publishing live content.",
+              message: finishReason.failure.exposeCode === true
+                ? `Model stream failed after publishing live content (${finishReason.failure.code}).`
+                : "Model stream failed after publishing live content.",
               ...(finishReason.failure.status === undefined
                 ? {} : { status: finishReason.failure.status }),
             }
-          : finishReason.failure,
+          : stripInternalFailure(finishReason.failure),
       };
     }
     return {
@@ -58,6 +60,7 @@ export async function requestModel(
           id: messageId,
           role: "assistant",
           content: collected.content,
+          ...(collected.replay === undefined ? {} : { replay: collected.replay }),
         }),
         finishReason,
         ...(collected.usage === undefined ? {} : { usage: collected.usage }),
@@ -66,6 +69,11 @@ export async function requestModel(
   } finally {
     deadline.dispose();
   }
+}
+
+function stripInternalFailure(failure: LlmFailure): LlmFailure {
+  const { exposeCode: _exposeCode, ...publicFailure } = failure;
+  return publicFailure;
 }
 
 function buildRequest(
