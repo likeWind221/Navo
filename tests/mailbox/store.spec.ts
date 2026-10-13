@@ -123,6 +123,7 @@ describe("Project Mailbox domain", () => {
     expect(Object.isFrozen(restored)).toBe(true);
     expect(Object.isFrozen(restored[0])).toBe(true);
 
+    target.storage.write(tx => tx.appendEvents({ domain: "mailbox", ownerId: project.id, projectId: project.id, firstSeq: 1, events: restored }), () => {});
     const next = target.mailbox.postFromMain({
       projectId: project.id,
       nodeId: node.node.id,

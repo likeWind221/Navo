@@ -31,7 +31,7 @@ export async function publishResourceContent(
   try {
     await pipeline(
       createReadStream(source.path),
-      createWriteStream(target, { flags: "wx" }),
+      createWriteStream(target, { flags: "wx", flush: true }),
       ...(signal === undefined ? [] : [{ signal }]),
     );
     signal?.throwIfAborted();

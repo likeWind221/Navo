@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { Service } from "cordis";
 import type { Context } from "cordis";
 
-import { createResourceId } from "../brand/ids.js";
+import { createProjectId, createResourceId } from "../brand/ids.js";
 import type {
   ProjectId,
   ResourceId,
@@ -16,6 +16,7 @@ import {
   requireResourceOwner,
   sameResourceAccess,
 } from "./access.js";
+import { StorageError } from "../storage/errors.js";
 import { ResourceError } from "./errors.js";
 import type { ResourceEvent } from "./events.js";
 import { createResourceEvent } from "./events.js";
@@ -54,11 +55,21 @@ import {
 const emptyResources: readonly ProjectResource[] = Object.freeze([]);
 
 export class ResourceService extends Service {
-  static inject = ["projects", "nodes", "projectWorkspaces"];
-  private readonly store = new ResourceStore(projectId => this.ctx.emit("project/changed", projectId));
+  static inject = ["storage", "projects", "nodes", "projectWorkspaces"];
+  private readonly store = new ResourceStore(this.ctx.storage, projectId => this.ctx.emit("project/changed", projectId));
 
   constructor(ctx: Context) {
     super(ctx, "resources");
+    for (const [ownerId, stored] of ctx.storage.loadEvents("resource")) {
+      try {
+        if (stored.projectId !== ownerId) throw new ResourceError("invalid-history", "Resource Project does not match its storage owner.");
+        const projectId = createProjectId(ownerId);
+        requireResourceProject(ctx, projectId);
+        this.store.restore(projectId, parseResourceHistory(ctx, projectId, stored.events));
+      } catch (error: unknown) {
+        throw new StorageError("invalid-record", `Stored resource history ${ownerId} is invalid.`, { cause: error });
+      }
+    }
   }
 
   async publish(
