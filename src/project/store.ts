@@ -17,7 +17,7 @@ export class ProjectStore extends Service {
 
   constructor(ctx: Context) {
     super(ctx, "projects");
-    for (const [projectId, history] of ctx.storage.loadEvents("project")) {
+    for (const [projectId, history] of ctx.storage.recovery.events.get("project")!) {
       if (history.projectId !== projectId) {
         throw new StorageError("invalid-record", `Stored project history ${projectId} is filed under Project ${history.projectId}.`);
       }

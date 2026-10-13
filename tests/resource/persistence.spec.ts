@@ -1,4 +1,5 @@
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { DatabaseSync } from "node:sqlite";
 import { dirname, join } from "node:path";
 import { Context } from "cordis";
 import { afterEach, expect, it } from "vitest";
@@ -71,6 +72,57 @@ it("keeps metadata when the Workspace is missing", async () => {
   expect(restored.resources.get(projectId, resource.id)).toEqual(resource);
   await expect(restored.resources.resolveEntry(projectId, resource.id)).rejects.toMatchObject({ code: "workspace-unavailable" });
 });
+it("isolates one corrupted Project while restoring another", async () => {
+  const { ctx, path, projectId, nodeId, publish } = await seed();
+  ctx.mailbox.postFromNode({ projectId, nodeId, body: "Broken project" });
+  await publish();
+
+  const otherProject = ctx.projects.create({ name: "Other", goal: "Survive" }).id;
+  const otherNode = ctx.nodes.create({
+    projectId: otherProject,
+    objective: { title: "Other work", description: "Other work", acceptanceCriteria: ["Done"] },
+  }).node.id;
+  const otherRoot = join(dirname(path), "other-workspace");
+  await mkdir(otherRoot);
+  await ctx.projectWorkspaces.create(otherProject, otherRoot);
+  await writeFile(join(otherRoot, "report.md"), "Other result");
+  ctx.mailbox.postFromNode({ projectId: otherProject, nodeId: otherNode, body: "Healthy project" });
+  const otherResource = await ctx.resources.publish({
+    projectId: otherProject,
+    owner: { kind: "node", nodeId: otherNode },
+    sourceRef: "report.md",
+    name: "Other report",
+    description: "Other findings",
+    type: "text/markdown",
+  });
+  await ctx.fiber.dispose();
+
+  const beforeDb = new DatabaseSync(path);
+  const before = beforeDb.prepare(
+    "SELECT payload FROM events WHERE domain = 'resource' AND project_id = ?",
+  ).all(projectId).map(row => String(row.payload));
+  beforeDb.close();
+  const raw = new DatabaseSync(path);
+  try {
+    raw.prepare("UPDATE events SET payload = '{}' WHERE domain = 'resource' AND project_id = ?").run(projectId);
+  } finally {
+    raw.close();
+  }
+
+  const restored = await open(path);
+  expect(restored.projects.get(projectId)).toBeUndefined();
+  expect(restored.projects.get(otherProject)).toBeDefined();
+  expect(restored.mailbox.getHistory(otherProject)).toHaveLength(1);
+  expect(restored.resources.get(otherProject, otherResource.id)).toEqual(otherResource);
+
+  const afterDb = new DatabaseSync(path);
+  const after = afterDb.prepare(
+    "SELECT payload FROM events WHERE domain = 'resource' AND project_id = ?",
+  ).all(projectId).map(row => String(row.payload));
+  afterDb.close();
+  expect(after).toEqual(["{}"]);
+  expect(before).not.toEqual(after);
+});
 it("does not expose failed writes or emit changes and removes unpublished content", async () => {
   const { ctx, path, projectId, nodeId, workspace, publish } = await seed();
   const resource = await publish();
@@ -90,20 +142,22 @@ it("does not expose failed writes or emit changes and removes unpublished conten
   await new Promise(resolve => setTimeout(resolve, 0));
   expect(changed).toEqual([]);
 });
-it.each(["mailbox", "resource"])("rejects invalid stored %s history", async domain => {
+it.each(["mailbox", "resource"])("isolates a Project with invalid stored %s history", async domain => {
   const { ctx, path, projectId, nodeId, publish } = await seed();
   ctx.mailbox.postFromNode({ projectId, nodeId, body: "Done" });
   await publish();
   await ctx.fiber.dispose();
   rawSql(path, `UPDATE events SET payload = '{}' WHERE domain = '${domain}'`);
-  await expect(open(path)).rejects.toMatchObject({ code: "invalid-record" });
+  const restored = await open(path);
+  expect(restored.projects.get(projectId)).toBeUndefined();
 });
 
-it.each(["mailbox", "resource"])("rejects a stored %s sequence gap", async domain => {
+it.each(["mailbox", "resource"])("isolates a Project with a stored %s sequence gap", async domain => {
   const { ctx, path, projectId, nodeId, publish } = await seed();
   ctx.mailbox.postFromNode({ projectId, nodeId, body: "Done" });
   await publish();
   await ctx.fiber.dispose();
   rawSql(path, `UPDATE events SET seq = 2 WHERE domain = '${domain}'`);
-  await expect(open(path)).rejects.toMatchObject({ code: "invalid-record" });
+  const restored = await open(path);
+  expect(restored.projects.get(projectId)).toBeUndefined();
 });

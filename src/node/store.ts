@@ -19,7 +19,7 @@ export class NodeStore extends Service {
 
   constructor(ctx: Context) {
     super(ctx, "nodes");
-    for (const [nodeId, stored] of ctx.storage.loadEvents("node")) {
+    for (const [nodeId, stored] of ctx.storage.recovery.events.get("node")!) {
       try {
         const snapshot = this.restore(createNodeId(nodeId), stored.events as readonly NodeEvent[]);
         if (snapshot.node.projectId !== stored.projectId) {

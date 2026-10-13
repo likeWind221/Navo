@@ -24,11 +24,11 @@ export class RoadmapStore extends Service {
     super(ctx, "roadmaps");
     const nodes = this.ctx.nodes;
     nodes.coordinate(drafts => this.commitNodeAction(nodes, drafts));
-    for (const [projectId, stored] of ctx.storage.loadEvents("roadmap")) {
+    for (const [projectId, stored] of ctx.storage.recovery.events.get("roadmap")!) {
       try {
         if (stored.projectId !== projectId) throw new RoadmapError("invalid-event-stream", `Roadmap is filed under Project ${stored.projectId}.`);
         if (!this.ctx.projects.get(createProjectId(projectId))) throw new RoadmapError("project-unavailable", "Roadmap Project does not exist.");
-        this.restore(createProjectId(projectId), stored.events as readonly RoadmapEvent[]);
+        this.restoreHistory(createProjectId(projectId), stored.events as readonly RoadmapEvent[], false);
       } catch (error: unknown) {
         const reason = error instanceof Error ? error.message : "unknown failure";
         throw new StorageError("invalid-record", `Stored roadmap history ${projectId} is invalid: ${reason}`, { cause: error });
@@ -115,11 +115,15 @@ export class RoadmapStore extends Service {
   }
 
   restore(projectId: ProjectId, events: readonly RoadmapEvent[]): RoadmapSnapshot {
+    return this.restoreHistory(projectId, events, true);
+  }
+
+  private restoreHistory(projectId: ProjectId, events: readonly RoadmapEvent[], emit: boolean): RoadmapSnapshot {
     if (this.snapshots.has(projectId)) throw new RoadmapError("already-exists", "Cannot overwrite an existing roadmap");
     const history = Object.freeze(events.map(freezeRoadmapEvent));
     const snapshot = projectRoadmap(projectId, history, this.ctx.nodes.getByProject(projectId).map(value => value.node));
     if (!snapshot) throw new RoadmapError("invalid-event-stream", "Cannot restore an empty history");
-    this.commitHistory(projectId, history, snapshot);
+    this.commitHistory(projectId, history, snapshot, emit);
     return snapshot;
   }
 
@@ -132,10 +136,10 @@ export class RoadmapStore extends Service {
     });
   }
 
-  private commitHistory(projectId: ProjectId, history: readonly RoadmapEvent[], snapshot: RoadmapSnapshot): void {
+  private commitHistory(projectId: ProjectId, history: readonly RoadmapEvent[], snapshot: RoadmapSnapshot, emit = true): void {
     this.histories.set(projectId, history);
     this.snapshots.set(projectId, snapshot);
-    this.ctx.emit("project/changed", projectId);
+    if (emit) this.ctx.emit("project/changed", projectId);
   }
 
   private commitNodeAction(nodes: NodeStore, drafts: readonly NodeEventDraft[]): void {

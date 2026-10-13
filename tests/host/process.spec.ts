@@ -124,15 +124,18 @@ describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, 
         const [detail] = await collect(client.stream(projectGetMethod, { projectId }));
         const nodeId = detail!.roadmap!.nodes[0]!.nodeId;
         await collect(client.stream(projectTurnMethod, { projectId, requestId: "work", text: "Publish", target: { kind: "node", nodeId } }));
+        const [afterWork] = await collect(client.stream(projectGetMethod, { projectId }));
         const [mailbox] = await collect(client.stream(projectMailboxMethod, { projectId, afterSequence: 0, limit: 100 }));
         const [resources] = await collect(client.stream(projectResourcesMethod, { projectId }));
         expect(mailbox!.messages).toHaveLength(1);
         expect(resources!.resources).toHaveLength(1);
-        return { projectId, mailbox, resources };
+        return { projectId, detail: afterWork, mailbox, resources };
       }, "scripts/host/mock.ts");
       await withRealHost({ NAVO_HOME: home }, async client => {
+        const [detail] = await collect(client.stream(projectGetMethod, { projectId: before.projectId }));
         const [mailbox] = await collect(client.stream(projectMailboxMethod, { projectId: before.projectId, afterSequence: 0, limit: 100 }));
         const [resources] = await collect(client.stream(projectResourcesMethod, { projectId: before.projectId }));
+        expect(detail).toEqual(before.detail);
         expect(mailbox).toEqual(before.mailbox);
         expect(resources).toEqual(before.resources);
         const resource = resources!.resources[0]!;

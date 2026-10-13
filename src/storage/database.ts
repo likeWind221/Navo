@@ -4,16 +4,20 @@ import { Service } from "cordis";
 import type { Context } from "cordis";
 
 import { StorageError } from "./errors.js";
+import { buildRecoveryPlan } from "./recovery.js";
+import type { RecoveryPlan } from "./recovery.js";
 import { openDatabase } from "./schema.js";
 
 export class StorageService extends Service {
   private readonly db: DatabaseSync;
+  readonly recovery: RecoveryPlan;
   private pending: (() => void)[] | undefined;
   private readonly transaction: StorageTransaction;
 
   constructor(ctx: Context, config: StorageConfig) {
     super(ctx, "storage");
     this.db = openDatabase(config.path);
+    this.recovery = buildRecoveryPlan(this.db);
     this.transaction = createTransaction(this.db);
     this.ctx.effect(() => () => {
       if (this.db.isOpen) this.db.close();
