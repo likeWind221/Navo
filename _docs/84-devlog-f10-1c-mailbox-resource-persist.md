@@ -1,6 +1,6 @@
 # 84：F10.1c 消息与资源登记持久保存
 
-> 2026-10-13，分支 `phase10-f10.1c-mailbox-resource-persist`；本机完成，等待 CI。
+> 2026-10-13，分支 `phase10-f10.1c-mailbox-resource-persist`；本机与 [PR #48](https://github.com/likeWind221/Navo/pull/48) CI 通过，等待用户确认合并。
 
 ## 做了什么
 
@@ -23,4 +23,4 @@ Mailbox 消息和 Resource 四类事件进入现有 SQLite events 表，按 Proj
 
 ## 下一步
 
-最终本机 pnpm typecheck 与 pnpm exec vitest run --maxWorkers 2 通过（88 文件，527 项）；扩展配置检查 Mock Host 通过。CI 结果将在 PR 收口时登记；CI 通过后等待用户确认 squash 合并。下一开发步骤为 F10.1d。
+最终本机 pnpm typecheck 与 pnpm exec vitest run --maxWorkers 2 通过（88 文件，527 项）；扩展配置检查 Mock Host 通过。[CI](https://github.com/likeWind221/Navo/actions/runs/38342621059) 的 pnpm typecheck 与默认并发 pnpm test 通过；等待用户确认 squash 合并。下一开发步骤为 F10.1d。
