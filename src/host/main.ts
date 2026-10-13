@@ -1,6 +1,8 @@
 import { agentTurnMethod, agentTurnV2Method, sessionCommandMethod, StreamRpcRouter, StreamRpcServer } from "../../rpc/index.js";
 import { createApp } from "../app.js";
 import { QwenChatCompletionsAdapter } from "../llm/adapters/qwen.js";
+import { OpenAIAdapter } from "../llm/adapters/openai.js";
+import { ChatGPTAuth } from "../llm/auth/chatgpt.js";
 import { createFileEnvironment } from "../tools/builtins/file/path.js";
 import { ExaSearchAdapter } from "../tools/builtins/search/adapters/exa.js";
 import type { ToolsPluginConfig } from "../tools/plugin.js";
@@ -38,7 +40,12 @@ export async function runKernelHost(): Promise<void> {
   });
   const unregister = ctx.llm.registerAdapter(
     config.provider,
-    new QwenChatCompletionsAdapter(config.adapter),
+    config.provider === "qwen" ? new QwenChatCompletionsAdapter(config.adapter)
+      : new OpenAIAdapter({
+          auth: new ChatGPTAuth({ home: config.adapter.home,
+            openBrowser: async () => { throw new Error("Run pnpm chatgpt login before using the Host."); } }),
+          ...(config.adapter.accountId === undefined ? {} : { accountId: config.adapter.accountId }),
+        }),
   );
   const transport = new StdioRpcServerTransport(process.stdin, process.stdout);
   const router = new StreamRpcRouter();

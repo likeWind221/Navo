@@ -214,6 +214,8 @@ describe("Kernel Host trusted configuration", () => {
   it("defaults to thinking mode with a bounded output budget", () => {
     const config = resolveKernelHostConfig({});
 
+    expect(config.provider).toBe("qwen");
+    if (config.provider !== "qwen") throw new Error("Expected Qwen config.");
     expect(config.adapter.enableThinking).toBe(true);
     expect(config.agent.model.maxTokens).toBe(8_192);
     expect(config.agent.toolNames).toEqual(["web_fetch", "read", "shell", "edit", "write"]);
@@ -229,7 +231,8 @@ describe("Kernel Host trusted configuration", () => {
   });
 
   it("validates explicit thinking and output-budget overrides", () => {
-    expect(resolveKernelHostConfig({ LLM_ENABLE_THINKING: "false" }).adapter.enableThinking).toBe(false);
+    expect(resolveKernelHostConfig({ LLM_ENABLE_THINKING: "false" }))
+      .toMatchObject({ adapter: { enableThinking: false } });
     expect(resolveKernelHostConfig({
       LLM_ENABLE_THINKING: "true",
       LLM_MAX_TOKENS: "4096",

@@ -42,6 +42,7 @@ export async function requestModel(
       return {
         kind: "failed",
         failure: publishedContent && finishReason.failure.code !== "stream-incomplete"
+          && !finishReason.failure.code.startsWith("subscription_sharing_")
           ? {
               code: "stream-output-interrupted",
               message: finishReason.failure.exposeCode === true

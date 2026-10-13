@@ -9,6 +9,11 @@ import { createResponsesReplay } from "../../../src/llm/protocols/responses/repl
 import type { GenerateRequest, ModelEvent } from "../../../src/llm/types.js";
 
 describe("Responses protocol", () => {
+  it("includes the description required by a Responses tool namespace", () => {
+    const body = serializeResponsesRequest({ provider: "openai", model: "gpt-6-luna", messages: [],
+      tools: [{ name: "read", parameters: { type: "object" } }] }, { toolNamespace: "navo" });
+    expect(body.tools).toMatchObject([{ type: "namespace", name: "navo", description: "Tools executed locally by Navo." }]);
+  });
   it("keeps reasoning items and function calls in an opaque replay", async () => {
     const events = await collect(translateResponsesSse(sseResponse([
       event({

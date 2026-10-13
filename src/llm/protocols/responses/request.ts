@@ -30,6 +30,7 @@ export function serializeResponsesRequest(
       tools: [{
         type: "namespace",
         name: options.toolNamespace,
+        description: "Tools executed locally by Navo.",
         tools: request.tools.map((tool) => ({
           type: "function",
           name: tool.name,
