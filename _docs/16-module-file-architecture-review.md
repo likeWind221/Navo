@@ -14,7 +14,7 @@
 | src/brand | ids.ts 内聚管理标识，不按 ID 类型拆分 |
 | src/session | types.ts 负责事件协议，store.ts 负责事实提交与投影 |
 | src/agent | runtime/inbox/request/response/result/limits 保留各自流程与状态职责 |
-| src/llm | 公共 adapter/types/service 与 accumulator/collect 分离；adapters/qwen.ts 保留厂商配置与 HTTP 生命周期，组合 protocols/completions/request.ts、stream.ts；protocols/sse.ts 负责解帧与 reader 清理，Mock 独立 |
+| src/llm | 公共 adapter/types/service 与 accumulator/collect 分离；adapters/qwen.ts 保留厂商配置与 HTTP 生命周期；protocols/completions 与 protocols/responses 各自转换请求与事件，共用 protocols/sse.ts 解帧；Responses item/replay 封装原生项状态与回传校验，通用聚合与 Session 保存不透明回传，Mock 独立 |
 | src/host | main.ts 进程入口，config.ts 配置，stdio.ts 传输，turn.ts 处理业务，turn/mock.ts 提供测试场景 |
 | src/node | model/events/projector/store/profile/tools/plugin 保持领域边界；session.ts 拥有 NodeSession 服务 |
 | src/tools | schema.ts 与 service.ts 分别负责参数边界和注册执行，plugin.ts 为组合根；testing.ts 不进入默认生产装配 |

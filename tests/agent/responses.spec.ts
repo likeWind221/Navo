@@ -12,6 +12,53 @@ afterEach(async () => {
 });
 
 describe("Responses protocol AgentRuntime integration", () => {
+  it("keeps reasoning-only assistant history for the next Responses request", async () => {
+    const first = turnInput("responses-reasoning-only");
+    const adapter = new RotatingResponsesAdapter([
+      fixture([
+        responseEvent({ type: "response.output_item.added", output_index: 0,
+          item: { type: "reasoning", id: "rs_only", summary: [], encrypted_content: "sealed" } }),
+        responseEvent({ type: "response.output_item.done", output_index: 0,
+          item: { type: "reasoning", id: "rs_only", summary: [], encrypted_content: "sealed" } }),
+        responseEvent({ type: "response.completed", response: { output: [
+          { type: "reasoning", id: "rs_only", summary: [], encrypted_content: "sealed" },
+        ] } }),
+      ]),
+      fixture([
+        responseEvent({ type: "response.output_item.done", output_index: 0,
+          item: { type: "message", id: "msg_only_next", role: "assistant",
+            phase: "final_answer", content: [{ type: "output_text", text: "done" }] } }),
+        responseEvent({ type: "response.completed", response: { output: [
+          { type: "message", id: "msg_only_next", role: "assistant",
+            phase: "final_answer", content: [{ type: "output_text", text: "done" }] },
+        ] } }),
+      ]),
+    ]);
+    const kit = await createRuntime([]);
+    kit.ctx.llm.registerAdapter("openai", adapter);
+
+    await expect(kit.ctx.agentRuntime.runTurn({
+      ...first,
+      model: { provider: "openai", model: "gpt-test" },
+    })).resolves.toMatchObject({ status: "completed" });
+    const history = kit.ctx.sessions.deriveMessages(first.sessionId);
+    expect(history).toHaveLength(2);
+    expect(history[1]?.content).toHaveLength(0);
+    expect(history[1]?.replay?.items[0]?.payload).toMatchObject({
+      type: "reasoning", encrypted_content: "sealed",
+    });
+
+    const next = turnInput("responses-reasoning-next");
+    await expect(kit.ctx.agentRuntime.runTurn({
+      ...next,
+      sessionId: first.sessionId,
+      model: { provider: "openai", model: "gpt-test" },
+    })).resolves.toMatchObject({ status: "completed" });
+    expect(adapter.requests[1]?.input).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "reasoning", encrypted_content: "sealed" }),
+    ]));
+  });
+
   it("rebuilds the protocol adapter between tool steps and restores native history", async () => {
     const first = fixture([
       responseEvent({

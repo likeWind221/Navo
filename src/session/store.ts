@@ -137,7 +137,8 @@ function eventMessage(event: SessionEvent): Message | undefined {
     case "tool-call-result":
       return event.data.message;
     case "assistant-message":
-      return event.data.message.content.length === 0 ? undefined : event.data.message;
+      return event.data.message.content.length === 0 && event.data.message.replay === undefined
+        ? undefined : event.data.message;
     default:
       return undefined;
   }
