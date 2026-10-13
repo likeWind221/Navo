@@ -3,6 +3,7 @@ import type {
   ContentBlockType,
   FinishReason,
   ModelEvent,
+  ReplayEnvelope,
   ToolCallContentBlock,
 } from "./types.js";
 
@@ -19,6 +20,7 @@ interface PartialContent {
 export class StepAccumulator {
   private readonly partials = new Map<number, PartialContent>();
   private readonly order: number[] = [];
+  private replayEnvelope: ReplayEnvelope | undefined;
 
   push(event: ModelEvent): void {
     switch (event.type) {
@@ -54,29 +56,48 @@ export class StepAccumulator {
         this.open(event.contentIndex, event.contentType).completed = true;
         return;
       case "usage":
+        return;
       case "finished":
+        this.replayEnvelope = event.replay;
         return;
     }
   }
 
+  replay(finishReason?: FinishReason): ReplayEnvelope | undefined {
+    if (this.replayEnvelope === undefined
+      || finishReason?.kind === "error"
+      || finishReason?.kind === "cancelled") return undefined;
+    const included = this.includedContentIndices(finishReason);
+    const indexMap = new Map(included.map((index, position) => [index, position]));
+    const items = this.replayEnvelope.items.flatMap((item) => {
+      if (item.contentIndex === null) return [item];
+      const contentIndex = indexMap.get(item.contentIndex);
+      return contentIndex === undefined ? [] : [{ ...item, contentIndex }];
+    });
+    return { ...this.replayEnvelope, items: Object.freeze(items) };
+  }
+
   content(finishReason?: FinishReason): readonly ContentBlock[] {
     const content: ContentBlock[] = [];
-    for (const contentIndex of this.order) {
+    for (const contentIndex of this.includedContentIndices(finishReason)) {
+      const partial = this.mustGet(contentIndex);
+      content.push(this.complete(partial));
+    }
+    return Object.freeze(content);
+  }
+
+  private includedContentIndices(finishReason?: FinishReason): readonly number[] {
+    return this.order.filter((contentIndex) => {
       const partial = this.mustGet(contentIndex);
       if (partial.contentType === "tool-call"
         && (finishReason?.kind === "content-filter"
           || finishReason?.kind === "error" || finishReason?.kind === "cancelled")) {
-        continue;
+        return false;
       }
       if (finishReason?.kind === "max-tokens"
-        && partial.contentType === "tool-call"
-        && !partial.completed) {
-        continue;
-      }
-      if (!partial.completed && finishReason === undefined) continue;
-      content.push(this.complete(partial));
-    }
-    return Object.freeze(content);
+        && partial.contentType === "tool-call" && !partial.completed) return false;
+      return partial.completed || finishReason !== undefined;
+    });
   }
 
   private open(contentIndex: number, contentType: ContentBlockType): PartialContent {

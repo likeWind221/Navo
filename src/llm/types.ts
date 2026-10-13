@@ -14,7 +14,8 @@ export type ModelEvent =
   | { readonly type: "content-completed"; readonly contentIndex: number;
       readonly contentType: ContentBlockType }
   | { readonly type: "usage"; readonly usage: TokenUsage }
-  | { readonly type: "finished"; readonly reason: FinishReason };
+  | { readonly type: "finished"; readonly reason: FinishReason;
+      readonly replay?: ReplayEnvelope };
 
 export type JsonValue =
   | null
@@ -26,6 +27,21 @@ export type JsonValue =
 
 export interface JsonObject {
   readonly [key: string]: JsonValue;
+}
+
+export interface ReplayEnvelope {
+  readonly version: 1;
+  readonly protocol: string;
+  readonly source: {
+    readonly provider: string;
+    readonly model: string;
+  };
+  readonly items: readonly ReplayItem[];
+}
+
+export interface ReplayItem {
+  readonly contentIndex: number | null;
+  readonly payload: JsonObject;
 }
 
 export type MessageRole = "system" | "user" | "assistant";
@@ -42,6 +58,7 @@ export interface Message {
   readonly id: MessageId;
   readonly role: MessageRole;
   readonly content: readonly MessageContent[];
+  readonly replay?: ReplayEnvelope;
 }
 
 export type UserMessage = Message & { readonly role: "user" };
@@ -122,4 +139,5 @@ export interface LlmFailure {
   readonly message: string;
   readonly status?: number;
   readonly retryAfterMs?: number;
+  readonly exposeCode?: boolean;
 }
