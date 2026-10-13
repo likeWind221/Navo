@@ -112,6 +112,9 @@
 
 ## 研究与自动审查
 
+- [M1.4 Navo 使用订阅模型完成工作](93-devlog-m1-4-openai.md)：Host 配置与 OpenAIAdapter 接入，gpt-6-luna 真实文本、read 续接、取消、重启凭据复用与主动刷新通过；本机通过，CI 待完成。
+- [BUG-009 Responses namespace 必填描述](94-bugfix-bug-009-namespace.md)：真实 HTTP 400 的定位、最小协议补齐及回归边界。
+
 - [ChatGPT 订阅模型接入可行性调研](85-devlog-chatgpt-provider-research.md)：对照 Pi 新旧 OpenAI 接入与官方 Sign in with ChatGPT；记录授权、Responses 限制、Navo 适配边界及尚未实测的账号准入。
 - [公共模型协议层与 ChatGPT 订阅接入方案](86-devlog-model-protocol-design.md)：提取 Chat Completions、新增 Responses、独立订阅认证与 Host 接入；含不透明 replay、Harness 源码对照及四个实施步骤。
 - [M1.3 本机订阅授权与账号模型查询](91-devlog-m1-3-chatgpt-auth.md)：独立 OAuth/OIDC、受保护凭据、轮换刷新与登出互斥、账号模型目录；本机、真实账号专项和最新 CI 通过，PR #52 已合并。

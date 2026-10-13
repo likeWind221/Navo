@@ -20,10 +20,13 @@ export interface KernelHostStorageConfig {
   readonly path: string;
 }
 
-export interface KernelHostConfig {
+export type KernelHostConfig = KernelHostCommonConfig & (
+  | { readonly provider: "qwen"; readonly adapter: QwenChatAdapterConfig }
+  | { readonly provider: "openai"; readonly adapter: { readonly home: string; readonly accountId?: string } }
+);
+
+interface KernelHostCommonConfig {
   readonly storage: KernelHostStorageConfig;
-  readonly provider: "qwen";
-  readonly adapter: QwenChatAdapterConfig;
   readonly agent: AgentTurnHandlerConfig;
   readonly search?: KernelHostSearchConfig;
   readonly file?: KernelHostFileConfig;
@@ -38,15 +41,23 @@ const MAX_OUTPUT_TOKENS = 65_536;
 export function resolveKernelHostConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): KernelHostConfig {
-  const baseUrl = env.LLM_BASE_URL?.trim() || DEFAULT_BASE_URL;
+  const provider = env.LLM_PROVIDER?.trim() ?? "qwen";
+  if (provider !== "qwen" && provider !== "openai") {
+    throw new TypeError("LLM_PROVIDER must be 'qwen' or 'openai'.");
+  }
+  if (provider === "openai") {
+    for (const name of ["LLM_MAX_TOKENS", "LLM_TEMPERATURE", "LLM_ENABLE_THINKING", "LLM_API_KEY", "LLM_BASE_URL"]) {
+      if (env[name] !== undefined) throw new TypeError(`${name} is not supported by the ChatGPT subscription provider.`);
+    }
+    if (!env.LLM_MODEL?.trim()) throw new TypeError("LLM_MODEL is required for the ChatGPT subscription provider.");
+    if (env.LLM_ACCOUNT_ID !== undefined && !env.LLM_ACCOUNT_ID.trim()) {
+      throw new TypeError("LLM_ACCOUNT_ID must be non-empty when provided.");
+    }
+  }
   const model = env.LLM_MODEL?.trim() || DEFAULT_MODEL;
-  const maxTokens = boundedInteger(
-    "LLM_MAX_TOKENS",
-    env.LLM_MAX_TOKENS,
-    DEFAULT_MAX_TOKENS,
-    MAX_OUTPUT_TOKENS,
-  );
-  const enableThinking = optionalBoolean("LLM_ENABLE_THINKING", env.LLM_ENABLE_THINKING, true);
+  const modelConfig = provider === "openai" ? { provider, model } : {
+    provider, model, maxTokens: boundedInteger("LLM_MAX_TOKENS", env.LLM_MAX_TOKENS, DEFAULT_MAX_TOKENS, MAX_OUTPUT_TOKENS),
+  };
   const apiKey = env.LLM_API_KEY;
   if (apiKey !== undefined && (apiKey.length === 0 || /[\r\n]/.test(apiKey))) {
     throw new TypeError("LLM_API_KEY must be non-empty and must not contain newlines.");
@@ -72,14 +83,19 @@ export function resolveKernelHostConfig(
   const storage = Object.freeze({ path: join(home, "navo.db") });
   return Object.freeze({
     storage,
-    provider: "qwen",
-    adapter: Object.freeze({
-      baseUrl,
-      enableThinking,
-      ...(apiKey === undefined ? {} : { apiKey }),
+    ...(provider === "openai" ? {
+      provider,
+      adapter: Object.freeze({ home, ...(env.LLM_ACCOUNT_ID === undefined ? {} : { accountId: env.LLM_ACCOUNT_ID.trim() }) }),
+    } : {
+      provider,
+      adapter: Object.freeze({
+        baseUrl: env.LLM_BASE_URL?.trim() || DEFAULT_BASE_URL,
+        enableThinking: optionalBoolean("LLM_ENABLE_THINKING", env.LLM_ENABLE_THINKING, true),
+        ...(apiKey === undefined ? {} : { apiKey }),
+      }),
     }),
     agent: Object.freeze({
-      model: Object.freeze({ provider: "qwen", model, maxTokens }),
+      model: Object.freeze(modelConfig),
       systemPrompt: "You are Navo, a concise and helpful AI agent.",
       toolNames: Object.freeze([
         ...(search === undefined ? [] : [WEB_SEARCH_TOOL_NAME]),

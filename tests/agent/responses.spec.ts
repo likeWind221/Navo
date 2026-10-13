@@ -207,8 +207,8 @@ describe("Responses protocol AgentRuntime integration", () => {
     })).resolves.toMatchObject({
       status: "failed",
       failure: {
-        code: "stream-output-interrupted",
-        message: expect.stringContaining("subscription_sharing_usage_limit_exceeded"),
+        code: "subscription_sharing_usage_limit_exceeded",
+        message: "usage limit",
       },
     });
   });
