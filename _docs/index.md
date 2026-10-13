@@ -111,6 +111,7 @@
 
 - [ChatGPT 订阅模型接入可行性调研](85-devlog-chatgpt-provider-research.md)：对照 Pi 新旧 OpenAI 接入与官方 Sign in with ChatGPT；记录授权、Responses 限制、Navo 适配边界及尚未实测的账号准入。
 - [公共模型协议层与 ChatGPT 订阅接入方案](86-devlog-model-protocol-design.md)：提取 Chat Completions、新增 Responses、独立订阅认证与 Host 接入；含不透明 replay、Harness 源码对照及四个实施步骤。
+- [M1.3 本机订阅授权与账号模型查询](91-devlog-m1-3-chatgpt-auth.md)：独立 OAuth/OIDC、受保护凭据、轮换刷新与登出互斥、账号模型目录；本机专项与真实账号登录/目录/撤销通过，等待合入验收。
 - [DeepSeek Harness 参考分析](01-deepseek-harness-单对话核心与最小-agent-闭环设计.md)
 - [ChatGPT / Codex 式过程 UI 开源参考调研](43-devlog-chatgpt-codex-ui-research.md)：ai-elements、assistant-ui、lobehub、openai/codex 的思考/工具/过程折叠实现对比、许可证与可借鉴机制。
 - [图标库选型调研](46-devlog-icon-library-research.md)：reicon 与 lucide 的许可、体量、绘图一致性实测对比，结论为本阶段继续使用自绘图标。

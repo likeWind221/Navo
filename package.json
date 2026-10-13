@@ -13,6 +13,7 @@
     "build": "tsc",
     "dev": "tsx src/index.ts",
     "demo": "tsx scripts/demo.ts",
+    "chatgpt": "tsx scripts/chatgpt.ts",
     "host": "tsx src/host/main.ts",
     "host:mock": "tsx scripts/host/mock.ts",
     "typecheck": "tsc --noEmit",
@@ -23,11 +24,14 @@
     "@joplin/turndown-plugin-gfm": "1.0.67",
     "cordis": "4.0.0-rc.9",
     "ipaddr.js": "2.5.0",
+    "jose": "6.2.12",
+    "proper-lockfile": "4.1.2",
     "turndown": "7.2.4",
     "undici": "8.10.0"
   },
   "devDependencies": {
     "@types/node": "24.13.3",
+    "@types/proper-lockfile": "4.1.4",
     "@types/turndown": "5.0.6",
     "tsx": "4.23.12",
     "typescript": "7.0.2",
