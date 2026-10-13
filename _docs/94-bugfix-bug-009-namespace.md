@@ -16,8 +16,8 @@ namespace 增加 description: Tools executed locally by Navo.，协议回归断�
 
 真实文本、read package.json -> 工具回传 -> 回答通过；取消、重启凭据复用、主动刷新后推理通过。本机 pnpm typecheck 和完整 96 文件/585 测试通过。未验证其他账号/模型。
 
-关闭条件为不再因 description 拒绝、真实文本/read 续接通过、协议回归与本机/当前 head CI 通过。真实与本机条件已满足，PR/CI/合入待补；状态见 [Bug 表](bug-plan.md)。
+关闭条件为不再因 description 拒绝、真实文本/read 续接通过、协议回归与本机/当前 head CI 通过。全部关闭条件已满足，PR #54 的 head fb9b179 经必需 verify CI 38375378364 通过并 squash 合入 master 849a126；状态见 [Bug 表](bug-plan.md)。
 
 ## 后续
 
-等待当前 head CI 并记录合入，不扩大协议范围。
+2026-10-13 17:20:52（北京时间），[PR #54](https://github.com/likeWind221/Navo/pull/54) 已合入，BUG-009 关闭；不扩大协议范围。

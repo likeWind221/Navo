@@ -26,8 +26,8 @@ bundled Node 24.19.0；pnpm typecheck 通过。独立脚本检查：pnpm exec ts
 
 刷新使用现有 ChatGPTTokens.refresh 与受保护 Store 事务主动调用官方端点；不篡改过期时间，未等待自然到期。自动临期与并发刷新由 M1.3 离线测试覆盖。只读取 package.json，未执行写工具、Shell 或 GPU 实验；保持账号登录。前端 UI、其他账号/模型、旧 Session 重启恢复未验收。
 
-本机及真实验收通过；PR/当前 head CI/合并记录待补。
+[PR #54](https://github.com/likeWind221/Navo/pull/54) 当前 head fb9b179 的必需 verify 全部通过（[CI 38375378364](https://github.com/likeWind221/Navo/actions/runs/38375378364)，安装、typecheck、test 均成功），于北京时间 2026-10-13 17:20:52 squash 合入 master 849a126。按用户规则直接合并，未再次询问。
 
 ## 下一步
 
-当前 head 必需 CI 成功后按新规则直接 squash 合并，不开始下一 Step。F10 主线仍为 F10.2。
+本步已完成并合入；文档状态单独以 docs 提交收口，不重复运行已通过的代码测试。不开始下一 Step。F10 主线仍为 F10.2。
