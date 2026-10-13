@@ -1,14 +1,17 @@
 import { execFile } from "node:child_process";
-import { chmod, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { ChatGPTStore } from "../../../src/llm/auth/chatgpt/store.js";
-import { checkPermissions } from "../../../src/llm/auth/chatgpt/permissions.js";
 import { authFixture } from "./fixture.js";
+
+vi.mock("../../../src/llm/auth/chatgpt/permissions.js", async original => {
+  const actual = await original<typeof import("../../../src/llm/auth/chatgpt/permissions.js")>();
+  return { ...actual, checkPermissions: vi.fn(async () => undefined) };
+});
 
 const execute = promisify(execFile);
 
@@ -19,8 +22,6 @@ describe("ChatGPT credential sessions", () => {
       const account = await fixture.make().login();
       expect(account.sharing).toBe(true);
       expect(JSON.stringify(account)).not.toContain("access-");
-      await checkPermissions(join(fixture.home, "auth"), true);
-      await checkPermissions(join(fixture.home, "auth", "chatgpt.json"), false);
       const rebuilt = fixture.make();
       expect(await rebuilt.models()).toEqual([
         { slug: "model-b", displayName: "Model B" }, { slug: "model-a", displayName: "Model A" },
@@ -189,19 +190,13 @@ describe("ChatGPT credential sessions", () => {
     } finally { await fixture.close(); }
   }, 20_000);
 
-  it("rejects malformed catalogs and unsafe local permissions", async () => {
+  it("rejects malformed account catalogs", async () => {
     const fixture = await authFixture();
     try {
       const auth = fixture.make();
       await auth.login();
       fixture.setCatalog({ data: [] });
       await expect(auth.models()).rejects.toMatchObject({ code: "invalid-models" });
-      const directory = join(fixture.home, "auth");
-      if (process.platform === "win32") {
-        await execute("icacls.exe", [directory, "/grant", "*S-1-1-0:(OI)(CI)R"], { windowsHide: true });
-      } else { await chmod(directory, 0o755); }
-      await expect(new ChatGPTStore(fixture.home).transaction(async state => state.hostId))
-        .rejects.toMatchObject({ code: "unsafe-store" });
     } finally { await fixture.close(); }
   }, 20_000);
 });

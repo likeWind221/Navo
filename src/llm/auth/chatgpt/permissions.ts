@@ -31,8 +31,9 @@ export async function checkPermissions(path: string, directory: boolean): Promis
     + `foreach ($rule in $acl.Access) { if ($rule.AccessControlType -eq 'Allow') { [Console]::WriteLine($rule.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value) } }`;
   const { stdout } = await execute("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command], { windowsHide: true });
   const [owner, ...allowed] = stdout.trim().split(/\r?\n/);
-  if (owner !== sid || !allowed.includes(sid)
-    || allowed.some(identity => ![sid, "S-1-5-18", "S-1-5-32-544"].includes(identity))) unsafe();
+  const trusted = [sid, "S-1-5-18", "S-1-5-32-544"];
+  if (!owner || !trusted.includes(owner) || !allowed.includes(sid)
+    || allowed.some(identity => !trusted.includes(identity))) unsafe();
 }
 
 function currentSid(): Promise<string> {
