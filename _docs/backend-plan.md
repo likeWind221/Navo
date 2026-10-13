@@ -311,7 +311,7 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Pha
 
 ## 10. 当前下一步
 
-模型接入补充工作 M1.1、M1.2 已于 2026-10-13 经本机完整检查与 CI 后，分别经用户确认 squash 合入 [PR #49](https://github.com/likeWind221/Navo/pull/49)、[PR #51](https://github.com/likeWind221/Navo/pull/51)。M1.3 本机订阅授权与账号模型查询已获用户授权实施，真实登录、模型目录与撤销已通过，等待合入验收，记录见 [91](91-devlog-m1-3-chatgpt-auth.md)；该补充工作不替换 F10 持久化主线。方案见 [86](86-devlog-model-protocol-design.md)，四个步骤及验收标准见第 12 节。
+模型接入补充工作 M1.1–M1.3 已于 2026-10-13 经本机完整检查与 CI 后，分别经用户确认 squash 合入 [PR #49](https://github.com/likeWind221/Navo/pull/49)、[PR #51](https://github.com/likeWind221/Navo/pull/51)、[PR #52](https://github.com/likeWind221/Navo/pull/52)。M1 当前下一步为 M1.4 Navo 使用订阅模型完成工作，待单独确认；该补充工作不替换 F10 持久化主线。方案见 [86](86-devlog-model-protocol-design.md)，四个步骤及验收标准见第 12 节。
 
 Phase 9 已全部完成（2026-10-07）：F9.0–F9.9c 均为 ✅，最后由 [PR #35](https://github.com/likeWind221/Navo/pull/35)、[#36](https://github.com/likeWind221/Navo/pull/36)、[#37](https://github.com/likeWind221/Navo/pull/37) 交付项目公共契约（记录见 [73](73-devlog-f9.9a-project-query.md)、[74](74-devlog-f9.9b-human-control.md)、[75](75-devlog-f9.9c-project-follow.md)）。各 Step 的实现、验证与 PR 经过见第 6 节表格及 [文档索引](index.md) 中对应开发记录。
 
@@ -346,13 +346,13 @@ Node 当前状态约定：新建 locked，解锁后 idle，实际执行时 worki
 
 ## 12. 模型接入补充工作（M1）
 
-用户已选择新 ChatGPT 订阅接入，并要求公共模型协议可供后续厂商复用。M1 不占用 F10 持久化编号；实现与验收设计见 [86](86-devlog-model-protocol-design.md)。M1.1、M1.2 已合并完成，M1.3 已实现且真实账号专项通过、等待合入验收，M1.4 尚未开始。已交付步骤未修改前端或公开 RPC 契约。
+用户已选择新 ChatGPT 订阅接入，并要求公共模型协议可供后续厂商复用。M1 不占用 F10 持久化编号；实现与验收设计见 [86](86-devlog-model-protocol-design.md)。M1.1–M1.3 已合并完成，M1.4 尚未开始。已交付步骤未修改前端或公开 RPC 契约。
 
 | 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
 |---|---|---|---|---|
 | ✅ | M1.1 现有模型接入可复用的协议基础 | Qwen 接入 / 公共模型协议 / 相关测试 | Qwen 继续正常工作，后续 Chat Completions 接入可直接复用消息、工具和流解析能力 | 原 Qwen 请求、事件、thinking、错误和取消断言保持；共享协议测试证明可独立复用；旧路径无运行引用；完整本机检查与 CI 通过 |
 | ✅ | M1.2 新协议下的连续对话与工具往返 | Responses 协议 / 助手消息与会话历史 | 系统能正确理解 Responses 输出，并在下一次请求中带回足够的历史与工具结果 | 离线完整闭环验证正文、reasoning、工具往返、原生回传信息、用量、失败、断流和取消；重建 Adapter 后同一 Session 可续接，不依赖其会话缓存 |
-| 🔄 | M1.3 本机订阅授权与账号模型查询 | 本机认证 / 凭据 / 账号模型目录 | 用户可独立登录 ChatGPT、查看自己的模型、刷新凭据及登出 | 身份与授权验证、回调取消、文件权限、轮换刷新竞态通过；真实账号登录、模型目录与撤销结果明确记录；账号未获准时不标成功 |
+| ✅ | M1.3 本机订阅授权与账号模型查询 | 本机认证 / 凭据 / 账号模型目录 | 用户可独立登录 ChatGPT、查看自己的模型、刷新凭据及登出 | 身份与授权验证、回调取消、文件权限、轮换刷新竞态通过；真实账号登录、模型目录与撤销结果明确记录；账号未获准时不标成功 |
 | ⬜ | M1.4 Navo 使用订阅模型完成工作 | OpenAI 接入 / Host / 集成验收 | 用户可通过配置选择订阅模型完成对话和现有工具闭环 | 真实文本、只读工具续接、取消与重启后凭据复用及刷新通过；Qwen 回归通过；额度失败不自动切换计费；完整本机检查与 CI 通过 |
 
-当前下一步：M1.3 本机认证与专项验收已实现，真实账号登录、目录与撤销通过，等待合入验收，记录见 [91](91-devlog-m1-3-chatgpt-auth.md)。M1.1、M1.2 分别合入 [PR #49](https://github.com/likeWind221/Navo/pull/49)、[PR #51](https://github.com/likeWind221/Navo/pull/51)，记录见 [87](87-devlog-m1-1-protocols.md)、[88](88-devlog-m1-2-responses.md)。Session 的进程重启恢复仍交由 F10.2，前端登录与模型选择另行规划。
+当前下一步：M1.4 Navo 使用订阅模型完成工作，待单独确认范围。M1.1–M1.3 分别合入 [PR #49](https://github.com/likeWind221/Navo/pull/49)、[PR #51](https://github.com/likeWind221/Navo/pull/51)、[PR #52](https://github.com/likeWind221/Navo/pull/52)，记录见 [87](87-devlog-m1-1-protocols.md)、[88](88-devlog-m1-2-responses.md)、[91](91-devlog-m1-3-chatgpt-auth.md)。Session 的进程重启恢复仍交由 F10.2，前端登录与模型选择另行规划。

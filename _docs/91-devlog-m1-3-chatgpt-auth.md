@@ -43,8 +43,10 @@ Harness 源码对照：官方快照 d743267388641bc76f17c45ce8b4c231aed1d32c 的
 
 真实只读 discovery 成功：issuer `https://auth.openai.com`，JWKS `https://auth.openai.com/.well-known/jwks.json`，撤销 `https://auth.openai.com/api/accounts/oauth/revoke`。真实 access token 尚未自然过期；轮换刷新由离线令牌 fixture 与双进程测试证明，本轮未等待真实过期或强制刷新。
 
-未验收边界：生产 OpenAIAdapter、Host provider 选择、前端页面与真实推理留给 M1.4；Session 重启恢复留给 F10.2。代码与账号专项已交付；完成合入验收前保持 M1.3 为 🔄。
+2026-10-13 最新 head 6d30ec4 的 CI verify 通过（[run 38370629423](https://github.com/likeWind221/Navo/actions/runs/38370629423)，1 分 6 秒）。用户明确授权合并后，PR #52 squash 合入 master，提交 deadcaa；远端功能分支已删除。本机完整检查、真实账号专项及合入验收均通过，M1.3 更新为 ✅。代码导读已交付；真实凭据仍保持已登出状态。
+
+未验收边界：生产 OpenAIAdapter、Host provider 选择、前端页面与真实推理留给 M1.4；Session 重启恢复留给 F10.2；真实令牌自然过期后的刷新仍未实测，不把离线刷新验收写成真实账号刷新成功。
 
 ## 下一步
 
-最新 head 的 CI 通过后交付代码导读并等待用户确认合并，再将 M1.3 标为 ✅；下一功能为 M1.4，但需单独授权。研究库已新增并回读确认 M1.3 凭据生命周期决策（想法表 rg5T4x），未覆盖原模型接入决策或项目目标。
+下一功能为 M1.4 Navo 使用订阅模型完成工作，需单独确认；本次授权仅实施与合并 M1.3。研究库已新增并回读确认 M1.3 凭据生命周期决策（想法表 rg5T4x），未覆盖原模型接入决策或项目目标。原目录既存改动保留，独立工作树保留供代码 review。
