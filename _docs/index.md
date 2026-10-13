@@ -55,7 +55,7 @@
 - [F10.1a 项目与工作目录持久保存](81-devlog-f10-1a-project-persist.md)：SQLite 存储模块（通用事件表 + 绑定表、版本与 application_id 校验、延迟 apply 的原子提交）；Project 写穿透与启动恢复；创建时事件与绑定同事务提交；Workspace 丢失时报告不可用；真实 Host 与 Electron 自带 Node 下的重启验收。
 - [F10.1b 节点与 Roadmap 持久保存](83-devlog-f10-1b-roadmap-persist.md)：复用事件表新增 node / roadmap 两类事件；自动解锁提前并入批次，Roadmap 变更与 Node 批次同一事务提交；Node 与 Roadmap 启动恢复；Mock Host 脚本化创建 Roadmap 的真实进程重启验收；退出时执行中的 Node 留给 F10.3 收尾。
 - [F10.1c 消息与资源登记持久保存](84-devlog-f10-1c-mailbox-resource-persist.md)：消息与资源事件同步提交、启动恢复、实体刷盘及真实 Host 重启验收。
-- [F10.1d 损坏隔离与整体重启验收](88-devlog-f10-1d-recovery-isolation.md)：按 Project 预校验并隔离损坏数据，其他 Project 继续恢复；验证五类数据与 Workspace 绑定共同经历真实 Host 重启。
+- [F10.1d 损坏隔离与整体重启验收](89-devlog-f10-1d-recovery-isolation.md)：按 Project 预校验并隔离损坏数据，其他 Project 继续恢复；验证五类数据与 Workspace 绑定共同经历真实 Host 重启。
 
 ## Bug 跟踪与复盘
 

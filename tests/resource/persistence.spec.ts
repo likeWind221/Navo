@@ -6,6 +6,7 @@ import { afterEach, expect, it } from "vitest";
 import { MailboxStore } from "../../src/mailbox/store.js";
 import { NodeStore } from "../../src/node/store.js";
 import { ProjectStore } from "../../src/project/store.js";
+import { RoadmapStore } from "../../src/roadmap/store.js";
 import { ResourceService } from "../../src/resource/service.js";
 import { StorageService } from "../../src/storage/database.js";
 import { ProjectWorkspaceStore } from "../../src/workspace/store.js";
@@ -23,6 +24,7 @@ async function open(path: string) {
   await ctx.plugin(StorageService, { path });
   await ctx.plugin(ProjectStore);
   await ctx.plugin(NodeStore);
+  await ctx.plugin(RoadmapStore);
   await ctx.plugin(ProjectWorkspaceStore);
   await ctx.plugin(MailboxStore);
   await ctx.plugin(ResourceService);
@@ -111,7 +113,17 @@ it("isolates one corrupted Project while restoring another", async () => {
 
   const restored = await open(path);
   expect(restored.projects.get(projectId)).toBeUndefined();
+  expect(restored.nodes.getByProject(projectId)).toEqual([]);
+  expect(restored.roadmaps.get(projectId)).toBeUndefined();
+  await expect(restored.projectWorkspaces.get(projectId)).rejects.toMatchObject({ code: "project-not-found" });
+  expect(restored.mailbox.getHistory(projectId)).toEqual([]);
+  expect(() => restored.resources.listByProject(projectId)).toThrow(expect.objectContaining({ code: "project-unavailable" }));
+  expect(restored.storage.recovery.failures).toEqual(expect.arrayContaining([
+    expect.objectContaining({ projectId, domain: "resource" }),
+  ]));
   expect(restored.projects.get(otherProject)).toBeDefined();
+  expect(restored.nodes.getByProject(otherProject)).toHaveLength(1);
+  expect(restored.roadmaps.get(otherProject)).toBeUndefined();
   expect(restored.mailbox.getHistory(otherProject)).toHaveLength(1);
   expect(restored.resources.get(otherProject, otherResource.id)).toEqual(otherResource);
 
@@ -142,12 +154,22 @@ it("does not expose failed writes or emit changes and removes unpublished conten
   await new Promise(resolve => setTimeout(resolve, 0));
   expect(changed).toEqual([]);
 });
-it.each(["mailbox", "resource"])("isolates a Project with invalid stored %s history", async domain => {
+it.each(["project", "node", "mailbox", "resource"])("isolates a Project with invalid stored %s history", async domain => {
   const { ctx, path, projectId, nodeId, publish } = await seed();
   ctx.mailbox.postFromNode({ projectId, nodeId, body: "Done" });
   await publish();
   await ctx.fiber.dispose();
   rawSql(path, `UPDATE events SET payload = '{}' WHERE domain = '${domain}'`);
+  const restored = await open(path);
+  expect(restored.projects.get(projectId)).toBeUndefined();
+});
+
+it.each(["{", "{}"])("isolates a Project with stored resource payload %s", async payload => {
+  const { ctx, path, projectId, nodeId, publish } = await seed();
+  ctx.mailbox.postFromNode({ projectId, nodeId, body: "Done" });
+  await publish();
+  await ctx.fiber.dispose();
+  rawSql(path, `UPDATE events SET payload = '${payload}' WHERE domain = 'resource'`);
   const restored = await open(path);
   expect(restored.projects.get(projectId)).toBeUndefined();
 });

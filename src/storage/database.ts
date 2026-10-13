@@ -17,11 +17,16 @@ export class StorageService extends Service {
   constructor(ctx: Context, config: StorageConfig) {
     super(ctx, "storage");
     this.db = openDatabase(config.path);
-    this.recovery = buildRecoveryPlan(this.db);
-    this.transaction = createTransaction(this.db);
     this.ctx.effect(() => () => {
       if (this.db.isOpen) this.db.close();
     }, "storage.lifecycle");
+    try {
+      this.recovery = buildRecoveryPlan(this.db);
+      this.transaction = createTransaction(this.db);
+    } catch (error: unknown) {
+      if (this.db.isOpen) this.db.close();
+      throw error;
+    }
   }
 
   write(persist: (tx: StorageTransaction) => void, apply: () => void): void {

@@ -76,6 +76,50 @@ describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, 
     }
   });
 
+  it("keeps a healthy Project usable when another Project has bad JSON", async () => {
+    const base = await mkdtemp(join(tmpdir(), "navo-process-isolation-"));
+    const home = join(base, "home");
+    const badRoot = join(base, "bad-workspace");
+    const healthyRoot = join(base, "healthy-workspace");
+    const nextRoot = join(base, "next-workspace");
+    await mkdir(badRoot);
+    await mkdir(healthyRoot);
+    await mkdir(nextRoot);
+    try {
+      const projects = await withRealHost({ NAVO_HOME: home }, async client => {
+        const [bad] = await collect(client.stream(projectCreateMethod, {
+          name: "Broken project", goal: "Broken", workspaceRoot: badRoot,
+        }));
+        const [healthy] = await collect(client.stream(projectCreateMethod, {
+          name: "Healthy project", goal: "Continue", workspaceRoot: healthyRoot,
+        }));
+        return { badId: bad!.projectId, healthyId: healthy!.projectId };
+      });
+      const db = new DatabaseSync(join(home, "navo.db"));
+      db.prepare("UPDATE events SET payload = '{' WHERE domain = 'project' AND project_id = ?").run(projects.badId);
+      db.close();
+
+      await withRealHost({ NAVO_HOME: home }, async client => {
+        const [list] = await collect(client.stream(projectListMethod, {}));
+        expect(list!.projects.map(project => project.name)).toEqual(["Healthy project"]);
+        const [detail] = await collect(client.stream(projectGetMethod, { projectId: projects.healthyId }));
+        expect(detail!.project.projectId).toBe(projects.healthyId);
+        const [next] = await collect(client.stream(projectCreateMethod, {
+          name: "Next project", goal: "Continue writing", workspaceRoot: nextRoot,
+        }));
+        expect(next!.name).toBe("Next project");
+      });
+
+      const check = new DatabaseSync(join(home, "navo.db"));
+      expect(check.prepare(
+        "SELECT payload FROM events WHERE domain = 'project' AND project_id = ?",
+      ).all(projects.badId).map(row => String(row.payload))).toEqual(["{"]);
+      check.close();
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
   it("restores a Roadmap and Node review results after the Host restarts", async () => {
     const base = await mkdtemp(join(tmpdir(), "navo-process-roadmap-"));
     const home = join(base, "home");

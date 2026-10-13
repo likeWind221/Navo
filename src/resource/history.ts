@@ -1,5 +1,3 @@
-import type { Context } from "cordis";
-
 import {
   createEventId,
   createNodeId,
@@ -28,12 +26,13 @@ import {
 import {
   requireResourceAccessNodes,
   requireResourcePrincipal,
+  type ResourceHistoryContext,
   validateResourceMetadata,
   validateResourcePatch,
 } from "./validation.js";
 
 export function parseResourceHistory(
-  ctx: Context,
+  ctx: ResourceHistoryContext,
   projectId: ProjectId,
   history: readonly unknown[],
 ): readonly ResourceEvent[] {
@@ -58,7 +57,7 @@ export function parseResourceHistory(
 }
 
 function parseResourceEvent(
-  ctx: Context,
+  ctx: ResourceHistoryContext,
   projectId: ProjectId,
   raw: unknown,
   sequence: number,

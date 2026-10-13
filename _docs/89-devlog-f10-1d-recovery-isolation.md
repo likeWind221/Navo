@@ -7,6 +7,8 @@
 - 损坏的 Project 被整体跳过，其他 Project 继续启动；恢复不写数据库、不删除资源文件、不发 `project/changed` 通知。
 - 扩展单元验收：坏的 Mailbox、Resource、Node、Roadmap 序列或内容只隔离所属 Project，并验证同库其他 Project 仍可恢复且坏记录保持原样。
 - 扩展真实 Host 两进程验收：同一场景创建 Project、Workspace、Roadmap、Node、Mailbox 与 Resource，关闭并重新启动后核对完整 Project 详情、消息和资源内容。
+- RecoveryPlan 保留 Project、领域、owner 与原因的内部失败结果；坏 JSON 可按领域隔离，SQL 读取失败仍拒绝启动。
+- 补充 Node 与 Project Main Session 冲突的启动前隔离、末尾 Resource 损坏时六领域无残留，以及真实 Host 中健康 Project 的读取和后续合法操作。
 
 ## 关键决策
 
@@ -21,11 +23,14 @@
 - 原有 `loadEvents` 的严格抛错行为保留给直接 Storage API；应用启动使用容错聚合，确保单 Project 内容损坏不变成全局启动失败。
 - 资源历史除自身投影外还依赖 Project、Node 和跨 Project 的事件 / Resource 身份唯一性，因此恢复计划在 Resource 阶段补做跨域唯一性检查。
 - Node 与 Project 的 Session 所有权冲突在启动前识别，避免恢复到 Store 后才触发全局异常。
+- 恢复阶段的 Resource 校验只依赖 `projects.get` 与 `nodes.get` 的只读接口，因此临时候选状态和正式 Context 共用同一解析器，不构造第二个完整 App。
+- Storage 在构造恢复计划前登记生命周期清理；计划构造失败时主动关闭已打开的数据库连接。
 
 ## 验证结果
 
 - Node 24.20.0 bundled runtime：`tsc --noEmit` 通过。
-- 完整测试：88 个测试文件、528 项通过；重点覆盖 `tests/storage/database.spec.ts`、`tests/project/store.spec.ts`、`tests/roadmap/persistence.spec.ts`、`tests/resource/persistence.spec.ts`、`tests/host/process.spec.ts`。
+- 定向回归：`tests/node/store.spec.ts`、`tests/resource/persistence.spec.ts`、`tests/host/process.spec.ts` 共 3 个文件、32 项通过；覆盖 Node/Main Session 冲突、四类坏 JSON、Resource 末尾失败的六领域无残留、健康 Project 真实重启后继续操作及坏记录原样保留。
+- 全量测试：89 个测试文件、537 项通过。CI 在本次 review 修复后随 PR 更新执行。
 
 ## 下一步
 
