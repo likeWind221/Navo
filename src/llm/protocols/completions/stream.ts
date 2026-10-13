@@ -2,9 +2,14 @@ import { randomUUID } from "node:crypto";
 
 import { createToolCallId } from "../../../brand/ids.js";
 import { LLMProviderError } from "../../errors.js";
+import { readSseData } from "../sse.js";
 import type { ContentBlockType, FinishReason, ModelEvent, TokenUsage } from "../../types.js";
 
-export const QWEN_SSE_MAX_EVENT_CHARS = 1_048_576;
+export interface ChatCompletionsStreamOptions {
+  readonly errorLabel: string;
+  readonly reasoningField?: "reasoning";
+  readonly generatedToolCallIdPrefix: string;
+}
 
 interface OpenContent {
   readonly contentIndex: number;
@@ -16,28 +21,30 @@ interface OpenContent {
   name?: string;
 }
 
-/** Incrementally parse SSE and translate Qwen deltas into canonical model events. */
-export async function* translateQwenSse(
+export async function* translateChatCompletionsSse(
   body: ReadableStream<Uint8Array>,
+  options: ChatCompletionsStreamOptions,
 ): AsyncGenerator<ModelEvent> {
   const contents: OpenContent[] = [];
   let finish: FinishReason | undefined;
   let usage: TokenUsage | undefined;
-  for await (const payload of readSseData(body)) {
+  for await (const payload of readSseData(body, options)) {
     if (payload === "[DONE]") break;
-    const event = parseEvent(payload);
-    usage = event.usage === undefined ? usage : parseUsage(event.usage);
+    const event = parseEvent(payload, options.errorLabel);
+    usage = event.usage === undefined ? usage : parseUsage(event.usage, options.errorLabel);
     const choice = event.choices?.[0];
     if (choice === undefined) continue;
     const delta = choice.delta;
-    if (typeof delta?.reasoning === "string" && delta.reasoning.length > 0) {
+    const reasoning = options.reasoningField === undefined
+      ? undefined : delta?.[options.reasoningField];
+    if (typeof reasoning === "string" && reasoning.length > 0) {
       const content = ensureTextContent(contents, "reasoning");
       if (!content.started) {
         content.started = true;
         yield { type: "content-started", contentIndex: content.contentIndex, contentType: "reasoning" };
       }
       yield { type: "content-delta", contentIndex: content.contentIndex,
-        contentType: "reasoning", delta: delta.reasoning };
+        contentType: "reasoning", delta: reasoning };
     }
     if (typeof delta?.content === "string" && delta.content.length > 0) {
       const content = ensureTextContent(contents, "text");
@@ -48,9 +55,9 @@ export async function* translateQwenSse(
       yield { type: "content-delta", contentIndex: content.contentIndex,
         contentType: "text", delta: delta.content };
     }
-    yield* translateToolCalls(contents, delta?.tool_calls ?? []);
+    yield* translateToolCalls(contents, delta?.tool_calls ?? [], options);
     if (choice.finish_reason !== null && choice.finish_reason !== undefined) {
-      finish = mapFinishReason(choice.finish_reason);
+      finish = mapFinishReason(choice.finish_reason, options.errorLabel);
     }
   }
   if (finish === undefined) return;
@@ -58,7 +65,7 @@ export async function* translateQwenSse(
     if (content.contentType === "tool-call") {
       if (finish.kind === "max-tokens" || finish.kind === "content-filter") continue;
       if (!content.started || !content.name) {
-        throw invalidEvent("Qwen SSE tool call ended without a function name.");
+        throw invalidEvent(options.errorLabel, "tool call ended without a function name.");
       }
     }
     if (!content.started) continue;
@@ -72,26 +79,27 @@ export async function* translateQwenSse(
 function* translateToolCalls(
   contents: OpenContent[],
   calls: readonly OpenAiToolCallDelta[],
+  options: ChatCompletionsStreamOptions,
 ): Generator<ModelEvent> {
   for (const call of calls) {
     if (!Number.isSafeInteger(call.index) || call.index < 0) {
-      throw invalidEvent("Qwen SSE tool call has an invalid index.");
+      throw invalidEvent(options.errorLabel, "tool call has an invalid index.");
     }
     const content = ensureToolContent(contents, call.index);
     if (typeof call.id === "string" && call.id.length > 0) {
       const remoteId = createToolCallId(call.id);
       if (content.remoteId !== undefined && content.remoteId !== remoteId) {
-        throw invalidEvent("Qwen SSE tool call changed id.");
+        throw invalidEvent(options.errorLabel, "tool call changed id.");
       }
       content.remoteId = remoteId;
     }
     if (content.id === undefined) {
-      content.id = content.remoteId ?? createToolCallId(`qwen-generated-${randomUUID()}`);
+      content.id = content.remoteId ?? createToolCallId(`${options.generatedToolCallIdPrefix}-${randomUUID()}`);
     }
     const name = call.function?.name;
     const delta = call.function?.arguments ?? "";
     if (typeof delta !== "string") {
-      throw invalidEvent("Qwen SSE tool arguments delta is invalid.");
+      throw invalidEvent(options.errorLabel, "tool arguments delta is invalid.");
     }
     if (typeof name === "string") content.name = `${content.name ?? ""}${name}`;
     if (!content.started) {
@@ -110,67 +118,7 @@ function* translateToolCalls(
   }
 }
 
-async function* readSseData(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
-  const reader = body.getReader();
-  const decoder = new TextDecoder("utf-8", { fatal: true });
-  let buffer = "";
-  let exhausted = false;
-  try {
-    while (true) {
-      const next = await reader.read();
-      if (next.done) {
-        exhausted = true;
-        buffer += decoder.decode();
-        break;
-      }
-      buffer += decoder.decode(next.value, { stream: true });
-      const split = takeEvents(buffer);
-      buffer = split.rest;
-      assertEventSize(buffer.length);
-      for (const payload of split.payloads) yield payload;
-    }
-    if (buffer.trim().length > 0) {
-      assertEventSize(buffer.length);
-      const payload = eventData(buffer);
-      if (payload.length > 0) yield payload;
-    }
-  } catch (cause: unknown) {
-    if (cause instanceof LLMProviderError) throw cause;
-    throw invalidEvent("Qwen SSE stream is invalid.", cause);
-  } finally {
-    if (!exhausted) await reader.cancel().catch(() => undefined);
-    reader.releaseLock();
-  }
-}
-
-function takeEvents(buffer: string): { readonly payloads: string[]; readonly rest: string } {
-  const payloads: string[] = [];
-  let rest = buffer;
-  while (true) {
-    const match = /\r?\n\r?\n/.exec(rest);
-    if (match === null) return { payloads, rest };
-    assertEventSize(match.index);
-    const raw = rest.slice(0, match.index);
-    rest = rest.slice(match.index + match[0].length);
-    const payload = eventData(raw);
-    if (payload.length > 0) payloads.push(payload);
-  }
-}
-
-function assertEventSize(characters: number): void {
-  if (characters > QWEN_SSE_MAX_EVENT_CHARS) {
-    throw invalidEvent("Qwen SSE event exceeds the size limit.");
-  }
-}
-
-function eventData(raw: string): string {
-  return raw.split(/\r?\n/)
-    .filter((line) => line === "data" || line.startsWith("data:"))
-    .map((line) => line === "data" ? "" : line.slice(5).replace(/^ /, ""))
-    .join("\n");
-}
-
-function parseEvent(payload: string): OpenAiStreamEvent {
+function parseEvent(payload: string, errorLabel: string): OpenAiStreamEvent {
   try {
     const parsed = JSON.parse(payload) as unknown;
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
@@ -178,7 +126,7 @@ function parseEvent(payload: string): OpenAiStreamEvent {
     }
     return parsed as OpenAiStreamEvent;
   } catch (cause: unknown) {
-    throw invalidEvent("Qwen SSE data is not valid JSON.", cause);
+    throw invalidEvent(errorLabel, "data is not valid JSON.", cause);
   }
 }
 
@@ -205,17 +153,17 @@ function ensureToolContent(contents: OpenContent[], remoteIndex: number): OpenCo
   return content;
 }
 
-function mapFinishReason(value: unknown): FinishReason {
+function mapFinishReason(value: unknown, errorLabel: string): FinishReason {
   if (value === "stop") return { kind: "stop" };
   if (value === "tool_calls") return { kind: "tool-calls" };
   if (value === "length") return { kind: "max-tokens" };
   if (value === "content_filter") return { kind: "content-filter" };
-  throw invalidEvent("Qwen SSE finish reason is unsupported.");
+  throw invalidEvent(errorLabel, "finish reason is unsupported.");
 }
 
-function parseUsage(value: OpenAiUsage): TokenUsage {
+function parseUsage(value: OpenAiUsage, errorLabel: string): TokenUsage {
   if (!isCount(value.prompt_tokens) || !isCount(value.completion_tokens)) {
-    throw invalidEvent("Qwen SSE usage is invalid.");
+    throw invalidEvent(errorLabel, "usage is invalid.");
   }
   return {
     inputTokens: value.prompt_tokens,
@@ -230,8 +178,8 @@ function isCount(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) >= 0;
 }
 
-function invalidEvent(message: string, cause?: unknown): LLMProviderError {
-  return new LLMProviderError("TRANSPORT", message, cause === undefined ? {} : { cause });
+function invalidEvent(errorLabel: string, message: string, cause?: unknown): LLMProviderError {
+  return new LLMProviderError("TRANSPORT", `${errorLabel} SSE ${message}`, cause === undefined ? {} : { cause });
 }
 
 interface OpenAiStreamEvent {

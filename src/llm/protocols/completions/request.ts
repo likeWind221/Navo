@@ -6,17 +6,19 @@ import type {
   ToolCallContentBlock,
 } from "../../types.js";
 
-/** Serialize provider-neutral messages and tools to OpenAI Chat Completions. */
-export function serializeQwenRequest(
+export interface ChatCompletionsRequestOptions {
+  readonly reasoningField?: "reasoning_content";
+}
+
+export function serializeChatCompletionsRequest(
   request: GenerateRequest,
-  enableThinking = false,
+  options: ChatCompletionsRequestOptions = {},
 ): Readonly<Record<string, JsonValue>> {
   return {
     model: request.model,
-    messages: request.messages.map(serializeMessage) as JsonValue[],
+    messages: request.messages.map((message) => serializeMessage(message, options)) as JsonValue[],
     stream: true,
     stream_options: { include_usage: true },
-    chat_template_kwargs: { enable_thinking: enableThinking },
     ...(request.tools === undefined || request.tools.length === 0
       ? {} : {
           tools: request.tools.map((tool) => ({
@@ -33,7 +35,10 @@ export function serializeQwenRequest(
   };
 }
 
-function serializeMessage(message: Message): Readonly<Record<string, JsonValue>> {
+function serializeMessage(
+  message: Message,
+  options: ChatCompletionsRequestOptions,
+): Readonly<Record<string, JsonValue>> {
   const result = message.content.find((block) => block.type === "tool-result");
   if (result?.type === "tool-result") {
     return {
@@ -50,8 +55,8 @@ function serializeMessage(message: Message): Readonly<Record<string, JsonValue>>
   return {
     role: message.role,
     content: textContent(message.content),
-    ...(message.role === "assistant" && reasoning.length > 0
-      ? { reasoning_content: reasoning } : {}),
+    ...(message.role === "assistant" && reasoning.length > 0 && options.reasoningField !== undefined
+      ? { [options.reasoningField]: reasoning } : {}),
     ...(calls.length === 0 ? {} : {
       tool_calls: calls.map((call) => ({
         id: call.id,

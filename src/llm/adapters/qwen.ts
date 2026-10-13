@@ -1,7 +1,7 @@
 import { LLMProviderError } from "../errors.js";
 import type { LLMAdapter } from "../adapter.js";
-import { translateQwenSse } from "./qwen/sse.js";
-import { serializeQwenRequest } from "./qwen/request.js";
+import { serializeChatCompletionsRequest } from "../protocols/completions/request.js";
+import { translateChatCompletionsSse } from "../protocols/completions/stream.js";
 import type { GenerateRequest, ModelEvent } from "../types.js";
 
 export interface QwenChatAdapterConfig {
@@ -37,7 +37,10 @@ export class QwenChatCompletionsAdapter implements LLMAdapter {
           ...(this.apiKey === undefined
             ? {} : { authorization: `Bearer ${this.apiKey}` }),
         },
-        body: JSON.stringify(serializeQwenRequest(request, this.enableThinking)),
+        body: JSON.stringify({
+          ...serializeChatCompletionsRequest(request, { reasoningField: "reasoning_content" }),
+          chat_template_kwargs: { enable_thinking: this.enableThinking },
+        }),
         ...(request.signal === undefined ? {} : { signal: request.signal }),
       });
     } catch (cause: unknown) {
@@ -52,7 +55,11 @@ export class QwenChatCompletionsAdapter implements LLMAdapter {
     if (response.body === null) {
       throw new LLMProviderError("EMPTY_RESPONSE", "Qwen API returned no response body.");
     }
-    yield* translateQwenSse(response.body);
+    yield* translateChatCompletionsSse(response.body, {
+      errorLabel: "Qwen",
+      reasoningField: "reasoning",
+      generatedToolCallIdPrefix: "qwen-generated",
+    });
   }
 }
 
