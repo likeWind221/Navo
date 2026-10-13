@@ -1,4 +1,5 @@
 import { Context } from "cordis";
+import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { createNodeId, createProjectId, createSessionId } from "../../src/brand/ids.js";
 import { ProjectStore } from "../../src/project/store.js";
@@ -113,6 +114,30 @@ describe("generic Project Nodes", () => {
     expect(storedRows(path, "node").map(row => row.seq)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(restarted.nodes.skip(id, { confirmedBy: "human", reason: "Skip", reviewedRevision: before.revision }))
       .toMatchObject({ status: "skipped", revision: 7 });
+  });
+
+  it("isolates a Node whose Session collides with the Project Main Session", async () => {
+    const path = await temporaryDatabase(roots, "navo-node-");
+    const { ctx, project, objective } = await kit(path);
+    const id = ctx.nodes.create({ projectId: project.id, objective }).node.id;
+    ctx.nodes.unlock(id, "Ready");
+    ctx.nodes.bindSession(id, createSessionId("work"));
+    await close(ctx);
+
+    const db = new DatabaseSync(path);
+    const row = db.prepare(
+      "SELECT seq, payload FROM events WHERE domain = 'node' AND owner_id = ? ORDER BY seq DESC LIMIT 1",
+    ).get(id);
+    const seq = Number(row!.seq);
+    const event = JSON.parse(String(row!.payload)) as { data: { sessionId: string } };
+    event.data.sessionId = project.mainSessionId;
+    db.prepare("UPDATE events SET payload = ? WHERE domain = 'node' AND owner_id = ? AND seq = ?")
+      .run(JSON.stringify(event), id, seq);
+    db.close();
+
+    const restored = await open(path);
+    expect(restored.projects.get(project.id)).toBeUndefined();
+    expect(restored.nodes.getByProject(project.id)).toEqual([]);
   });
 
   it("leaves a Node unchanged and silent when its event cannot be stored", async () => {

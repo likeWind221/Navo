@@ -76,6 +76,50 @@ describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, 
     }
   });
 
+  it("keeps a healthy Project usable when another Project has bad JSON", async () => {
+    const base = await mkdtemp(join(tmpdir(), "navo-process-isolation-"));
+    const home = join(base, "home");
+    const badRoot = join(base, "bad-workspace");
+    const healthyRoot = join(base, "healthy-workspace");
+    const nextRoot = join(base, "next-workspace");
+    await mkdir(badRoot);
+    await mkdir(healthyRoot);
+    await mkdir(nextRoot);
+    try {
+      const projects = await withRealHost({ NAVO_HOME: home }, async client => {
+        const [bad] = await collect(client.stream(projectCreateMethod, {
+          name: "Broken project", goal: "Broken", workspaceRoot: badRoot,
+        }));
+        const [healthy] = await collect(client.stream(projectCreateMethod, {
+          name: "Healthy project", goal: "Continue", workspaceRoot: healthyRoot,
+        }));
+        return { badId: bad!.projectId, healthyId: healthy!.projectId };
+      });
+      const db = new DatabaseSync(join(home, "navo.db"));
+      db.prepare("UPDATE events SET payload = '{' WHERE domain = 'project' AND project_id = ?").run(projects.badId);
+      db.close();
+
+      await withRealHost({ NAVO_HOME: home }, async client => {
+        const [list] = await collect(client.stream(projectListMethod, {}));
+        expect(list!.projects.map(project => project.name)).toEqual(["Healthy project"]);
+        const [detail] = await collect(client.stream(projectGetMethod, { projectId: projects.healthyId }));
+        expect(detail!.project.projectId).toBe(projects.healthyId);
+        const [next] = await collect(client.stream(projectCreateMethod, {
+          name: "Next project", goal: "Continue writing", workspaceRoot: nextRoot,
+        }));
+        expect(next!.name).toBe("Next project");
+      });
+
+      const check = new DatabaseSync(join(home, "navo.db"));
+      expect(check.prepare(
+        "SELECT payload FROM events WHERE domain = 'project' AND project_id = ?",
+      ).all(projects.badId).map(row => String(row.payload))).toEqual(["{"]);
+      check.close();
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
   it("restores a Roadmap and Node review results after the Host restarts", async () => {
     const base = await mkdtemp(join(tmpdir(), "navo-process-roadmap-"));
     const home = join(base, "home");
@@ -124,15 +168,18 @@ describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, 
         const [detail] = await collect(client.stream(projectGetMethod, { projectId }));
         const nodeId = detail!.roadmap!.nodes[0]!.nodeId;
         await collect(client.stream(projectTurnMethod, { projectId, requestId: "work", text: "Publish", target: { kind: "node", nodeId } }));
+        const [afterWork] = await collect(client.stream(projectGetMethod, { projectId }));
         const [mailbox] = await collect(client.stream(projectMailboxMethod, { projectId, afterSequence: 0, limit: 100 }));
         const [resources] = await collect(client.stream(projectResourcesMethod, { projectId }));
         expect(mailbox!.messages).toHaveLength(1);
         expect(resources!.resources).toHaveLength(1);
-        return { projectId, mailbox, resources };
+        return { projectId, detail: afterWork, mailbox, resources };
       }, "scripts/host/mock.ts");
       await withRealHost({ NAVO_HOME: home }, async client => {
+        const [detail] = await collect(client.stream(projectGetMethod, { projectId: before.projectId }));
         const [mailbox] = await collect(client.stream(projectMailboxMethod, { projectId: before.projectId, afterSequence: 0, limit: 100 }));
         const [resources] = await collect(client.stream(projectResourcesMethod, { projectId: before.projectId }));
+        expect(detail).toEqual(before.detail);
         expect(mailbox).toEqual(before.mailbox);
         expect(resources).toEqual(before.resources);
         const resource = resources!.resources[0]!;

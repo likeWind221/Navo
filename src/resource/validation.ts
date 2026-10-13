@@ -12,6 +12,13 @@ import type {
 } from "./model.js";
 import { validateResourceEntryRef } from "./path.js";
 
+export type ResourceHistoryContext = {
+  readonly projects: Pick<Context["projects"], "get">;
+  readonly nodes: Pick<Context["nodes"], "get">;
+};
+type ResourceNodeContext = Pick<ResourceHistoryContext, "nodes">;
+type ResourceProjectContext = Pick<ResourceHistoryContext, "projects">;
+
 export function validateResourceMetadata(input: {
   readonly name: unknown;
   readonly description: unknown;
@@ -88,7 +95,7 @@ export function effectiveResourceChanges(
 }
 
 export function requireResourcePrincipal(
-  ctx: Context,
+  ctx: ResourceNodeContext,
   projectId: ProjectId,
   principal: ResourcePrincipal,
   code: "node-unavailable" | "invalid-history" | "invalid-access" = "node-unavailable",
@@ -98,7 +105,7 @@ export function requireResourcePrincipal(
 }
 
 export function requireResourceWorkNode(
-  ctx: Context,
+  ctx: ResourceNodeContext,
   projectId: ProjectId,
   nodeId: NodeId,
   code: "node-unavailable" | "invalid-history" | "invalid-access" = "node-unavailable",
@@ -120,7 +127,7 @@ export function requireResourceWorkNode(
 }
 
 export function requireResourceAccessNodes(
-  ctx: Context,
+  ctx: ResourceNodeContext,
   projectId: ProjectId,
   access: ResourceAccess,
   code: "invalid-access" | "invalid-history" = "invalid-access",
@@ -146,7 +153,7 @@ function requireResourceText(value: unknown, field: string): string {
 }
 
 export function requireResourceProject(
-  ctx: Context,
+  ctx: ResourceProjectContext,
   projectId: ProjectId,
 ): void {
   if (ctx.projects.get(projectId) !== undefined) return;
@@ -157,7 +164,7 @@ export function requireResourceProject(
 }
 
 export function requireActiveResourceProject(
-  ctx: Context,
+  ctx: ResourceProjectContext,
   projectId: ProjectId,
 ): void {
   if (ctx.projects.get(projectId)?.status === "active") return;

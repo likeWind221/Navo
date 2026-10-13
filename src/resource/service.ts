@@ -60,7 +60,7 @@ export class ResourceService extends Service {
 
   constructor(ctx: Context) {
     super(ctx, "resources");
-    for (const [ownerId, stored] of ctx.storage.loadEvents("resource")) {
+    for (const [ownerId, stored] of ctx.storage.recovery.events.get("resource")!) {
       try {
         if (stored.projectId !== ownerId) throw new ResourceError("invalid-history", "Resource Project does not match its storage owner.");
         const projectId = createProjectId(ownerId);

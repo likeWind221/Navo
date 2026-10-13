@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { Service } from "cordis";
 import type { Context } from "cordis";
-import { createMessageId, createNodeId, createProjectId } from "../brand/ids.js";
+import { createMessageId, createProjectId } from "../brand/ids.js";
 import type { NodeId, ProjectId } from "../brand/ids.js";
 import { StorageError } from "../storage/errors.js";
 import { MailboxError } from "./errors.js";
+import { parseMailboxHistory } from "./history.js";
 import type {
   MailboxParticipant,
   PostFromMainInput,
@@ -21,7 +22,7 @@ export class MailboxStore extends Service {
 
   constructor(ctx: Context) {
     super(ctx, "mailbox");
-    for (const [projectId, stored] of ctx.storage.loadEvents("mailbox")) {
+    for (const [projectId, stored] of ctx.storage.recovery.events.get("mailbox")!) {
       try {
         if (stored.projectId !== projectId) throw new MailboxError("invalid-history", "Mailbox Project does not match its storage owner.");
         this.restore(createProjectId(projectId), stored.events);
@@ -65,15 +66,9 @@ export class MailboxStore extends Service {
       throw new MailboxError("project-unavailable", "Mailbox restore requires an existing Project.");
     }
 
-    const seenIds = new Set<string>();
-    const restored = history.map((raw, index) => {
-      const message = this.parseMessage(projectId, raw, index + 1);
-      if (seenIds.has(message.id)) {
-        throw new MailboxError("invalid-history", "Mailbox history contains a duplicate message id.");
-      }
-      seenIds.add(message.id);
-      return message;
-    });
+    const restored = parseMailboxHistory(projectId, history, this.ctx.projects, new Map(
+      this.ctx.nodes.getByProject(projectId).map(node => [node.node.id, node]),
+    ));
 
     const frozen = Object.freeze(restored);
     this.histories.set(projectId, frozen);
@@ -107,53 +102,6 @@ export class MailboxStore extends Service {
       this.ctx.emit("project/changed", projectId);
     });
     return message;
-  }
-
-  private parseMessage(projectId: ProjectId, raw: unknown, expectedSequence: number): ProjectMessage {
-    if (!raw || typeof raw !== "object") {
-      throw new MailboxError("invalid-history", "Mailbox history contains an invalid message.");
-    }
-
-    const value = raw as Record<string, unknown>;
-    if (
-      value.version !== 1
-      || typeof value.id !== "string"
-      || value.projectId !== projectId
-      || value.sequence !== expectedSequence
-      || typeof value.timestamp !== "string"
-      || Number.isNaN(Date.parse(value.timestamp))
-      || typeof value.body !== "string"
-    ) {
-      throw new MailboxError("invalid-history", "Mailbox history contains an invalid message envelope.");
-    }
-
-    this.requireBody(value.body);
-    const sender = this.parseParticipant(value.sender);
-    const recipient = this.parseParticipant(value.recipient);
-    this.requireRoute(projectId, sender, recipient);
-
-    return this.freezeMessage({
-      version: 1,
-      id: createMessageId(value.id),
-      projectId,
-      sequence: expectedSequence,
-      timestamp: value.timestamp,
-      sender,
-      recipient,
-      body: value.body,
-    });
-  }
-
-  private parseParticipant(value: unknown): MailboxParticipant {
-    if (!value || typeof value !== "object") {
-      throw new MailboxError("invalid-history", "Mailbox participant is invalid.");
-    }
-    const participant = value as Record<string, unknown>;
-    if (participant.kind === "main") return Object.freeze({ kind: "main" });
-    if (participant.kind === "node" && typeof participant.nodeId === "string") {
-      return Object.freeze({ kind: "node", nodeId: createNodeId(participant.nodeId) });
-    }
-    throw new MailboxError("invalid-history", "Mailbox participant is invalid.");
   }
 
   private requireRoute(

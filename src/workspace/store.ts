@@ -37,7 +37,7 @@ export class ProjectWorkspaceStore extends Service {
 
   constructor(ctx: Context) {
     super(ctx, "projectWorkspaces");
-    for (const binding of ctx.storage.loadWorkspaceBindings()) {
+    for (const binding of ctx.storage.recovery.workspaceBindings) {
       const projectId = createProjectId(binding.projectId);
       if (ctx.projects.get(projectId) === undefined) {
         throw new StorageError("invalid-record", `Stored Workspace binding references missing Project ${projectId}.`);

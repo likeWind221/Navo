@@ -175,19 +175,15 @@ describe("Roadmap and Node persistence", () => {
     expect(seen.nodeEvents).toEqual([]);
   });
 
-  it("refuses to start when a stored Roadmap or Node history is invalid", async () => {
+  it("isolates a Project when a stored Roadmap or Node history is invalid", async () => {
     const filed = await seeded();
     await close(filed.ctx);
     rawSql(filed.path, `UPDATE events SET project_id = 'other' WHERE domain = 'node' AND owner_id = '${filed.c}'`);
-    await expect(open(filed.path)).rejects.toMatchObject({
-      name: "StorageError", code: "invalid-record", message: expect.stringContaining(`node history ${filed.c}`),
-    });
+    expect((await open(filed.path)).projects.list()).toEqual([]);
 
     const missing = await seeded();
     await close(missing.ctx);
     rawSql(missing.path, `DELETE FROM events WHERE domain = 'node' AND owner_id = '${missing.b}'`);
-    await expect(open(missing.path)).rejects.toMatchObject({
-      name: "StorageError", code: "invalid-record", message: expect.stringContaining(`roadmap history ${missing.projectId}`),
-    });
+    expect((await open(missing.path)).projects.list()).toEqual([]);
   });
 });
