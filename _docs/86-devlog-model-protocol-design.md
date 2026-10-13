@@ -1,6 +1,6 @@
 # 公共模型协议层与 ChatGPT 订阅接入方案
 
-日期：2026-10-13。状态：M1.1、M1.2 分别经 PR #49、#51 合并完成。用户已选择新 ChatGPT 订阅线路，并要求建立可供后续厂商复用的公共协议层；下一步为 M1.3，M1.3–M1.4 尚未开始，后续逐步确认。
+日期：2026-10-13。状态：M1.1、M1.2 分别经 PR #49、#51 合并完成；M1.3 已获授权实施，真实账号登录、模型目录与撤销通过，等待合入验收，记录见 [91](91-devlog-m1-3-chatgpt-auth.md)。用户已选择新 ChatGPT 订阅线路，并要求建立可供后续厂商复用的公共协议层；M1.4 尚未开始。
 
 ## 做了什么
 
@@ -159,14 +159,14 @@ M1.2 不声称已经完成真实 OpenAI 接入，M1.3 不声称已可执行 Navo
 
 ## 坑与发现
 
-- 当前 package.json 的 license 是 UNLICENSED、private 是 true；GitHub 仓库公开不等同已有开源许可。package private 控制 npm 发布，与 GitHub 可见性不同。官方新线路面向开源伙伴和选定私有客户端，Navo/账号的实际准入必须验证；不擅自修改许可证、不冒用 Pi 客户端、不借用既有 Codex token。
+- 当前 package.json 的 license 是 UNLICENSED、private 是 true；GitHub 仓库公开不等同已有开源许可。package private 控制 npm 发布，与 GitHub 可见性不同。当前官方说明也支持本机个人项目，不能据许可证字段断言本机接入被拒；M1.3 已验证本次账号准入。不修改许可证、不冒用 Pi 客户端、不借用既有 Codex token。
 - 当前 Agent 把流中已展示内容后的失败概括为 stream-output-interrupted；订阅额度错误需要在这条实际路径保留可解释信息，同时不能破坏禁止自动重放已展示内容的规则。
 - 后端内部 replay 必须与 Session 消息一起传递；将其放进全局 Map、Adapter 私有缓存或普通 reasoning 文本都不能证明多轮历史正确。
 - 通用 SSE 解帧只承担字节与 framing，不承载两种协议的完成判据和工具状态机；两种协议各自解析其 payload。
 
 ## 下一步与范围边界
 
-M1.1、M1.2 已合入 master，四个补充步骤已纳入 backend-plan.md。M1.2 由开发与只读审查子 Agent 交付，主 Agent 串行验证、记录与收口；最终经用户确认合入 PR #51（c27dd34）。当前下一步为 M1.3 本机订阅授权与账号模型查询，待确认实施范围；F10 持久化主线不被替换，M1.3–M1.4 不提前实现。
+M1.1、M1.2 已合入 master，四个补充步骤已纳入 backend-plan.md。M1.2 最终经用户确认合入 PR #51（c27dd34）。M1.3 已获授权实施，真实账号验收通过，等待合入验收；F10 持久化主线不被替换，M1.4 不提前实现。
 
 本轮方案不包含 OpenAI API key 计费、旧 Codex backend-api、其他新厂商、通用配置平台、运行中切换模型、跨模型 replay 迁移、图像/音频/文件上传、自动 fallback、Pi/Codex Agent Loop、Session 持久化或新的前端设置 UI。前端登录/模型选择若后续需要，先分别规划后端公共契约与前端消费。
 
