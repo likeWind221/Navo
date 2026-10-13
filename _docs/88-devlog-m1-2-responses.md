@@ -42,6 +42,6 @@ Harness 参考沿用已核对的官方快照 d743267388641bc76f17c45ce8b4c231aed
 
 ## 下一步
 
-M1.2 已推送 [PR #51](https://github.com/likeWind221/Navo/pull/51)，实现提交为 9546c78、reasoning-only 修订与本机验收提交为 d174109。检查最新 head 的 CI 后，再按用户授权与项目规则合并。M1.2 保持 🔄 至合并收口，M1.3/M1.4 不提前实现。下一功能为本机订阅授权与账号模型查询，需单独确认范围。
+2026-10-13 用户明确授权合并后，[PR #51](https://github.com/likeWind221/Navo/pull/51) 在最新 head 941a49c 的 CI verify 成功（56 秒）后 squash 合入，master 提交为 c27dd34。M1.2 更新为 ✅；下一功能为 M1.3 本机订阅授权与账号模型查询，需单独确认范围，M1.3/M1.4 不提前实现。
 
-交接：当前授权仅 M1.2；文件、已完成能力与验证见本记录。Responses 已有公共 codec 与消息传递，但生产 OpenAIAdapter、OAuth、Host 选择和前端尚未落实；主 Agent 最终回复交付代码导读。
+M1.2 收口交接：该步授权仅 M1.2，文件与验证见本记录；代码导读已交付。Responses 已有公共 codec 与消息传递，但生产 OpenAIAdapter、OAuth、Host 选择和前端尚未落实。

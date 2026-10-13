@@ -28,7 +28,7 @@
 - [Exa Search 接入真实 Host](37-devlog-exa-host-wiring.md)：Host 按环境密钥装配 Exa adapter、向 turn 传递 `web_search` 白名单，并补充启动脱敏与配置测试。
 - [F3.7：思考内容修正](38-devlog-f3-7-reasoning.md)：Host 默认启用 thinking，Qwen Adapter 对齐真实 reasoning 字段，记录模型冒烟与展示复验边界。
 - [M1.1：公共 Chat Completions 协议基础](87-devlog-m1-1-protocols.md)：Qwen 厂商配置与公共请求/流转换分离，共享 SSE 解帧；保留原行为并验证协议独立复用。
-- [M1.2：Responses 连续对话与工具往返](88-devlog-m1-2-responses.md)：公共 Responses 请求与流转换、原生历史回传及离线 Session/工具闭环；本机验证通过，待 PR 收口。
+- [M1.2：Responses 连续对话与工具往返](88-devlog-m1-2-responses.md)：公共 Responses 请求与流转换、原生历史回传及离线 Session/工具闭环；本机、CI 通过，PR #51 已合并。
 
 ## Phase 9 记录
 
