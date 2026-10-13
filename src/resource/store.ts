@@ -1,4 +1,5 @@
 import type { ProjectId, ResourceId } from "../brand/ids.js";
+import type { StorageService } from "../storage/database.js";
 import { ResourceError } from "./errors.js";
 import type { ResourceEvent } from "./events.js";
 import { freezeResourceEvent } from "./events.js";
@@ -11,7 +12,10 @@ const emptyHistory: readonly ResourceEvent[] = Object.freeze([]);
 const emptyStates: readonly ResourceState[] = Object.freeze([]);
 
 export class ResourceStore {
-  constructor(private readonly onAppend: (projectId: ProjectId) => void) {}
+  constructor(
+    private readonly storage: StorageService,
+    private readonly onAppend: (projectId: ProjectId) => void,
+  ) {}
 
   private readonly histories = new Map<ProjectId, readonly ResourceEvent[]>();
   private readonly states = new Map<ResourceId, ResourceState>();
@@ -57,14 +61,18 @@ export class ResourceStore {
 
     const frozen = freezeResourceEvent(event);
     const state = projectResourceEvent(this.states.get(event.resourceId), frozen);
-    this.histories.set(event.projectId, Object.freeze([...history, frozen]));
-    this.states.set(event.resourceId, state);
-    this.eventIds.add(frozen.id);
-    if (frozen.type === "resource-created") {
-      const order = this.orders.get(event.projectId) ?? Object.freeze([]);
-      this.orders.set(event.projectId, Object.freeze([...order, event.resourceId]));
-    }
-    this.onAppend(event.projectId);
+    this.storage.write(tx => {
+      tx.appendEvents({ domain: "resource", ownerId: event.projectId, projectId: event.projectId, firstSeq: event.sequence, events: [frozen] });
+    }, () => {
+      this.histories.set(event.projectId, Object.freeze([...history, frozen]));
+      this.states.set(event.resourceId, state);
+      this.eventIds.add(frozen.id);
+      if (frozen.type === "resource-created") {
+        const order = this.orders.get(event.projectId) ?? Object.freeze([]);
+        this.orders.set(event.projectId, Object.freeze([...order, event.resourceId]));
+      }
+      this.onAppend(event.projectId);
+    });
     return state;
   }
 

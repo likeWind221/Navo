@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -12,6 +12,8 @@ import {
   projectCreateMethod,
   projectGetMethod,
   projectListMethod,
+  projectMailboxMethod,
+  projectResourcesMethod,
   projectNodeReviewMethod,
   projectTurnMethod,
   sessionCommandMethod,
@@ -103,6 +105,39 @@ describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, 
         await collect(client.stream(projectGetMethod, { projectId: before.project.projectId }))
       )[0]!, "scripts/host/mock.ts");
       expect(after).toEqual(before);
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
+  it("restores messages and readable Resources after a real Host restart", async () => {
+    const base = await mkdtemp(join(tmpdir(), "navo-process-handoff-"));
+    const home = join(base, "home");
+    const root = join(base, "workspace");
+    await mkdir(root);
+    await writeFile(join(root, "report.md"), "Persistent findings");
+    try {
+      const before = await withRealHost({ NAVO_HOME: home, NAVO_MOCK_LLM_MODE: "handoff" }, async client => {
+        const [created] = await collect(client.stream(projectCreateMethod, { name: "Handoff", goal: "Persist findings", workspaceRoot: root }));
+        const projectId = created!.projectId;
+        await collect(client.stream(projectTurnMethod, { projectId, requestId: "plan", text: "Plan", target: { kind: "main" } }));
+        const [detail] = await collect(client.stream(projectGetMethod, { projectId }));
+        const nodeId = detail!.roadmap!.nodes[0]!.nodeId;
+        await collect(client.stream(projectTurnMethod, { projectId, requestId: "work", text: "Publish", target: { kind: "node", nodeId } }));
+        const [mailbox] = await collect(client.stream(projectMailboxMethod, { projectId, afterSequence: 0, limit: 100 }));
+        const [resources] = await collect(client.stream(projectResourcesMethod, { projectId }));
+        expect(mailbox!.messages).toHaveLength(1);
+        expect(resources!.resources).toHaveLength(1);
+        return { projectId, mailbox, resources };
+      }, "scripts/host/mock.ts");
+      await withRealHost({ NAVO_HOME: home }, async client => {
+        const [mailbox] = await collect(client.stream(projectMailboxMethod, { projectId: before.projectId, afterSequence: 0, limit: 100 }));
+        const [resources] = await collect(client.stream(projectResourcesMethod, { projectId: before.projectId }));
+        expect(mailbox).toEqual(before.mailbox);
+        expect(resources).toEqual(before.resources);
+        const resource = resources!.resources[0]!;
+        expect(await readFile(join(root, ".navo", "assets", resource.resourceId, resource.entryRef), "utf8")).toBe("Persistent findings");
+      });
     } finally {
       await rm(base, { recursive: true, force: true });
     }

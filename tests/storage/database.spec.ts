@@ -47,6 +47,15 @@ function raw(path: string, statement: string): void {
 }
 
 describe("StorageService", () => {
+  it.each(["mailbox", "resource"] as const)("reopens contiguous %s events", async domain => {
+    const path = await databasePath();
+    const first = await open(path);
+    first.storage.write(tx => tx.appendEvents({ domain, ownerId: "p1", projectId: "p1", firstSeq: 1, events: [{ sequence: 1 }, { sequence: 2 }] }), () => {});
+    await close(first);
+    const second = await open(path);
+    expect(second.storage.loadEvents(domain).get("p1")?.events).toEqual([{ sequence: 1 }, { sequence: 2 }]);
+  });
+
   it("initializes a new database and reads committed events after reopening", async () => {
     const path = await databasePath();
     const first = await open(path);

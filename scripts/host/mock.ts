@@ -72,6 +72,15 @@ function createMockLlmAdapter(env: NodeJS.ProcessEnv): MockLLMAdapter {
       { kind: "handler", handle: () => completedEvents() },
     ]);
   }
+  if (mode === "handoff") {
+    return new MockLLMAdapter([
+      { kind: "events", events: createRoadmapEvents() },
+      { kind: "events", events: completedEvents() },
+      { kind: "events", events: toolEvents("register_resource", { path: "report.md", name: "Report", description: "Findings", type: "text/markdown" }) },
+      { kind: "events", events: toolEvents("send_to_main", { message: "Report ready" }) },
+      { kind: "handler", handle: () => completedEvents() },
+    ]);
+  }
   if (mode === "hang") {
     return new MockLLMAdapter([{
       kind: "hang",
@@ -115,6 +124,16 @@ function createRoadmapEvents(): readonly ModelEvent[] {
       type: "content-delta", contentIndex: 0, contentType: "tool-call",
       toolCallId, toolNameDelta: "create_roadmap", delta: args,
     },
+    { type: "content-completed", contentIndex: 0, contentType: "tool-call" },
+    { type: "finished", reason: { kind: "tool-calls" } },
+  ];
+}
+
+function toolEvents(name: string, args: Record<string, string>): readonly ModelEvent[] {
+  const toolCallId = createToolCallId(`mock-${name}`);
+  return [
+    { type: "content-started", contentIndex: 0, contentType: "tool-call", toolCallId },
+    { type: "content-delta", contentIndex: 0, contentType: "tool-call", toolCallId, toolNameDelta: name, delta: JSON.stringify(args) },
     { type: "content-completed", contentIndex: 0, contentType: "tool-call" },
     { type: "finished", reason: { kind: "tool-calls" } },
   ];

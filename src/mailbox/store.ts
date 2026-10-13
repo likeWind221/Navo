@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { Service } from "cordis";
 import type { Context } from "cordis";
-import { createMessageId, createNodeId } from "../brand/ids.js";
+import { createMessageId, createNodeId, createProjectId } from "../brand/ids.js";
 import type { NodeId, ProjectId } from "../brand/ids.js";
+import { StorageError } from "../storage/errors.js";
 import { MailboxError } from "./errors.js";
 import type {
   MailboxParticipant,
@@ -14,12 +15,20 @@ import type {
 const emptyHistory: readonly ProjectMessage[] = Object.freeze([]);
 
 export class MailboxStore extends Service {
-  static inject = ["projects", "nodes"];
+  static inject = ["storage", "projects", "nodes"];
 
   private readonly histories = new Map<ProjectId, readonly ProjectMessage[]>();
 
   constructor(ctx: Context) {
     super(ctx, "mailbox");
+    for (const [projectId, stored] of ctx.storage.loadEvents("mailbox")) {
+      try {
+        if (stored.projectId !== projectId) throw new MailboxError("invalid-history", "Mailbox Project does not match its storage owner.");
+        this.restore(createProjectId(projectId), stored.events);
+      } catch (error: unknown) {
+        throw new StorageError("invalid-record", `Stored mailbox history ${projectId} is invalid.`, { cause: error });
+      }
+    }
   }
 
   getHistory(projectId: ProjectId): readonly ProjectMessage[] {
@@ -91,8 +100,12 @@ export class MailboxStore extends Service {
       recipient,
       body,
     });
-    this.histories.set(projectId, Object.freeze([...history, message]));
-    this.ctx.emit("project/changed", projectId);
+    this.ctx.storage.write(tx => {
+      tx.appendEvents({ domain: "mailbox", ownerId: projectId, projectId, firstSeq: message.sequence, events: [message] });
+    }, () => {
+      this.histories.set(projectId, Object.freeze([...history, message]));
+      this.ctx.emit("project/changed", projectId);
+    });
     return message;
   }
 
