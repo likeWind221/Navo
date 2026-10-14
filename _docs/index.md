@@ -112,7 +112,7 @@
 
 ## 研究与自动审查
 
-- [F10.3 中断处理](98-devlog-f10-3-interruption.md)：启动恢复时确定性收口普通/Main/Node 未闭合 Turn，保守补齐工具结果，并与 working Node 的 work-ended 在同一事务提交；本机完整验证与真实 Host 终止 / 重启验收通过，当前等待 PR head CI。
+- [F10.3 中断处理](98-devlog-f10-3-interruption.md)：启动恢复时确定性收口普通/Main/Node 未闭合 Turn，保守补齐工具结果，并与 working Node 的 work-ended 在同一事务提交；本机完整验证、真实 Host 终止 / 重启验收与代码 head CI 通过，交付见 PR #58。
 
 - [F10.2a 普通会话保存与重启续接](97-devlog-f10-2a-session.md)：通用会话写穿透、v1 数据保留升级、普通/Project 两类损坏隔离与跨进程续接；本机完整验证与代码 head CI 通过，最终提交按当前 head CI 门禁收口。
 

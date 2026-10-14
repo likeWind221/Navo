@@ -1,6 +1,6 @@
 # 98：F10.3 中断处理
 
-> 2026-10-14。生产实现与本机完整验证已完成；当前等待 PR head CI，合并后再将本记录与计划状态收口为完成。
+> 2026-10-14。生产实现、本机完整验证、真实 Host 终止 / 重启验收及代码 head CI 已完成；交付见 [PR #58](https://github.com/likeWind221/Navo/pull/58)。
 
 ## 做了什么
 
@@ -40,10 +40,11 @@ durable Session / Node histories
 
 - `pnpm typecheck`：通过。
 - 专项：`pnpm exec vitest run tests/session/repair.spec.ts tests/session/persistence.spec.ts tests/storage/database.spec.ts tests/host/process.spec.ts`，4 个文件、46 项通过。
-- 完整：`pnpm test`，102 个文件、641 项通过；执行环境 Node 22.23.1，仓库声明 Node >=24 因而输出 engine warning，SQLite 相关测试仍全部通过；当前 PR head CI 将在仓库约定的 Node 24 环境再次执行完整检查。
+- 完整：`pnpm test`，102 个文件、641 项通过；本地执行环境 Node 22.23.1，仓库声明 Node >=24 因而输出 engine warning，SQLite 相关测试仍全部通过。
+- [PR #58](https://github.com/likeWind221/Navo/pull/58) 代码 head `750ddf0` 的必需 CI `verify` 成功（1 分 29 秒，含完整 typecheck / test）；最终文档提交仍须通过其当前 head CI 才合并。
 - 覆盖：等待模型且消息未收到、普通/Main/Node、工具未开始、工具结果未知、Node Turn 已闭合但状态仍 working、事务回滚、重复启动幂等、真实 Host 终止与跨进程续接。
 - 未执行付费模型请求或 Electron 人工验收；中断记录已进入后端 Session 事实，但前端历史查询、会话列表和专门的“中断”视觉样式仍不在本 Step。没有自动续跑、自动工具重试、AbortController 恢复、F10.4 Verification 或数据库迁移。
 
 ## 下一步
 
-当前等待 PR head 必需 CI。成功后按仓库约定将 F10.3 标记完成并 squash 合入；下一后端 Step 为 F10.4 验证结论记录，不自动开始。
+F10.3 已完成生产实现与代码 head CI，计划、索引和前端交接已收口；PR #58 按最终 head 必需 CI 成功后 squash 合入。下一后端 Step 为 F10.4 验证结论记录，不自动开始。
