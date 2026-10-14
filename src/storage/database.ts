@@ -4,6 +4,7 @@ import { Service } from "cordis";
 import type { Context } from "cordis";
 
 import { StorageError } from "./errors.js";
+import { planInterruptionRepair } from "./interruption.js";
 import { buildRecoveryPlan } from "./recovery.js";
 import type { RecoveryPlan } from "./recovery.js";
 import { openDatabase } from "./schema.js";
@@ -21,8 +22,12 @@ export class StorageService extends Service {
       if (this.db.isOpen) this.db.close();
     }, "storage.lifecycle");
     try {
-      this.recovery = buildRecoveryPlan(this.db);
       this.transaction = createTransaction(this.db);
+      const recovery = buildRecoveryPlan(this.db);
+      const repair = planInterruptionRepair(recovery);
+      this.recovery = repair === undefined
+        ? recovery
+        : this.commit(() => repair.commit(this.transaction));
     } catch (error: unknown) {
       if (this.db.isOpen) this.db.close();
       throw error;

@@ -232,6 +232,7 @@ Final answer (outside collapse)
 - 本阶段不关闭或绕过已有后端持久化：Project、Roadmap、Mailbox 与 Resource 按公共接口返回的实际数据展示。F5.2 交付记录中的“Host 重启后项目清空”是当时的历史边界，后端 F10.1a 起已保留项目和工作目录绑定；相关旧空态文案在 F5.4 接入时同步校正。
 - 后端 F10.2 原上下文续接已完成并经 PR #55 合入：Main / Node 在 Host 重启后可通过既有回合接口继续原 Session，恢复不重新执行工具，记录见 [95](95-devlog-f10-2-session.md)。历史查询公共契约与前端历史展示仍另行规划，中断恢复交由 `backend-plan.md` 的 F10.3 实施；不要求 F5 全量接入 F10，后端完成不代表前端 UI 已验收。
 - 2026-10-14 新增后端依赖 F10.2a 普通会话保存与重启续接，交由 `backend-plan.md` 实施；实现方案调研见 [96](96-devlog-f10-2a-session-design.md)，后端实现、本机完整验证、实际跨进程续接及代码 head CI 已完成，交付见 [PR #56](https://github.com/likeWind221/Navo/pull/56) 与 [97](97-devlog-f10-2a-session.md)，最终提交仍遵循当前 head CI 合并门禁。该步让普通会话按原 Session ID 恢复模型上下文，不交付会话列表、历史查询契约或前端历史展示；相关前端能力另行规划，不改变当前下一步 F5.4。F10.3 中断处理将覆盖普通 / Main / Node 会话。
+- 后端 F10.3 已完成生产实现、本机完整检查、真实 Host 终止 / 重启验收及代码 head CI，交付见 [PR #58](https://github.com/likeWind221/Navo/pull/58) 与 [98](98-devlog-f10-3-interruption.md)。恢复会把未闭合普通 / Main / Node Turn 记为失败、补齐悬空工具结果并将 working Node 退回 idle，不自动续跑；本步没有新增公共 RPC 或前端历史入口，因此不改变当前前端下一步 F5.4，也不代表 Renderer 已展示历史中断记录。
 - 归档/重新打开等需要新增公共操作接口的项目管理、资源正文预览与文件管理、Verification、RAG 和独立多会话管理另行规划，不作为 F5.8 收尾条件。
 - Main/Node 的每次 Agent 回合均由用户明确触发；节点解锁、消息到达、资源发布与上次回合结束都不会自动运行。当前运行期间的界面状态保留不等于已具备历史查询或重启恢复。
 - F5.3–F5.8 规划已确认；F5.3 原型已获用户确认，正式 Electron 入口已接入，本地与代码 CI 已通过，PR #53 已 squash 合入 master（e271d5b），F5.4–F5.8 尚未开始，不授权连续实施。每个 Step 仍按项目启动、审查和验收规则逐步推进；真实模型验收开始前按会话规则说明预计耗时与影响范围并取得授权。
