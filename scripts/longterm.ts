@@ -4,16 +4,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "../src/app.js";
 import type { NodeId, ProjectId } from "../src/brand/ids.js";
-import { resolveKernelHostConfig } from "../src/host/config.js";
-import { QwenChatCompletionsAdapter } from "../src/llm/adapters/qwen.js";
 import { projectNode } from "../src/node/projector.js";
 import { projectRoadmap } from "../src/roadmap/projector.js";
+import { createAcceptanceAdapter, resolveAcceptanceHostConfig } from "./acceptance.js";
 import { captureTurn, projectState, writeEvidence } from "./longterm/evidence.js";
 
 async function main() {
-  const config = resolveKernelHostConfig();
+  const config = resolveAcceptanceHostConfig();
   const root = await mkdtemp(join(tmpdir(), "navo-real-f98-"));
   const app = await createApp({
+    storage: { path: ":memory:" },
     node: { session: { model: config.agent.model } },
     runtime: { maxSteps: 16, maxModelRetries: 0 },
   });
@@ -23,7 +23,7 @@ async function main() {
   try {
     await writeFile(join(root, "evidence.txt"), "Candidate A: latency 120 ms, accuracy 94%. Candidate B: latency 180 ms, accuracy 95%. Requirement: latency below 150 ms and accuracy at least 93%. These measurements have not been independently validated.");
     await writeFile(join(root, "validation.txt"), "Independent repeat: Candidate A latency 125 ms, accuracy 93.5%; Candidate B latency 175 ms, accuracy 94.5%. Candidate A meets both requirements; Candidate B fails latency. Small synthetic sample; production workload remains untested.");
-    app.llm.registerAdapter(config.provider, new QwenChatCompletionsAdapter(config.adapter));
+    app.llm.registerAdapter(config.provider, createAcceptanceAdapter(config));
     const project = app.projects.create({ name: "Project", goal: "Recommend A or B using supplied measurements and independent validation. No internet research is needed. Humans control every turn and completion." });
     await app.projectWorkspaces.create(project.id, root);
     const projectId = project.id;
@@ -53,7 +53,7 @@ async function main() {
       return { result, calls, succeeded, answer: answers.at(-1) ?? "" };
     };
     const mainTurn = (text: string) => app.projectRuntime.startMain({ projectId, text });
-    console.log(JSON.stringify({ model: config.agent.model.model, thinking: config.adapter.enableThinking, maxTokens: config.agent.model.maxTokens }));
+    console.log(JSON.stringify({ provider: config.provider, model: config.agent.model.model }));
     const planRequest = "Read the roadmap, then create exactly two required work nodes with titles evidence and synthesis. evidence publishes supplied measurements; synthesis recommends a candidate after reviewing evidence and independent validation, reporting a blocker if validation is missing. synthesis depends on evidence. Use tools to persist the plan, then stop. Do not add validation yet.";
     const recordedGoal = app.projects.get(projectId)?.goal;
     await run("1a-confirm", () => mainTurn(planRequest));

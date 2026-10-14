@@ -12,6 +12,14 @@ import { registerAgentTurnIpc } from "../../electron/ipc/agent.js";
 
 const outputDirectory = resolve("qa-output");
 const mockText = "这是用于验证真实流式链路的回答。它会分成多个增量，保持顺序并持续更新消息。".repeat(60);
+const realAcceptanceModel = "gpt-6-luna";
+const incompatibleModelVariables = [
+  "LLM_MAX_TOKENS",
+  "LLM_TEMPERATURE",
+  "LLM_ENABLE_THINKING",
+  "LLM_API_KEY",
+  "LLM_BASE_URL",
+] as const;
 app.setPath("userData", join(tmpdir(), `navo-f2-6-qa-${process.pid}`));
 
 async function main(): Promise<void> {
@@ -19,7 +27,11 @@ async function main(): Promise<void> {
   const scenario = process.env.NAVO_QA_SCENARIO;
   process.env.NAVO_HOST_MODE = useRealHost ? "real" : "mock";
   process.env.NAVO_REPO_ROOT = resolve("..");
-  if (!useRealHost) {
+  if (useRealHost) {
+    process.env.LLM_PROVIDER = "openai";
+    process.env.LLM_MODEL = realAcceptanceModel;
+    for (const name of incompatibleModelVariables) delete process.env[name];
+  } else {
     process.env.NAVO_MOCK_TEXT = mockText;
     process.env.NAVO_MOCK_CHUNK_CHARS = "40";
     process.env.NAVO_MOCK_DELAY_MS = "20";

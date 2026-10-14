@@ -15,5 +15,12 @@
     "noEmit": true,
     "types": ["node", "electron-vite/node"]
   },
-  "include": ["shared/**/*.ts", "electron/**/*.ts", "electron.vite.config.ts", "vite.config.ts", "vitest.config.ts"]
+  "include": [
+    "shared/**/*.ts",
+    "electron/**/*.ts",
+    "scripts/qa/chat.ts",
+    "electron.vite.config.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ]
 }
