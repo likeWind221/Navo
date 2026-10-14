@@ -16,9 +16,9 @@ export async function requestModel(
   const { input, turnId, signal, limits } = turn;
   const timeoutMs = limits.modelTimeoutMs;
   const deadline = createDeadline(signal, timeoutMs);
-  const request = buildRequest(ctx, input, deadline.signal);
-  appendRequest(ctx, input.sessionId, turnId, stepId, request);
   try {
+    const request = buildRequest(ctx, input, deadline.signal);
+    appendRequest(ctx, input.sessionId, turnId, stepId, request);
     turn.output.beginAttempt();
     let publishedContent = false;
     const collected = await collectStream(ctx.llm.stream(request), async (event) => {
