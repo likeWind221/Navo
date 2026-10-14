@@ -39,9 +39,9 @@ Startup -> known schema upgrade -> Project domains recovery
 - 专项已验证：不依赖 Project 服务的保存、消息替换投影、会话身份隔离、坏 JSON/序号/ID 隔离且原记录保持、归属变更拒绝、保存失败不更新内存或通知、普通会话工具结果续接且工具仅执行一次。
 - 升级测试覆盖旧 Project 会话和 Workspace 记录保持、普通会话新写入、二次启动不重复升级、坏 JSON 保留后隔离，以及旧结构复制失败时表与版本整体撤销。
 - 实际独立 Host 进程退出 → 重启 → 普通原 ID 续接已验证；启动不追加事件，下一模型请求包含原消息和工具结果，另一个普通 ID 不带原上下文。该跨进程工具记录来自既有 Mock Host 的无权限工具失败结果；真实工具执行一次/恢复不重放由普通会话服务级工具探针与既有 Main/Node 跨进程测试分别覆盖。
-- Windows / Node 24.19.0：`pnpm typecheck` 通过；`pnpm test` 100 文件、631 项全部通过（61.42 秒）。当前等待 PR head 必需 CI；未进行付费模型请求或 Electron 人工验收。
+- Windows / Node 24.19.0：`pnpm typecheck` 通过；`pnpm test` 100 文件、631 项全部通过（61.42 秒）。[PR #56](https://github.com/likeWind221/Navo/pull/56) 代码 head `0d1db66` 的必需 CI `verify` 成功（1 分 12 秒，含完整 typecheck/test）；最终文档提交也须在其当前 head CI 成功后才合并。不使用 admin 或绕过检查。未进行付费模型请求或 Electron 人工验收。
 - 合法未闭合日志原样恢复，不自动补尾、不恢复控制器；F10.3 尚未实现。后端上下文恢复不等于前端历史可见、多会话列表或旧 Host 文件目录/模型配置恢复。
 
 ## 下一步
 
-当前授权为实现 F10.2a，按 [96](96-devlog-f10-2a-session-design.md) 落地；验证、PR、CI 与合并收口后更新完成状态。下一后端步骤 F10.3、下一前端步骤 F5.4，不自动开始。最终交付需提供模块与关键函数导读；没有新增公共 RPC 契约，没有专用 worktree 或开发文件夹。
+F10.2a 已按 [96](96-devlog-f10-2a-session-design.md) 经用户确认的方案完成代码与验收，计划、索引与前端交接已更新；PR #56 按最终 head 必需 CI 成功后 squash 合并并删除开发分支。下一后端步骤 F10.3、下一前端步骤 F5.4，不自动开始。最终交付提供模块与关键函数导读；没有新增公共 RPC 契约，没有专用 worktree 或开发文件夹。
