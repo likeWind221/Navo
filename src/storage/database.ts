@@ -53,17 +53,18 @@ export class StorageService extends Service {
     return result;
   }
 
-  loadEvents(domain: EventDomain): ReadonlyMap<string, StoredHistory> {
+  loadEvents<T extends EventDomain>(domain: T): ReadonlyMap<string, StoredHistory<T extends "session" ? string | null : string>>;
+  loadEvents(domain: EventDomain): ReadonlyMap<string, StoredHistory<string | null>> {
     const rows = read("Stored events could not be read.", () => this.db.prepare(
       "SELECT owner_id, seq, project_id, payload FROM events WHERE domain = ? ORDER BY owner_id, seq",
     ).all(domain));
-    const owners = new Map<string, { readonly projectId: string; readonly events: unknown[] }>();
+    const owners = new Map<string, { readonly projectId: string | null; readonly events: unknown[] }>();
     for (const row of rows) {
       const ownerId = row.owner_id;
       const seq = row.seq;
       const where = `${domain} event ${String(ownerId)}#${String(seq)}`;
       const projectId = row.project_id;
-      if (typeof ownerId !== "string" || typeof projectId !== "string" || typeof row.payload !== "string") {
+      if (typeof ownerId !== "string" || (typeof projectId !== "string" && !(domain === "session" && projectId === null)) || typeof row.payload !== "string") {
         throw new StorageError("invalid-record", `Stored ${where} has an invalid shape.`);
       }
       const history = owners.get(ownerId) ?? { projectId, events: [] };
@@ -119,18 +120,22 @@ export interface StorageTransaction {
   unbindWorkspace(projectId: string): void;
 }
 
-export interface EventAppend {
-  readonly domain: EventDomain;
+export type EventAppend = EventAppendFields & (
+  | { readonly domain: "session"; readonly projectId: string | null }
+  | { readonly domain: ProjectEventDomain; readonly projectId: string }
+);
+
+interface EventAppendFields {
   readonly ownerId: string;
-  readonly projectId: string;
   readonly firstSeq: number;
   readonly events: readonly unknown[];
 }
 
-export type EventDomain = "project" | "node" | "roadmap" | "mailbox" | "resource" | "session";
+export type EventDomain = ProjectEventDomain | "session";
+export type ProjectEventDomain = "project" | "node" | "roadmap" | "mailbox" | "resource";
 
-export interface StoredHistory {
-  readonly projectId: string;
+export interface StoredHistory<TProjectId = string> {
+  readonly projectId: TProjectId;
   readonly events: readonly unknown[];
 }
 
@@ -142,6 +147,15 @@ export interface WorkspaceBindingRecord {
 function createTransaction(db: DatabaseSync): StorageTransaction {
   return {
     appendEvents({ domain, ownerId, projectId, firstSeq, events }) {
+      if ((projectId === null && domain !== "session") || (projectId !== null && (typeof projectId !== "string" || !projectId.trim()))) {
+        throw new StorageError("invalid-record", "Stored events require a valid Project owner or a standalone Session.");
+      }
+      const owner = write(() => db.prepare(
+        "SELECT project_id FROM events WHERE domain = ? AND owner_id = ? LIMIT 1",
+      ).get(domain, ownerId));
+      if (owner !== undefined && owner.project_id !== projectId) {
+        throw new StorageError("invalid-record", `Stored ${domain} history for ${ownerId} cannot change its Project owner.`);
+      }
       const last = write(() => db.prepare(
         "SELECT max(seq) AS seq FROM events WHERE domain = ? AND owner_id = ?",
       ).get(domain, ownerId)?.seq);

@@ -6,7 +6,7 @@ import type { Context, Logger } from "cordis";
 import { createEventId, createSessionId } from "../brand/ids.js";
 import type { SessionId } from "../brand/ids.js";
 import type { Message } from "../llm/types.js";
-import { resolveAgentBinding } from "../project/binding.js";
+import { SessionError } from "./errors.js";
 import { parseSessionEvent, parseSessionHistory } from "./history.js";
 import { applySurface, createSurface, eventMessage, withSystemPrompt } from "./surface.js";
 import type { SurfaceState } from "./surface.js";
@@ -14,6 +14,7 @@ import type { SessionEvent, SurfaceOp } from "./types.js";
 
 export interface SessionStoreConfig {
   readonly persistence: boolean;
+  readonly resolveProjectId?: (sessionId: SessionId) => string | null;
 }
 
 /** An event before the log assigns its identity, order, and commit time. */
@@ -42,22 +43,23 @@ export class SessionStore extends Service {
     super(ctx, "sessions");
     this.logger = ctx.logger("session");
     if (config?.persistence) {
-      ctx.inject(["storage", "projects", "nodes"], scope => {
-        for (const [sessionId, history] of scope.storage.recovery.events.get("session")!) {
+      const unavailable = () => { throw new SessionError("persistence-unavailable", "Session persistence is unavailable."); };
+      this.persist = unavailable;
+      ctx.inject(["storage"], scope => {
+        for (const [sessionId, history] of scope.storage.recovery.sessions) {
           this.restore(createSessionId(sessionId), history.events);
         }
         this.persist = (event, apply) => {
-          const binding = resolveAgentBinding(scope, event.sessionId);
-          if (binding === undefined) {
-            apply();
-            return;
+          if (scope.storage.recovery.unavailableSessionIds.has(event.sessionId)) {
+            throw new SessionError("session-unavailable", `Session '${event.sessionId}' could not be recovered.`);
           }
+          const projectId = config.resolveProjectId?.(event.sessionId) ?? null;
           scope.storage.write(tx => tx.appendEvents({
-            domain: "session", ownerId: event.sessionId, projectId: binding.projectId,
+            domain: "session", ownerId: event.sessionId, projectId,
             firstSeq: event.sequence, events: [event],
           }), apply);
         };
-        return () => { this.persist = undefined; };
+        return () => { this.persist = unavailable; };
       });
     }
   }

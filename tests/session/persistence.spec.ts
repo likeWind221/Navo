@@ -166,12 +166,55 @@ describe("Main and Node Session persistence", () => {
     expect(next.ctx.projectRuntime.isMainActive(kit.project.id)).toBe(false);
   });
 
-  it("keeps standalone unbound Sessions temporary", async () => {
+  it("persists standalone Sessions and restores their original identity", async () => {
     const kit = await seed();
     const id = createSessionId("standalone");
     kit.ctx.sessions.append({ type: "turn-started", sessionId: id, data: { turnId: createTurnId("temporary") } });
     expect(kit.ctx.sessions.getEvents(id)).toHaveLength(1);
-    expect(storedRows(kit.path, "session")).toEqual([]);
+    const history = kit.ctx.sessions.getEvents(id);
+    expect(storedRows(kit.path, "session")).toHaveLength(1);
+    await close(kit.ctx);
+    const next = await open(kit.path);
+    expect(next.ctx.sessions.getEvents(id)).toEqual(history);
+    expect(next.adapter.requests).toHaveLength(0);
+  });
+
+  it("keeps Project Sessions available when a standalone Session is corrupt", async () => {
+    const kit = await seed();
+    const plain = createSessionId("bad-plain");
+    kit.ctx.sessions.append({ type: "user-message", sessionId: plain,
+      data: { message: { id: createMessageId("plain"), role: "user", content: [{ type: "text", text: "Plain" }] } } });
+    await close(kit.ctx);
+    rawSql(kit.path, "UPDATE events SET payload = '{' WHERE owner_id = 'bad-plain'");
+    const next = await open(kit.path, [done()]);
+    expect(next.ctx.projects.get(kit.project.id)).toEqual(kit.project);
+    await expect(next.ctx.mainSessions.sendMessage({ projectId: kit.project.id, text: "Continue" }))
+      .resolves.toMatchObject({ turn: { status: "completed" } });
+    expect(() => next.ctx.sessions.append({ type: "context-observed", sessionId: plain, data: { facts: [] } }))
+      .toThrow(expect.objectContaining({ code: "session-unavailable" }));
+  });
+
+  it.each(["all", "second"] as const)("rejects Project identities presented as standalone or mixed ownership: %s", async mode => {
+    const kit = await seed();
+    const healthy = kit.ctx.projects.create({ name: "Healthy", goal: null });
+    const id = kit.project.mainSessionId;
+    for (const messageId of ["one", "two"]) {
+      kit.ctx.sessions.append({ type: "user-message", sessionId: id,
+        data: { message: { id: createMessageId(messageId), role: "user", content: [{ type: "text", text: messageId }] } } });
+    }
+    const plain = createSessionId("healthy-plain");
+    const plainEvent = kit.ctx.sessions.append({ type: "user-message", sessionId: plain,
+      data: { message: { id: createMessageId("plain"), role: "user", content: [{ type: "text", text: "Plain" }] } } });
+    await close(kit.ctx);
+    rawSql(kit.path, `UPDATE events SET project_id = NULL WHERE domain = 'session' AND owner_id = '${id}'${mode === "second" ? " AND seq = 2" : ""}`);
+    const next = await open(kit.path, [done()]);
+    expect(next.ctx.projects.get(kit.project.id)).toBeUndefined();
+    expect(next.ctx.projects.get(healthy.id)).toBeDefined();
+    expect(next.ctx.sessions.getEvents(plain)).toEqual([plainEvent]);
+    await expect(next.ctx.agentRuntime.runTurn({ sessionId: id, model: { provider: "mock", model: "test" },
+      userMessage: { id: createMessageId("reuse"), role: "user", content: [{ type: "text", text: "Reuse" }] } }))
+      .rejects.toMatchObject({ code: "session-unavailable" });
+    expect(next.adapter.requests).toHaveLength(0);
   });
 
   it.each([

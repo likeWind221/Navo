@@ -112,6 +112,10 @@
 
 ## 研究与自动审查
 
+- [F10.2a 普通会话保存与重启续接](97-devlog-f10-2a-session.md)：通用会话写穿透、v1 数据保留升级、普通/Project 两类损坏隔离与跨进程续接；本机完整验证与代码 head CI 通过，最终提交按当前 head CI 门禁收口。
+
+- [F10.2a 普通会话保存与重启续接方案](96-devlog-f10-2a-session-design.md)：新增后端子步骤、通用 Session 保存边界、已知数据库升级、两类损坏隔离及 Harness 源码对照；方案已获用户确认，实际交付见 97。
+
 - [F10.2 会话与执行记录恢复](95-devlog-f10-2-session.md)：Main / Node 会话写穿透、历史与上下文恢复、执行前持久化、损坏隔离及实际跨进程续接验收。
 
 - [M1.4 Navo 使用订阅模型完成工作](93-devlog-m1-4-openai.md)：Host 配置与 OpenAIAdapter 接入，gpt-6-luna 真实文本、read 续接、取消、重启凭据复用与主动刷新通过；本机与当前 head CI 通过，PR #54 已合入。
