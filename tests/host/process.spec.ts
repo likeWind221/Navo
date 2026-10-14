@@ -311,6 +311,58 @@ describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, 
     }
   });
 
+  it("closes a Turn interrupted by Host termination before accepting another Turn", async () => {
+    const home = await mkdtemp(join(tmpdir(), "navo-process-interrupted-"));
+    const child = startHost("scripts/host/mock.ts", {
+      NAVO_HOME: home,
+      NAVO_MOCK_LLM_MODE: "hang",
+    });
+    const stderr = capture(child.stderr);
+    await waitUntil(() => stderr.value.includes("[mock-kernel-host] ready"));
+    const client = new StreamRpcClient(new ChildRpcTransport(child));
+    const iterator = client.stream(agentTurnV2Method, {
+      sessionId: "interrupted-process",
+      requestId: "interrupted-request",
+      text: "Wait for a reply",
+    });
+    let terminated = false;
+    try {
+      await expect(iterator.next()).resolves.toMatchObject({ value: { type: "turn-started" } });
+      await waitUntil(() => readSessionEvents(home).some(event => event.type === "llm-requested"));
+      expect(readSessionEvents(home).some(event => event.type === "turn-ended")).toBe(false);
+      expect(child.kill()).toBe(true);
+      terminated = true;
+      await exitOf(child);
+    } finally {
+      if (!terminated) {
+        await client.dispose();
+        if (child.exitCode === null && child.signalCode === null) child.kill();
+        await exitOf(child);
+      }
+    }
+
+    try {
+      await withRealHost({ NAVO_HOME: home, NAVO_MOCK_LLM_MODE: "completed" }, async next => {
+        const repaired = readSessionEvents(home).filter(event => event.sessionId === "interrupted-process");
+        expect(repaired.slice(-3)).toEqual([
+          expect.objectContaining({ type: "error", data: expect.objectContaining({ failure: expect.objectContaining({ code: "interrupted" }) }) }),
+          expect.objectContaining({ type: "step-ended", data: expect.objectContaining({ status: "failed" }) }),
+          expect.objectContaining({ type: "turn-ended", data: expect.objectContaining({ status: "failed" }) }),
+        ]);
+        const events = await collect(next.stream(agentTurnV2Method, {
+          sessionId: "interrupted-process",
+          requestId: "continued-request",
+          text: "Continue after restart",
+        }));
+        expect(events.at(-1)?.type).toBe("turn-completed");
+      }, "scripts/host/mock.ts");
+      const after = readSessionEvents(home).filter(event => event.sessionId === "interrupted-process");
+      expect(after.filter(event => event.type === "error" && event.data.failure.code === "interrupted")).toHaveLength(1);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   it("runs the scripted Mock Host and exposes a deterministic crash for Main supervision", async () => {
     const child = startHost("scripts/host/mock.ts", {
       NAVO_MOCK_MODE: "crash",
@@ -553,6 +605,9 @@ function capture(stream: NodeJS.ReadableStream): { readonly value: string } {
 function exitOf(
   child: ChildProcessWithoutNullStreams,
 ): Promise<{ readonly code: number | null; readonly signal: NodeJS.Signals | null }> {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return Promise.resolve({ code: child.exitCode, signal: child.signalCode });
+  }
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       child.kill();

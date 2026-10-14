@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createApp } from "../../src/app.js";
-import { createMessageId, createNodeId, createSessionId, createToolCallId, createTurnId } from "../../src/brand/ids.js";
+import { createMessageId, createNodeId, createSessionId, createStepId, createToolCallId, createTurnId } from "../../src/brand/ids.js";
 import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import type { ReplayEnvelope } from "../../src/llm/types.js";
 import { modelResponse } from "../helpers/runtime.js";
@@ -153,30 +153,125 @@ describe("Main and Node Session persistence", () => {
     expect(kit.ctx.projectRuntime.isMainActive(kit.project.id)).toBe(false);
   });
 
-  it("preserves an interrupted tail without executing or synthesizing recovery events", async () => {
+  it("closes an interrupted Main Turn before restoring it without executing work", async () => {
     const kit = await seed();
     const id = kit.project.mainSessionId;
     kit.ctx.sessions.append({ type: "turn-started", sessionId: id, data: { turnId: createTurnId("unfinished") } });
-    const history = kit.ctx.sessions.getEvents(id);
     await close(kit.ctx);
     const next = await open(kit.path);
-    expect(next.ctx.sessions.getEvents(id)).toEqual(history);
-    expect(storedRows(kit.path, "session")).toHaveLength(1);
+    const repaired = next.ctx.sessions.getEvents(id);
+    expect(repaired.map(event => event.type)).toEqual(["turn-started", "error", "turn-ended"]);
+    expect(repaired[1]).toMatchObject({ data: { source: "runtime", failure: { code: "interrupted" } } });
+    expect(repaired[2]).toMatchObject({ data: { status: "failed" } });
+    expect(storedRows(kit.path, "session")).toHaveLength(3);
     expect(next.adapter.requests).toHaveLength(0);
     expect(next.ctx.projectRuntime.isMainActive(kit.project.id)).toBe(false);
+    await close(next.ctx);
+    const reopened = await open(kit.path);
+    expect(reopened.ctx.sessions.getEvents(id)).toEqual(repaired);
   });
 
-  it("persists standalone Sessions and restores their original identity", async () => {
+  it("closes an interrupted standalone Turn and restores its original identity", async () => {
     const kit = await seed();
     const id = createSessionId("standalone");
     kit.ctx.sessions.append({ type: "turn-started", sessionId: id, data: { turnId: createTurnId("temporary") } });
-    expect(kit.ctx.sessions.getEvents(id)).toHaveLength(1);
-    const history = kit.ctx.sessions.getEvents(id);
-    expect(storedRows(kit.path, "session")).toHaveLength(1);
     await close(kit.ctx);
     const next = await open(kit.path);
-    expect(next.ctx.sessions.getEvents(id)).toEqual(history);
+    expect(next.ctx.sessions.getEvents(id)).toEqual([
+      expect.objectContaining({ type: "turn-started" }),
+      expect.objectContaining({ type: "error", data: expect.objectContaining({ failure: expect.objectContaining({ code: "interrupted" }) }) }),
+      expect.objectContaining({ type: "turn-ended", data: expect.objectContaining({ status: "failed" }) }),
+    ]);
     expect(next.adapter.requests).toHaveLength(0);
+  });
+
+  it("persists conservative results for interrupted tool calls without executing them", async () => {
+    const kit = await seed();
+    const id = kit.project.mainSessionId;
+    const turnId = createTurnId("tool-turn");
+    const stepId = createStepId("tool-step");
+    const notStarted = createToolCallId("not-started");
+    const unknown = createToolCallId("unknown");
+    kit.ctx.sessions.append({ type: "turn-started", sessionId: id, data: { turnId } });
+    kit.ctx.sessions.append({ type: "step-started", sessionId: id, data: { turnId, stepId } });
+    kit.ctx.sessions.append({ type: "assistant-message", sessionId: id, data: {
+      turnId, stepId, finishReason: { kind: "tool-calls" }, message: {
+        id: createMessageId("tool-message"), role: "assistant", content: [
+          { type: "tool-call", id: notStarted, name: "read", arguments: "{}" },
+          { type: "tool-call", id: unknown, name: "write", arguments: "{}" },
+        ],
+      },
+    } });
+    kit.ctx.sessions.append({ type: "tool-call-requested", sessionId: id, data: {
+      turnId, stepId, toolCall: { type: "tool-call", id: unknown, name: "write", arguments: "{}" },
+    } });
+    await close(kit.ctx);
+
+    const next = await open(kit.path);
+    const repaired = next.ctx.sessions.getEvents(id);
+    const codes = repaired.filter(event => event.type === "error").map(event => event.data.failure.code);
+    const messages = next.ctx.sessions.deriveMessages(id);
+
+    expect(codes).toEqual(["tool-not-started", "tool-outcome-unknown", "interrupted"]);
+    expect(messages.slice(-2).map(message => message.content[0])).toEqual([
+      expect.objectContaining({ type: "tool-result", toolCallId: notStarted, isError: true }),
+      expect.objectContaining({ type: "tool-result", toolCallId: unknown, isError: true }),
+    ]);
+    expect(next.calls()).toBe(0);
+    expect(next.adapter.requests).toHaveLength(0);
+  });
+
+  it("closes an interrupted Node Turn and returns its working Node to idle atomically", async () => {
+    const kit = await seed();
+    const id = createSessionId("interrupted-node");
+    kit.ctx.nodes.bindSession(kit.nodeId, id);
+    kit.ctx.nodes.beginWork(kit.nodeId);
+    kit.ctx.sessions.append({ type: "turn-started", sessionId: id, data: { turnId: createTurnId("node-turn") } });
+    await close(kit.ctx);
+
+    const next = await open(kit.path);
+
+    expect(next.ctx.nodes.get(kit.nodeId)?.status).toBe("idle");
+    expect(next.ctx.sessions.getEvents(id).at(-1)).toMatchObject({
+      type: "turn-ended",
+      data: { status: "failed" },
+    });
+    expect(storedRows(kit.path, "node").at(-1)).toMatchObject({ ownerId: kit.nodeId, type: "work-ended" });
+  });
+
+  it("returns a working Node to idle when its Session Turn was already durably closed", async () => {
+    const kit = await seed();
+    const id = createSessionId("closed-node");
+    const turnId = createTurnId("closed-turn");
+    kit.ctx.nodes.bindSession(kit.nodeId, id);
+    kit.ctx.nodes.beginWork(kit.nodeId);
+    kit.ctx.sessions.append({ type: "turn-started", sessionId: id, data: { turnId } });
+    kit.ctx.sessions.append({ type: "turn-ended", sessionId: id, data: { turnId, status: "completed" } });
+    const session = kit.ctx.sessions.getEvents(id);
+    await close(kit.ctx);
+
+    const next = await open(kit.path);
+
+    expect(next.ctx.nodes.get(kit.nodeId)?.status).toBe("idle");
+    expect(next.ctx.sessions.getEvents(id)).toEqual(session);
+    expect(next.ctx.sessions.getEvents(id).some(event => event.type === "error")).toBe(false);
+  });
+
+  it("rolls back Session and Node recovery together when either append fails", async () => {
+    const kit = await seed();
+    const id = createSessionId("rollback-node");
+    kit.ctx.nodes.bindSession(kit.nodeId, id);
+    kit.ctx.nodes.beginWork(kit.nodeId);
+    kit.ctx.sessions.append({ type: "turn-started", sessionId: id, data: { turnId: createTurnId("rollback-turn") } });
+    await close(kit.ctx);
+    const sessions = storedRows(kit.path, "session");
+    const nodes = storedRows(kit.path, "node");
+    rawSql(kit.path, "CREATE TRIGGER reject_recovery BEFORE INSERT ON events WHEN NEW.domain = 'node' AND json_extract(NEW.payload, '$.type') = 'work-ended' BEGIN SELECT RAISE(ABORT, 'test recovery failure'); END");
+
+    await expect(open(kit.path)).rejects.toMatchObject({ code: "write-failed" });
+
+    expect(storedRows(kit.path, "session")).toEqual(sessions);
+    expect(storedRows(kit.path, "node")).toEqual(nodes);
   });
 
   it("keeps Project Sessions available when a standalone Session is corrupt", async () => {
