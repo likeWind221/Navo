@@ -24,7 +24,13 @@
   },
   "include": [
     "src/**/*.ts",
-    "tests/**/*.ts"
+    "tests/**/*.ts",
+    "scripts/acceptance.ts",
+    "scripts/goal.ts",
+    "scripts/longterm.ts",
+    "scripts/longterm/**/*.ts",
+    "scripts/real.ts",
+    "scripts/subscription.ts"
   ],
   "exclude": [
     "node_modules",

@@ -106,15 +106,13 @@ pnpm typecheck
 pnpm test
 ```
 
-接入真实模型（OpenAI 兼容接口；注意 `LLM_BASE_URL` 的默认值是作者局域网内的服务器，必须显式设置）：
+启动普通 Host 的 OpenAI 兼容模型（`LLM_BASE_URL` 的默认值是作者局域网内的服务器，必须显式设置）：
 
 ```bash
 LLM_API_KEY=... LLM_MODEL=... LLM_BASE_URL=... pnpm host
 ```
 
-```bash
-LLM_API_KEY=... LLM_MODEL=... LLM_BASE_URL=... pnpm exec tsx scripts/longterm.ts
-```
+真实验收脚本固定使用 ChatGPT 订阅的 `gpt-6-luna`。先运行 `pnpm chatgpt login`，然后按需执行 `pnpm test:real`、`pnpm exec tsx scripts/goal.ts`、`pnpm exec tsx scripts/longterm.ts` 或 `pnpm exec tsx scripts/subscription.ts`；脚本不会继承 Qwen 的 API key、Base URL、thinking、temperature 或 max-token 配置。
 
 桌面端：
 
@@ -205,7 +203,7 @@ See the architecture diagram above.
 
 Requires Node.js >= 24 and pnpm 10 (on Node 22, 5 shell / host-process tests fail). Commands: `pnpm install`, `pnpm demo`, `pnpm typecheck`, `pnpm test`.
 
-For a real model (OpenAI-compatible endpoint), set `LLM_API_KEY`, `LLM_MODEL` and `LLM_BASE_URL` and run `pnpm host` or `pnpm exec tsx scripts/longterm.ts`. The default `LLM_BASE_URL` points at the author's LAN server, so set it explicitly. Desktop: `cd frontend && pnpm install && pnpm dev`.
+For a normal Host using an OpenAI-compatible endpoint, set `LLM_API_KEY`, `LLM_MODEL` and `LLM_BASE_URL`, then run `pnpm host`; the default `LLM_BASE_URL` points at the author's LAN server, so set it explicitly. Real acceptance scripts are pinned to the ChatGPT subscription model `gpt-6-luna`: run `pnpm chatgpt login` first, then use `pnpm test:real`, `pnpm exec tsx scripts/goal.ts`, `pnpm exec tsx scripts/longterm.ts`, or `pnpm exec tsx scripts/subscription.ts`. Desktop: `cd frontend && pnpm install && pnpm dev`.
 
 ### Offline demo
 

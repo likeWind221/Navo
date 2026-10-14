@@ -9,14 +9,22 @@ import type { AgentTurnV2Event, RpcClientFrame, RpcClientTransport } from "../rp
 import { ChatGPTAuth } from "../src/llm/auth/chatgpt.js";
 import { ChatGPTStore } from "../src/llm/auth/chatgpt/store.js";
 import { ChatGPTTokens } from "../src/llm/auth/chatgpt/token.js";
+import {
+  createAcceptanceEnvironment,
+  REAL_ACCEPTANCE_MODEL,
+  resolveAcceptanceHostConfig,
+} from "./acceptance.js";
 
 async function main(): Promise<void> {
-  assert.equal(process.env.LLM_PROVIDER, "openai");
-  assert.equal(process.env.LLM_MODEL, "gpt-6-luna");
-  const auth = new ChatGPTAuth({ openBrowser: async () => { throw new Error("Run pnpm chatgpt login first."); } });
-  assert((await auth.models()).some(model => model.slug === "gpt-6-luna"));
+  const config = resolveAcceptanceHostConfig();
+  const environment = createAcceptanceEnvironment();
+  const auth = new ChatGPTAuth({
+    home: config.adapter.home,
+    openBrowser: async () => { throw new Error("Run pnpm chatgpt login first."); },
+  });
+  assert((await auth.models(config.adapter.accountId)).some(model => model.slug === REAL_ACCEPTANCE_MODEL));
   const sessionId = `subscription-${randomUUID()}`;
-  if (!process.argv.includes("--restart")) await withHost(async client => {
+  if (!process.argv.includes("--restart")) await withHost(environment, async client => {
     const text = await turn(client, sessionId, "Do not use tools. Return only this exact string without punctuation or additional text:\nNAVO-TEXT-OK");
     assert.equal(answer(text).trim(), "NAVO-TEXT-OK");
     const tool = await turn(client, sessionId,
@@ -53,19 +61,19 @@ async function main(): Promise<void> {
     console.log("PASS: live-stream cancellation and subsequent turn.");
   });
 
-  await withHost(async client => {
+  await withHost(environment, async client => {
     const restarted = await turn(client, `restart-${randomUUID()}`, "Do not use tools. Return only this exact string without punctuation or additional text:\nNAVO-RESTART-OK");
     assert.equal(answer(restarted).trim(), "NAVO-RESTART-OK");
   });
   console.log("PASS: new Host process reuses saved credentials.");
 
   if (process.argv.includes("--refresh")) {
-    await new ChatGPTStore().transaction(async state => {
-      const account = state.accounts.find(entry => entry.id === state.activeId);
+    await new ChatGPTStore(config.adapter.home).transaction(async state => {
+      const account = state.accounts.find(entry => entry.id === (config.adapter.accountId ?? state.activeId));
       assert(account?.credentials);
       account.credentials = await new ChatGPTTokens(fetch).refresh(account, AbortSignal.timeout(30_000));
     });
-    await withHost(async client => {
+    await withHost(environment, async client => {
       const refreshed = await turn(client, `refresh-${randomUUID()}`, "Do not use tools. Return only this exact string without punctuation or additional text:\nNAVO-REFRESH-OK");
       assert.equal(answer(refreshed).trim(), "NAVO-REFRESH-OK");
     });
@@ -101,9 +109,12 @@ function answer(events: AgentTurnV2Event[]): string {
   return [...textBlocks].filter(([key]) => key.startsWith(`${lastMessage}:`)).map(([, text]) => text).join("");
 }
 
-async function withHost(use: (client: StreamRpcClient) => Promise<void>): Promise<void> {
+async function withHost(
+  environment: NodeJS.ProcessEnv,
+  use: (client: StreamRpcClient) => Promise<void>,
+): Promise<void> {
   const child = spawn(process.execPath, ["--import", "tsx", "src/host/main.ts"], {
-    cwd: process.cwd(), env: process.env, windowsHide: true, stdio: ["pipe", "pipe", "pipe"],
+    cwd: process.cwd(), env: environment, windowsHide: true, stdio: ["pipe", "pipe", "pipe"],
   });
   const exited = once(child, "exit");
   child.stderr.on("data", () => undefined);

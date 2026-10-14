@@ -6,9 +6,8 @@ import type { Context } from "cordis";
 
 import { createApp } from "../src/app.js";
 import type { ProjectId } from "../src/brand/ids.js";
-import { resolveKernelHostConfig } from "../src/host/config.js";
-import { QwenChatCompletionsAdapter } from "../src/llm/adapters/qwen.js";
 import { SET_PROJECT_GOAL_TOOL_NAME } from "../src/tools/builtins/project/goal.js";
+import { createAcceptanceAdapter, resolveAcceptanceHostConfig } from "./acceptance.js";
 import { captureTurn, writeEvidence } from "./longterm/evidence.js";
 
 interface Scenario {
@@ -101,15 +100,16 @@ function observe(app: Context, projectId: ProjectId) {
 }
 
 async function main(): Promise<void> {
-  const config = resolveKernelHostConfig();
+  const config = resolveAcceptanceHostConfig();
   const app = await createApp({
+    storage: { path: ":memory:" },
     node: { session: { model: config.agent.model } },
     runtime: { maxSteps: 16, maxModelRetries: 0 },
   });
   const evidenceDir = process.env.NAVO_EVIDENCE_DIR?.trim() || join(tmpdir(), `navo-goal-evidence-${Date.now()}`);
-  console.log(JSON.stringify({ evidenceDir, model: config.agent.model.model, thinking: config.adapter.enableThinking }));
+  console.log(JSON.stringify({ evidenceDir, provider: config.provider, model: config.agent.model.model }));
   try {
-    app.llm.registerAdapter(config.provider, new QwenChatCompletionsAdapter(config.adapter));
+    app.llm.registerAdapter(config.provider, createAcceptanceAdapter(config));
     const only = process.argv[2];
     const failed: string[] = [];
     for (const scenario of scenarios.filter(value => only === undefined || value.name === only)) {

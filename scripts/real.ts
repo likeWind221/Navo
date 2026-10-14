@@ -5,27 +5,20 @@ import {
   createSessionId,
 } from "../src/brand/ids.js";
 import { AgentRuntime } from "../src/agent/runtime.js";
-import { resolveKernelHostConfig } from "../src/host/config.js";
-import { QwenChatCompletionsAdapter } from "../src/llm/adapters/qwen.js";
-import { OpenAIAdapter } from "../src/llm/adapters/openai.js";
-import { ChatGPTAuth } from "../src/llm/auth/chatgpt.js";
 import { LLMService } from "../src/llm/service.js";
 import { SessionStore } from "../src/session/store.js";
 import { ToolService } from "../src/tools/service.js";
+import { createAcceptanceAdapter, resolveAcceptanceHostConfig } from "./acceptance.js";
 
 async function main(): Promise<void> {
-  const config = resolveKernelHostConfig();
+  const config = resolveAcceptanceHostConfig();
   const ctx = new Context();
   try {
     await ctx.plugin(SessionStore);
     await ctx.plugin(LLMService);
     await ctx.plugin(ToolService);
     await ctx.plugin(AgentRuntime);
-    ctx.llm.registerAdapter(config.provider, config.provider === "qwen"
-      ? new QwenChatCompletionsAdapter(config.adapter)
-      : new OpenAIAdapter({ auth: new ChatGPTAuth({ home: config.adapter.home,
-          openBrowser: async () => { throw new Error("Run pnpm chatgpt login first."); } }),
-          ...(config.adapter.accountId === undefined ? {} : { accountId: config.adapter.accountId }) }));
+    ctx.llm.registerAdapter(config.provider, createAcceptanceAdapter(config));
     ctx.tools.register({
       name: "echo_for_real_test",
       description: "Returns its text argument unchanged.",
