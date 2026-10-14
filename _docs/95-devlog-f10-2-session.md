@@ -35,10 +35,10 @@ Host startup -> existing domain recovery -> validate Session ownership + history
 
 - 专项验证已通过：Main / Node 原 Session 续接、完整事件一致性、替换 Surface、opaque replay、保存失败不修改内存或通知、模型 / 工具检查点失败不执行、恢复不自动运行、损坏历史隔离且原记录不变。
 - 实际独立 Host 进程退出 → 启动 → 两个原 Session 续接已通过。第二进程的模型请求包含原消息与工具结果；历史前缀保持一致，资源与 Mailbox 记录不重复产生。
-- Windows 11 / Node 24.19.0：`pnpm typecheck` 通过；`pnpm test` 98 个文件、618 项全部通过（55.04 秒）。当前 PR head CI 与合并结果待更新。
+- Windows 11 / Node 24.19.0：`pnpm typecheck` 通过；`pnpm test` 98 个文件、618 项全部通过（55.04 秒）。[PR #55](https://github.com/likeWind221/Navo/pull/55) 的 head `6e7c482` 必需 CI `verify` 成功（1 分 34 秒，含完整 typecheck/test），已于 2026-10-14 squash 合入 master（`0d074d2`）。
 - 首次全量测试为 617/618 通过，既有 Fetch 本地连接测试在并发套件中超过 5 秒；单独复验该文件 7/7 通过（约 0.44 秒）。未修改该测试或网络代码，重新执行完整套件确认。
 - 未进行付费 / 真实模型请求或 Electron 人工验收。本步验收验证后端请求上下文恢复，不宣称模型回答质量或前端历史展示已经验收。
 
 ## 下一步
 
-完成本机完整验证与 CI 后按仓库规则合并 F10.2。后续为 F10.3 中断处理：处理未闭合回合与未知工具结果、清理持久化的工作中状态；不自动开始。
+F10.2 已完成并合入；已更新后端完成状态、索引与前端计划交接。本次授权仅覆盖 F10.2 后端，未修改前端源码、RPC 契约或后续步骤；交付回复提供代码导读。本地开发分支已删除，没有创建专用 worktree 或开发文件夹。后续为 F10.3 中断处理：处理未闭合回合与未知工具结果、清理持久化的工作中状态；不自动开始。
