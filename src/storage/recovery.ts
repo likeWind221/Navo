@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 
-import { createNodeId, createProjectId, createSessionId } from "../brand/ids.js";
+import { createNodeId, createProjectId } from "../brand/ids.js";
 import { NodeError } from "../node/errors.js";
 import { projectNode } from "../node/projector.js";
 import type { NodeEvent } from "../node/events.js";
@@ -15,19 +15,25 @@ import { ResourceError } from "../resource/errors.js";
 import { parseResourceHistory } from "../resource/history.js";
 import type { ResourceHistoryContext } from "../resource/validation.js";
 import { SessionError } from "../session/errors.js";
-import { parseSessionHistory } from "../session/history.js";
-import type { StoredHistory, EventDomain, WorkspaceBindingRecord } from "./database.js";
+import type { StoredHistory, EventDomain, ProjectEventDomain, WorkspaceBindingRecord } from "./database.js";
 import { StorageError } from "./errors.js";
+import { recoverSessions } from "./session.js";
 
 export interface RecoveryPlan {
   readonly validProjectIds: ReadonlySet<string>;
-  readonly events: ReadonlyMap<EventDomain, ReadonlyMap<string, StoredHistory>>;
+  readonly events: ReadonlyMap<ProjectEventDomain, ReadonlyMap<string, StoredHistory>>;
+  readonly sessions: ReadonlyMap<string, StoredHistory<string | null>>;
+  readonly unavailableSessionIds: ReadonlySet<string>;
   readonly workspaceBindings: readonly WorkspaceBindingRecord[];
   readonly failures: readonly RecoveryFailure[];
 }
 
-export interface RecoveryFailure {
-  readonly projectId: string;
+export type RecoveryFailure = RecoveryFailureDetails & (
+  | { readonly kind: "project"; readonly projectId: string }
+  | { readonly kind: "session"; readonly sessionId: string }
+);
+
+interface RecoveryFailureDetails {
   readonly domain: EventDomain | "workspace";
   readonly ownerId: string;
   readonly sequence?: number;
@@ -39,8 +45,9 @@ class RecoveryError extends Error {}
 export function buildRecoveryPlan(db: DatabaseSync): RecoveryPlan {
   const invalid = new Set<string>();
   const failures: RecoveryFailure[] = [];
-  const events = new Map<EventDomain, ReadonlyMap<string, StoredHistory>>();
-  const domains: readonly EventDomain[] = ["project", "node", "roadmap", "mailbox", "resource", "session"];
+  const events = new Map<ProjectEventDomain, ReadonlyMap<string, StoredHistory>>();
+  const domains: readonly ProjectEventDomain[] = ["project", "node", "roadmap", "mailbox", "resource"];
+  const sessionOwners = new Map<string, Set<string>>();
 
   for (const domain of domains) {
     events.set(domain, readHistories(db, domain, invalid, failures));
@@ -54,6 +61,7 @@ export function buildRecoveryPlan(db: DatabaseSync): RecoveryPlan {
       if (history.projectId !== projectId) throw new RecoveryError("Project owner does not match its history.");
       const snapshot = projectProject(createProjectId(projectId), history.events);
       if (snapshot === undefined) throw new RecoveryError("Project history is empty.");
+      rememberSessionOwner(sessionOwners, snapshot.mainSessionId, projectId);
       const owner = mainSessions.get(snapshot.mainSessionId);
       if (owner !== undefined) {
         markInvalid(invalid, failures, "project", projectId, projectId, `Main Session is also owned by Project ${owner}.`);
@@ -92,6 +100,7 @@ export function buildRecoveryPlan(db: DatabaseSync): RecoveryPlan {
   for (const [nodeId, history] of nodes) {
     try {
       const snapshot = projectNode(createNodeId(nodeId), history.events as readonly NodeEvent[]);
+      if (snapshot?.sessionId !== undefined) rememberSessionOwner(sessionOwners, snapshot.sessionId, history.projectId);
       if (snapshot === undefined || history.projectId !== snapshot.node.projectId) {
         throw new RecoveryError("Node owner does not match its history.");
       }
@@ -186,18 +195,7 @@ export function buildRecoveryPlan(db: DatabaseSync): RecoveryPlan {
     }
   }
 
-  for (const [sessionId, history] of events.get("session")!) {
-    try {
-      const owner = mainSessions.get(sessionId) ?? sessions.get(sessionId);
-      if (owner !== history.projectId || !projectSnapshots.has(history.projectId) || invalid.has(history.projectId)) {
-        throw new RecoveryError("Session does not belong to an available Main or Node in its Project.");
-      }
-      parseSessionHistory(createSessionId(sessionId), history.events);
-    } catch (error: unknown) {
-      if (!isRecoverable(error)) throw error;
-      markInvalid(invalid, failures, "session", history.projectId, sessionId, reason(error));
-    }
-  }
+  const recoveredSessions = recoverSessions(db, new Set(projectSnapshots.keys()), sessionOwners, invalid, failures);
 
   const validProjectIds = new Set<string>();
   for (const projectId of projectSnapshots.keys()) {
@@ -205,6 +203,8 @@ export function buildRecoveryPlan(db: DatabaseSync): RecoveryPlan {
   }
   return Object.freeze({
     validProjectIds,
+    sessions: recoveredSessions.histories,
+    unavailableSessionIds: recoveredSessions.unavailable,
     events: new Map([...events].map(([domain, histories]) => [
       domain,
       new Map([...histories].filter(([ownerId, history]) => validProjectIds.has(history.projectId) && ownerId !== "")),
@@ -304,7 +304,13 @@ function markInvalid(
   sequence?: number,
 ): void {
   invalid.add(projectId);
-  failures.push({ projectId, domain, ownerId, ...(typeof sequence === "number" ? { sequence } : {}), reason: message });
+  failures.push({ kind: "project", projectId, domain, ownerId, ...(typeof sequence === "number" ? { sequence } : {}), reason: message });
+}
+
+function rememberSessionOwner(owners: Map<string, Set<string>>, sessionId: string, projectId: string): void {
+  const projects = owners.get(sessionId) ?? new Set<string>();
+  projects.add(projectId);
+  owners.set(sessionId, projects);
 }
 
 function isRecoverable(error: unknown): boolean {

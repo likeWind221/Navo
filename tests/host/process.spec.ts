@@ -274,6 +274,43 @@ describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, 
     }
   });
 
+  it("continues standalone Sessions with tool records across separate Host processes", async () => {
+    const home = await mkdtemp(join(tmpdir(), "navo-process-standalone-"));
+    try {
+      await withRealHost({ NAVO_HOME: home, NAVO_MOCK_LLM_MODE: "roadmap" }, async client => {
+        await collect(client.stream(agentTurnV2Method, {
+          sessionId: "plain", requestId: "original", text: "Original question",
+        }));
+      }, "scripts/host/mock.ts");
+      const history = readSessionEvents(home);
+      expect(history.some(event => event.type === "tool-call-requested")).toBe(true);
+      expect(history.some(event => event.type === "tool-call-result")).toBe(true);
+      const messages = history.map(eventMessage).filter(message => message !== undefined);
+      await withRealHost({ NAVO_HOME: home }, async client => {
+        expect(readSessionEvents(home)).toEqual(history);
+        await collect(client.stream(agentTurnV2Method, {
+          sessionId: "plain", requestId: "continued", text: "Continue",
+        }));
+        await collect(client.stream(agentTurnV2Method, {
+          sessionId: "other", requestId: "separate", text: "Separate question",
+        }));
+      }, "scripts/host/mock.ts");
+      const after = readSessionEvents(home);
+      const continued = after.filter(event => event.sessionId === "plain");
+      expect(continued.slice(0, history.length)).toEqual(history);
+      const request = continued.findLast(event => event.type === "llm-requested");
+      if (request?.type !== "llm-requested") throw new Error("Missing continued request");
+      expect(request.data.messages.slice(0, -1)).toEqual(messages);
+      expect(continued.filter(event => event.type === "tool-call-requested"))
+        .toEqual(history.filter(event => event.type === "tool-call-requested"));
+      const separate = after.filter(event => event.sessionId === "other").find(event => event.type === "llm-requested");
+      if (separate?.type !== "llm-requested") throw new Error("Missing separate request");
+      expect(separate.data.messages).toHaveLength(1);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   it("runs the scripted Mock Host and exposes a deterministic crash for Main supervision", async () => {
     const child = startHost("scripts/host/mock.ts", {
       NAVO_MOCK_MODE: "crash",

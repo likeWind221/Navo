@@ -4,19 +4,22 @@ import type { DatabaseSync, SQLInputValue } from "node:sqlite";
 
 import { StorageError } from "./errors.js";
 
-export const STORAGE_SCHEMA_VERSION = 1;
+export const STORAGE_SCHEMA_VERSION = 2;
 export const STORAGE_APPLICATION_ID = 0x4e41564f;
 
-const SCHEMA = `
+const EVENTS_SCHEMA = `
 CREATE TABLE events (
   domain     TEXT    NOT NULL,
   owner_id   TEXT    NOT NULL,
   seq        INTEGER NOT NULL CHECK (seq >= 1),
-  project_id TEXT    NOT NULL,
+  project_id TEXT CHECK (domain = 'session' OR project_id IS NOT NULL),
   payload    TEXT    NOT NULL,
   PRIMARY KEY (domain, owner_id, seq)
 ) STRICT;
 CREATE INDEX events_by_project ON events (project_id, domain, owner_id, seq);
+`;
+
+const SCHEMA = `${EVENTS_SCHEMA}
 CREATE TABLE workspace_bindings (
   project_id TEXT PRIMARY KEY,
   root       TEXT NOT NULL UNIQUE
@@ -63,13 +66,23 @@ function configureDatabase(db: DatabaseSync, path: string): void {
         throw unsupported(path, "has an unversioned schema or a foreign application id");
       }
       db.exec(SCHEMA);
-    } else if (version !== STORAGE_SCHEMA_VERSION || applicationId !== STORAGE_APPLICATION_ID) {
+    } else if ((version !== 1 && version !== STORAGE_SCHEMA_VERSION) || applicationId !== STORAGE_APPLICATION_ID) {
       throw unsupported(path, `has schema ${String(version)} / application id ${String(applicationId)}`);
     } else {
       const tables = db.prepare(
         `SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN (${REQUIRED_TABLES.map(() => "?").join(", ")})`,
       ).all(...REQUIRED_TABLES);
       if (tables.length !== REQUIRED_TABLES.length) throw unsupported(path, "is missing required tables");
+      if (version === 1) {
+        db.exec(`
+          DROP INDEX events_by_project;
+          ALTER TABLE events RENAME TO events_v1;
+          ${EVENTS_SCHEMA}
+          INSERT INTO events SELECT domain, owner_id, seq, project_id, payload FROM events_v1;
+          DROP TABLE events_v1;
+          PRAGMA user_version = ${STORAGE_SCHEMA_VERSION};
+        `);
+      }
     }
     db.exec("COMMIT");
   } catch (error: unknown) {

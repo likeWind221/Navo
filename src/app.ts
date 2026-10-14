@@ -13,6 +13,7 @@ import { ProjectRuntime } from "./project/runtime.js";
 import { MainSessionService } from "./project/session.js";
 import { ResourceService } from "./resource/service.js";
 import { SessionStore } from "./session/store.js";
+import { SessionError } from "./session/errors.js";
 import { StorageService } from "./storage/database.js";
 import type { StorageConfig } from "./storage/database.js";
 import { ProjectStore } from "./project/store.js";
@@ -42,8 +43,18 @@ export async function NavoApp(
   config: NavoAppConfig,
 ): Promise<void> {
   await ctx.plugin(StorageService, config.storage);
+  let resolveSessionProject: ((sessionId: SessionId) => string | null) | undefined;
+  ctx.inject(["projects", "nodes"], scope => {
+    resolveSessionProject = sessionId => resolveAgentBinding(scope, sessionId)?.projectId ?? null;
+    return () => { resolveSessionProject = undefined; };
+  });
   await Promise.all([
-    ctx.plugin(SessionStore, { persistence: true }),
+    ctx.plugin(SessionStore, { persistence: true, resolveProjectId: (sessionId: SessionId) => {
+      if (resolveSessionProject === undefined) {
+        throw new SessionError("persistence-unavailable", "Session ownership is unavailable.");
+      }
+      return resolveSessionProject(sessionId);
+    } }),
     ctx.plugin(ProjectStore),
     ctx.plugin(LLMService),
   ]);
