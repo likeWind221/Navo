@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 
-import { createNodeId, createProjectId } from "../brand/ids.js";
+import { createNodeId, createProjectId, createSessionId } from "../brand/ids.js";
 import { NodeError } from "../node/errors.js";
 import { projectNode } from "../node/projector.js";
 import type { NodeEvent } from "../node/events.js";
@@ -14,6 +14,8 @@ import type { RoadmapEvent } from "../roadmap/events.js";
 import { ResourceError } from "../resource/errors.js";
 import { parseResourceHistory } from "../resource/history.js";
 import type { ResourceHistoryContext } from "../resource/validation.js";
+import { SessionError } from "../session/errors.js";
+import { parseSessionHistory } from "../session/history.js";
 import type { StoredHistory, EventDomain, WorkspaceBindingRecord } from "./database.js";
 import { StorageError } from "./errors.js";
 
@@ -38,7 +40,7 @@ export function buildRecoveryPlan(db: DatabaseSync): RecoveryPlan {
   const invalid = new Set<string>();
   const failures: RecoveryFailure[] = [];
   const events = new Map<EventDomain, ReadonlyMap<string, StoredHistory>>();
-  const domains: readonly EventDomain[] = ["project", "node", "roadmap", "mailbox", "resource"];
+  const domains: readonly EventDomain[] = ["project", "node", "roadmap", "mailbox", "resource", "session"];
 
   for (const domain of domains) {
     events.set(domain, readHistories(db, domain, invalid, failures));
@@ -184,6 +186,19 @@ export function buildRecoveryPlan(db: DatabaseSync): RecoveryPlan {
     }
   }
 
+  for (const [sessionId, history] of events.get("session")!) {
+    try {
+      const owner = mainSessions.get(sessionId) ?? sessions.get(sessionId);
+      if (owner !== history.projectId || !projectSnapshots.has(history.projectId) || invalid.has(history.projectId)) {
+        throw new RecoveryError("Session does not belong to an available Main or Node in its Project.");
+      }
+      parseSessionHistory(createSessionId(sessionId), history.events);
+    } catch (error: unknown) {
+      if (!isRecoverable(error)) throw error;
+      markInvalid(invalid, failures, "session", history.projectId, sessionId, reason(error));
+    }
+  }
+
   const validProjectIds = new Set<string>();
   for (const projectId of projectSnapshots.keys()) {
     if (!invalid.has(projectId)) validProjectIds.add(projectId);
@@ -298,7 +313,8 @@ function isRecoverable(error: unknown): boolean {
     || error instanceof NodeError
     || error instanceof RoadmapError
     || error instanceof MailboxError
-    || error instanceof ResourceError;
+    || error instanceof ResourceError
+    || error instanceof SessionError;
 }
 
 function reason(error: unknown): string {

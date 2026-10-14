@@ -43,7 +43,7 @@ export async function NavoApp(
 ): Promise<void> {
   await ctx.plugin(StorageService, config.storage);
   await Promise.all([
-    ctx.plugin(SessionStore),
+    ctx.plugin(SessionStore, { persistence: true }),
     ctx.plugin(ProjectStore),
     ctx.plugin(LLMService),
   ]);

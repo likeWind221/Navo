@@ -20,6 +20,8 @@ import {
   StreamRpcClient,
 } from "../../rpc/index.js";
 import type { RpcClientFrame, RpcClientTransport } from "../../rpc/index.js";
+import type { SessionEvent } from "../../src/session/types.js";
+import { eventMessage } from "../../src/session/surface.js";
 
 import { describe, expect, it } from "vitest";
 
@@ -211,6 +213,67 @@ describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, 
     }
   });
 
+  it("continues Main and Node contexts across separate Host processes without replaying tool side effects", async () => {
+    const base = await mkdtemp(join(tmpdir(), "navo-process-session-"));
+    const home = join(base, "home");
+    const root = join(base, "workspace");
+    await mkdir(root);
+    await writeFile(join(root, "report.md"), "# Report\nPersist once.\n");
+    try {
+      const before = await withRealHost({ NAVO_HOME: home, NAVO_MOCK_LLM_MODE: "handoff" }, async client => {
+        const [project] = await collect(client.stream(projectCreateMethod, {
+          name: "Session project", goal: "Resume original contexts", workspaceRoot: root,
+        }));
+        const projectId = project!.projectId;
+        await collect(client.stream(projectTurnMethod, {
+          projectId, requestId: "plan", text: "Main original question", target: { kind: "main" },
+        }));
+        const [detail] = await collect(client.stream(projectGetMethod, { projectId }));
+        const nodeId = detail!.roadmap!.nodes[0]!.nodeId;
+        await collect(client.stream(projectTurnMethod, {
+          projectId, requestId: "work", text: "Node original question", target: { kind: "node", nodeId },
+        }));
+        const [mailbox] = await collect(client.stream(projectMailboxMethod, { projectId, afterSequence: 0, limit: 50 }));
+        const [resources] = await collect(client.stream(projectResourcesMethod, { projectId }));
+        return { projectId, nodeId, mailbox, resources };
+      }, "scripts/host/mock.ts");
+      const history = readSessionEvents(home);
+      const ids = [...new Set(history.map(event => event.sessionId))];
+      expect(ids).toHaveLength(2);
+      const messages = new Map(ids.map(id => [id, history.filter(event => event.sessionId === id)
+        .map(eventMessage).filter(message => message !== undefined)]));
+
+      await withRealHost({ NAVO_HOME: home }, async client => {
+        expect(readSessionEvents(home)).toEqual(history);
+        await collect(client.stream(projectTurnMethod, {
+          projectId: before.projectId, requestId: "continue-main", text: "Continue Main", target: { kind: "main" },
+        }));
+        await collect(client.stream(projectTurnMethod, {
+          projectId: before.projectId, requestId: "continue-node", text: "Continue Node",
+          target: { kind: "node", nodeId: before.nodeId },
+        }));
+        const [mailbox] = await collect(client.stream(projectMailboxMethod, { projectId: before.projectId, afterSequence: 0, limit: 50 }));
+        const [resources] = await collect(client.stream(projectResourcesMethod, { projectId: before.projectId }));
+        expect(mailbox).toEqual(before.mailbox);
+        expect(resources).toEqual(before.resources);
+      }, "scripts/host/mock.ts");
+      const after = readSessionEvents(home);
+      expect([...new Set(after.map(event => event.sessionId))]).toEqual(ids);
+      for (const id of ids) {
+        const events = after.filter(event => event.sessionId === id);
+        const old = history.filter(event => event.sessionId === id);
+        expect(events.slice(0, old.length)).toEqual(old);
+        const request = events.findLast(event => event.type === "llm-requested");
+        if (request?.type !== "llm-requested") throw new Error("Missing continued request");
+        expect(request.data.messages.slice(1, -1)).toEqual(messages.get(id));
+        expect(events.filter(event => event.type === "tool-call-requested"))
+          .toEqual(old.filter(event => event.type === "tool-call-requested"));
+      }
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
   it("runs the scripted Mock Host and exposes a deterministic crash for Main supervision", async () => {
     const child = startHost("scripts/host/mock.ts", {
       NAVO_MOCK_MODE: "crash",
@@ -359,6 +422,16 @@ describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, 
     await expect(exitOf(child)).resolves.toEqual({ code: 0, signal: null });
   });
 });
+
+function readSessionEvents(home: string): SessionEvent[] {
+  const db = new DatabaseSync(join(home, "navo.db"));
+  try {
+    return db.prepare("SELECT payload FROM events WHERE domain = 'session' ORDER BY owner_id, seq").all()
+      .map(row => JSON.parse(String(row.payload)) as SessionEvent);
+  } finally {
+    db.close();
+  }
+}
 
 async function withRealHost<T>(
   env: Readonly<Record<string, string>>,

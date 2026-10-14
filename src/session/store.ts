@@ -3,10 +3,18 @@ import { randomUUID } from "node:crypto";
 import { Service } from "cordis";
 import type { Context, Logger } from "cordis";
 
-import { createEventId, createMessageId } from "../brand/ids.js";
+import { createEventId, createSessionId } from "../brand/ids.js";
 import type { SessionId } from "../brand/ids.js";
 import type { Message } from "../llm/types.js";
+import { resolveAgentBinding } from "../project/binding.js";
+import { parseSessionEvent, parseSessionHistory } from "./history.js";
+import { applySurface, createSurface, eventMessage, withSystemPrompt } from "./surface.js";
+import type { SurfaceState } from "./surface.js";
 import type { SessionEvent, SurfaceOp } from "./types.js";
+
+export interface SessionStoreConfig {
+  readonly persistence: boolean;
+}
 
 /** An event before the log assigns its identity, order, and commit time. */
 export type SessionEventDraft<TEvent extends SessionEvent = SessionEvent> =
@@ -24,38 +32,66 @@ declare module "cordis" {
   }
 }
 
-/** In-memory, append-only session log exposed as `ctx.sessions`. */
 export class SessionStore extends Service {
   private readonly events = new Map<SessionId, SessionEvent[]>();
   private readonly surfaces = new Map<SessionId, SurfaceState>();
   private readonly logger: Logger;
+  private persist: ((event: SessionEvent, apply: () => void) => void) | undefined;
 
-  constructor(ctx: Context) {
+  constructor(ctx: Context, config?: SessionStoreConfig) {
     super(ctx, "sessions");
     this.logger = ctx.logger("session");
+    if (config?.persistence) {
+      ctx.inject(["storage", "projects", "nodes"], scope => {
+        for (const [sessionId, history] of scope.storage.recovery.events.get("session")!) {
+          this.restore(createSessionId(sessionId), history.events);
+        }
+        this.persist = (event, apply) => {
+          const binding = resolveAgentBinding(scope, event.sessionId);
+          if (binding === undefined) {
+            apply();
+            return;
+          }
+          scope.storage.write(tx => tx.appendEvents({
+            domain: "session", ownerId: event.sessionId, projectId: binding.projectId,
+            firstSeq: event.sequence, events: [event],
+          }), apply);
+        };
+        return () => { this.persist = undefined; };
+      });
+    }
   }
 
   append(draft: SessionEventDraft, surfaceOp?: SurfaceOp): SessionEvent {
     const events = this.events.get(draft.sessionId) ?? [];
-    const event = deepFreeze(
-      structuredClone({
-        ...draft,
-        ...(surfaceOp === undefined ? {} : { surfaceOp }),
-        id: createEventId(randomUUID()),
-        sequence: events.length + 1,
-        timestamp: new Date().toISOString(),
-      }) as SessionEvent,
-    );
+    const event = parseSessionEvent(draft.sessionId, {
+      ...draft,
+      ...(surfaceOp === undefined ? {} : { surfaceOp }),
+      id: createEventId(randomUUID()),
+      sequence: events.length + 1,
+      timestamp: new Date().toISOString(),
+    }, events.length + 1);
 
-    const surface = this.surfaces.get(event.sessionId) ?? createSurface();
+    const current = this.surfaces.get(event.sessionId) ?? createSurface();
+    const surface = { ...current, nodes: [...current.nodes] };
     applySurface(surface, event);
-    if (!this.events.has(event.sessionId)) {
-      this.events.set(event.sessionId, events);
+    const apply = () => {
+      if (!this.events.has(event.sessionId)) this.events.set(event.sessionId, events);
       this.surfaces.set(event.sessionId, surface);
-    }
-    events.push(event);
-    this.publish(event);
+      events.push(event);
+      this.publish(event);
+    };
+    if (this.persist === undefined) apply();
+    else this.persist(event, apply);
     return event;
+  }
+
+  restore(sessionId: SessionId, history: readonly unknown[]): void {
+    const events = parseSessionHistory(sessionId, history);
+    const surface = createSurface();
+    for (const event of events) applySurface(surface, event);
+    this.events.set(sessionId, [...events]);
+    this.surfaces.set(sessionId, surface);
   }
 
   getEvents(sessionId: SessionId): readonly SessionEvent[] {
@@ -96,78 +132,4 @@ export class SessionStore extends Service {
       );
     });
   }
-}
-
-interface SurfaceState {
-  readonly nodes: number[];
-  derived: Message[];
-  derivedNodes: number;
-  generation: number;
-  derivedGeneration: number;
-}
-
-function createSurface(): SurfaceState {
-  return { nodes: [], derived: [], derivedNodes: 0, generation: 0, derivedGeneration: 0 };
-}
-
-function applySurface(surface: SurfaceState, event: SessionEvent): void {
-  if (!isMessageEvent(event)) {
-    if (event.surfaceOp !== undefined) throw new TypeError("Log-only events cannot alter the model surface.");
-    return;
-  }
-  const op = event.surfaceOp ?? "append";
-  if (op === "append") {
-    surface.nodes.push(event.sequence);
-    return;
-  }
-  const start = surface.nodes.indexOf(op.start);
-  const end = surface.nodes.indexOf(op.end);
-  if (start < 0 || end < start) throw new RangeError("Surface replacement bounds must name an ordered current range.");
-  surface.nodes.splice(start, end - start + 1, event.sequence);
-  surface.generation += 1;
-}
-
-function isMessageEvent(event: SessionEvent): boolean {
-  return event.type === "user-message" || event.type === "assistant-message" || event.type === "tool-call-result";
-}
-
-function eventMessage(event: SessionEvent): Message | undefined {
-  switch (event.type) {
-    case "user-message":
-    case "tool-call-result":
-      return event.data.message;
-    case "assistant-message":
-      return event.data.message.content.length === 0 && event.data.message.replay === undefined
-        ? undefined : event.data.message;
-    default:
-      return undefined;
-  }
-}
-
-function withSystemPrompt(
-  messages: readonly Message[],
-  sessionId: SessionId,
-  systemPrompt: string | undefined,
-): readonly Message[] {
-  if (systemPrompt === undefined) return Object.freeze([...messages]);
-  return Object.freeze([{
-    id: createMessageId(`system-${sessionId}`),
-    role: "system",
-    content: [{ type: "text", text: systemPrompt }],
-  }, ...messages]);
-}
-
-function deepFreeze<TValue>(
-  value: TValue,
-  seen = new Set<object>(),
-): TValue {
-  if (value === null || typeof value !== "object" || seen.has(value)) {
-    return value;
-  }
-
-  seen.add(value);
-  for (const child of Object.values(value)) {
-    deepFreeze(child, seen);
-  }
-  return Object.freeze(value) as TValue;
 }
