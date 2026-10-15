@@ -1,6 +1,5 @@
 import type { EventId, NodeId, ProjectId, SessionId } from "../brand/ids.js";
 import type {
-  ControlPurpose,
   NodeConfirmation,
   NodeObjective,
   NodeReviewInput,
@@ -9,13 +8,12 @@ import type {
   NodeSubmissionInput,
 } from "./model.js";
 
-export type NodeDefinitionChange =
-  | { readonly kind: "work"; readonly objective: NodeObjective }
-  | { readonly kind: "control"; readonly purpose: ControlPurpose; readonly title: string };
+export interface NodeDefinitionChange {
+  readonly objective: NodeObjective;
+}
 
 export type NodeEvent =
   | NodeEventRecord<"node-created", { readonly projectId: ProjectId; readonly objective: NodeObjective; readonly requirement?: NodeRequirement }>
-  | NodeEventRecord<"control-created", { readonly projectId: ProjectId; readonly purpose: ControlPurpose; readonly title: string; readonly requirement?: NodeRequirement }>
   | NodeEventRecord<"definition-changed", {
       readonly definition: NodeDefinitionChange;
       readonly requirement: NodeRequirement;

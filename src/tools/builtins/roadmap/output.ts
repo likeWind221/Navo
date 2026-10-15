@@ -25,25 +25,10 @@ export function createAgentRoadmapView(
     if (!snapshot || !relation) {
       throw new Error(`Roadmap Node '${nodeId}' is missing from the projected state.`);
     }
-    const base = {
-      id: String(snapshot.node.id),
-      title: snapshot.node.kind === "work" ? snapshot.node.objective.title : snapshot.node.title,
-      required: snapshot.node.requirement === "required",
-      status: snapshot.status,
-      depends_on: Object.freeze(relation.predecessors.map(String)),
-    } as const;
-    if (snapshot.node.kind === "control") {
-      return Object.freeze({
-        ...base,
-        kind: "control" as const,
-        control: snapshot.node.purpose,
-      });
-    }
     return Object.freeze({
-      ...base,
-      kind: "work" as const,
-      goal: snapshot.node.objective.description,
-      done_when: Object.freeze([...snapshot.node.objective.acceptanceCriteria]),
+      id: String(snapshot.node.id),
+      ...nodeContent(snapshot),
+      depends_on: Object.freeze(relation.predecessors.map(String)),
     });
   });
   return Object.freeze({
@@ -54,26 +39,17 @@ export function createAgentRoadmapView(
 }
 
 export function createAgentNodeView(snapshot: NodeSnapshot): AgentNodeView {
-  const base = {
-    id: String(snapshot.node.id),
-    version: snapshot.revision,
-    title: snapshot.node.kind === "work" ? snapshot.node.objective.title : snapshot.node.title,
+  return Object.freeze({ id: String(snapshot.node.id), version: snapshot.revision, ...nodeContent(snapshot) });
+}
+
+function nodeContent(snapshot: NodeSnapshot) {
+  return {
+    title: snapshot.node.objective.title,
     required: snapshot.node.requirement === "required",
     status: snapshot.status,
-  } as const;
-  if (snapshot.node.kind === "control") {
-    return Object.freeze({
-      ...base,
-      kind: "control" as const,
-      control: snapshot.node.purpose,
-    });
-  }
-  return Object.freeze({
-    ...base,
-    kind: "work" as const,
     goal: snapshot.node.objective.description,
     done_when: Object.freeze([...snapshot.node.objective.acceptanceCriteria]),
-  });
+  } as const;
 }
 
 export function formatAgentRoadmapView(view: AgentRoadmapView): string {
@@ -93,15 +69,10 @@ export function formatAgentRoadmapView(view: AgentRoadmapView): string {
       `required: ${node.required ? "yes" : "no"}`,
       `status: ${node.status}`,
       `depends_on: ${node.depends_on.length > 0 ? node.depends_on.join(", ") : "none"}`,
+      `Goal: ${inline(node.goal)}`,
+      "Done when:",
+      ...criteria(node.done_when),
     );
-    if (node.kind === "control") {
-      lines.push(`Control: ${node.control}`);
-      continue;
-    }
-    lines.push(`Goal: ${inline(node.goal)}`, "Done when:");
-    lines.push(...(node.done_when.length > 0
-      ? node.done_when.map((criterion) => `- ${inline(criterion)}`)
-      : ["- none"]));
   }
 
   return lines.join("\n");
@@ -112,55 +83,43 @@ export function formatAgentNodeView(view: AgentNodeView): string {
     `Node: ${view.id}`,
     `version: ${view.version}`,
     `title: ${inline(view.title)}`,
-    `kind: ${view.kind}`,
     `required: ${view.required ? "yes" : "no"}`,
     `status: ${view.status}`,
+    `Goal: ${inline(view.goal)}`,
+    "Done when:",
+    ...criteria(view.done_when),
   ];
-  if (view.kind === "control") {
-    lines.push(`Control: ${view.control}`);
-  } else {
-    lines.push(`Goal: ${inline(view.goal)}`, "Done when:");
-    lines.push(...(view.done_when.length > 0
-      ? view.done_when.map((criterion) => `- ${inline(criterion)}`)
-      : ["- none"]));
-  }
   return lines.join("\n");
 }
 
 export function agentRoadmapArtifact(view: AgentRoadmapView): JsonObject {
   if (view.state === "empty") return { state: "empty" };
-  const nodes: JsonValue[] = view.nodes.map((node) => {
-    const base: JsonObject = {
-      id: node.id,
-      title: node.title,
-      required: node.required,
-      status: node.status,
-      depends_on: [...node.depends_on],
-    };
-    return node.kind === "control"
-      ? { ...base, kind: "control", control: node.control }
-      : {
-          ...base,
-          kind: "work",
-          goal: node.goal,
-          done_when: [...node.done_when],
-        };
-  });
+  const nodes: JsonValue[] = view.nodes.map((node) => ({
+    id: node.id,
+    title: node.title,
+    required: node.required,
+    status: node.status,
+    depends_on: [...node.depends_on],
+    goal: node.goal,
+    done_when: [...node.done_when],
+  }));
   return { state: "ready", version: view.version, nodes };
 }
 
 export function agentNodeArtifact(view: AgentNodeView): JsonObject {
-  const base: JsonObject = {
+  return {
     id: view.id,
     version: view.version,
     title: view.title,
-    kind: view.kind,
     required: view.required,
     status: view.status,
+    goal: view.goal,
+    done_when: [...view.done_when],
   };
-  return view.kind === "control"
-    ? { ...base, control: view.control }
-    : { ...base, goal: view.goal, done_when: [...view.done_when] };
+}
+
+function criteria(values: readonly string[]): string[] {
+  return values.length > 0 ? values.map((criterion) => `- ${inline(criterion)}`) : ["- none"];
 }
 
 function inline(value: string): string {

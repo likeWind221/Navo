@@ -59,7 +59,6 @@ describe("read_node", () => {
     expect(text).toContain(`Node: ${node.node.id}`);
     expect(text).toContain(`version: ${current.revision}`);
     expect(text).toContain("title: Build prototype");
-    expect(text).toContain("kind: work");
     expect(text).toContain("required: no");
     expect(text).toContain("status: idle");
     expect(text).toContain("Goal: Implement the first backend prototype.");
@@ -68,7 +67,6 @@ describe("read_node", () => {
       id: String(node.node.id),
       version: current.revision,
       title: "Build prototype",
-      kind: "work",
       required: false,
       status: "idle",
       goal: "Implement the first backend prototype.",
@@ -76,34 +74,6 @@ describe("read_node", () => {
     });
     expect(JSON.stringify(result.artifact)).not.toContain("sessionId");
     expect(JSON.stringify(result.artifact)).not.toContain("confirmation");
-  });
-
-  it("projects control Nodes without inventing work fields", async () => {
-    const ctx = await createContext();
-    const project = ctx.projects.create({ name: "Project", goal: "Run checkpoints" });
-    const node = ctx.nodes.create({
-      projectId: project.id,
-      kind: "control",
-      purpose: "checkpoint",
-      title: "Architecture review",
-    });
-
-    const result = await ctx.tools.execute(
-      toolCall("read-control-node", READ_NODE_TOOL_NAME, { node_id: String(node.node.id) }),
-      signal,
-      { sessionId: project.mainSessionId, allowedTools: [READ_NODE_TOOL_NAME] },
-    );
-
-    if (result.kind !== "success") throw new Error("read_node unexpectedly failed");
-    expect(result.artifact).toEqual({
-      id: String(node.node.id),
-      version: node.revision,
-      title: "Architecture review",
-      kind: "control",
-      required: true,
-      status: "locked",
-      control: "checkpoint",
-    });
   });
 
   it("does not reveal a Node owned by another Project", async () => {

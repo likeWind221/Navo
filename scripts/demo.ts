@@ -35,10 +35,7 @@ export async function runDemo(print: (line: string) => void = console.log): Prom
     await app.projectWorkspaces.create(project.id, root);
     const projectId = project.id;
     const nodeId = (key: string) => createNodeId(script.id(key));
-    const title = (id: NodeId) => {
-      const value = app.nodes.get(id)?.node;
-      return value?.kind === "work" ? value.objective.title : id;
-    };
+    const title = (id: NodeId) => app.nodes.get(id)?.node.objective.title ?? id;
     const rejected: string[] = [];
     let actions = 0;
     let answer = "";

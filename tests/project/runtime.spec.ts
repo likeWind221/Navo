@@ -67,19 +67,12 @@ describe("ProjectRuntime Human-controlled Node start", () => {
     })).resolves.toMatchObject({ turn: { status: "completed" } });
   });
 
-  it("rejects archived Projects, cross-Project Nodes, locked Nodes, and control Nodes", async () => {
+  it("rejects archived Projects, cross-Project Nodes, and locked Nodes", async () => {
     const { ctx, adapter } = await createKit([]);
     const first = ctx.projects.create({ name: "Project", goal: "First" });
     const second = ctx.projects.create({ name: "Project", goal: "Second" });
     const locked = createWorkNode(ctx, first.id, "Locked");
     const foreign = createWorkNode(ctx, second.id, "Foreign");
-    const control = ctx.nodes.create({
-      projectId: first.id,
-      kind: "control",
-      purpose: "start",
-      title: "Start",
-    });
-    ctx.nodes.unlock(control.node.id, "Ready");
 
     expect(ctx.projectRuntime.canStartNode(first.id, locked.node.id)).toBe(false);
     expect(() => ctx.projectRuntime.startNode({
@@ -87,14 +80,8 @@ describe("ProjectRuntime Human-controlled Node start", () => {
       nodeId: foreign.node.id,
       text: "Cross project",
     })).toThrow(expect.objectContaining({ code: "node-not-found" }));
-    expect(() => ctx.projectRuntime.startNode({
-      projectId: first.id,
-      nodeId: control.node.id,
-      text: "Run control",
-    })).toThrow(expect.objectContaining({ code: "invalid-state" }));
 
     ctx.projects.archive(first.id, "Pause");
-    expect(ctx.projectRuntime.canStartNode(first.id, control.node.id)).toBe(false);
     expect(() => ctx.projectRuntime.startNode({
       projectId: first.id,
       nodeId: locked.node.id,

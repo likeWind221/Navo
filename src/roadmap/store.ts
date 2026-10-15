@@ -12,6 +12,7 @@ import { buildRoadmapGraph } from "./graph.js";
 import { RoadmapError } from "./errors.js";
 import { freezeRoadmapEvent } from "./events.js";
 import type { RoadmapChange, RoadmapEvent } from "./events.js";
+import { lastLegacyEvent } from "./legacy.js";
 import type { RoadmapDefinition, RoadmapGraph, RoadmapSnapshot } from "./model.js";
 import { projectRoadmap } from "./projector.js";
 
@@ -19,9 +20,11 @@ export class RoadmapStore extends Service {
   static inject = ["storage", "projects", "nodes"];
   private readonly histories = new Map<ProjectId, readonly RoadmapEvent[]>();
   private readonly snapshots = new Map<ProjectId, RoadmapSnapshot>();
+  private readonly legacy: ReadonlySet<string>;
 
   constructor(ctx: Context) {
     super(ctx, "roadmaps");
+    this.legacy = ctx.storage.recovery.legacyControlNodes;
     const nodes = this.ctx.nodes;
     nodes.coordinate(drafts => this.commitNodeAction(nodes, drafts));
     for (const [projectId, stored] of ctx.storage.recovery.events.get("roadmap")!) {
@@ -33,6 +36,7 @@ export class RoadmapStore extends Service {
         const reason = error instanceof Error ? error.message : "unknown failure";
         throw new StorageError("invalid-record", `Stored roadmap history ${projectId} is invalid: ${reason}`, { cause: error });
       }
+      if (lastLegacyEvent(stored.events as readonly RoadmapEvent[], this.legacy) >= 0) this.releaseResolved(createProjectId(projectId));
     }
   }
 
@@ -81,6 +85,7 @@ export class RoadmapStore extends Service {
       input.projectId,
       history,
       [...candidateNodes.values()].map(value => value.node),
+      this.legacy,
     );
     if (!snapshot) throw new RoadmapError("invalid-reference", "Every roadmap node must exist");
 
@@ -121,7 +126,7 @@ export class RoadmapStore extends Service {
   private restoreHistory(projectId: ProjectId, events: readonly RoadmapEvent[], emit: boolean): RoadmapSnapshot {
     if (this.snapshots.has(projectId)) throw new RoadmapError("already-exists", "Cannot overwrite an existing roadmap");
     const history = Object.freeze(events.map(freezeRoadmapEvent));
-    const snapshot = projectRoadmap(projectId, history, this.ctx.nodes.getByProject(projectId).map(value => value.node));
+    const snapshot = projectRoadmap(projectId, history, this.ctx.nodes.getByProject(projectId).map(value => value.node), this.legacy);
     if (!snapshot) throw new RoadmapError("invalid-event-stream", "Cannot restore an empty history");
     this.commitHistory(projectId, history, snapshot, emit);
     return snapshot;
@@ -144,7 +149,7 @@ export class RoadmapStore extends Service {
 
   private commitNodeAction(nodes: NodeStore, drafts: readonly NodeEventDraft[]): void {
     if (drafts.length === 0) return;
-    if (drafts.every(draft => draft.type === "node-created" || draft.type === "control-created")) {
+    if (drafts.every(draft => draft.type === "node-created")) {
       nodes.commit(nodes.prepare(drafts));
       return;
     }
@@ -172,6 +177,15 @@ export class RoadmapStore extends Service {
     const added = new Set(drafts.map(draft => draft.nodeId));
     this.findUnlocks(graph, proposed, batch, added);
     nodes.commit(batch);
+  }
+
+  private releaseResolved(projectId: ProjectId): void {
+    if (this.ctx.projects.get(projectId)?.status !== "active") return;
+    const nodes = new Map(this.ctx.nodes.getByProject(projectId).map(value => [value.node.id, value]));
+    const batch = this.ctx.nodes.prepare([]);
+    const unlocked = new Set<NodeId>();
+    this.findUnlocks(this.get(projectId)!.graph, nodes, batch, unlocked);
+    if (unlocked.size > 0) this.ctx.nodes.commit(batch);
   }
 
   private findUnlocks(graph: RoadmapGraph, nodes: Map<NodeId, NodeSnapshot>, batch: NodeBatch, added = new Set<NodeId>()): void {

@@ -113,7 +113,7 @@ function completedEvents(): readonly ModelEvent[] {
 
 function createRoadmapEvents(): readonly ModelEvent[] {
   const work = (key: string, dependsOn: readonly string[]) => ({
-    key, kind: "work", title: `Step ${key}`, goal: `Finish step ${key}`,
+    key, title: `Step ${key}`, goal: `Finish step ${key}`,
     done_when: [`Step ${key} is reviewed`], required: true, depends_on: dependsOn,
   });
   const args = JSON.stringify({ reason: "Mock plan", nodes: [work("a", []), work("b", ["a"])] });

@@ -218,17 +218,11 @@ describe("Main Resource handoff capability", () => {
     });
   });
 
-  it("rejects control or cross-Project Nodes and never starts the target Node", async () => {
+  it("rejects cross-Project Nodes and never starts the target Node", async () => {
     const { app, project, root } = await resourceToolFixture();
     await writeFile(join(root, "target.md"), "target\n", "utf8");
     const owner = bindResourceNode(app, project.id);
     const target = bindResourceNode(app, project.id);
-    const control = app.nodes.create({
-      projectId: project.id,
-      kind: "control",
-      purpose: "checkpoint",
-      title: "review",
-    });
     const otherProject = app.projects.create({ name: "Project", goal: "Other Project" });
     const otherNode = app.nodes.create({
       projectId: otherProject.id,
@@ -252,7 +246,7 @@ describe("Main Resource handoff capability", () => {
     const id = resourceArtifact(registered).resource_id as string;
     const before = app.nodes.getEvents(target.node.node.id).length;
 
-    for (const nodeId of [control.node.id, otherNode.node.id]) {
+    for (const nodeId of [otherNode.node.id]) {
       const rejected = await callResourceTool(
         app,
         project.mainSessionId,

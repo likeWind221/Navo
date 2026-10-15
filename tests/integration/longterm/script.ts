@@ -27,7 +27,7 @@ export function scenario(): Scenario {
     ids.set(key, match![1]!);
   };
   const work = (key: string, depends_on: string[]) => ({
-    key, kind: "work", title: key, goal: `Complete ${key}`, done_when: [`${key} accepted`], required: true, depends_on,
+    key, title: key, goal: `Complete ${key}`, done_when: [`${key} accepted`], required: true, depends_on,
   });
   const register = (key: string) => ({ path: `${key}.txt`, name: key, description: `${key} metadata`, type: "text/plain" });
   const share = (key: string) => ({ resource_id: id(key), expected_revision: 1, access: { kind: "shared", node_ids: [id("synthesis")] } });

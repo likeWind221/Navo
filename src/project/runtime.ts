@@ -108,7 +108,6 @@ export class ProjectRuntime extends Service {
     if (
       node === undefined
       || node.node.projectId !== projectId
-      || node.node.kind !== "work"
       || node.status !== "idle"
     ) {
       return false;
@@ -154,7 +153,7 @@ export class ProjectRuntime extends Service {
       complete: reviewable && waiting,
       skip: reviewable && (node.status === "locked" || waiting),
       rework: reviewable && node.status === "submitted",
-      review: reviewable && node.node.kind === "work" && waiting
+      review: reviewable && waiting
         && !this.activeMains.has(projectId) && this.ctx.reviews.get(projectId) === undefined,
     };
   }
@@ -260,9 +259,6 @@ export class ProjectRuntime extends Service {
     this.requireActiveProject(projectId);
     const node = this.requireProjectNode(projectId, nodeId);
     this.requireNodeAvailable(nodeId);
-    if (node.node.kind !== "work") {
-      throw new NodeError("invalid-state", "Control nodes cannot execute.");
-    }
     if (node.status !== "idle") {
       throw new NodeError(
         "invalid-state",

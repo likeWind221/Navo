@@ -79,7 +79,6 @@ describe("modify_roadmap", () => {
       reason: "Add verification",
       action: "add_node",
       key: "verify",
-      kind: "work",
       title: "Verify backend",
       goal: "Verify the integrated backend.",
       done_when: ["Integration tests pass"],
@@ -94,7 +93,6 @@ describe("modify_roadmap", () => {
     expect(createdId).toBeTruthy();
     expect(artifact.nodes?.map((node) => node.id)).toContain(createdId);
     const created = ctx.nodes.getByProject(project.id).find((node) => String(node.node.id) === createdId);
-    expect(created?.node.kind).toBe("work");
     expect(created?.status).toBe("locked");
     expect(ctx.roadmaps.get(project.id)?.graph.definition.edges).toContainEqual({
       from: buildId,
@@ -142,7 +140,6 @@ describe("modify_roadmap", () => {
       action: "edit_node",
       node_id: String(designId),
       node_version: current.revision,
-      kind: "work",
       title: "Design service architecture",
       goal: "Define services, API boundaries and persistence responsibilities.",
       done_when: ["Service boundaries documented", "API contract documented"],
@@ -154,7 +151,6 @@ describe("modify_roadmap", () => {
     expect(ctx.roadmaps.get(project.id)?.revision).toBe(2);
     expect(edited.revision).toBe(current.revision + 1);
     expect(edited.node).toMatchObject({
-      kind: "work",
       requirement: "optional",
       objective: {
         title: "Design service architecture",
@@ -177,7 +173,6 @@ describe("modify_roadmap", () => {
       action: "edit_node",
       node_id: String(designId),
       node_version: current.revision,
-      kind: "work",
       title: "Stale title",
       goal: "Stale goal",
       done_when: ["Stale criterion"],
@@ -204,7 +199,6 @@ describe("modify_roadmap", () => {
       action: "edit_node",
       node_id: String(designId),
       node_version: working.revision,
-      kind: "work",
       title: "Changed during work",
       goal: "Different goal",
       done_when: ["Different criterion"],
@@ -264,6 +258,28 @@ describe("modify_roadmap", () => {
     expect(ctx.roadmaps.get(project.id)?.revision).toBe(4);
     expect(ctx.roadmaps.get(project.id)?.graph.definition.nodes).toEqual([buildId]);
     expect(ctx.nodes.get(designId)).toBeDefined();
+  });
+
+  it("rejects legacy kind and control fields on add_node and edit_node", async () => {
+    const { ctx, project, designId, buildId } = await createRoadmap();
+    const node = { title: "Verify", goal: "Verify the backend.", done_when: ["Verified"], required: true };
+    for (const arguments_ of [
+      { base_version: 1, reason: "Add", action: "add_node", key: "verify", ...node, depends_on: [String(buildId)], kind: "work" },
+      { base_version: 1, reason: "Add", action: "add_node", key: "verify", ...node, depends_on: [], control: "checkpoint" },
+      { base_version: 1, reason: "Edit", action: "edit_node", node_id: String(designId), node_version: 2, ...node, kind: "work" },
+    ]) {
+      const result = await execute(ctx, project.mainSessionId, arguments_);
+      expect(result.kind).toBe("failure");
+    }
+    expect(ctx.roadmaps.get(project.id)?.revision).toBe(1);
+    expect(ctx.nodes.getByProject(project.id)).toHaveLength(2);
+
+    const { goal: _, ...missingGoal } = node;
+    const incomplete = await execute(ctx, project.mainSessionId, {
+      base_version: 1, reason: "Add", action: "add_node", key: "verify", ...missingGoal, depends_on: [],
+    });
+    if (incomplete.kind !== "failure") throw new Error("add_node unexpectedly accepted a Node without a goal");
+    expect(JSON.stringify(incomplete.block.content)).toContain("goal must be a non-empty string");
   });
 
   it("rejects a Node Session even if modify_roadmap is dispatched directly", async () => {

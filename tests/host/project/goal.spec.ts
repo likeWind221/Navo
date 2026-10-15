@@ -12,7 +12,7 @@ import { call, host, workspace } from "./helpers.js";
 const plan = {
   reason: "User agreed to the restated goal",
   nodes: [{
-    key: "survey", kind: "work", title: "Survey", goal: "Collect sources",
+    key: "survey", title: "Survey", goal: "Collect sources",
     done_when: ["Sources listed"], required: true, depends_on: [],
   }],
 };

@@ -24,7 +24,7 @@ export function demoScript(): DemoScript {
   const resource = (request: GenerateRequest, callId: string, key: string) =>
     capture(request, callId, key, /Resource ID: ([^\s]+)/);
   const work = (key: string, goal: string, depends_on: string[]) => ({
-    key, kind: "work", title: key, goal, done_when: [`${key} accepted by Human`], required: true, depends_on,
+    key, title: key, goal, done_when: [`${key} accepted by Human`], required: true, depends_on,
   });
   const publish = (key: string, description: string) =>
     ({ path: `${key}.txt`, name: key, description, type: "text/plain" });

@@ -26,7 +26,7 @@ export function scenario(): Scenario {
     ids.set(key, match![1]!);
   };
   const work = (key: string, depends_on: string[]) => ({
-    key, kind: "work", title: key, goal: `Complete ${key}`, done_when: [`${key} is backed by a cited source`], required: true, depends_on,
+    key, title: key, goal: `Complete ${key}`, done_when: [`${key} is backed by a cited source`], required: true, depends_on,
   });
   const register = (file: string, name: string) => ({ path: file, name, description: `${name} metadata`, type: "text/plain" });
   const submit = (resources: string[], note: string) => ({

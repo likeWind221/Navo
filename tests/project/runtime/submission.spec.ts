@@ -66,7 +66,6 @@ describe("Node completion signal and Human review", () => {
     expect(reworked.status).toBe("idle");
     expect(reworked.submission).toBeUndefined();
     expect(reworked.pendingFeedback).toMatchObject({ requestedBy: "human", feedback: "Add the 2024 data" });
-    if (reworked.node.kind !== "work") throw new Error("Expected a work node");
     expect(reworked.node.objective.acceptanceCriteria).toEqual(["Collect complete"]);
     expect(ctx.nodes.get(next)?.status).toBe("locked");
     await Promise.resolve();

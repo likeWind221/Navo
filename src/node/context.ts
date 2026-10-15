@@ -31,12 +31,6 @@ export class NodeTurnContextBuilder {
     snapshot: NodeSnapshot,
     observed?: readonly ContextFact[],
   ): NodeTurnContext {
-    if (snapshot.node.kind !== "work") {
-      throw new NodeError(
-        "invalid-state",
-        "Control nodes cannot build a Node Agent Turn context.",
-      );
-    }
 
     const project = this.ctx.projects.get(snapshot.node.projectId);
     if (project === undefined || project.status !== "active") {

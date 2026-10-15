@@ -42,7 +42,6 @@ describe("generic Project Nodes", () => {
   it("creates immutable locked Nodes with independent project ownership", async () => {
     const { ctx, project, objective } = await kit();
     const node = ctx.nodes.create({ projectId: project.id, objective });
-    if (node.node.kind !== "work") throw new Error("Expected a work node");
     objective.acceptanceCriteria.push("Changed");
     expect(node.status).toBe("locked");
     expect(node.node.objective.acceptanceCriteria).toEqual(["Cite primary sources"]);

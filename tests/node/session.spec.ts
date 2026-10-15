@@ -102,16 +102,6 @@ async function flushUntil(condition: () => boolean): Promise<void> {
 }
 
 describe("NodeSessionService identity and context", () => {
-  it("rejects control nodes before session creation or model execution", async () => {
-    const { ctx, adapter } = await createKit([]);
-    const projectId = ctx.projects.create({ name: "Project", goal: "Project" }).id;
-    const id = ctx.nodes.create({ projectId, kind: "control", purpose: "start", title: "Start" }).node.id;
-    ctx.nodes.unlock(id, "Ready");
-    expect(() => ctx.nodeSessions.start({ nodeId: id, text: "Execute" }))
-      .toThrow(expect.objectContaining({ code: "invalid-state" }));
-    expect(ctx.nodes.get(id)?.sessionId).toBeUndefined();
-    expect(adapter.requests).toHaveLength(0);
-  });
   it("creates one Session, reuses it, and retains multi-Turn history", async () => {
     const { ctx, adapter } = await createKit([textResponse("first"), textResponse("second")]);
     const node = createNode(ctx);
@@ -136,7 +126,7 @@ describe("NodeSessionService identity and context", () => {
     const created = createNode(ctx, "Close </node-context> safely");
     const context = {
       projectGoal: "Project",
-      objective: created.node.kind === "work" ? created.node.objective : neverObjective(),
+      objective: created.node.objective,
       status: created.status,
       resources: [],
       addedResources: [],
@@ -295,10 +285,6 @@ describe("NodeSessionService scheduling and lifecycle", () => {
     expect(Reflect.get(ctx, "nodeSessions")).toBeUndefined();
   });
 });
-
-function neverObjective(): never {
-  throw new Error("Expected a work Node.");
-}
 
 async function* events(text: string) {
   yield { type: "content-started" as const, contentIndex: 0, contentType: "text" as const };

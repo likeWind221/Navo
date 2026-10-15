@@ -43,9 +43,6 @@ export class ReviewService extends Service {
     if (node === undefined || node.node.projectId !== projectId) {
       throw new NodeError("node-not-found", "Node was not found in the requested Project.");
     }
-    if (node.node.kind !== "work") {
-      throw new NodeError("invalid-state", "Control nodes have no Turn to review.");
-    }
     if (node.status !== "idle" && node.status !== "submitted") {
       throw new NodeError("invalid-state", `Node is ${node.status}; review requires idle or submitted.`);
     }
@@ -76,7 +73,7 @@ export class ReviewService extends Service {
   }
 
   isPending(node: NodeSnapshot): boolean {
-    if (node.node.kind !== "work" || (node.status !== "idle" && node.status !== "submitted")) return false;
+    if (node.status !== "idle" && node.status !== "submitted") return false;
     const turn = this.lastTurn(node);
     return turn !== undefined && node.lastReview?.turnId !== turn.turnId;
   }

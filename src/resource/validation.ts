@@ -114,7 +114,6 @@ export function requireResourceWorkNode(
   if (
     node !== undefined
     && node.node.projectId === projectId
-    && node.node.kind === "work"
   ) {
     return;
   }

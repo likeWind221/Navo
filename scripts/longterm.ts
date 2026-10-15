@@ -31,7 +31,7 @@ async function main() {
     type Execution = Pick<Awaited<ReturnType<typeof app.projectRuntime.startMain>>, "sessionId" | "turn">;
     const turns: Execution[] = [];
     const node = (title: string) => {
-      const value = app.nodes.getByProject(projectId).find(value => value.node.kind === "work" && value.node.objective.title === title);
+      const value = app.nodes.getByProject(projectId).find(value => value.node.objective.title === title);
       assert(value, `Missing node ${title}`);
       return value;
     };

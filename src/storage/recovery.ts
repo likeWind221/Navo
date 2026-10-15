@@ -23,6 +23,7 @@ import { recoverSessions } from "./session.js";
 export interface RecoveryPlan {
   readonly validProjectIds: ReadonlySet<string>;
   readonly events: ReadonlyMap<ProjectEventDomain, ReadonlyMap<string, StoredHistory>>;
+  readonly legacyControlNodes: ReadonlySet<string>;
   readonly sessions: ReadonlyMap<string, StoredHistory<string | null>>;
   readonly unavailableSessionIds: ReadonlySet<string>;
   readonly workspaceBindings: readonly WorkspaceBindingRecord[];
@@ -53,6 +54,7 @@ export function buildRecoveryPlan(db: DatabaseSync): RecoveryPlan {
   for (const domain of domains) {
     events.set(domain, readHistories(db, domain, invalid, failures));
   }
+  const legacyControlNodes = dropLegacyControlNodes(events);
 
   const projects = events.get("project")!;
   const projectSnapshots = new Map<string, ReturnType<typeof projectProject>>();
@@ -134,7 +136,7 @@ export function buildRecoveryPlan(db: DatabaseSync): RecoveryPlan {
       const catalog = [...nodeSnapshots.values()]
         .filter(snapshot => snapshot?.node.projectId === projectId)
         .map(snapshot => snapshot!.node);
-      if (!projectRoadmap(createProjectId(projectId), history.events as readonly RoadmapEvent[], catalog)) {
+      if (!projectRoadmap(createProjectId(projectId), history.events as readonly RoadmapEvent[], catalog, legacyControlNodes)) {
         throw new RecoveryError("Roadmap history is empty.");
       }
     } catch (error: unknown) {
@@ -210,6 +212,7 @@ export function buildRecoveryPlan(db: DatabaseSync): RecoveryPlan {
       domain,
       new Map([...histories].filter(([ownerId, history]) => validProjectIds.has(history.projectId) && ownerId !== "")),
     ])),
+    legacyControlNodes,
     workspaceBindings: Object.freeze(validBindings.filter(binding => validProjectIds.has(binding.projectId))),
     failures: Object.freeze(failures),
   });
@@ -259,6 +262,18 @@ function readHistories(
     owners.set(ownerId, history);
   }
   return new Map([...owners].map(([ownerId, history]) => [ownerId, history]));
+}
+
+function dropLegacyControlNodes(events: Map<ProjectEventDomain, ReadonlyMap<string, StoredHistory>>): ReadonlySet<string> {
+  const nodes = new Map(events.get("node")!);
+  const legacy = new Set<string>();
+  for (const [nodeId, history] of nodes) {
+    if ((history.events[0] as { readonly type?: unknown } | undefined)?.type !== "control-created") continue;
+    legacy.add(nodeId);
+    nodes.delete(nodeId);
+  }
+  events.set("node", nodes);
+  return legacy;
 }
 
 function readBindings(

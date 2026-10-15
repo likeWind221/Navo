@@ -158,12 +158,6 @@ describe("Resource ownership, access and content boundary", () => {
     await writeFile(join(root, "report.md"), "report\n", "utf8");
     const owner = ctx.nodes.create({ projectId: project.id, objective: objective("owner") });
     const reader = ctx.nodes.create({ projectId: project.id, objective: objective("reader") });
-    const control = ctx.nodes.create({
-      projectId: project.id,
-      kind: "control",
-      purpose: "checkpoint",
-      title: "review",
-    });
     const resource = await ctx.resources.publish({
       projectId: project.id,
       owner: { kind: "node", nodeId: owner.node.id },
@@ -177,7 +171,6 @@ describe("Resource ownership, access and content boundary", () => {
       { kind: "shared", nodeIds: [] },
       { kind: "shared", nodeIds: [owner.node.id] },
       { kind: "shared", nodeIds: [reader.node.id, reader.node.id] },
-      { kind: "shared", nodeIds: [control.node.id] },
     ] as const) {
       expect(() => ctx.resources.setAccess({
         projectId: project.id,

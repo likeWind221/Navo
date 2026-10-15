@@ -41,7 +41,6 @@ describe("create_roadmap creation receipt", () => {
         nodes: [
           {
             key: "design",
-            kind: "work",
             title: "Design backend",
             goal: "Define the backend architecture.",
             done_when: ["Architecture is documented"],
@@ -50,7 +49,6 @@ describe("create_roadmap creation receipt", () => {
           },
           {
             key: "build",
-            kind: "work",
             title: "Build backend",
             goal: "Implement the backend.",
             done_when: ["Backend runs"],
