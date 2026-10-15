@@ -117,8 +117,9 @@ Research Workspace 后续可包含：
 |---|---|---|
 | Phase 9 | Agent 如何可靠执行长程任务？ | Adaptive Roadmap Runtime |
 | Phase 10 | 项目如何跨重启持续推进，系统如何知道任务真的完成？ | Durable Project（持久化与恢复）+ Main 判断节点完成 |
-| Phase 11 | Research 如何形成可用闭环？ | Research Agent + Claim/Evidence + RAG |
-| Phase 12 | 系统如何与研究者长期共同改进？ | Research Memory + Human-AI Co-evolution |
+| Phase 11 | 项目能否在无人逐个确认时自动推进？ | 人工 / 全自动两种推进模式 + 上下文压缩 |
+| Phase 12 | Research 如何形成可用闭环？ | Research Agent + Claim/Evidence + RAG |
+| Phase 13 | 系统如何与研究者长期共同改进？ | Research Memory + Human-AI Co-evolution |
 
 Coding 与 Learning 暂作为验证 Core 通用性的后续 Mode Adapter，不在当前阶段同时做成完整产品。
 

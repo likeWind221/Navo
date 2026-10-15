@@ -195,10 +195,11 @@ VerificationVerdict {
 - 完成判断的归属：Human 与 Main 都可以完成 work 节点；Node 不能完成自己。PRD 原则 2 仍成立：Main 是协调者而不是该节点的执行者。
 - Main 只在 Human 启动的 Main 回合中判断，读取节点目标、完成标准、可见 Resource 与 Mailbox 往来（复用 `read_node`、Resource 读取），判断通过时以自己的理由与检查过的节点 revision 完成节点。
 - 复用既有完成事实：`completion-confirmed` 已带 `confirmedBy`、`reason`、`reviewedRevision`，Main 完成写入 `confirmedBy: "main"`；不新增结论存储，持久化与恢复沿用 F10.1b 的 Node 事件。公共契约中 `confirmedBy` 已是文本字段，前端区分“Human / Main 完成”无需改契约，由前端计划另行展示。
-- 判断不通过时不产生新记录：Main 向用户说明缺什么，并按 F9.6e“任务变化继续使用 `modify_roadmap`”的约定，用 `edit_node` 把需要补做的内容写进该节点的目标或完成标准，或用 `add_node` 插入补救节点；Human 再决定是否启动该节点。当前 Main 没有向 Node 发消息的工具（Mailbox 工具只有 `send_to_main` 与 Main 侧 `read_mailbox`），F10.4 不新增该通道。
+- 判断不通过时不产生完成记录：Main 把返工意见发给该节点，节点下一次回合开始时看到发给自己的意见；任务范围真的改变时仍用 `modify_roadmap`。Human 再决定是否启动该节点。
+- 返工意见复用 F9.6a 已有、但尚无生产调用方的 Main->Node Mailbox 路由（`postFromMain`），持久化沿用 F10.1c；F10.4 需要补上 Main 的发送工具与 Node 回合开始时的读取。为避免 F9.6 担心的“两份任务事实”，约定返工意见只是意见，节点的权威任务仍是目标与完成标准，意见不修改二者。返工意见在桌面的展示按共享契约流程另行提出。
 - 边界：Main 不能跳过节点（是否放弃可选工作属于用户的范围决定）；完成后不能撤销，误判通过 Roadmap 插入补救节点处理；Main 完成节点后下游解锁，但不自动启动任何 Agent。
 - 对 [69](69-devlog-f10-plan.md) 中“Main 验证等于规划者给自己打分”的顾虑：Main 判断的是 Node 成果是否满足其完成标准，而不是计划本身是否正确；上下文压力在 F10.4 实施与真实模型验收中观察，确有问题再考虑独立检查。
-- 节点自动推进不在 F10：届时沿用 Main 的完成判断，必要时为完成标准补充可机器检查的规则，并单独确认 Human Gate 的调整范围。
+- 全自动推进放在 F11（2026-10-15 用户确认）：由代码中的驱动循环在 Node 回合结束后启动 Main 审查回合，Main 决定完成、发返工意见、修改 Roadmap 或暂停求助，驱动按决定启动返工的 Node 或下一个已解锁的 Node；Main 不在自己的回合内同步调用 Node。停止条件与预算、暂停求助、高风险操作把关、Main 自评缺少人工兜底的风险，以及上下文压缩，都在 F11.0 设计收口。F10.4 的完成判断与返工反馈按 F11 可复用的形态实现。
 - F10.4 开始前仍需只读检查 DeepSeek Harness 中与完成判断、工具权限相关的源码，在步骤介绍中说明采用与不采用的机制。
 
 ## 下一步
