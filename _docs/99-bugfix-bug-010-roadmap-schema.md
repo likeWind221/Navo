@@ -76,3 +76,15 @@ DeepSeek Harness 对照（本机 `D:\Program\Miracle\kernel`，commit `277c141`�
 - 前端：`frontend/` 下 `pnpm typecheck` 通过，`pnpm test` 135/135 通过。
 - 新增回归：`tests/roadmap/legacy.spec.ts` 覆盖旧数据库（start -> A -> required checkpoint -> B，后续变更加入 end，以及旧控制节点上的确认、改定义和 Roadmap 更新事件）恢复为 [A, B]、边 A -> B，B 解锁，已存记录不变，恢复后的新变更在再次重启后重放一致；`create_roadmap` / `modify_roadmap` 测试覆盖新形状与多余字段拒绝。
 - 未验证：真实模型。关闭本 Bug 仍需在本机完成：Qwen `scripts/goal.ts` 5 轮首调合法率不低于 14/15；gpt-6-luna 与 gpt-6-sol 能创建 Roadmap；随后重跑 `scripts/rework.ts` 完成 F10.5 真实验收，以及 F5.4 预填 / 空目标 Electron 真实验收。
+
+## 2026-10-15 真实模型复验（云端容器）
+
+- 环境：Claude Code 云端容器，Node v22.22.0，ChatGPT 订阅（容器内登录），命令均带 `NODE_USE_ENV_PROXY=1`（Node 内置 `fetch` 默认不走容器代理）。
+- gpt-6-luna，`scripts/goal.ts` 5 个场景：全部通过（`{"failed":[]}`）。3 个规划场景各 1 次 `create_roadmap`，首调全部合法（3/3，0 次被拒），分别创建 3–4 个工作节点（链式或菱形依赖，每节点 2–3 条完成标准）；闲聊与模糊意图场景未提前规划。修复前 F5.4 中 luna 的 8 次调用全部被拒。
+- gpt-6-sol，`scripts/rework.ts`：确认与规划回合通过，首次 `create_roadmap` 即创建 evidence -> synthesis 两个必选工作节点，0 次被拒（修复前 15 次全部被拒）。
+- 第 3 回合起 F10.5 场景未通过，与本 Bug 无关：evidence 节点读到 draft.txt 中 “Source: not recorded” 后判断完成标准未满足，按 `submit_completion` 说明（“认为目标完成时提交”）拒绝提交，改用 `send_to_main` 报告缺少来源；场景期望它提交后由 Main 返工。需另行决定场景或 Node 提交语义。
+- 复验中发现 #63 漏改：`scripts/rework.ts` 仍按 `node.kind === "work"` 查找节点，导致规划成功后报 `Missing node evidence`；该脚本不在根 tsconfig 的 include 中，typecheck 未覆盖。已删除这两处判断并把脚本加入 include（用包含全部 `scripts/**` 的临时 tsconfig 检查，修复前恰好报这 2 处错误，修复后无错误）。
+- 基础设施噪声：多次运行的首个请求收到 HTTP 520（Cloudflare），模型未执行，不计入结论；探测请求同期均为 200，原因未查明。最后一次运行在 Navo 外层包装 `fetch`，对 520 透明重试至多 3 次，实际未触发。
+- 证据（未入库）：容器 scratchpad 的 `goal-luna2/`、`rework-sol5/` 与各 `*-520/` 目录。
+- 仍未验证：Qwen 本机 5 轮首调合法率对照、F5.4 预填 / 空目标 Electron 真实验收（需本机），因此 BUG-010 保持未勾选。
+
