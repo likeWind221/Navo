@@ -35,7 +35,7 @@ async function main() {
   let activeProject: ProjectId | undefined;
   console.log(JSON.stringify({ provider: config.provider, model: config.agent.model.model, evidenceDir }));
   try {
-    await writeFile(join(root, "draft.txt"), "Candidate A: latency 120 ms, accuracy 94%. Candidate B: latency 180 ms, accuracy 95%. Requirement: latency below 150 ms and accuracy at least 93%. Source: not recorded.");
+    await writeFile(join(root, "draft.txt"), "Candidate A: latency 120 ms, accuracy 94%. Candidate B: latency 180 ms, accuracy 95%. Requirement: latency below 150 ms and accuracy at least 93%. Source for every measurement: benchmark log bench-2026-10-03, run 16. Run 16 log excerpt: Candidate A latency 141 ms, accuracy 91%; Candidate B latency 196 ms, accuracy 92%.");
     await writeFile(join(root, "sourced.txt"), "Candidate A: latency 120 ms, accuracy 94%. Candidate B: latency 180 ms, accuracy 95%. Requirement: latency below 150 ms and accuracy at least 93%. Source: benchmark log bench-2026-10-03, run 17. Caution: these numbers come from a single run and must be independently validated before any final recommendation.");
     await writeFile(join(root, "validation.txt"), "Independent repeat: Candidate A latency 125 ms, accuracy 93.5%; Candidate B latency 175 ms, accuracy 94.5%. Source: repeat run bench-2026-10-09. Candidate A meets both requirements; Candidate B fails latency. Limitation: small synthetic sample.");
     const project = app.projects.create({ name: "Project", goal: "Recommend candidate A or B from the supplied workspace files. Every measurement must cite its source. No internet research. Humans start every turn." });
@@ -91,7 +91,7 @@ async function main() {
     assert.equal(status(synthesisId).status, "locked");
 
     await run("03-review-draft", () => review(evidenceId, "Review the evidence Node's submission against its acceptance criteria."));
-    assert.equal(status(evidenceId).lastReview?.decision, "rework", "Main did not return the unsourced draft");
+    assert.equal(status(evidenceId).lastReview?.decision, "rework", "Main did not return the draft whose numbers contradict its cited source");
     assert.equal(status(evidenceId).status, "idle");
     assert(status(evidenceId).pendingFeedback, "rework feedback was not recorded");
     assert.equal(status(synthesisId).status, "locked");
@@ -99,7 +99,7 @@ async function main() {
     await restart("04-restart");
 
     const feedback = status(evidenceId).pendingFeedback!.feedback;
-    await run("05-rework", () => nodeTurn(evidenceId, "Address the review feedback. The workspace also contains sourced.txt with sourced measurements; publish it as a text/plain resource and submit again. Do not edit files."));
+    await run("05-rework", () => nodeTurn(evidenceId, "Address the review feedback. The workspace also contains sourced.txt, whose measurements match their cited source; publish it as a text/plain resource and submit again. Do not edit files."));
     assert.equal(status(evidenceId).status, "submitted", "evidence did not resubmit");
     assert.equal(status(evidenceId).pendingFeedback, undefined);
     const sourced = app.resources.listByProject(projectId).find(value => value.entryRef.endsWith("sourced.txt"));
