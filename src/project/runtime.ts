@@ -3,7 +3,7 @@ import type { Context } from "cordis";
 
 import type { NodeId, ProjectId } from "../brand/ids.js";
 import { NodeError } from "../node/errors.js";
-import type { NodeConfirmation, NodeSnapshot } from "../node/model.js";
+import type { NodeConfirmation, NodeReworkInput, NodeSnapshot } from "../node/model.js";
 import type {
   NodeSessionMessageInput,
   NodeSessionTurnResult,
@@ -15,6 +15,7 @@ export interface NodeActions {
   readonly run: boolean;
   readonly complete: boolean;
   readonly skip: boolean;
+  readonly rework: boolean;
 }
 
 export interface ProjectNodeTurnInput extends NodeSessionMessageInput {
@@ -124,8 +125,9 @@ export class ProjectRuntime extends Service {
       && node?.node.projectId === projectId;
     return {
       run: this.canStartNode(projectId, nodeId) || this.canContinueNode(projectId, nodeId),
-      complete: reviewable && node.status === "idle",
-      skip: reviewable && (node.status === "locked" || node.status === "idle"),
+      complete: reviewable && (node.status === "idle" || node.status === "submitted"),
+      skip: reviewable && (node.status === "locked" || node.status === "idle" || node.status === "submitted"),
+      rework: reviewable && node.status === "submitted",
     };
   }
 
@@ -142,6 +144,11 @@ export class ProjectRuntime extends Service {
   skipNode(projectId: ProjectId, nodeId: NodeId, confirmation: NodeConfirmation): NodeSnapshot {
     this.requireReviewableNode(projectId, nodeId);
     return this.ctx.nodes.skip(nodeId, confirmation);
+  }
+
+  requestRework(projectId: ProjectId, nodeId: NodeId, rework: NodeReworkInput): NodeSnapshot {
+    this.requireReviewableNode(projectId, nodeId);
+    return this.ctx.nodes.requestRework(nodeId, rework);
   }
 
   private requireReviewableNode(projectId: ProjectId, nodeId: NodeId): void {

@@ -35,6 +35,7 @@ export function toolResultMessage(
 
 export function unexecutedToolResultMessage(
   toolCallId: ToolCallId,
+  text: string,
 ): ToolResultMessage {
   return Object.freeze({
     id: createMessageId(randomUUID()),
@@ -43,10 +44,7 @@ export function unexecutedToolResultMessage(
       type: "tool-result",
       toolCallId,
       isError: true,
-      content: [{
-        type: "text",
-        text: "Tool call was not executed because the model response reached its output token limit.",
-      }],
+      content: [{ type: "text", text }],
     }] as const,
   });
 }

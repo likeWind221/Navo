@@ -131,7 +131,7 @@ export type ProjectTurnTarget =
 export interface NodeReviewInput {
   readonly projectId: string;
   readonly nodeId: string;
-  readonly action: "complete" | "skip";
+  readonly action: "complete" | "skip" | "rework";
   readonly reason: string;
   readonly reviewedRevision: number;
 }
@@ -192,20 +192,44 @@ export interface NodeV1 {
   readonly turnActive: boolean;
   readonly actions: NodeActionsV1;
   readonly confirmation: NodeConfirmationV1 | null;
+  readonly submission: NodeSubmissionV1 | null;
+  readonly pendingFeedback: NodeFeedbackV1 | null;
 }
 
-export type NodeStatusV1 = "locked" | "idle" | "working" | "completing" | "skipped";
+export type NodeStatusV1 = "locked" | "idle" | "working" | "submitted" | "completing" | "skipped";
 
 export interface NodeActionsV1 {
   readonly run: boolean;
   readonly complete: boolean;
   readonly skip: boolean;
+  readonly rework: boolean;
 }
 
 export interface NodeConfirmationV1 {
   readonly confirmedBy: string;
   readonly reason: string;
   readonly reviewedRevision: number;
+}
+
+export interface NodeSubmissionV1 {
+  readonly summary: string;
+  readonly resourceIds: readonly string[];
+  readonly criteria: readonly NodeCriterionCheckV1[];
+  readonly remaining: readonly string[];
+  readonly submittedAt: string;
+}
+
+export interface NodeCriterionCheckV1 {
+  readonly criterion: string;
+  readonly satisfied: boolean;
+  readonly note: string;
+}
+
+export interface NodeFeedbackV1 {
+  readonly requestedBy: string;
+  readonly feedback: string;
+  readonly reviewedRevision: number;
+  readonly requestedAt: string;
 }
 
 export interface ProjectMailboxV1 {

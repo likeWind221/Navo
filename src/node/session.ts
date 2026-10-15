@@ -15,7 +15,7 @@ import { FILE_TOOL_SCHEMAS } from "../tools/builtins/file/types.js";
 import { NodeTurnContextBuilder } from "./context.js";
 import { NodeError } from "./errors.js";
 import type { NodeSnapshot } from "./model.js";
-import { createNodeAgentProfile, formatResourceChanges } from "./profile.js";
+import { createNodeAgentProfile, formatResourceChanges, formatReworkFeedback } from "./profile.js";
 
 export interface NodeSessionServiceConfig {
   readonly model: TurnModelConfig;
@@ -179,6 +179,9 @@ export class NodeSessionService extends Service {
             ...(context.addedResources.length === 0
               ? []
               : [{ type: "text" as const, text: formatResourceChanges(context.addedResources) }]),
+            ...(node.pendingFeedback === undefined
+              ? []
+              : [{ type: "text" as const, text: formatReworkFeedback(node.pendingFeedback) }]),
           ],
         },
         model: this.model,

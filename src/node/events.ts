@@ -1,5 +1,12 @@
 import type { EventId, NodeId, ProjectId, SessionId } from "../brand/ids.js";
-import type { ControlPurpose, NodeConfirmation, NodeObjective, NodeRequirement } from "./model.js";
+import type {
+  ControlPurpose,
+  NodeConfirmation,
+  NodeObjective,
+  NodeReworkInput,
+  NodeRequirement,
+  NodeSubmissionInput,
+} from "./model.js";
 
 export type NodeDefinitionChange =
   | { readonly kind: "work"; readonly objective: NodeObjective }
@@ -17,6 +24,8 @@ export type NodeEvent =
   | NodeEventRecord<"session-bound", { readonly sessionId: SessionId }>
   | NodeEventRecord<"node-unlocked" | "node-locked", { readonly reason: string }>
   | NodeEventRecord<"work-started" | "work-ended", Record<string, never>>
+  | NodeEventRecord<"completion-signaled", NodeSubmissionInput>
+  | NodeEventRecord<"rework-requested", NodeReworkInput>
   | NodeEventRecord<"completion-confirmed" | "node-skipped", NodeConfirmation>
   | NodeEventRecord<"requirement-changed", { readonly requirement: NodeRequirement; readonly reason: string; readonly reviewedRevision: number }>;
 

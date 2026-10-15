@@ -3,6 +3,7 @@ import type { Context } from "cordis";
 import type { StepId } from "../brand/ids.js";
 import type { ToolCallContentBlock } from "../llm/types.js";
 import type { SessionStore } from "../session/store.js";
+import type { Failure } from "../session/types.js";
 import {
   toolResultMessage,
   unexecutedToolResultMessage,
@@ -36,23 +37,10 @@ export async function acceptResponse(
     },
   });
   if (finishReason.kind === "max-tokens") {
-    for (const toolCall of calls) {
-      appendToolCall(sessions, sessionId, turnId, stepId, toolCall);
-      const message = unexecutedToolResultMessage(toolCall.id);
-      sessions.append({
-        type: "tool-call-result",
-        sessionId,
-        data: {
-          turnId,
-          stepId,
-          message,
-        },
-      });
-      await turn.output.rejectTool(toolCall.id, {
-        code: "max-tokens",
-        message: "Tool call was not executed because the model response reached its output token limit.",
-      });
-    }
+    await skipCalls(sessions, turn, stepId, calls, {
+      code: "max-tokens",
+      message: "Tool call was not executed because the model response reached its output token limit.",
+    });
     return blocked(stepId, "max-tokens", "Model output reached its token limit.");
   }
   if (finishReason.kind === "content-filter") {
@@ -62,7 +50,7 @@ export async function acceptResponse(
       "Model output was stopped by a content filter.",
     );
   }
-  for (const toolCall of calls) {
+  for (const [index, toolCall] of calls.entries()) {
     appendToolCall(sessions, sessionId, turnId, stepId, toolCall);
     const result = await tools.execute(toolCall, signal, {
       sessionId,
@@ -90,9 +78,35 @@ export async function acceptResponse(
         },
       });
     }
+    if (result.kind === "success" && result.endsTurn === true) {
+      await skipCalls(sessions, turn, stepId, calls.slice(index + 1), {
+        code: "turn-ended",
+        message: "Tool call was not executed because an earlier tool call in this response ended the Turn.",
+      });
+      return signal.aborted ? { status: "cancelled", stepId } : { status: "completed", stepId };
+    }
   }
   if (signal.aborted) return { status: "cancelled", stepId };
   return { status: calls.length === 0 ? "completed" : "continue", stepId };
+}
+
+async function skipCalls(
+  sessions: SessionStore,
+  turn: TurnScope,
+  stepId: StepId,
+  calls: readonly ToolCallContentBlock[],
+  failure: Failure,
+): Promise<void> {
+  const { sessionId } = turn.input;
+  for (const toolCall of calls) {
+    appendToolCall(sessions, sessionId, turn.turnId, stepId, toolCall);
+    sessions.append({
+      type: "tool-call-result",
+      sessionId,
+      data: { turnId: turn.turnId, stepId, message: unexecutedToolResultMessage(toolCall.id, failure.message) },
+    });
+    await turn.output.rejectTool(toolCall.id, failure);
+  }
 }
 
 function appendToolCall(

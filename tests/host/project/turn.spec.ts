@@ -7,7 +7,7 @@ import {
   projectNodeReviewMethod,
   projectTurnMethod,
 } from "../../../rpc/index.js";
-import { createProjectId } from "../../../src/brand/ids.js";
+import { createProjectId, createSessionId } from "../../../src/brand/ids.js";
 import type { ModelEvent } from "../../../src/llm/types.js";
 import { call, failureOf, host, seedRoadmap, workspace } from "./helpers.js";
 
@@ -149,5 +149,38 @@ describe("Kernel Host project.node.review.v1", () => {
       .toMatchObject({ code: "invalid-state" });
     expect(await call(client, projectNodeReviewMethod, { ...review, action: "skip" }))
       .toMatchObject({ status: "skipped", confirmation: { confirmedBy: "human" } });
+  });
+
+  it("shows a submitted Node and returns it for rework with Human feedback", async () => {
+    const { ctx, client } = await host();
+    const created = await project(client);
+    const { first, second } = seedRoadmap(ctx, created.projectId);
+    ctx.nodes.bindSession(first, createSessionId("session-first"));
+    ctx.nodes.beginWork(first);
+    ctx.nodes.signalCompletion(first, {
+      summary: "Collected", resourceIds: [], remaining: ["Add 2024"],
+      criteria: [{ criterion: "Done", satisfied: false, note: "2024 missing" }],
+    });
+    const reviewedRevision = ctx.nodes.endWork(first).revision;
+
+    const detail = await call(client, projectGetMethod, { projectId: created.projectId });
+    expect(detail.roadmap?.nodes.find(node => node.nodeId === first)).toMatchObject({
+      status: "submitted",
+      actions: { run: false, complete: true, skip: true, rework: true },
+      submission: { summary: "Collected", remaining: ["Add 2024"], criteria: [{ criterion: "Done", satisfied: false }] },
+      pendingFeedback: null,
+    });
+    const review = { projectId: created.projectId, nodeId: first, action: "rework" as const, reason: "Add the 2024 data" };
+    expect(await failureOf(client, projectNodeReviewMethod, { ...review, reviewedRevision: reviewedRevision - 1 }))
+      .toMatchObject({ code: "revision-conflict" });
+    const reworked = await call(client, projectNodeReviewMethod, { ...review, reviewedRevision });
+    expect(reworked).toMatchObject({
+      status: "idle", submission: null, confirmation: null,
+      actions: { run: true, complete: true, skip: true, rework: false },
+      pendingFeedback: { requestedBy: "human", feedback: "Add the 2024 data", reviewedRevision },
+    });
+    expect(await failureOf(client, projectNodeReviewMethod, { ...review, reviewedRevision: reworked.revision }))
+      .toMatchObject({ code: "invalid-state" });
+    expect(ctx.nodes.get(second)?.status).toBe("locked");
   });
 });

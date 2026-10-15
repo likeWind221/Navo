@@ -6,7 +6,16 @@ import { StorageError } from "../storage/errors.js";
 import type { NodeId, ProjectId, SessionId } from "../brand/ids.js";
 import { NodeError } from "./errors.js";
 import type { NodeDefinitionChange, NodeEvent, NodeEventDraft } from "./events.js";
-import type { ControlPurpose, NodeConfirmation, NodeObjective, NodeRequirement, NodeSnapshot, NodeStatus } from "./model.js";
+import type {
+  ControlPurpose,
+  NodeConfirmation,
+  NodeObjective,
+  NodeReworkInput,
+  NodeRequirement,
+  NodeSnapshot,
+  NodeStatus,
+  NodeSubmissionInput,
+} from "./model.js";
 import { projectNode } from "./projector.js";
 import { NodeBatch } from "./batch.js";
 
@@ -162,18 +171,30 @@ export class NodeStore extends Service {
     return this.append({ type: "work-ended", nodeId, data: {} });
   }
 
+  signalCompletion(nodeId: NodeId, submission: NodeSubmissionInput): NodeSnapshot {
+    if (this.requireState(nodeId, "working").submission !== undefined) {
+      throw new NodeError("invalid-state", "Node already signaled completion in this Turn.");
+    }
+    return this.append({ type: "completion-signaled", nodeId, data: submission });
+  }
+
+  requestRework(nodeId: NodeId, rework: NodeReworkInput): NodeSnapshot {
+    this.review(nodeId, rework, "submitted");
+    return this.append({ type: "rework-requested", nodeId, data: rework });
+  }
+
   confirmCompletion(nodeId: NodeId, confirmation: NodeConfirmation): NodeSnapshot {
-    this.review(nodeId, confirmation, "idle");
+    this.review(nodeId, confirmation, "idle", "submitted");
     return this.append({ type: "completion-confirmed", nodeId, data: confirmation });
   }
 
   skip(nodeId: NodeId, confirmation: NodeConfirmation): NodeSnapshot {
-    this.review(nodeId, confirmation, "locked", "idle");
+    this.review(nodeId, confirmation, "locked", "idle", "submitted");
     return this.append({ type: "node-skipped", nodeId, data: confirmation });
   }
 
   setRequirement(nodeId: NodeId, requirement: NodeRequirement, reviewedRevision: number, reason: string): NodeSnapshot {
-    const node = this.requireState(nodeId, "locked", "idle", "working", "completing", "skipped");
+    const node = this.requireState(nodeId, "locked", "idle", "working", "submitted", "completing", "skipped");
     if (node.revision !== reviewedRevision) throw new NodeError("stale-revision", "Review current Node before editing.");
     return this.append({ type: "requirement-changed", nodeId, data: { requirement, reviewedRevision, reason } });
   }
@@ -186,8 +207,8 @@ export class NodeStore extends Service {
     return node;
   }
 
-  private review(nodeId: NodeId, confirmation: NodeConfirmation, ...states: NodeStatus[]): void {
-    if (this.requireState(nodeId, ...states).revision !== confirmation.reviewedRevision) {
+  private review(nodeId: NodeId, review: { readonly reviewedRevision: number }, ...states: NodeStatus[]): void {
+    if (this.requireState(nodeId, ...states).revision !== review.reviewedRevision) {
       throw new NodeError("stale-revision", "Review the current Node revision.");
     }
   }

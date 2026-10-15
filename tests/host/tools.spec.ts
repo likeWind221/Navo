@@ -8,6 +8,7 @@ import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import { createFileEnvironment } from "../../src/tools/builtins/file/path.js";
 import { READ_MAILBOX_TOOL_NAME } from "../../src/tools/builtins/mailbox/read.js";
 import { SEND_TO_MAIN_TOOL_NAME } from "../../src/tools/builtins/mailbox/send.js";
+import { SUBMIT_COMPLETION_TOOL_NAME } from "../../src/tools/builtins/node/submit.js";
 import { SET_PROJECT_GOAL_TOOL_NAME } from "../../src/tools/builtins/project/goal.js";
 import { DELETE_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/delete.js";
 import { FETCH_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/fetch.js";
@@ -54,6 +55,7 @@ describe("desktop Host tool availability", () => {
         SET_RESOURCE_ACCESS_TOOL_NAME,
         READ_MAILBOX_TOOL_NAME,
         SEND_TO_MAIN_TOOL_NAME,
+        SUBMIT_COMPLETION_TOOL_NAME,
         SET_PROJECT_GOAL_TOOL_NAME,
       ].sort());
       const adapter = new MockLLMAdapter([
@@ -87,6 +89,7 @@ describe("desktop Host tool availability", () => {
         SET_RESOURCE_ACCESS_TOOL_NAME,
         READ_MAILBOX_TOOL_NAME,
         SEND_TO_MAIN_TOOL_NAME,
+        SUBMIT_COMPLETION_TOOL_NAME,
       ]));
       expect(events.at(-1)).toMatchObject({ type: "turn-completed" });
     } finally {

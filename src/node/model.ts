@@ -1,4 +1,4 @@
-import type { NodeId, ProjectId, SessionId } from "../brand/ids.js";
+import type { NodeId, ProjectId, ResourceId, SessionId } from "../brand/ids.js";
 
 export interface NodeSnapshot {
   readonly node: Node;
@@ -6,6 +6,8 @@ export interface NodeSnapshot {
   readonly status: NodeStatus;
   readonly sessionId?: SessionId;
   readonly confirmation?: NodeConfirmation;
+  readonly submission?: NodeSubmission;
+  readonly pendingFeedback?: NodeFeedback;
 }
 
 export type Node = NodeIdentity & (
@@ -22,7 +24,7 @@ interface NodeIdentity {
 }
 
 export type NodeRequirement = "required" | "optional";
-export type NodeStatus = "locked" | "idle" | "working" | "completing" | "skipped";
+export type NodeStatus = "locked" | "idle" | "working" | "submitted" | "completing" | "skipped";
 
 export interface NodeObjective {
   readonly title: string;
@@ -33,5 +35,32 @@ export interface NodeObjective {
 export interface NodeConfirmation {
   readonly confirmedBy: string;
   readonly reason: string;
+  readonly reviewedRevision: number;
+}
+
+export interface NodeSubmission extends NodeSubmissionInput {
+  readonly submittedAt: string;
+}
+
+export interface NodeSubmissionInput {
+  readonly summary: string;
+  readonly resourceIds: readonly ResourceId[];
+  readonly criteria: readonly NodeCriterionCheck[];
+  readonly remaining: readonly string[];
+}
+
+export interface NodeCriterionCheck {
+  readonly criterion: string;
+  readonly satisfied: boolean;
+  readonly note: string;
+}
+
+export interface NodeFeedback extends NodeReworkInput {
+  readonly requestedAt: string;
+}
+
+export interface NodeReworkInput {
+  readonly requestedBy: string;
+  readonly feedback: string;
   readonly reviewedRevision: number;
 }

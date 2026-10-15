@@ -58,6 +58,13 @@ export function describeNode(ctx: Context, projectId: ProjectId, snapshot: NodeS
     turnActive: ctx.projectRuntime.isNodeActive(node.id),
     actions: { ...ctx.projectRuntime.nodeActions(projectId, node.id) },
     confirmation: snapshot.confirmation === undefined ? null : { ...snapshot.confirmation },
+    submission: snapshot.submission === undefined ? null : {
+      ...snapshot.submission,
+      resourceIds: [...snapshot.submission.resourceIds],
+      criteria: snapshot.submission.criteria.map(check => ({ ...check })),
+      remaining: [...snapshot.submission.remaining],
+    },
+    pendingFeedback: snapshot.pendingFeedback === undefined ? null : { ...snapshot.pendingFeedback },
   };
 }
 

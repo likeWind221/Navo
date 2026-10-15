@@ -1,7 +1,7 @@
 import type { NodeId } from "../brand/ids.js";
 import { NodeError } from "./errors.js";
 import type { NodeDefinitionChange, NodeEvent } from "./events.js";
-import type { NodeObjective, NodeSnapshot, NodeStatus } from "./model.js";
+import type { NodeObjective, NodeSnapshot, NodeStatus, NodeSubmissionInput } from "./model.js";
 
 export function projectNode(nodeId: NodeId, events: readonly NodeEvent[]): NodeSnapshot | undefined {
   let snapshot: NodeSnapshot | undefined;
@@ -94,26 +94,44 @@ export function projectNode(nodeId: NodeId, events: readonly NodeEvent[]): NodeS
         text(event.data.reason);
         snapshot = { ...snapshot!, status: "locked" };
         break;
-      case "work-started":
+      case "work-started": {
         requireStatus(snapshot, "idle");
         if (snapshot!.node.kind !== "work") invalid("Control nodes cannot execute.");
         if (snapshot!.sessionId === undefined) invalid("Working Node requires a Session.");
-        snapshot = { ...snapshot!, status: "working" };
+        const { pendingFeedback: _, ...rest } = snapshot!;
+        snapshot = { ...rest, status: "working" };
+        break;
+      }
+      case "completion-signaled":
+        requireStatus(snapshot, "working");
+        if (snapshot!.submission !== undefined) invalid("Node already signaled completion in this Turn.");
+        submission(snapshot!, event.data);
+        snapshot = { ...snapshot!, submission: { ...event.data, submittedAt: event.timestamp } };
         break;
       case "work-ended":
         requireStatus(snapshot, "working");
-        snapshot = { ...snapshot!, status: "idle" };
+        snapshot = { ...snapshot!, status: snapshot!.submission === undefined ? "idle" : "submitted" };
         break;
+      case "rework-requested": {
+        requireStatus(snapshot, "submitted");
+        text(event.data.requestedBy);
+        text(event.data.feedback);
+        if (event.data.reviewedRevision !== snapshot!.revision) invalid("Rework refers to a stale Node revision.");
+        const { submission: _, ...rest } = snapshot!;
+        snapshot = { ...rest, status: "idle", pendingFeedback: { ...event.data, requestedAt: event.timestamp } };
+        break;
+      }
       case "completion-confirmed":
-      case "node-skipped":
-        if (event.type === "node-skipped" && snapshot?.status === "locked") {
-          requireStatus(snapshot, "locked");
-        } else requireStatus(snapshot, "idle");
+      case "node-skipped": {
+        requireStatus(snapshot, ...(event.type === "node-skipped"
+          ? ["locked", "idle", "submitted"] as const : ["idle", "submitted"] as const));
         text(event.data.confirmedBy);
         text(event.data.reason);
         if (event.data.reviewedRevision !== snapshot!.revision) invalid("Confirmation refers to a stale Node revision.");
-        snapshot = { ...snapshot!, status: event.type === "node-skipped" ? "skipped" : "completing", confirmation: event.data };
+        const { pendingFeedback: _, ...rest } = snapshot!;
+        snapshot = { ...rest, status: event.type === "node-skipped" ? "skipped" : "completing", confirmation: event.data };
         break;
+      }
       case "requirement-changed":
         if (!snapshot) invalid("Node must exist.");
         requirement(event.data.requirement);
@@ -160,12 +178,33 @@ function objective(value: NodeObjective): void {
   value.acceptanceCriteria.forEach(text);
 }
 
+function submission(snapshot: NodeSnapshot, value: NodeSubmissionInput): void {
+  if (snapshot.node.kind !== "work") invalid("Control nodes cannot signal completion.");
+  text(value.summary);
+  if (!Array.isArray(value.resourceIds) || !Array.isArray(value.remaining) || !Array.isArray(value.criteria)) {
+    invalid("Completion signal lists are required.");
+  }
+  value.resourceIds.forEach(text);
+  if (new Set(value.resourceIds).size !== value.resourceIds.length) invalid("Completion signal repeats a Resource.");
+  value.remaining.forEach(text);
+  const expected = snapshot.node.objective.acceptanceCriteria;
+  if (value.criteria.length !== expected.length) invalid("Completion signal must check every acceptance criterion.");
+  value.criteria.forEach((check, index) => {
+    if (!check || check.criterion !== expected[index] || typeof check.satisfied !== "boolean") {
+      invalid("Completion signal criteria must follow the Node acceptance criteria.");
+    }
+    text(check.note);
+  });
+}
+
 function controlPurpose(value: unknown): void {
   if (value !== "start" && value !== "end" && value !== "checkpoint") invalid("Invalid control purpose.");
 }
 
-function requireStatus(snapshot: NodeSnapshot | undefined, expected: NodeStatus): void {
-  if (snapshot?.status !== expected) invalid("Node must be " + expected + " for this event.");
+function requireStatus(snapshot: NodeSnapshot | undefined, ...expected: readonly NodeStatus[]): void {
+  if (snapshot === undefined || !expected.includes(snapshot.status)) {
+    invalid("Node must be " + expected.join(" or ") + " for this event.");
+  }
 }
 
 function text(value: unknown): void {
