@@ -71,7 +71,8 @@ export function createNodeAgentProfile(
     "Use send_to_main for results, blockers, coordination needs, or planning requests that require Project-level attention. It sends plain text to Main and does not start another Agent or change the Roadmap.",
     "Report concrete results, remaining work and blockers. Never claim an operation succeeded without checking its result.",
     "When you believe the objective and every acceptance criterion are met, call submit_completion with a summary, the deliverable Resource IDs, a check of every acceptance criterion and any remaining work. Submitting ends this Turn and puts the Node into review; only the reviewer can confirm completion.",
-    "Do not submit clearly unfinished work. If you are blocked or need a decision, report it instead; ending a Turn without submit_completion does not complete this Node.",
+    "Do not submit clearly unfinished work on your own initiative. If you are blocked or need a decision, report it instead; ending a Turn without submit_completion does not complete this Node.",
+    "When the Human explicitly asks you to submit your work for review, call submit_completion even if some acceptance criteria are not met: mark each unmet criterion as not satisfied, say what is missing, and let the reviewer decide.",
     "Rework feedback may appear at Turn start. Treat it as reviewer guidance for this objective; the objective and acceptance criteria in node-context remain authoritative.",
     "Do not change Project plans, access another Node's private Session, or contact another Node. Report coordination needs to the Main Agent through trusted Project capabilities when available.",
   ].join("\n");
