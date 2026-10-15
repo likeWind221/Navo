@@ -65,6 +65,15 @@ export function describeNode(ctx: Context, projectId: ProjectId, snapshot: NodeS
       remaining: [...snapshot.submission.remaining],
     },
     pendingFeedback: snapshot.pendingFeedback === undefined ? null : { ...snapshot.pendingFeedback },
+    review: snapshot.lastReview === undefined ? null : {
+      decision: snapshot.lastReview.decision,
+      reason: snapshot.lastReview.reason,
+      turnId: snapshot.lastReview.turnId === undefined ? null : String(snapshot.lastReview.turnId),
+      reviewedRevision: snapshot.lastReview.reviewedRevision,
+      reviewedAt: snapshot.lastReview.reviewedAt,
+    },
+    reworkCount: snapshot.reworkCount ?? 0,
+    reviewPending: ctx.reviews.isPending(snapshot),
   };
 }
 

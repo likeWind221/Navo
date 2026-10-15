@@ -75,7 +75,9 @@ export function parseProjectTurnInput(value: unknown): ProjectTurnInput {
     target: target.kind === "main" && exactKeys(target, ["kind"]) ? { kind: "main" }
       : target.kind === "node" && exactKeys(target, ["kind", "nodeId"])
         ? { kind: "node", nodeId: id(target.nodeId, "target nodeId") }
-        : invalid("Malformed turn target"),
+        : target.kind === "review" && exactKeys(target, ["kind", "nodeId"])
+          ? { kind: "review", nodeId: id(target.nodeId, "target nodeId") }
+          : invalid("Malformed turn target"),
   };
 }
 
@@ -144,12 +146,12 @@ function parseRoadmap(value: unknown): RoadmapV1 {
 export function parseNode(value: unknown): NodeV1 {
   const node = shape(value, ["nodeId", "revision", "kind", "requirement", "status", "title", "description",
     "acceptanceCriteria", "controlPurpose", "hasSession", "turnActive", "actions", "confirmation", "submission",
-    "pendingFeedback"], "node");
+    "pendingFeedback", "review", "reworkCount", "reviewPending"], "node");
   const kind = oneOf(node.kind, ["work", "control"] as const, "node kind");
   const controlPurpose = node.controlPurpose === null ? null
     : oneOf(node.controlPurpose, ["start", "end", "checkpoint"] as const, "control purpose");
   if ((kind === "control") !== (controlPurpose !== null)) invalid("Control purpose must match node kind");
-  const actions = shape(node.actions, ["run", "complete", "skip", "rework"], "node actions");
+  const actions = shape(node.actions, ["run", "complete", "skip", "rework", "review"], "node actions");
   return {
     nodeId: id(node.nodeId, "nodeId"),
     revision: positive(node.revision, "node revision"),
@@ -168,10 +170,25 @@ export function parseNode(value: unknown): NodeV1 {
       complete: flag(actions.complete, "complete action"),
       skip: flag(actions.skip, "skip action"),
       rework: flag(actions.rework, "rework action"),
+      review: flag(actions.review, "review action"),
     },
     confirmation: node.confirmation === null ? null : parseConfirmation(node.confirmation),
     submission: node.submission === null ? null : parseSubmission(node.submission),
     pendingFeedback: node.pendingFeedback === null ? null : parseFeedback(node.pendingFeedback),
+    review: node.review === null ? null : parseReview(node.review),
+    reworkCount: count(node.reworkCount, "reworkCount"),
+    reviewPending: flag(node.reviewPending, "reviewPending"),
+  };
+}
+
+function parseReview(value: unknown): NodeV1["review"] {
+  const review = shape(value, ["decision", "reason", "turnId", "reviewedRevision", "reviewedAt"], "node review");
+  return {
+    decision: oneOf(review.decision, ["complete", "rework", "skip", "escalate"] as const, "review decision"),
+    reason: visibleText(review.reason, "review reason", TEXT_MAX),
+    turnId: review.turnId === null ? null : id(review.turnId, "review turnId"),
+    reviewedRevision: positive(review.reviewedRevision, "reviewedRevision"),
+    reviewedAt: timestamp(review.reviewedAt, "reviewedAt"),
   };
 }
 

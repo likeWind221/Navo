@@ -3,6 +3,7 @@ import type {
   ControlPurpose,
   NodeConfirmation,
   NodeObjective,
+  NodeReviewInput,
   NodeReworkInput,
   NodeRequirement,
   NodeSubmissionInput,
@@ -26,6 +27,7 @@ export type NodeEvent =
   | NodeEventRecord<"work-started" | "work-ended", Record<string, never>>
   | NodeEventRecord<"completion-signaled", NodeSubmissionInput>
   | NodeEventRecord<"rework-requested", NodeReworkInput>
+  | NodeEventRecord<"review-recorded", NodeReviewInput>
   | NodeEventRecord<"completion-confirmed" | "node-skipped", NodeConfirmation>
   | NodeEventRecord<"requirement-changed", { readonly requirement: NodeRequirement; readonly reason: string; readonly reviewedRevision: number }>;
 

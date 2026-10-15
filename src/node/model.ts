@@ -1,4 +1,4 @@
-import type { NodeId, ProjectId, ResourceId, SessionId } from "../brand/ids.js";
+import type { NodeId, ProjectId, ResourceId, SessionId, TurnId } from "../brand/ids.js";
 
 export interface NodeSnapshot {
   readonly node: Node;
@@ -8,6 +8,8 @@ export interface NodeSnapshot {
   readonly confirmation?: NodeConfirmation;
   readonly submission?: NodeSubmission;
   readonly pendingFeedback?: NodeFeedback;
+  readonly lastReview?: NodeReview;
+  readonly reworkCount?: number;
 }
 
 export type Node = NodeIdentity & (
@@ -63,4 +65,17 @@ export interface NodeReworkInput {
   readonly requestedBy: string;
   readonly feedback: string;
   readonly reviewedRevision: number;
+}
+
+export type ReviewDecision = "complete" | "rework" | "skip" | "escalate";
+
+export interface NodeReviewInput {
+  readonly turnId?: TurnId;
+  readonly decision: ReviewDecision;
+  readonly reason: string;
+  readonly reviewedRevision: number;
+}
+
+export interface NodeReview extends NodeReviewInput {
+  readonly reviewedAt: string;
 }

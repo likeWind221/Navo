@@ -113,14 +113,29 @@ export function projectNode(nodeId: NodeId, events: readonly NodeEvent[]): NodeS
         snapshot = { ...snapshot!, status: snapshot!.submission === undefined ? "idle" : "submitted" };
         break;
       case "rework-requested": {
-        requireStatus(snapshot, "submitted");
+        requireStatus(snapshot, "submitted", "idle");
         text(event.data.requestedBy);
         text(event.data.feedback);
         if (event.data.reviewedRevision !== snapshot!.revision) invalid("Rework refers to a stale Node revision.");
         const { submission: _, ...rest } = snapshot!;
-        snapshot = { ...rest, status: "idle", pendingFeedback: { ...event.data, requestedAt: event.timestamp } };
+        snapshot = {
+          ...rest,
+          status: "idle",
+          pendingFeedback: { ...event.data, requestedAt: event.timestamp },
+          reworkCount: (snapshot!.reworkCount ?? 0) + 1,
+        };
         break;
       }
+      case "review-recorded":
+        requireStatus(snapshot, "idle", "submitted", "completing", "skipped");
+        if (snapshot!.node.kind !== "work") invalid("Control nodes cannot be reviewed.");
+        if (event.data.turnId !== undefined) text(event.data.turnId);
+        text(event.data.reason);
+        if (!["complete", "rework", "skip", "escalate"].includes(event.data.decision)) invalid("Invalid review decision.");
+        if (!Number.isSafeInteger(event.data.reviewedRevision) || event.data.reviewedRevision < 1
+          || event.data.reviewedRevision > snapshot!.revision) invalid("Review refers to an invalid Node revision.");
+        snapshot = { ...snapshot!, lastReview: { ...event.data, reviewedAt: event.timestamp } };
+        break;
       case "completion-confirmed":
       case "node-skipped": {
         requireStatus(snapshot, ...(event.type === "node-skipped"

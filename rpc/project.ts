@@ -126,7 +126,8 @@ export interface ProjectTurnInput {
 
 export type ProjectTurnTarget =
   | { readonly kind: "main" }
-  | { readonly kind: "node"; readonly nodeId: string };
+  | { readonly kind: "node"; readonly nodeId: string }
+  | { readonly kind: "review"; readonly nodeId: string };
 
 export interface NodeReviewInput {
   readonly projectId: string;
@@ -194,6 +195,9 @@ export interface NodeV1 {
   readonly confirmation: NodeConfirmationV1 | null;
   readonly submission: NodeSubmissionV1 | null;
   readonly pendingFeedback: NodeFeedbackV1 | null;
+  readonly review: NodeReviewV1 | null;
+  readonly reworkCount: number;
+  readonly reviewPending: boolean;
 }
 
 export type NodeStatusV1 = "locked" | "idle" | "working" | "submitted" | "completing" | "skipped";
@@ -203,6 +207,7 @@ export interface NodeActionsV1 {
   readonly complete: boolean;
   readonly skip: boolean;
   readonly rework: boolean;
+  readonly review: boolean;
 }
 
 export interface NodeConfirmationV1 {
@@ -223,6 +228,14 @@ export interface NodeCriterionCheckV1 {
   readonly criterion: string;
   readonly satisfied: boolean;
   readonly note: string;
+}
+
+export interface NodeReviewV1 {
+  readonly decision: "complete" | "rework" | "skip" | "escalate";
+  readonly reason: string;
+  readonly turnId: string | null;
+  readonly reviewedRevision: number;
+  readonly reviewedAt: string;
 }
 
 export interface NodeFeedbackV1 {

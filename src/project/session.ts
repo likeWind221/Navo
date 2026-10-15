@@ -5,7 +5,7 @@ import type { Context } from "cordis";
 
 import type { RunTurnInput, TurnModelConfig, TurnResult } from "../agent/types.js";
 import { createMessageId } from "../brand/ids.js";
-import type { ProjectId, SessionId } from "../brand/ids.js";
+import type { NodeId, ProjectId, SessionId } from "../brand/ids.js";
 import { changedFacts, lastObservedFacts } from "../session/reminder.js";
 import { requireMainBinding } from "./binding.js";
 import { ProjectError } from "./errors.js";
@@ -22,6 +22,7 @@ export interface MainSessionMessageInput {
   readonly requestId?: string;
   readonly signal?: AbortSignal;
   readonly onEvent?: RunTurnInput["onEvent"];
+  readonly review?: { readonly nodeId: NodeId; readonly checklist: string };
 }
 
 export interface MainSessionTurnResult {
@@ -50,7 +51,7 @@ export class MainSessionService extends Service {
     const text = requireMessageText(input.text);
     const project = this.requireProject(input.projectId);
     const binding = requireMainBinding(this.ctx, project.mainSessionId, project.id);
-    const profile = createMainAgentProfile(project);
+    const profile = createMainAgentProfile(project, input.review !== undefined);
     const facts = this.ctx.nodes.getByProject(project.id).flatMap(value => value.node.kind === "work"
       ? [{ kind: "node", id: String(value.node.id), label: value.node.objective.title, state: value.status }]
       : []);
@@ -64,6 +65,7 @@ export class MainSessionService extends Service {
         content: [
           { type: "text", text },
           ...(changes.length === 0 ? [] : [{ type: "text" as const, text: formatNodeChanges(changes) }]),
+          ...(input.review === undefined ? [] : [{ type: "text" as const, text: input.review.checklist }]),
         ],
       },
       model: this.model,

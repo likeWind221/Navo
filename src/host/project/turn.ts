@@ -29,6 +29,8 @@ export function createProjectTurnHandler(ctx: Context): RpcStreamHandler<Project
     try {
       if (input.target.kind === "main") {
         execution = ctx.projectRuntime.startMain(turn);
+      } else if (input.target.kind === "review") {
+        execution = ctx.projectRuntime.startReview({ ...turn, nodeId: createNodeId(input.target.nodeId) });
       } else {
         const nodeId = createNodeId(input.target.nodeId);
         if (ctx.projectRuntime.isNodeActive(nodeId)) {

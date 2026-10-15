@@ -6,6 +6,8 @@ import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import { MockFetchCore } from "../../src/tools/builtins/fetch/mock.js";
 import { READ_MAILBOX_TOOL_NAME } from "../../src/tools/builtins/mailbox/read.js";
 import { SEND_TO_MAIN_TOOL_NAME } from "../../src/tools/builtins/mailbox/send.js";
+import { SUBMIT_REVIEW_TOOL_NAME } from "../../src/tools/builtins/project/review.js";
+import { READ_NODE_TURN_TOOL_NAME } from "../../src/tools/builtins/project/turnlog.js";
 import { SUBMIT_COMPLETION_TOOL_NAME } from "../../src/tools/builtins/node/submit.js";
 import { SET_PROJECT_GOAL_TOOL_NAME } from "../../src/tools/builtins/project/goal.js";
 import { DELETE_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/delete.js";
@@ -68,6 +70,7 @@ describe("generic Node research loop", () => {
         UPDATE_RESOURCE_TOOL_NAME, DELETE_RESOURCE_TOOL_NAME,
         SET_RESOURCE_ACCESS_TOOL_NAME,
         READ_MAILBOX_TOOL_NAME,
+        SUBMIT_REVIEW_TOOL_NAME, READ_NODE_TURN_TOOL_NAME,
         SEND_TO_MAIN_TOOL_NAME,
         SUBMIT_COMPLETION_TOOL_NAME,
         SET_PROJECT_GOAL_TOOL_NAME,

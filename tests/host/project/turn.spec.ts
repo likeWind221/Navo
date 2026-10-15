@@ -7,7 +7,9 @@ import {
   projectNodeReviewMethod,
   projectTurnMethod,
 } from "../../../rpc/index.js";
-import { createProjectId, createSessionId } from "../../../src/brand/ids.js";
+import { createProjectId, createSessionId, createToolCallId } from "../../../src/brand/ids.js";
+import { SUBMIT_REVIEW_TOOL_NAME } from "../../../src/tools/builtins/project/review.js";
+import { modelResponse } from "../../helpers/runtime.js";
 import type { ModelEvent } from "../../../src/llm/types.js";
 import { call, failureOf, host, seedRoadmap, workspace } from "./helpers.js";
 
@@ -92,7 +94,7 @@ describe("Kernel Host project.turn.v1", () => {
 
     const working = await call(client, projectGetMethod, { projectId: created.projectId });
     expect(working.roadmap?.nodes[0]).toMatchObject({
-      status: "working", turnActive: true, actions: { run: false, complete: false, skip: false },
+      status: "working", turnActive: true, actions: { run: false, complete: false, skip: false, rework: false, review: false },
     });
     expect(await failureOf(client, projectTurnMethod, {
       projectId: created.projectId, requestId: "again", text: "Again", target,
@@ -118,6 +120,41 @@ describe("Kernel Host project.turn.v1", () => {
   });
 });
 
+describe("Kernel Host Main review turn", () => {
+  it("streams a Main review of an executed Node and exposes the recorded decision", async () => {
+    const { ctx, client } = await host([
+      { kind: "events", events: reply },
+      modelResponse([{
+        type: "tool-call", id: createToolCallId("decide"), name: SUBMIT_REVIEW_TOOL_NAME,
+        arguments: JSON.stringify({ decision: "rework", reason: "No evidence was produced", feedback: "Produce the report" }),
+      }], "tool-calls"),
+      { kind: "events", events: reply },
+    ]);
+    const created = await project(client);
+    const { first, second } = seedRoadmap(ctx, created.projectId);
+    await collect(client.stream(projectTurnMethod, {
+      projectId: created.projectId, requestId: "work", text: "Work", target: { kind: "node", nodeId: first },
+    }));
+    const before = (await call(client, projectGetMethod, { projectId: created.projectId })).roadmap?.nodes[0];
+    expect(before).toMatchObject({ reviewPending: true, review: null, reworkCount: 0, actions: { review: true } });
+
+    const events = await collect(client.stream(projectTurnMethod, {
+      projectId: created.projectId, requestId: "review", text: "Please review", target: { kind: "review", nodeId: first },
+    }));
+    expect(events[0]).toMatchObject({ type: "turn-started", requestId: "review" });
+    expect(events.at(-1)?.type).toBe("turn-completed");
+    const after = (await call(client, projectGetMethod, { projectId: created.projectId })).roadmap?.nodes[0];
+    expect(after).toMatchObject({
+      status: "idle", reviewPending: false, reworkCount: 1,
+      review: { decision: "rework", reason: "No evidence was produced" },
+      pendingFeedback: { requestedBy: "main", feedback: "Produce the report" },
+    });
+    expect(await failureOf(client, projectTurnMethod, {
+      projectId: created.projectId, requestId: "locked", text: "Review", target: { kind: "review", nodeId: second },
+    })).toMatchObject({ code: "invalid-state" });
+  });
+});
+
 describe("Kernel Host project.node.review.v1", () => {
   it("confirms completion against the reviewed revision and unlocks the successor", async () => {
     const { ctx, client } = await host();
@@ -132,7 +169,7 @@ describe("Kernel Host project.node.review.v1", () => {
     expect(completed).toMatchObject({
       nodeId: first, status: "completing",
       confirmation: { confirmedBy: "human", reason: "Looks right", reviewedRevision: revision },
-      actions: { run: false, complete: false, skip: false },
+      actions: { run: false, complete: false, skip: false, rework: false, review: false },
     });
     const detail = await call(client, projectGetMethod, { projectId: created.projectId });
     expect(detail.roadmap?.nodes.find(node => node.nodeId === second)?.status).toBe("idle");
@@ -166,7 +203,7 @@ describe("Kernel Host project.node.review.v1", () => {
     const detail = await call(client, projectGetMethod, { projectId: created.projectId });
     expect(detail.roadmap?.nodes.find(node => node.nodeId === first)).toMatchObject({
       status: "submitted",
-      actions: { run: false, complete: true, skip: true, rework: true },
+      actions: { run: false, complete: true, skip: true, rework: true, review: true },
       submission: { summary: "Collected", remaining: ["Add 2024"], criteria: [{ criterion: "Done", satisfied: false }] },
       pendingFeedback: null,
     });
@@ -176,7 +213,7 @@ describe("Kernel Host project.node.review.v1", () => {
     const reworked = await call(client, projectNodeReviewMethod, { ...review, reviewedRevision });
     expect(reworked).toMatchObject({
       status: "idle", submission: null, confirmation: null,
-      actions: { run: true, complete: true, skip: true, rework: false },
+      actions: { run: true, complete: true, skip: true, rework: false, review: true },
       pendingFeedback: { requestedBy: "human", feedback: "Add the 2024 data", reviewedRevision },
     });
     expect(await failureOf(client, projectNodeReviewMethod, { ...review, reviewedRevision: reworked.revision }))
