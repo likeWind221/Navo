@@ -44,7 +44,7 @@ async function main() {
     await app.projectWorkspaces.create(projectId, root);
     const turns: Execution[] = [];
     const node = (title: string) => {
-      const value = app.nodes.getByProject(projectId).find(value => value.node.kind === "work" && value.node.objective.title === title);
+      const value = app.nodes.getByProject(projectId).find(value => value.node.objective.title === title);
       assert(value, `Missing node ${title}`);
       return value;
     };
@@ -112,7 +112,7 @@ async function main() {
     await run("06-review-sourced", () => review(evidenceId, "Review the evidence Node's new submission against its acceptance criteria. After your decision, adjust the downstream plan if the results show it is needed."));
     assert.equal(status(evidenceId).lastReview?.decision, "complete", "Main did not complete sourced evidence");
     assert.equal(status(evidenceId).confirmation?.confirmedBy, "main");
-    const added = app.nodes.getByProject(projectId).filter(value => value.node.kind === "work" && !plannedNodes.has(value.node.id));
+    const added = app.nodes.getByProject(projectId).filter(value => !plannedNodes.has(value.node.id));
     assert.equal(added.length, 1, "Main did not add exactly one work node from the review result");
     const validationId = added[0]!.node.id;
     assert(edges().some(edge => edge.from === validationId && edge.to === synthesisId), "synthesis does not wait for the added node");

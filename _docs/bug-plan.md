@@ -45,6 +45,8 @@
 
 2026-10-15：分支 `fix/bug-010-remove-control-node` 按用户决定删除控制节点（start / end / checkpoint）：每个 Roadmap Node 都是带目标与完成标准的工作节点，`create_roadmap` / `modify_roadmap` 只接受这一种字段全部必填的形状，`NodeV1` 去掉 `kind` / `controlPurpose`；旧数据库中的控制节点在恢复时丢弃并把前后节点直接相连。离线验证通过，真实模型（Qwen 基线、gpt-6-luna、gpt-6-sol）尚未复验，因此保持未勾选。详见 [99](99-bugfix-bug-010-roadmap-schema.md)。
 
+2026-10-15：BUG-010 真实模型复验（云端容器）：gpt-6-luna `scripts/goal.ts` 5 个场景全部通过，3 次 `create_roadmap` 首调均合法；gpt-6-sol 在 F10.5 场景中首次 `create_roadmap` 即成功。F10.5 后续回合因 Node 拒绝提交未满足标准的作业而中断，与本 Bug 无关。Qwen 对照与 F5.4 Electron 真实验收仍待本机完成，保持未勾选。详见 [99](99-bugfix-bug-010-roadmap-schema.md)。
+
 ## 待修复表
 
 优先级：P1 阻断目标闭环，P2 影响诊断或报告可信度。优先级不代表已确认生产代码缺陷。

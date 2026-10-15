@@ -30,6 +30,7 @@
     "scripts/longterm.ts",
     "scripts/longterm/**/*.ts",
     "scripts/real.ts",
+    "scripts/rework.ts",
     "scripts/subscription.ts"
   ],
   "exclude": [
