@@ -40,9 +40,14 @@
   - `01-confirm`（约 26 秒，2 步）：Main 读取 Roadmap，复述目标和两个节点并请求同意，没有提前规划，符合预期。
   - `01-plan`（约 160 秒，16 步）：15 次 `create_roadmap` 都给 work 节点带上 `control: "checkpoint"`，全部被拒；回合在 16 步上限处 `blocked`。这就是 BUG-010，记录追加在 [99](99-bugfix-bug-010-roadmap-schema.md)。
   - 后续回合（交作业、返工、两次重启、Main 判完成和改计划）都没有执行，F10.4b 的真实场景也因此仍未验证。证据在本机 scratchpad 的 `rework-run1/`（未入库）。
-  - 因此 F10.5 保持 🔄。
+  - 因此当时 F10.5 保持 🔄。
+- **真实模型复验（2026-10-15，BUG-010 修复后，`gpt-6-sol`，云端容器）：前 6 个回合通过。**
+  - 期间按用户选择调整场景：第 2 回合由 Human 明确要求 Node 先提交未标来源的草稿；节点标题匹配不区分大小写。为此还修正了 Node 拒绝 Human 明确提交请求的问题，并把 Roadmap 修改工具按动作拆分（[99](99-bugfix-bug-010-roadmap-schema.md)，[PR #65](https://github.com/likeWind221/Navo/pull/65)）。
+  - 通过：首次 `create_roadmap` 成功；Node 按要求提交草稿；Main 判返工并给出具体意见；重启前后状态一致；Node 补交 sourced.txt；Main 判完成并首次 `edit_node` 即成功调整 synthesis。
+  - 第 6 回合 Main 选择改写 synthesis 而非新增验证节点，未满足“恰好新增一个节点”的场景断言，第 7–11 回合未执行。
+  - 2026-10-15 经用户决定免除第 7–11 回合的真实模型验收，F10.5 标记 ✅。这些回合覆盖的能力（从未执行的节点不能被判完成、新增验证节点后按依赖推进、synthesis 由 Main 判完成、第二次重启）仅由离线场景验证。证据在云端容器 scratchpad 的 `rework-sol10/`（未入库）。
 
 ## 下一步
 
-- 真实验收被 BUG-010 阻断：先修 BUG-010 再重跑 `scripts/rework.ts`；或者经用户决定，由脚本直接写入初始 Roadmap 以绕开规划阶段。通过后把 F10.5 和 Phase 10 标为 ✅。
+- F10.5 与 Phase 10 已标记 ✅（第 7–11 回合真实验收经用户决定免除）。若之后补跑，可在第 6 回合复核指示中告知 Main 工作区有 validation.txt，再观察它是否新增验证节点。
 - BUG-011 已在 `fix/bug-011-restart-order` 修复（[103](103-bugfix-bug-011-restart-order.md)）。
