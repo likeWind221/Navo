@@ -107,6 +107,7 @@ DeepSeek Harness 对照（本机 `D:\Program\Miracle\kernel`，commit `277c141`�
 
 - 离线：`pnpm typecheck` 通过（另用覆盖 `src`、`tests`、全部 `scripts/**` 的临时 tsconfig 检查无错误）；`pnpm test` 662 通过、6 失败、3 跳过，6 项为容器环境已知失败；rpc 46/46。新增测试覆盖五个工具的行为、原样回放 sol 的占位字段被拒、`index: null` / `index: 0`、缺少 `connected` 被拒、可为 null 类型的校验与非法组合，以及 Node 提示中的新规则。
 - gpt-6-sol F10.5（`scripts/rework.ts`）：前 6 个回合通过——首次 `create_roadmap` 成功；Node 按要求提交草稿；Main 判返工；重启前后状态一致；Node 补交；Main 判完成并首次 `edit_node` 即成功（拆分前 13 次被拒）。第 6 回合 Main 选择把 synthesis 改为“暂定推荐并说明需独立验证”，而非新增验证节点，未满足场景断言，第 7–11 回合未执行；经用户决定暂不继续调整场景。
+- gpt-6-luna 回归（`scripts/goal.ts`，拆分与提交规则修改后）：5 个场景全部通过，3 次 `create_roadmap` 首调均合法。
 - 基础设施噪声：多次运行中 `/v1/responses` 间歇返回 HTTP 520，外层 `fetch` 包装透明重试后均为 200，不影响模型行为；原因未查明。
 - 仍未验证：Qwen 本机首调合法率（工具形状变化，需重测基线）、F5.4 预填 / 空目标 Electron 真实验收、F10.5 第 7–11 回合。BUG-010 保持未勾选。
 
