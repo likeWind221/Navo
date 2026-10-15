@@ -5,6 +5,7 @@
 ## 当前状态
 
 - [x] BUG-009：Responses 工具 namespace 缺少必填 description，真实订阅请求返回 HTTP 400（M1.4 已补齐；真实文本/read、本机完整验证与当前 head CI 通过，PR #54 已合入）。笔记：[94](94-bugfix-bug-009-namespace.md)。
+- [ ] BUG-010：gpt-6-luna 为 `create_roadmap` 生成跨 Node 分支字段，运行时连续拒绝，真实 Project 无法创建 Roadmap。笔记：[99](99-bugfix-bug-010-roadmap-schema.md)。
 
 2026-09-22：登记 4 项未关闭问题，尚未实施生产修复。用户明确要求将已发现问题转入此表后先合并 F9.8 阶段成果；本次允许带已知真实验收失败合并，不改变后续验证门禁，也不声称真实模型闭环已通过。阶段交付见 [PR #30](https://github.com/likeWind221/Navo/pull/30)。
 
@@ -31,6 +32,10 @@
 
 2026-10-12：BUG-008 在本机冷启动全量测试中复现（15 轮 1 次），现场证实 `taskkill /T` 漏杀 pwsh 正在创建的子进程（pwsh 7 启动后 200ms 结束时 7–9 成漏杀）。修复为 shell 先把自己放进 `KILL_ON_JOB_CLOSE` 作业再执行命令，并在 `exit` 后设 1 秒排空兜底；行为变化：命令结束时其后台进程一并结束。本机冷启动多轮全量测试 0 挂起、0 残留，CI 结果见笔记。详见 [82：修复笔记](82-bugfix-bug-008-shell-cancel.md)。
 
+2026-10-14：F5.4 真实 Electron 验收发现 BUG-010。`gpt-6-luna` 在预填目标和目标留空两条路径中均完成目标确认，但 `create_roadmap` 多次携带与 Node kind 不匹配的条件字段并被运行时拒绝；目标写入、follow、失败展示、取消和布局已通过，Roadmap 创建未通过。详见 [99：排查与修复笔记](99-bugfix-bug-010-roadmap-schema.md)。
+
+2026-10-15：在 `fix/bug-010-roadmap-schema` 尝试把 `create_roadmap` 拆为 `work_nodes` / `checkpoints` 两个扁平数组。Qwen 对照首调合法率从 14/15 降到 12/15：模型在两个数组参数之间写出坏的 JSON。用户决定整体回退，未合入生产代码；gpt-6-luna 因额度用尽未复验。BUG-010 保持未修复，详见 [99](99-bugfix-bug-010-roadmap-schema.md)。
+
 ## 待修复表
 
 优先级：P1 阻断目标闭环，P2 影响诊断或报告可信度。优先级不代表已确认生产代码缺陷。
@@ -38,6 +43,7 @@
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
 | BUG-009 | P1 / 后端 | 真实订阅请求因工具 namespace 缺少 description 返回 HTTP 400 | gpt-6-luna 返回 missing_required_parameter；补齐后文本及 read 续接通过，根因已确认 | 真实文本/read、协议回归、本机完整检查和当前 head CI 通过 | [94：修复笔记](94-bugfix-bug-009-namespace.md) |
+| BUG-010 | P1 / 后端 | gpt-6-luna 在目标确认后无法创建 Roadmap，阻断真实 Project 规划与 F5.4 收口 | F5.4 两个独立 Project 均复现：模型为 control 节点发送 `goal` / `done_when`，也曾为 work 节点发送 `control`；运行时按互斥联合拒绝。直接失败点已确认：工具向模型公布的扁平 Schema 允许这些字段，条件约束只写在描述里 | 工具 Schema 与运行时约束一致；非法跨分支字段仍被拒绝；后端目标确认真实验收和 F5.4 预填/空目标 Electron 真实验收均能创建 Roadmap | [99：排查与修复笔记](99-bugfix-bug-010-roadmap-schema.md) |
 | BUG-001 | P1 / 后端 | synthesis 续接仍读取旧 evidence，报告缺少 validation，无法产出最终推荐 | 首次有效运行第 8 回合；Store 权限检查通过，但未留存该回合请求快照。上下文传递遗漏、模型漏读或旧历史干扰均待确认。2026-10-07 证据确认：新 Resource 已在续接提示中，失败为模型被历史“缺失”结论压过并把名称当 ID；修复后续接 8/8 成功（run 6-13），Resource 引用加固后工具调用零失败 | 留存该回合模型输入和调用结果，定位并处理原因；真实模型读取新 Resource 并形成有依据的结论，同时保持原 Session 和 Human Gate；笔记记录完整复验 | [发现记录](67-devlog-f9.8-longterm-acceptance.md)、[登记与排查边界](68-devlog-bug-tracking.md)、[修复笔记](70-bugfix-bug-001-004-longterm.md) |
 | BUG-002 | P1 / 后端 | validation 注册文件时出现 `Resource source file is unavailable`；模型随后恢复，但严格验收在第 6 回合停止 | 第二次有效运行；未留存失败调用的 path 和底层 I/O 原因。该消息可来自 realpath/stat 的 I/O 失败，不能据此断言一定是模型猜错文件名。2026-10-07：错误已携带 path 与 errno，验收改为“不得有未恢复错误”；run 2-13 均以正确路径注册成功，原错误未复现，原因仍未证实 | 捕获实际参数及失败原因，明确输入文件交接与工具错误恢复的预期；处理已证实问题，真实场景能正确发布/读取所需文件；明确可恢复工具错误的验收标准，不能仅删断言以通过 | [发现记录](67-devlog-f9.8-longterm-acceptance.md)、[登记与排查边界](68-devlog-bug-tracking.md)、[修复笔记](70-bugfix-bug-001-004-longterm.md) |
 | BUG-003 | P2 / 后端 | Main 在 synthesis 实际 idle 时仍报告 locked，误导用户下一步操作 | 首次有效运行的交接回复；属于可观察的文本与事实不一致，具体提示、历史或查询使用原因待确认。回合内 working 与回合后 idle 的正常转换不算此问题。2026-10-07：确认原因是人工确认发生在 Main 对话外且提示无重读规则；修复后状态探针 10/10 本回合读取并答 idle，Main 另收节点状态变化提醒 | 关键状态报告基于当前可信事实；以实际状态转换场景验证报告一致，无法确认时表达未知；保留真实复验文本与对应快照 | [发现记录](67-devlog-f9.8-longterm-acceptance.md)、[登记与排查边界](68-devlog-bug-tracking.md)、[修复笔记](70-bugfix-bug-001-004-longterm.md) |
