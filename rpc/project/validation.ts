@@ -84,7 +84,7 @@ export function parseNodeReviewInput(value: unknown): NodeReviewInput {
   return {
     projectId: id(input.projectId, "projectId"),
     nodeId: id(input.nodeId, "nodeId"),
-    action: oneOf(input.action, ["complete", "skip"] as const, "review action"),
+    action: oneOf(input.action, ["complete", "skip", "rework"] as const, "review action"),
     reason: visibleText(input.reason, "review reason", PROJECT_REVIEW_REASON_MAX_CHARS),
     reviewedRevision: positive(input.reviewedRevision, "reviewedRevision"),
   };
@@ -143,18 +143,19 @@ function parseRoadmap(value: unknown): RoadmapV1 {
 
 export function parseNode(value: unknown): NodeV1 {
   const node = shape(value, ["nodeId", "revision", "kind", "requirement", "status", "title", "description",
-    "acceptanceCriteria", "controlPurpose", "hasSession", "turnActive", "actions", "confirmation"], "node");
+    "acceptanceCriteria", "controlPurpose", "hasSession", "turnActive", "actions", "confirmation", "submission",
+    "pendingFeedback"], "node");
   const kind = oneOf(node.kind, ["work", "control"] as const, "node kind");
   const controlPurpose = node.controlPurpose === null ? null
     : oneOf(node.controlPurpose, ["start", "end", "checkpoint"] as const, "control purpose");
   if ((kind === "control") !== (controlPurpose !== null)) invalid("Control purpose must match node kind");
-  const actions = shape(node.actions, ["run", "complete", "skip"], "node actions");
+  const actions = shape(node.actions, ["run", "complete", "skip", "rework"], "node actions");
   return {
     nodeId: id(node.nodeId, "nodeId"),
     revision: positive(node.revision, "node revision"),
     kind,
     requirement: oneOf(node.requirement, ["required", "optional"] as const, "node requirement"),
-    status: oneOf(node.status, ["locked", "idle", "working", "completing", "skipped"] as const, "node status"),
+    status: oneOf(node.status, ["locked", "idle", "working", "submitted", "completing", "skipped"] as const, "node status"),
     title: visibleText(node.title, "node title", TEXT_MAX),
     description: text(node.description, "node description"),
     acceptanceCriteria: array(node.acceptanceCriteria, "acceptanceCriteria")
@@ -166,8 +167,39 @@ export function parseNode(value: unknown): NodeV1 {
       run: flag(actions.run, "run action"),
       complete: flag(actions.complete, "complete action"),
       skip: flag(actions.skip, "skip action"),
+      rework: flag(actions.rework, "rework action"),
     },
     confirmation: node.confirmation === null ? null : parseConfirmation(node.confirmation),
+    submission: node.submission === null ? null : parseSubmission(node.submission),
+    pendingFeedback: node.pendingFeedback === null ? null : parseFeedback(node.pendingFeedback),
+  };
+}
+
+function parseSubmission(value: unknown): NodeV1["submission"] {
+  const submission = shape(value, ["summary", "resourceIds", "criteria", "remaining", "submittedAt"], "node submission");
+  return {
+    summary: visibleText(submission.summary, "submission summary", TEXT_MAX),
+    resourceIds: array(submission.resourceIds, "submission resourceIds").map(entry => id(entry, "submission resourceId")),
+    criteria: array(submission.criteria, "submission criteria").map((candidate) => {
+      const check = shape(candidate, ["criterion", "satisfied", "note"], "submission criterion");
+      return {
+        criterion: visibleText(check.criterion, "submission criterion", TEXT_MAX),
+        satisfied: flag(check.satisfied, "criterion satisfied"),
+        note: visibleText(check.note, "criterion note", TEXT_MAX),
+      };
+    }),
+    remaining: array(submission.remaining, "submission remaining").map(entry => visibleText(entry, "remaining work", TEXT_MAX)),
+    submittedAt: timestamp(submission.submittedAt, "submittedAt"),
+  };
+}
+
+function parseFeedback(value: unknown): NodeV1["pendingFeedback"] {
+  const feedback = shape(value, ["requestedBy", "feedback", "reviewedRevision", "requestedAt"], "node feedback");
+  return {
+    requestedBy: visibleText(feedback.requestedBy, "requestedBy", ID_MAX),
+    feedback: visibleText(feedback.feedback, "rework feedback", TEXT_MAX),
+    reviewedRevision: positive(feedback.reviewedRevision, "reviewedRevision"),
+    requestedAt: timestamp(feedback.requestedAt, "requestedAt"),
   };
 }
 

@@ -27,7 +27,17 @@ const summary: ProjectSummaryV1 = {
 const node: NodeV1 = {
   nodeId: "n", revision: 1, kind: "work", requirement: "required", status: "idle",
   title: "Collect", description: "", acceptanceCriteria: ["Done"], controlPurpose: null,
-  hasSession: false, turnActive: false, actions: { run: true, complete: true, skip: true }, confirmation: null,
+  hasSession: false, turnActive: false, actions: { run: true, complete: true, skip: true, rework: false }, confirmation: null,
+  submission: null, pendingFeedback: null,
+};
+const submitted: NodeV1 = {
+  ...node, status: "submitted", revision: 5, hasSession: true,
+  actions: { run: false, complete: true, skip: true, rework: true },
+  submission: {
+    summary: "Collected sources", resourceIds: ["r1"], remaining: [],
+    criteria: [{ criterion: "Done", satisfied: true, note: "See r1" }],
+    submittedAt: "2026-10-15T00:00:00.000Z",
+  },
 };
 const detail = {
   project: summary,
@@ -82,6 +92,10 @@ describe("F9.9a project contract", () => {
       { ...detail, roadmap: { ...detail.roadmap, nodes: [{ ...node, controlPurpose: "start" }] } },
       { ...detail, roadmap: { ...detail.roadmap, nodes: [{ ...node, status: "done" }] } },
       { ...detail, roadmap: { ...detail.roadmap, nodes: [{ ...node, actions: { run: true } }] } },
+      { ...detail, roadmap: { ...detail.roadmap, nodes: [{ ...node, submission: undefined }] } },
+      { ...detail, roadmap: { ...detail.roadmap, nodes: [{ ...submitted, submission: { ...submitted.submission, summary: " " } }] } },
+      { ...detail, roadmap: { ...detail.roadmap, nodes: [{ ...submitted, submission: { ...submitted.submission, criteria: [{ criterion: "Done", satisfied: "yes", note: "n" }] } }] } },
+      { ...detail, roadmap: { ...detail.roadmap, nodes: [{ ...node, pendingFeedback: { requestedBy: "human", feedback: "Fix", reviewedRevision: 2 } }] } },
     ]) {
       expect(() => projectGetMethod.parseOutput(candidate)).toThrow(RpcError);
     }
@@ -164,6 +178,14 @@ describe("F9.9a project contract", () => {
       expect(() => projectNodeReviewMethod.parseInput(candidate)).toThrow(RpcError);
     }
     expect(projectNodeReviewMethod.parseOutput(node)).toEqual(node);
+    const rework = { ...review, action: "rework", reason: "Add the 2024 data" };
+    expect(projectNodeReviewMethod.parseInput(rework)).toEqual(rework);
+    expect(projectNodeReviewMethod.parseOutput(submitted)).toEqual(submitted);
+    const reworked: NodeV1 = {
+      ...node, revision: 6, hasSession: true, actions: { run: true, complete: true, skip: true, rework: false },
+      pendingFeedback: { requestedBy: "human", feedback: "Add the 2024 data", reviewedRevision: 5, requestedAt: "2026-10-15T01:00:00.000Z" },
+    };
+    expect(projectNodeReviewMethod.parseOutput(reworked)).toEqual(reworked);
   });
 
   it("adopts the Session announced by the first turn event and then enforces it", () => {

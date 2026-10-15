@@ -16,6 +16,7 @@ import { SessionStore } from "../../../src/session/store.js";
 import { MockFetchCore } from "../../../src/tools/builtins/fetch/mock.js";
 import { FetchTool } from "../../../src/tools/builtins/fetch/tool.js";
 import { SendToMainTool } from "../../../src/tools/builtins/mailbox/send.js";
+import { SubmitCompletionTool } from "../../../src/tools/builtins/node/submit.js";
 import { ResourceToolsPlugin } from "../../../src/tools/builtins/resource/plugin.js";
 import { MockSearchAdapter } from "../../../src/tools/builtins/search/adapters/mock.js";
 import { SearchTool } from "../../../src/tools/builtins/search/tool.js";
@@ -54,6 +55,7 @@ export async function createKit(
   await ctx.plugin(MailboxStore);
   await ctx.plugin(ResourceToolsPlugin);
   await ctx.plugin(SendToMainTool);
+  await ctx.plugin(SubmitCompletionTool);
   const searchAdapter = new MockSearchAdapter(searchEntries);
   await ctx.plugin(SearchTool, { adapter: searchAdapter });
   await ctx.plugin(FetchTool, { core: new MockFetchCore([]) });

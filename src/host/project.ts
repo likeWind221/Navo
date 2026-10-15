@@ -103,7 +103,10 @@ function reviewNode(ctx: Context, input: NodeReviewInput): NodeV1 {
   const confirmation = { confirmedBy: "human", reason: input.reason, reviewedRevision: input.reviewedRevision };
   const node = input.action === "complete"
     ? ctx.projectRuntime.confirmCompletion(projectId, nodeId, confirmation)
-    : ctx.projectRuntime.skipNode(projectId, nodeId, confirmation);
+    : input.action === "skip"
+      ? ctx.projectRuntime.skipNode(projectId, nodeId, confirmation)
+      : ctx.projectRuntime.requestRework(projectId, nodeId,
+        { requestedBy: "human", feedback: input.reason, reviewedRevision: input.reviewedRevision });
   return describeNode(ctx, projectId, node);
 }
 

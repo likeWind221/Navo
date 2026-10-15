@@ -190,6 +190,7 @@ function snapshotDefinition(definition: ToolDefinition): RegisteredTool {
 interface NormalizedOutput {
   readonly content: readonly TextContentBlock[];
   readonly artifact?: JsonValue;
+  readonly endsTurn?: true;
 }
 
 function normalizeOutput(output: ToolOutput): NormalizedOutput {
@@ -200,6 +201,7 @@ function normalizeOutput(output: ToolOutput): NormalizedOutput {
   return deepFreeze({
     content: [{ type: "text", text: detached.content }],
     ...(detached.artifact === undefined ? {} : { artifact: detached.artifact }),
+    ...(detached.endsTurn === true ? { endsTurn: true as const } : {}),
   });
 }
 
@@ -216,6 +218,7 @@ function successResult(
       isError: false,
     },
     ...(output.artifact === undefined ? {} : { artifact: output.artifact }),
+    ...(output.endsTurn === true ? { endsTurn: true as const } : {}),
   });
 }
 

@@ -42,12 +42,14 @@ export interface ToolExecutionOptions {
 export type ToolOutput = {
   readonly content: string;
   readonly artifact?: JsonValue;
+  readonly endsTurn?: true;
 };
 
 export interface ToolExecutionSuccess {
   readonly kind: "success";
   readonly block: ToolResultContentBlock & { readonly isError: false };
   readonly artifact?: JsonValue;
+  readonly endsTurn?: true;
 }
 
 export interface ToolExecutionFailure {

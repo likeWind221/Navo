@@ -112,6 +112,7 @@
 
 ## 研究与自动审查
 
+- [F10.4a 完成信号与待确认](100-devlog-f10-4a-done-signal.md)：Node 用 `submit_completion` 交作业（摘要、产物、逐条自查、未完成事项）后回合立即结束并进入 `submitted`；Human 确认、返工或跳过，返工意见存于 Node 事件并在下一回合开始时送达；工具输出 `endsTurn`；公共契约新增 `submitted`、`submission`、`pendingFeedback` 与 `rework` 动作；Harness goal / structured output 对照。
 - [F10.3 中断处理](98-devlog-f10-3-interruption.md)：启动恢复时确定性收口普通/Main/Node 未闭合 Turn，保守补齐工具结果，并与 working Node 的 work-ended 在同一事务提交；本机完整验证、真实 Host 终止 / 重启验收与代码 head CI 通过，交付见 PR #58。
 
 - [F10.2a 普通会话保存与重启续接](97-devlog-f10-2a-session.md)：通用会话写穿透、v1 数据保留升级、普通/Project 两类损坏隔离与跨进程续接；本机完整验证与代码 head CI 通过，最终提交按当前 head CI 门禁收口。

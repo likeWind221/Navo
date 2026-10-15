@@ -85,10 +85,10 @@ export class RoadmapStore extends Service {
     if (!snapshot) throw new RoadmapError("invalid-reference", "Every roadmap node must exist");
 
     for (const currentNode of currentNodes.values()) {
-      if (currentNode.status !== "working") continue;
+      if (currentNode.status !== "working" && currentNode.status !== "submitted") continue;
       const relation = snapshot.graph.relations.find(value => value.nodeId === currentNode.node.id);
       if (!relation || !relation.requiredBefore.every(required => this.isTerminal(candidateNodes.get(required)))) {
-        throw new RoadmapError("working-node", "Roadmap change would invalidate a working Node");
+        throw new RoadmapError("working-node", "Roadmap change would invalidate a working or submitted Node");
       }
     }
     for (const relation of snapshot.graph.relations) {

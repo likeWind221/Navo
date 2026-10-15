@@ -242,4 +242,4 @@ VerificationVerdict {
 
 ## 下一步
 
-F10.0 已确认，F10.1–F10.3 已完成。按 D11，下一步为 F10.4a 完成信号与待确认，开始前先按共享契约流程确认待确认状态的公开形态。
+F10.0 已确认，F10.1–F10.3 与 F10.4a 已完成。F10.4a 实施时经用户确认，返工意见改存于 Node 事件（`rework-requested`）而非 D10 所述的 Main->Node Mailbox，原因见 [100](100-devlog-f10-4a-done-signal.md)。下一步为 F10.4b Main 复盘判定与计划调整。

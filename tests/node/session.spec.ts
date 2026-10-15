@@ -16,6 +16,7 @@ import { SessionStore } from "../../src/session/store.js";
 import { ProjectWorkspaceStore } from "../../src/workspace/store.js";
 import { MockFetchCore } from "../../src/tools/builtins/fetch/mock.js";
 import { SendToMainTool } from "../../src/tools/builtins/mailbox/send.js";
+import { SubmitCompletionTool } from "../../src/tools/builtins/node/submit.js";
 import { FetchTool } from "../../src/tools/builtins/fetch/tool.js";
 import { ResourceToolsPlugin } from "../../src/tools/builtins/resource/plugin.js";
 import { MockSearchAdapter } from "../../src/tools/builtins/search/adapters/mock.js";
@@ -46,6 +47,7 @@ async function createKit(entries: ConstructorParameters<typeof MockLLMAdapter>[0
   await ctx.plugin(MailboxStore);
   await ctx.plugin(ResourceToolsPlugin);
   await ctx.plugin(SendToMainTool);
+  await ctx.plugin(SubmitCompletionTool);
 
   await ctx.plugin(SearchTool, { adapter: new MockSearchAdapter([]) });
   await ctx.plugin(FetchTool, { core: new MockFetchCore([]) });
