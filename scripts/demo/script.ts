@@ -55,27 +55,27 @@ export function demoScript(): DemoScript {
     step(() => answer("Evidence shared with synthesis only.")),
 
     step(() => call("consume-evidence", "fetch_resource", { resource_id: id("evidenceResource") })),
-    step(() => call("forbidden-replan", "modify_roadmap", {
-      base_version: 1, action: "add_node", reason: "Node tries to replan", ...work("validation", "Validate", []),
+    step(() => call("forbidden-replan", "add_node", {
+      base_version: 1, index: null, reason: "Node tries to replan", ...work("validation", "Validate", []),
     })),
     step(() => call("report-blocker", "send_to_main", { message: "BLOCKER: measurements are not independently validated; please add a validation node." })),
     step(() => answer("Blocked until independent validation exists.")),
 
     step(() => call("blocker-mail", "read_mailbox", {})),
     step(() => call("replan-read", "read_roadmap", {})),
-    step(() => call("add-validation", "modify_roadmap", {
-      base_version: 1, action: "add_node", reason: "Resolve synthesis blocker",
+    step(() => call("add-validation", "add_node", {
+      base_version: 1, index: null, reason: "Resolve synthesis blocker",
       ...work("validation", "Publish the independent validation run", [id("evidence")]),
     })),
     step(request => {
       node(request, "add-validation", "validation");
-      return call("stale-connect", "modify_roadmap", {
-        base_version: 1, action: "connect", from_node_id: id("validation"), to_node_id: id("synthesis"), reason: "Stale base version",
+      return call("stale-connect", "set_dependency", {
+        base_version: 1, connected: true, from_node_id: id("validation"), to_node_id: id("synthesis"), reason: "Stale base version",
       });
     }),
     step(() => call("refresh-plan", "read_roadmap", {})),
-    step(() => call("connect-validation", "modify_roadmap", {
-      base_version: 2, action: "connect", from_node_id: id("validation"), to_node_id: id("synthesis"), reason: "Validate before synthesis",
+    step(() => call("connect-validation", "set_dependency", {
+      base_version: 2, connected: true, from_node_id: id("validation"), to_node_id: id("synthesis"), reason: "Validate before synthesis",
     })),
     step(() => answer("Roadmap v3: synthesis now also waits for validation.")),
 

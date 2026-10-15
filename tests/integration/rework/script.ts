@@ -94,12 +94,12 @@ export function scenario(): Scenario {
     }),
     step(request => {
       expect(resultText(request, "adjust-read")).toContain("Roadmap version: 1");
-      return call("add-validation", "modify_roadmap", { base_version: 1, action: "add_node", reason: "Evidence asks for independent validation", ...work("validation", [id("evidence")]) });
+      return call("add-validation", "add_node", { base_version: 1, index: null, reason: "Evidence asks for independent validation", ...work("validation", [id("evidence")]) });
     }),
     step(request => {
       mapping(request, "add-validation", "validation");
-      return call("connect-validation", "modify_roadmap", {
-        base_version: 2, action: "connect", from_node_id: id("validation"), to_node_id: id("synthesis"), reason: "Validate before synthesis",
+      return call("connect-validation", "set_dependency", {
+        base_version: 2, connected: true, from_node_id: id("validation"), to_node_id: id("synthesis"), reason: "Validate before synthesis",
       });
     }),
     answer("Evidence complete; validation inserted before synthesis"),

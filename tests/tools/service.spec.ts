@@ -77,6 +77,37 @@ describe("ToolService registration and schemas", () => {
     })).toThrow(expect.objectContaining({ code: "invalid-tool-definition" }));
   });
 
+  it("accepts a required nullable scalar and rejects other type arrays", async () => {
+    const ctx = await kit.createContext();
+    ctx.tools.register({
+      name: "nullable",
+      parameters: {
+        type: "object",
+        properties: { index: { type: ["integer", "null"] } },
+        required: ["index"],
+        additionalProperties: false,
+      },
+      execute: (arguments_) => ({ content: JSON.stringify(arguments_.index) }),
+    });
+
+    const nulled = await ctx.tools.execute(toolCall("null", "nullable", { index: null }), signal);
+    const numbered = await ctx.tools.execute(toolCall("number", "nullable", { index: 2 }), signal);
+    const wrong = await ctx.tools.execute(toolCall("wrong", "nullable", { index: "2" }), signal);
+    const missing = await ctx.tools.execute(toolCall("missing", "nullable", {}), signal);
+
+    expect(nulled.block.content).toEqual([{ type: "text", text: "null" }]);
+    expect(numbered.block.content).toEqual([{ type: "text", text: "2" }]);
+    expect(wrong).toMatchObject({ kind: "failure", failure: { code: "invalid-arguments", message: expect.stringContaining("an integer or null") } });
+    expect(missing).toMatchObject({ kind: "failure", failure: { code: "invalid-arguments" } });
+    for (const type of [["integer"], ["null", "integer"], ["object", "null"], ["integer", "string"]]) {
+      expect(() => ctx.tools.register({
+        name: `invalid-${type.join("-")}`,
+        parameters: { type: "object", properties: { value: { type } } } as unknown as JsonObject,
+        execute: () => ({ content: "never" }),
+      })).toThrow(expect.objectContaining({ code: "invalid-tool-definition" }));
+    }
+  });
+
   it("disposes idempotently without deleting a later registration", async () => {
     const ctx = await kit.createContext();
     const first = ctx.tools.register({

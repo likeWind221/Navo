@@ -1,5 +1,5 @@
 import { WEB_FETCH_TOOL_NAME } from "../tools/builtins/fetch/tool.js";
-import { MODIFY_ROADMAP_TOOL_NAME } from "../tools/builtins/roadmap/modify-roadmap.js";
+import { ROADMAP_MUTATION_TOOL_NAMES } from "../tools/builtins/roadmap/modify.js";
 import { READ_NODE_TOOL_NAME } from "../tools/builtins/roadmap/read-node.js";
 import { READ_ROADMAP_TOOL_NAME } from "../tools/builtins/roadmap/read.js";
 import { CREATE_ROADMAP_TOOL_NAME } from "../tools/builtins/roadmap/create-roadmap.js";
@@ -29,7 +29,7 @@ export const MAIN_AGENT_TOOL_NAMES: readonly string[] = Object.freeze([
   READ_ROADMAP_TOOL_NAME,
   READ_NODE_TOOL_NAME,
   CREATE_ROADMAP_TOOL_NAME,
-  MODIFY_ROADMAP_TOOL_NAME,
+  ...ROADMAP_MUTATION_TOOL_NAMES,
   REGISTER_RESOURCE_TOOL_NAME,
   FETCH_RESOURCE_TOOL_NAME,
   UPDATE_RESOURCE_TOOL_NAME,
@@ -50,7 +50,7 @@ const REVIEW_RULES = [
   "Check the evidence before deciding: open the relevant Resource with fetch_resource, reading only the lines that bear on an acceptance criterion, and use read_node_turn when you need to confirm that a claimed action really happened. Spot-check at least one piece of evidence for every criterion the Node claims to satisfy. Keep reads small; do not read everything.",
   "Decide with submit_review exactly once. complete: every acceptance criterion is met and you verified evidence for it; this also unlocks downstream Nodes. rework: some criterion is not met; give concrete feedback, the Node keeps its objective and criteria, and a Node may be returned at most twice. skip: the Node's work is not needed; use it only with a clear reason, and prefer escalate when skipping would change the plan substantially. escalate: you cannot decide or the matter needs the Human; the Node stays unchanged.",
   "Never choose complete for a Node that never ran or whose evidence you could not verify. If evidence is insufficient, choose rework with what is missing, or escalate.",
-  "Your reason must name the evidence you checked. After the decision you may use modify_roadmap to re-evaluate downstream Nodes against what the Node actually produced, then give the Human a short summary of the decision, the evidence and any plan change.",
+  "Your reason must name the evidence you checked. After the decision you may use the Roadmap change tools (add_node, edit_node, remove_node, set_dependency, reorder_nodes) to re-evaluate downstream Nodes against what the Node actually produced, then give the Human a short summary of the decision, the evidence and any plan change.",
   "Do not edit the reviewed Node's definition before submit_review; a changed Node revision makes the decision invalid.",
 ];
 
@@ -72,7 +72,7 @@ export function createMainAgentProfile(project: ProjectSnapshot, review = false)
     "One explicit user agreement covers both adopting the restated goal and starting planning. After that agreement, if the agreed goal differs from the recorded goal or no goal is recorded, call set_project_goal with the agreed goal first; then, when read_roadmap reports that no Roadmap exists, use create_roadmap to create the initial plan in the same Turn. The agreement stays valid for the whole Turn: if a call fails because of a malformed tool name, unknown tool or invalid proposal, correct the call and retry instead of asking the user to agree again. If the user rejects or changes the proposal, revise it and ask again instead of planning.",
     "Record only what the user agreed to. The recorded goal may be more concise than your restatement, but it must not add scope choices, assumptions, defaults or answers to open questions that the user did not explicitly confirm; leave unanswered questions and your own suggested leanings out of the goal, or ask again before recording. After set_project_goal succeeds, tell the user in the same reply what was recorded, introduced as \"Recorded goal:\" in the user's language and quoting the recorded text verbatim.",
     "create_roadmap fails while the Project goal is not recorded, and set_project_goal fails once a Roadmap exists because the goal is then locked. Give every Node a clear goal and explicit done_when acceptance criteria; each Node is confirmed before its successors unlock, so do not add start, end or review-only Nodes. create_roadmap creates only the initial Roadmap; never use it to replace an existing one.",
-    "For an existing Roadmap, use modify_roadmap and copy the exact current base_version. Each call performs one planning action. Before edit_node, call read_node and copy its exact node_version. After each successful mutation, use the returned Roadmap version for the next change.",
+    "For an existing Roadmap, change the plan with add_node, edit_node, remove_node, set_dependency and reorder_nodes. Each call performs one change and every parameter is required; copy the exact current base_version. Before edit_node, call read_node and copy its exact node_version. After each successful change, use the returned Roadmap version for the next change.",
     "Node completion and skip remain human-confirmed lifecycle decisions. Do not use Roadmap replanning to impersonate that confirmation; remove_node changes the plan but does not mark the underlying Node completed or skipped.",
     "Use web_search to discover sources and web_fetch to inspect full pages when research is needed. Cite sources supporting your findings.",
     "Use register_resource to publish an existing Workspace file as a Resource owned by Main. Use fetch_resource to read any Project Resource. update_resource and delete_resource apply only to Resources owned by Main; Resources owned by Nodes are read-only to Main.",

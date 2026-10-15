@@ -19,6 +19,7 @@ type JsonSchemaType =
 const schemaTypes = new Set<JsonSchemaType>([
   "object", "array", "string", "number", "integer", "boolean", "null",
 ]);
+const nullableTypes = new Set<JsonSchemaType>(["string", "number", "integer", "boolean"]);
 const commonKeys = new Set(["type", "description", "enum"]);
 const keysByType: Readonly<Record<JsonSchemaType, ReadonlySet<string>>> = {
   object: new Set([...commonKeys, "properties", "required", "additionalProperties"]),
@@ -96,12 +97,18 @@ function assertSupportedSchema(
   if (!isRecord(schema)) {
     throw invalidDefinition(`${path} must be a JSON Schema object.`);
   }
-  const type = schema.type;
+  const declared = schema.type;
+  const nullable = Array.isArray(declared);
+  if (nullable && (declared.length !== 2 || declared[1] !== "null"
+    || !nullableTypes.has(declared[0] as JsonSchemaType))) {
+    throw invalidDefinition(`${path}.type array must be [string|number|integer|boolean, "null"].`);
+  }
+  const type = nullable ? declared[0] : declared;
   if (typeof type !== "string" || !schemaTypes.has(type as JsonSchemaType)) {
     throw invalidDefinition(`${path}.type must be one supported JSON Schema type.`);
   }
   const schemaType = type as JsonSchemaType;
-  if (root && schemaType !== "object") {
+  if (root && (nullable || schemaType !== "object")) {
     throw invalidDefinition(`${path} must have type 'object'.`);
   }
   for (const key of Object.keys(schema)) {
@@ -173,9 +180,11 @@ function validateSchemaValue(
   path: string,
   violations: string[],
 ): void {
-  const type = schema.type as JsonSchemaType;
+  const nullable = Array.isArray(schema.type);
+  const type = (nullable ? (schema.type as JsonSchemaType[])[0] : schema.type) as JsonSchemaType;
+  if (nullable && value === null) return;
   if (!matchesType(type, value)) {
-    violations.push(`${path} must be ${article(type)}${type}`);
+    violations.push(`${path} must be ${article(type)}${type}${nullable ? " or null" : ""}`);
     return;
   }
   const enumValues = schema.enum;
