@@ -5,7 +5,7 @@
 ## 当前状态
 
 - [x] BUG-009：Responses 工具 namespace 缺少必填 description，真实订阅请求返回 HTTP 400（M1.4 已补齐；真实文本/read、本机完整验证与当前 head CI 通过，PR #54 已合入）。笔记：[94](94-bugfix-bug-009-namespace.md)。
-- [ ] BUG-010：gpt-6-luna 为 `create_roadmap` 生成跨 Node 分支字段，运行时连续拒绝，真实 Project 无法创建 Roadmap。笔记：[99](99-bugfix-bug-010-roadmap-schema.md)。
+- [ ] BUG-010：gpt-6-luna 为 `create_roadmap` 生成跨 Node 分支字段，运行时连续拒绝，真实 Project 无法创建 Roadmap（2026-10-15 已删除控制节点、Node 只剩一种形状，离线验证通过，待真实模型验收）。笔记：[99](99-bugfix-bug-010-roadmap-schema.md)。
 - [x] BUG-011：重启后节点列表从创建顺序变为 ID 顺序（2026-10-15 F10.5 发现；同日修复：存储按每个 owner 首条事件的写入顺序回放，资源列表经核实本不受影响）。笔记：[103](103-bugfix-bug-011-restart-order.md)。
 
 2026-09-22：登记 4 项未关闭问题，尚未实施生产修复。用户明确要求将已发现问题转入此表后先合并 F9.8 阶段成果；本次允许带已知真实验收失败合并，不改变后续验证门禁，也不声称真实模型闭环已通过。阶段交付见 [PR #30](https://github.com/likeWind221/Navo/pull/30)。
@@ -42,6 +42,8 @@
 2026-10-15：F10.5 真实验收（`gpt-6-sol`）复现 BUG-010：用户同意规划后，Main 的 15 次 `create_roadmap` 都为 work 节点附带 `control: "checkpoint"`，全部被拒，回合在 16 步上限处 blocked，F10.5 真实验收停在规划阶段。详见 [99](99-bugfix-bug-010-roadmap-schema.md)。
 
 2026-10-15：分支 `fix/bug-011-restart-order` 修复 BUG-011：事件历史统一按每个 owner 首条事件的 rowid 排列、owner 内按 `seq` 回放，Node 与 Session 列表重启前后保持创建顺序；资源事件以 Project 为 owner，经核实本来就稳定。新增存储层与 NodeStore 重启顺序回归测试，F10.5 恢复严格比较；本机 typecheck 与 667 项测试通过。详见 [103](103-bugfix-bug-011-restart-order.md)。
+
+2026-10-15：分支 `fix/bug-010-remove-control-node` 按用户决定删除控制节点（start / end / checkpoint）：每个 Roadmap Node 都是带目标与完成标准的工作节点，`create_roadmap` / `modify_roadmap` 只接受这一种字段全部必填的形状，`NodeV1` 去掉 `kind` / `controlPurpose`；旧数据库中的控制节点在恢复时丢弃并把前后节点直接相连。离线验证通过，真实模型（Qwen 基线、gpt-6-luna、gpt-6-sol）尚未复验，因此保持未勾选。详见 [99](99-bugfix-bug-010-roadmap-schema.md)。
 
 ## 待修复表
 
