@@ -61,6 +61,7 @@
   - `tests/host/project/turn.spec.ts`：RPC 展示作业单，以及返工的版本冲突与状态校验；
   - `rpc/tests/project.spec.ts`：新字段与 `rework` 动作的严格校验。
 - 未执行真实模型验收，按计划与 F10.4b 的五个场景一起执行。
+- 交付 PR：[#59](https://github.com/likeWind221/Navo/pull/59)，按当前 head 的必需 CI 通过后 squash 合入。
 
 ## 下一步
 
