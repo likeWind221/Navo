@@ -39,6 +39,8 @@
 
 2026-10-15：F10.5 离线长程场景在重启前后比较节点列表时发现 BUG-011：恢复时按 `owner_id` 读取事件，导致列表顺序从创建顺序变为 UUID 顺序，数据本身不变。F10.5 测试暂时按 ID 排序后比较，详见 [103](103-bugfix-bug-011-restart-order.md)。
 
+2026-10-15：F10.5 真实验收（`gpt-6-sol`）复现 BUG-010：用户同意规划后，Main 的 15 次 `create_roadmap` 都为 work 节点附带 `control: "checkpoint"`，全部被拒，回合在 16 步上限处 blocked，F10.5 真实验收停在规划阶段。详见 [99](99-bugfix-bug-010-roadmap-schema.md)。
+
 ## 待修复表
 
 优先级：P1 阻断目标闭环，P2 影响诊断或报告可信度。优先级不代表已确认生产代码缺陷。

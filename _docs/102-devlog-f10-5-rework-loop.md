@@ -35,9 +35,14 @@
 
 - `pnpm typecheck` 通过；`pnpm test` 107 个文件、665 项全部通过（PowerShell，Node 22.23.1）。
 - 新场景与原 longterm 场景连续跑 5 次全部通过，未出现不稳定。
-- **真实模型验收尚未执行**：需要用户另行同意，执行前报预计耗时，并确认本机 ChatGPT 凭据可用（F10.4b 时 `gpt-6-luna` 因凭据无法加载而 `AUTH` 失败）。因此 F10.5 保持 🔄。
+- **真实模型验收（2026-10-15，经用户同意，`gpt-6-sol`）：未通过，停在规划阶段。**
+  - 凭据：第一次检查时刷新令牌返回 `invalid_grant`，用户重新执行 `pnpm chatgpt login` 后，模型列表中有 `gpt-6-sol`。
+  - `01-confirm`（约 26 秒，2 步）：Main 读取 Roadmap，复述目标和两个节点并请求同意，没有提前规划，符合预期。
+  - `01-plan`（约 160 秒，16 步）：15 次 `create_roadmap` 都给 work 节点带上 `control: "checkpoint"`，全部被拒；回合在 16 步上限处 `blocked`。这就是 BUG-010，记录追加在 [99](99-bugfix-bug-010-roadmap-schema.md)。
+  - 后续回合（交作业、返工、两次重启、Main 判完成和改计划）都没有执行，F10.4b 的真实场景也因此仍未验证。证据在本机 scratchpad 的 `rework-run1/`（未入库）。
+  - 因此 F10.5 保持 🔄。
 
 ## 下一步
 
-- 经用户同意后运行 `pnpm exec tsx scripts/rework.ts`，把结果补进本记录；通过后把 F10.5 和 Phase 10 标为 ✅。
+- 真实验收被 BUG-010 阻断：先修 BUG-010 再重跑 `scripts/rework.ts`；或者经用户决定，由脚本直接写入初始 Roadmap 以绕开规划阶段。通过后把 F10.5 和 Phase 10 标为 ✅。
 - BUG-011 另起 `fix/bug-011-restart-order` 修复。
