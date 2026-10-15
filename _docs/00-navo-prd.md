@@ -31,7 +31,7 @@ Verification
 核心原则：
 
 1. **Roadmap 是活的执行计划**：规划结果允许在执行中插入、跳过、替换、重排节点。
-2. **规划、执行与验证分离**：执行结果不能由执行者自行宣布为完成。
+2. **规划、执行与验证分离**：执行结果不能由执行者自行宣布为完成。当前由 Human 或协调节点的 Main Agent 判断节点是否完成，不设独立验证者。
 3. **证据驱动完成**：关键结论和任务完成状态需要可检查的 Artifact / Evidence 支撑。
 4. **Replanning 是一等能力**：失败、信息不足和目标变化都可以触发局部或全局重规划。
 5. **执行轨迹可追溯**：Roadmap 变化、任务执行、验证结果和关键产物应能被记录和重放。
@@ -116,7 +116,7 @@ Research Workspace 后续可包含：
 | Phase | 核心问题 | 目标产物 |
 |---|---|---|
 | Phase 9 | Agent 如何可靠执行长程任务？ | Adaptive Roadmap Runtime |
-| Phase 10 | 项目如何跨重启持续推进，系统如何知道任务真的完成？ | Durable Project（持久化与恢复）+ Evidence + Verification |
+| Phase 10 | 项目如何跨重启持续推进，系统如何知道任务真的完成？ | Durable Project（持久化与恢复）+ Main 判断节点完成 |
 | Phase 11 | Research 如何形成可用闭环？ | Research Agent + Claim/Evidence + RAG |
 | Phase 12 | 系统如何与研究者长期共同改进？ | Research Memory + Human-AI Co-evolution |
 

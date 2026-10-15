@@ -260,33 +260,35 @@ Phase 9 明确不做：
 - Phase 9 不为 Project / Node / Roadmap / Mailbox / Resource Registry 元数据加入数据库持久化；Project Workspace 从 F9.6b 起承载真实文件，本阶段所说的领域状态恢复仍只指给定历史后的内存重建，不是进程重启恢复；
 - F9.6 只借鉴显式 Message / Artifact 的 A2A 思想，不实现标准 A2A 的 Agent Card、网络发现或跨服务 Transport。
 
-## 8. Phase 10（F10）：可恢复、可验证的长期 Project
+## 8. Phase 10（F10）：可恢复、由 Main 判断完成的长期 Project
 
-**阶段目标：** 让 Project 在应用退出并重新启动后仍能继续推进，并让“节点是否真的完成”由独立的验证结论支撑：执行者不能自行宣布完成，验证不通过时 Main 能据此修改 Roadmap，形成 PRD 中“执行 -> 验证 -> 再规划”的闭环。Human Gate 不变：保存、恢复、验证结论和 Roadmap 变化都不会自动启动任何 Agent Turn。
+**阶段目标：** 让 Project 在应用退出并重新启动后仍能继续推进，并让 Main 在 Human 启动的回合里检查节点成果、判断是否完成：执行者不能自行宣布完成，Main 判断通过即可完成节点，判断不通过时补写节点要求或插入补救节点，形成 PRD 中“执行 -> 验证 -> 再规划”的闭环。Human 仍可直接确认完成或跳过。Human Gate 不变：保存、恢复、完成判断和 Roadmap 变化都不会自动启动任何 Agent Turn；节点自动推进不在本阶段。
 
-**进入条件：** F9.8 的真实验收收口（BUG-001 至 BUG-004 按 [Bug 跟踪表](bug-plan.md) 关闭或经用户明确处置）后开始 F10.1；F10.0 设计调研可以提前进行。F9.9 公共契约交接与 F10 相互独立；F10 若需要向桌面公开验证或恢复状态，仍先停止并按共享契约流程确认。
+**进入条件：** F9.8 的真实验收收口（BUG-001 至 BUG-004 按 [Bug 跟踪表](bug-plan.md) 关闭或经用户明确处置）后开始 F10.1；F10.0 设计调研可以提前进行。F9.9 公共契约交接与 F10 相互独立；F10 若需要向桌面公开新的状态或操作，仍先停止并按共享契约流程确认。
 
-**阶段验收场景：** Human 启动 Node 完成工作并发布产物；Human 启动验证，验证结论为不通过并给出理由与证据引用；Human 启动 Main，Main 读取该结论并修改 Roadmap；此时关闭并重新启动后端，Project、Roadmap、会话、消息、资源与验证结论均可读取，退出时进行中的 Turn 处于明确的已中断状态；Human 继续执行与验证，结论通过后才能确认节点完成。
+**阶段验收场景：** Human 启动 Node 完成工作并发布产物；Human 启动 Main，Main 检查后判断不通过，把需要补做的内容写进该 Node 的任务要求或插入补救节点；此时关闭并重新启动后端，Project、Roadmap、会话、消息、资源与完成记录均可读取，退出时进行中的 Turn 处于明确的已中断状态；Human 继续执行 Node 后再次启动 Main，Main 判断通过并完成节点，下游节点随之解锁。
 
 ```text
 Human start Node ---> Node works / publishes Resource
                               |
-Human start Verify ---> Verifier (read-only) ---> Verdict (node version + pass|fail + reason + evidence)
-                                                    |
-                    +-------------------------------+---------------------------+
-                    | pass                                                      | fail
-                    v                                                           v
-     Human confirm completion                       Human start Main ---> read Verdict ---> modify Roadmap
-     (requires pass on current version)                                                  |
-                                                                                         v
-                                                                       Human starts related Node again
+Human start Main ---> Main reads Node goal, criteria, Resources, Mailbox
+                              |
+            +-----------------+------------------+
+            | pass                               | not yet
+            v                                    v
+  Main completes Node                 Main edits Node goal / criteria
+  (reason + reviewed revision)        or adds a remedy Node
+            |                                    |
+            v                                    v
+  downstream Nodes unlock             Human starts Node again
 
+  Human may still confirm completion or skip directly at any time.
 [ all facts above survive restart; interrupted Turns are never resumed automatically ]
 ```
 
 | 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
 |---|---|---|---|---|
-| ✅ | F10.0 持久化与验证设计收口 | 后端设计记录 | 确定持久保存的范围、写入成功的含义、重启恢复与中断处理规则，以及验证结论的含义、失效条件、验证者权限和对完成确认的约束 | 设计记录经用户确认；参考 DeepSeek Harness 与既有存储调研，写明采用与不采用的机制；不修改生产代码 |
+| ✅ | F10.0 持久化与验证设计收口 | 后端设计记录 | 确定持久保存的范围、写入成功的含义、重启恢复与中断处理规则，以及完成判断的归属 | 设计记录经用户确认；参考 DeepSeek Harness 与既有存储调研，写明采用与不采用的机制；不修改生产代码。2026-10-15 经用户决定撤销独立验证者（原 D7–D9），改由 Main 判断完成，修订见 [80](80-devlog-f10-0-design.md) |
 | ✅ | F10.1 Project 状态持久保存与重启恢复 | Project / Node / Roadmap / Mailbox / Resource 元数据 | 让 Project、节点、Roadmap 及其变更历史、Project 消息和资源登记在应用退出后仍然存在，重新启动后恢复为与退出前一致的状态；按下列 F10.1a–F10.1d 分步交付 | 子步骤全部完成；实际关闭并重新启动后端后读取到旧数据；只有保存成功的变更才对调用方表现为成功；不能用同进程内存或仅序列化测试替代 |
 | ✅ | F10.1a 项目与工作目录持久保存 | Project 与 Workspace 绑定 | 让已创建的 Project、项目目标、归档 / 重新打开状态和 Workspace 绑定在重启后仍然存在，项目列表与退出前一致 | 真实关闭并重启后端后列表一致；数据库无法打开或版本不认识时拒绝启动；保存失败时调用方收到失败且状态不变；Workspace 目录丢失时 Project 仍恢复，但使用 Workspace 处报告不可用 |
 | ✅ | F10.1b 节点与 Roadmap 持久保存 | Node 与 Roadmap | 让 Roadmap、其变更历史以及各 Node 的状态与解锁结果在重启后保持一致 | 一次 Roadmap 变更连同新节点和自动解锁要么全部保存、要么全部不保存；手动解锁、开始 / 结束工作、确认完成与跳过在重启后状态一致 |
@@ -295,16 +297,15 @@ Human start Verify ---> Verifier (read-only) ---> Verdict (node version + pass|f
 | ✅ | F10.2 会话与执行记录恢复 | Main / Node Session 与工具记录 | 让 Main 与 Node 的会话消息、工具调用与结果在重启后可以继续使用，后续 Turn 能接着原上下文工作 | 重启后同一 Session 可继续发起 Turn 且上下文完整；恢复过程不重新执行任何工具副作用 |
 | ✅ | F10.2a 普通会话保存与重启续接 | 通用 Session 与 Project 会话归属 | 让不属于 Project 的普通会话也能保存消息、工具调用与结果，并在重启后按原 Session 继续上下文；Main / Node 保持既有保存与恢复能力 | 实际关闭并重启 Host 后，普通会话按同一 Session ID 续接且上下文完整；恢复不运行模型或工具；保存失败不表现为成功；旧版本已保存的 Project 会话可继续恢复；普通会话损坏只隔离该会话，Project 损坏隔离规则保持；本步不交付会话列表或历史 UI |
 | ✅ | F10.3 中断处理 | 通用 Session 与 Project 执行控制面 | 让应用退出时正在进行的普通 / Main / Node Turn 在重启后处于明确、可解释的稳定状态，由用户决定是否继续 | 生产实现、本机完整检查、真实 Host 终止 / 重启验收与代码 head CI 已通过；重启后无悬挂执行状态，不自动续跑或标记完成；Node 与 Session 在同一事务收口，见 [PR #58](https://github.com/likeWind221/Navo/pull/58) 与 [98](98-devlog-f10-3-interruption.md) |
-| ⬜ | F10.4 验证结论记录 | 验证领域 | 让系统能为某个节点的某个版本记录“通过 / 不通过”的验证结论、理由和所引用的资源证据，并可随 Project 一起保存与恢复 | 结论可追加、查询与按历史重建；节点版本变化后旧结论不再视为当前有效；结论本身不改变节点状态 |
-| ⬜ | F10.5 独立验证者 | 验证 Agent 角色 | 让用户可以启动一个独立的验证回合，由只读的验证者根据节点目标和可见资源检查工作成果并提交验证结论 | 验证者不能修改文件、资源或 Roadmap，不能给其他 Agent 发消息；只能为被指定的节点提交结论；验证回合同样受取消、失败释放和 Human Gate 约束 |
-| ⬜ | F10.6 验证结论可见与失败重规划 | Main 协调 / 项目查询 | 让 Main 与用户能看到节点当前的验证结论及其是否过期，并让 Main 在不通过时修改 Roadmap 安排补救；验证结论只作参考，完成与否始终由用户决定 | Main 能看到不通过的理由与证据并通过既有 Roadmap 修改完成重规划；用户确认完成与跳过不受验证结论约束；任何结论都不自动启动 Agent |
-| ⬜ | F10.7 F10 长程集成验收 | 后端集成测试与阶段记录 | 用一个包含验证失败、重规划、重启恢复和最终通过的完整长程场景证明 F10 能力共同工作 | 离线完整场景可重复通过；真实模型验收保留完整记录，失败现场可用于定位 |
+| ⬜ | F10.4 Main 判断节点完成 | Main 协调 / Node 完成 | 让 Main 在 Human 启动的回合里检查节点目标、完成标准与产物，判断通过时直接完成该节点并写明理由，判断不通过时把需要补做的内容写进该节点的任务要求或插入补救节点；Human 仍可直接确认完成或跳过 | Main 只能完成当前 Project 中处于空闲的 work 节点，且只认它检查过的节点版本，版本已变化则被拒绝；Node 不能完成自己，Main 不能跳过节点；完成记录区分由 Human 还是 Main 判断，并随 Project 保存与恢复；完成判断不自动启动任何 Agent；真实模型验证“成果达标则完成”“成果不足则补写要求而不完成”“节点从未执行则不完成”三个场景 |
+| ⬜ | F10.5 F10 长程集成验收 | 后端集成测试与阶段记录 | 用一个包含 Main 判断不通过、返工、重启恢复和最终由 Main 完成的完整长程场景证明 F10 能力共同工作 | 离线完整场景可重复通过；真实模型验收保留完整记录，失败现场可用于定位 |
 
 ## 9. 后续阶段
 
 | Phase | 核心问题 | 目标产物 |
 |---|---|---|
-| Phase 10（F10） | 应用退出后如何继续推进项目？系统如何判断节点真的完成？ | 见第 8 节：持久保存与重启恢复、中断处理、验证结论、独立验证者、验证结论可见与失败重规划 |
+| Phase 10（F10） | 应用退出后如何继续推进项目？系统如何判断节点真的完成？ | 见第 8 节：持久保存与重启恢复、中断处理、Main 判断节点完成 |
+| 后续待定 | 节点能否在无人逐个确认时自动推进？ | 节点自动推进；沿用 F10.4 的 Main 完成判断，必要时补充可机器检查的完成标准，开始前单独确认 Human Gate 的调整范围 |
 | Phase 11 | Research Workspace 如何使用通用 Core？ | Research Agent Profile、Claim / Evidence、RAG 与研究领域适配 |
 | Phase 12 | 系统如何与研究者长期共同演进？ | Research Memory、长期反馈与 Human-AI Co-evolution |
 
@@ -316,7 +317,7 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Pha
 
 Phase 9 已全部完成（2026-10-07）：F9.0–F9.9c 均为 ✅，最后由 [PR #35](https://github.com/likeWind221/Navo/pull/35)、[#36](https://github.com/likeWind221/Navo/pull/36)、[#37](https://github.com/likeWind221/Navo/pull/37) 交付项目公共契约（记录见 [73](73-devlog-f9.9a-project-query.md)、[74](74-devlog-f9.9b-human-control.md)、[75](75-devlog-f9.9c-project-follow.md)）。各 Step 的实现、验证与 PR 经过见第 6 节表格及 [文档索引](index.md) 中对应开发记录。
 
-F9.10 项目目标确认与规划前置已于 2026-10-08 合入（[PR #38](https://github.com/likeWind221/Navo/pull/38)，记录见 [76](76-devlog-f9.10-goal-confirm.md)）：目标可选、Main 规划前须经用户同意、无目标不能生成 Roadmap；前端 F5.2 已据此完成接入（[PR #39](https://github.com/likeWind221/Navo/pull/39)）。真实验收中发现的 BUG-005、BUG-006 已于 2026-10-09 修复合入（[PR #40](https://github.com/likeWind221/Navo/pull/40)、[#41](https://github.com/likeWind221/Navo/pull/41)），BUG-007 经用户决定搁置，见 [Bug 跟踪表](bug-plan.md)。F10.0 持久化与验证设计收口已于 2026-10-10 经用户确认（[80](80-devlog-f10-0-design.md)）：只用 SQLite 并存于 `~/.navo/`，`project-goal-set` 与 Workspace 绑定纳入持久化范围，单个 Project 损坏只隔离该 Project，验证结论只作参考、不设完成门禁。F10.1 于 2026-10-10 经用户确认拆为 F10.1a–F10.1d（项目与工作目录 → 节点与 Roadmap → 消息与资源 → 损坏隔离与整体验收），已实测 Electron 44.2.0 自带 Node 24.20.0 支持 `node:sqlite`。F10.1a–F10.1c 已完成（[81](81-devlog-f10-1a-project-persist.md)、[83](83-devlog-f10-1b-roadmap-persist.md)、[84](84-devlog-f10-1c-mailbox-resource-persist.md)），F10.1d 损坏隔离与整体重启验收已完成，记录见 [89](89-devlog-f10-1d-recovery-isolation.md)。F10.2 会话与执行记录恢复已于 2026-10-14 经本机完整验证、实际跨进程续接验收和当前 head CI 后 squash 合入 [PR #55](https://github.com/likeWind221/Navo/pull/55)；记录见 [95](95-devlog-f10-2-session.md)。F10.2a 已于同日完成并经 [PR #56](https://github.com/likeWind221/Navo/pull/56) 合入，记录见 [96](96-devlog-f10-2a-session-design.md) 与 [97](97-devlog-f10-2a-session.md)。F10.3 已完成生产实现、本机 641 项完整检查、真实 Host 终止 / 重启验收及代码 head CI，交付见 [PR #58](https://github.com/likeWind221/Navo/pull/58) 与 [98](98-devlog-f10-3-interruption.md)。当前下一后端 Step 为 F10.4 验证结论记录，不自动开始。
+F9.10 项目目标确认与规划前置已于 2026-10-08 合入（[PR #38](https://github.com/likeWind221/Navo/pull/38)，记录见 [76](76-devlog-f9.10-goal-confirm.md)）：目标可选、Main 规划前须经用户同意、无目标不能生成 Roadmap；前端 F5.2 已据此完成接入（[PR #39](https://github.com/likeWind221/Navo/pull/39)）。真实验收中发现的 BUG-005、BUG-006 已于 2026-10-09 修复合入（[PR #40](https://github.com/likeWind221/Navo/pull/40)、[#41](https://github.com/likeWind221/Navo/pull/41)），BUG-007 经用户决定搁置，见 [Bug 跟踪表](bug-plan.md)。F10.0 持久化与验证设计收口已于 2026-10-10 经用户确认（[80](80-devlog-f10-0-design.md)）：只用 SQLite 并存于 `~/.navo/`，`project-goal-set` 与 Workspace 绑定纳入持久化范围，单个 Project 损坏只隔离该 Project，不设完成门禁（2026-10-15 进一步撤销独立验证者，改由 Main 判断完成）。F10.1 于 2026-10-10 经用户确认拆为 F10.1a–F10.1d（项目与工作目录 → 节点与 Roadmap → 消息与资源 → 损坏隔离与整体验收），已实测 Electron 44.2.0 自带 Node 24.20.0 支持 `node:sqlite`。F10.1a–F10.1c 已完成（[81](81-devlog-f10-1a-project-persist.md)、[83](83-devlog-f10-1b-roadmap-persist.md)、[84](84-devlog-f10-1c-mailbox-resource-persist.md)），F10.1d 损坏隔离与整体重启验收已完成，记录见 [89](89-devlog-f10-1d-recovery-isolation.md)。F10.2 会话与执行记录恢复已于 2026-10-14 经本机完整验证、实际跨进程续接验收和当前 head CI 后 squash 合入 [PR #55](https://github.com/likeWind221/Navo/pull/55)；记录见 [95](95-devlog-f10-2-session.md)。F10.2a 已于同日完成并经 [PR #56](https://github.com/likeWind221/Navo/pull/56) 合入，记录见 [96](96-devlog-f10-2a-session-design.md) 与 [97](97-devlog-f10-2a-session.md)。F10.3 已完成生产实现、本机 641 项完整检查、真实 Host 终止 / 重启验收及代码 head CI，交付见 [PR #58](https://github.com/likeWind221/Navo/pull/58) 与 [98](98-devlog-f10-3-interruption.md)。2026-10-15 经用户决定，撤销 F10.4–F10.6 的独立验证者设计，改为 F10.4 Main 判断节点完成，原 F10.7 改为 F10.5 长程集成验收，修订见 [80](80-devlog-f10-0-design.md)。当前下一后端 Step 为 F10.4 Main 判断节点完成，不自动开始。
 
 BUG-002 经用户决定保持未关闭、等待复现，不阻塞 F10，状态见 [Bug 跟踪表](bug-plan.md)。
 
