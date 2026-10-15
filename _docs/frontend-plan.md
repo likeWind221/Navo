@@ -4,7 +4,7 @@
 
 前端采用独立的 Electron + React + TypeScript 工程。工程骨架、产品信息架构、视觉基线、真实流式对话（F2）与 F3 助手内容和命令反馈链路均已完成：桌面可以启动后端 Agent、与真实模型多轮流式对话，并展示工具、思考和命令状态。
 
-F3 与 F4 已全部完成并通过用户验收，F5.1 工作区布局与导航已通过验收。后端 F9.9 项目公共接口已于 2026-10-07 合入 master（交由 `backend-plan.md` 实施）；F5.2 真实项目入口已完成并通过用户验收（与后端 F9.10 项目目标确认并行开发，F9.10 先合入）。2026-10-13 用户确认 F5.3–F5.8 的规划：接入当前运行期间的完整 Project 执行闭环，当前前端步骤为 F5.3 工作区布局与交互设计，已完成原型用户验收、正式 Electron 布局接入及本地/CI 验证，PR #53 已 squash 合入 master（e271d5b）。后端仍在 F10 开发，本阶段不要求完整接入持久化、历史与重启恢复；独立多会话管理另行规划。
+F3 与 F4 已全部完成并通过用户验收，F5.1 工作区布局与导航已通过验收。后端 F9.9 项目公共接口已于 2026-10-07 合入 master（交由 `backend-plan.md` 实施）；F5.2 真实项目入口已完成并通过用户验收（与后端 F9.10 项目目标确认并行开发，F9.10 先合入）。2026-10-13 用户确认 F5.3–F5.8 的规划：接入当前运行期间的完整 Project 执行闭环；F5.3 工作区布局与交互设计已合入 master（PR #53，e271d5b），下一步为 F5.4。后端 Phase 10（持久化、重启恢复、中断收尾、完成信号与 Main 复盘）已于 2026-10-15 完成（交由 `backend-plan.md` 实施），F5 只消费其中影响执行闭环的公共契约，不要求完整接入历史与重启恢复体验；独立多会话管理另行规划。
 
 ## 2. 开发方式
 
@@ -210,15 +210,15 @@ Final answer (outside collapse)
 
 ### 当前运行期间的 Project 执行闭环
 
-2026-10-13 用户确认本阶段范围：创建 Project → 与 Main 确认目标并规划 → 查看 Roadmap → 打开 Node 执行 → 人工确认完成或跳过 → Main 协调或调整路线 → 继续推进。“完整”指上述执行闭环可在 Electron 桌面中完成，不包含后端 F10 尚未交付的完整持久化与恢复体验。规划记录见 [F5.3–F5.8 Project 前端闭环规划](90-devlog-f5-project-plan.md)。
+2026-10-13 用户确认本阶段范围：创建 Project → 与 Main 确认目标并规划 → 查看 Roadmap → 打开 Node 执行 → 人工确认完成或跳过 → Main 协调或调整路线 → 继续推进。“完整”指上述执行闭环可在 Electron 桌面中完成，不包含后端 F10 尚未交付的完整持久化与恢复体验。规划记录见 [F5.3–F5.8 Project 前端闭环规划](88-devlog-f5-project-plan.md)。
 
 保留现有项目侧栏与顶部标签；项目内部以 Main 对话和 Roadmap 为核心，Node 打开工作页，消息与资源提供辅助查看入口。具体布局、导航和运行中离开或关闭的行为在 F5.3 通过预览确认，不在规划记录阶段固化组件或修改代码。
 
 | 状态 | 子步骤 | 所有权与目标范围 | 工作内容与完成标准 |
 |---|---|---|---|
 | ✅ | F5.1 工作区布局与导航 | 前端工作区、导航样式与预览 | 侧栏可动画切换项目/会话列表，显示对应新增入口及底部设置；Logo 按钮控制侧栏并变化图标；条目打开、激活和关闭顶部标签；侧栏平滑展开收起，窄屏可用；标签切换保留界面内容。代码、Electron Mock 自动验收与用户视觉验收均通过（2026-09-15） |
-| ✅ | F5.2 真实项目入口 | 前端项目视图与桌面桥接；后端依赖交由 backend-plan.md 实施 | 用户可以创建项目（名称与工作目录必填、目标可选）、在侧栏看到真实项目列表、打开项目并在标签页查看名称、目标、工作目录、状态和创建时间；目标未填时显示“目标待确定”，列表为空时说明 Host 重启后项目会清空，常见失败给出可读提示。完成标准：Mock Host 与真实 Host 下的 Electron 桌面验收均完成“创建（填目标与不填目标）→ 列表 → 打开”，窄屏无横向溢出。目标可选依赖后端 F9.10（交由 `backend-plan.md` 实施），F9.10 合入后再合入本 Step；本 Step 不接入项目内 Main 对话，目标确认流程需在后续接入项目 Main 对话后才能在桌面体验。代码、Electron 自动验收与用户人工验收均通过（2026-10-08），见 [F5.2 开发记录](77-devlog-f5-2-project-entry.md) |
-| ✅ | F5.3 Project 工作区布局与交互设计 | 前端工作区设计、导航与预览 | 明确项目内 Main 对话、Roadmap、Node 工作页、消息与资源的位置和导航，保留项目侧栏与顶部标签；采用全区域 Roadmap 与覆盖式 Main/Node 面板，可完全展开、收起、拖拽地图和复位工作节点。原型用户验收与正式 Electron 布局接入已完成，详见 [F5.3 记录](92-devlog-f5-3-workspace.md)。完成标准：桌面与窄屏预览经用户确认；项目与节点切换、草稿与当前运行期间对话保留、运行中离开及关闭行为明确；不把旧 Learning 教材/练习布局作为通用 Project 设计 |
+| ✅ | F5.2 真实项目入口 | 前端项目视图与桌面桥接；后端依赖交由 backend-plan.md 实施 | 用户可以创建项目（名称与工作目录必填、目标可选）、在侧栏看到真实项目列表、打开项目并在标签页查看名称、目标、工作目录、状态和创建时间；目标未填时显示“目标待确定”，列表为空时说明 Host 重启后项目会清空，常见失败给出可读提示。完成标准：Mock Host 与真实 Host 下的 Electron 桌面验收均完成“创建（填目标与不填目标）→ 列表 → 打开”，窄屏无横向溢出。目标可选依赖后端 F9.10（交由 `backend-plan.md` 实施），F9.10 合入后再合入本 Step；本 Step 不接入项目内 Main 对话，目标确认流程需在后续接入项目 Main 对话后才能在桌面体验。代码、Electron 自动验收与用户人工验收均通过（2026-10-08），见 [F5.2 开发记录](75-devlog-f5-2-project-entry.md) |
+| ✅ | F5.3 Project 工作区布局与交互设计 | 前端工作区设计、导航与预览 | 明确项目内 Main 对话、Roadmap、Node 工作页、消息与资源的位置和导航，保留项目侧栏与顶部标签；采用全区域 Roadmap 与覆盖式 Main/Node 面板，可完全展开、收起、拖拽地图和复位工作节点。原型用户验收与正式 Electron 布局接入已完成，详见 [F5.3 记录](90-devlog-f5-3-workspace.md)。完成标准：桌面与窄屏预览经用户确认；项目与节点切换、草稿与当前运行期间对话保留、运行中离开及关闭行为明确；不把旧 Learning 教材/练习布局作为通用 Project 设计 |
 | ⬜ | F5.4 Main 对话、目标确认与项目状态跟随 | 前端项目对话、状态与桌面桥接 | 用户可在项目内与 Main 多轮流式对话，确认目标并请求规划，停止当前回合，实时看到目标和项目状态变化。完成标准：真实 Host 下目标留空与预填两种路径可用；正文、思考、工具与失败反馈复用现有展示；不同项目的对话、草稿及回合状态隔离；切换界面不隐式启动或重复提交回合；关闭项目视图释放相应观察订阅；目标确认依赖后端 F9.10，交由 `backend-plan.md` 实施且已交付 |
 | ⬜ | F5.5 Roadmap 展示与实时变化 | 前端路线地图、节点入口与项目状态展示 | 用户可查看节点、依赖关系、必选/可选属性、当前状态与允许操作，并在 Main 修改路线或节点状态变化后看到最新地图。完成标准：空路线、分叉/汇合、锁定/可执行/执行中/完成/跳过均可辨识；路线中所有节点均为工作节点，不设计开始 / 结束 / 检查点等控制节点样式；节点可打开工作页；状态与操作权限以后端公共快照为准，不解析助手回答推断进度；窄屏可用 |
 | ⬜ | F5.6 Node 对话与人工控制 | 前端节点工作页、对话与操作桥接 | 用户可查看节点目标与验收条件，显式开始或继续 Node 对话、取消该回合，并人工确认完成或跳过。完成标准：不同 Node 会话隔离，当前运行期间切换后对话与草稿保留；按后端允许操作展示入口，失败可读；确认携带当前节点版本，陈旧版本拒绝后展示最新状态；取消仅影响目标回合；人工操作后地图更新 |
@@ -227,14 +227,12 @@ Final answer (outside collapse)
 
 ### 交接与阶段边界
 
-- F5.1 交付时正式入口使用单个真实会话，项目与多会话只在预览中使用 Mock；F5.2 已接入真实项目创建、列表与详情。实现分别见 [F5.1 开发记录](57-devlog-f5-1-workspace.md) 与 [F5.2 开发记录](77-devlog-f5-2-project-entry.md)。
+- F5.1 交付时正式入口使用单个真实会话，项目与多会话只在预览中使用 Mock；F5.2 已接入真实项目创建、列表与详情。实现分别见 [F5.1 开发记录](57-devlog-f5-1-workspace.md) 与 [F5.2 开发记录](75-devlog-f5-2-project-entry.md)。
 - 后端 F9.9a–F9.9c 与 F9.10 的公共接口已交付，前端通过稳定 RPC 与 `frontend/shared/` 桥接消费；后端依赖交由 `backend-plan.md` 实施。需要新增或修改共享契约时先串行交接，不直接依赖后端私有 Store 或内部事件。
 - 本阶段不关闭或绕过已有后端持久化：Project、Roadmap、Mailbox 与 Resource 按公共接口返回的实际数据展示。F5.2 交付记录中的“Host 重启后项目清空”是当时的历史边界，后端 F10.1a 起已保留项目和工作目录绑定；相关旧空态文案在 F5.4 接入时同步校正。
-- 后端 F10.2 原上下文续接已完成并经 PR #55 合入：Main / Node 在 Host 重启后可通过既有回合接口继续原 Session，恢复不重新执行工具，记录见 [95](95-devlog-f10-2-session.md)。历史查询公共契约与前端历史展示仍另行规划，中断恢复交由 `backend-plan.md` 的 F10.3 实施；不要求 F5 全量接入 F10，后端完成不代表前端 UI 已验收。
-- 2026-10-14 新增后端依赖 F10.2a 普通会话保存与重启续接，交由 `backend-plan.md` 实施；实现方案调研见 [96](96-devlog-f10-2a-session-design.md)，后端实现、本机完整验证、实际跨进程续接及代码 head CI 已完成，交付见 [PR #56](https://github.com/likeWind221/Navo/pull/56) 与 [97](97-devlog-f10-2a-session.md)，最终提交仍遵循当前 head CI 合并门禁。该步让普通会话按原 Session ID 恢复模型上下文，不交付会话列表、历史查询契约或前端历史展示；相关前端能力另行规划，不改变当前下一步 F5.4。F10.3 中断处理将覆盖普通 / Main / Node 会话。
-- 后端 F10.3 已完成生产实现、本机完整检查、真实 Host 终止 / 重启验收及代码 head CI，交付见 [PR #58](https://github.com/likeWind221/Navo/pull/58) 与 [98](98-devlog-f10-3-interruption.md)。恢复会把未闭合普通 / Main / Node Turn 记为失败、补齐悬空工具结果并将 working Node 退回 idle，不自动续跑；本步没有新增公共 RPC 或前端历史入口，因此不改变当前前端下一步 F5.4，也不代表 Renderer 已展示历史中断记录。
-- 2026-10-15 后端 F10.4a 完成信号与待确认已完成（交由 `backend-plan.md` 实施，记录见 [100](100-devlog-f10-4a-done-signal.md)）。公共契约变化：`NodeStatusV1` 新增 `submitted`（Node 已交作业、等待确认），`NodeV1` 新增 `submission`（摘要、产物 Resource ID、逐条完成标准自查、未完成事项、提交时间）与 `pendingFeedback`（尚未被 Node 读取的返工意见），`NodeActionsV1` 新增 `rework`，`project.node.review.v1` 的 `action` 新增 `rework`（`reason` 即返工意见）。前端待接入：在 Roadmap / Node 视图展示“Node 认为已完成”与作业单，提供确认、返工（填写意见）与跳过入口，并显示未读返工意见；归属 F5.5–F5.6 的 Node 执行与人工确认相关步骤，后端完成不代表前端 UI 已验收。
-- 2026-10-15 后端 F10.4b Main 复盘判定已完成生产实现与离线测试（交由 `backend-plan.md` 实施，2026-10-15 经用户决定免除真实模型验收并标记完成，记录见 [101](101-devlog-f10-4b-main-review.md)）。公共契约变化：`project.turn.v1` 的目标新增 `{ kind: "review", nodeId }`（请 Main 复盘该节点，`text` 为给 Main 的一句话说明）；`NodeV1` 新增 `review`（最近一次复盘的结论、理由、复盘的回合与版本、时间，没有时为 `null`）、`reworkCount`（已返工次数，Main 返工上限 2 次）、`reviewPending`（最近一回合已结束且尚未复盘）；`NodeActionsV1` 新增 `review`。前端待接入：节点工作页的“请 Main 复盘”入口、复盘回合的流式展示（沿用现有回合事件）、结论与理由、返工次数与“待复盘”提示；复盘期间节点的其他操作会被后端禁用。后端完成不代表前端 UI 已验收。
+- 后端 F10.1–F10.3 已完成（交由 `backend-plan.md` 实施，记录见 [93](93-devlog-f10-2-session.md)、[94](94-devlog-f10-3-interruption.md)）：Project 各类数据与普通 / Main / Node 会话在 Host 重启后恢复，原 Session 可通过既有回合接口续接且不重新执行工具；退出时未闭合的回合重启后记为失败、working Node 退回 idle，不自动续跑。这些交付没有新增公共 RPC，会话列表、历史查询契约与前端历史 / 中断记录展示另行规划，不改变当前下一步 F5.4。
+- 2026-10-15 后端 F10.4a 完成信号与待确认已完成（交由 `backend-plan.md` 实施，记录见 [96](96-devlog-f10-4a-done-signal.md)）。公共契约变化：`NodeStatusV1` 新增 `submitted`（Node 已交作业、等待确认），`NodeV1` 新增 `submission`（摘要、产物 Resource ID、逐条完成标准自查、未完成事项、提交时间）与 `pendingFeedback`（尚未被 Node 读取的返工意见），`NodeActionsV1` 新增 `rework`，`project.node.review.v1` 的 `action` 新增 `rework`（`reason` 即返工意见）。前端待接入：在 Roadmap / Node 视图展示“Node 认为已完成”与作业单，提供确认、返工（填写意见）与跳过入口，并显示未读返工意见；归属 F5.5–F5.6 的 Node 执行与人工确认相关步骤，后端完成不代表前端 UI 已验收。
+- 2026-10-15 后端 F10.4b Main 复盘判定已完成生产实现与离线测试（交由 `backend-plan.md` 实施，2026-10-15 经用户决定免除真实模型验收并标记完成，记录见 [97](97-devlog-f10-4b-main-review.md)）。公共契约变化：`project.turn.v1` 的目标新增 `{ kind: "review", nodeId }`（请 Main 复盘该节点，`text` 为给 Main 的一句话说明）；`NodeV1` 新增 `review`（最近一次复盘的结论、理由、复盘的回合与版本、时间，没有时为 `null`）、`reworkCount`（已返工次数，Main 返工上限 2 次）、`reviewPending`（最近一回合已结束且尚未复盘）；`NodeActionsV1` 新增 `review`。前端待接入：节点工作页的“请 Main 复盘”入口、复盘回合的流式展示（沿用现有回合事件）、结论与理由、返工次数与“待复盘”提示；复盘期间节点的其他操作会被后端禁用。后端完成不代表前端 UI 已验收。
 - 2026-10-15 后端移除控制节点概念（交由 `backend-plan.md` 实施，BUG-010）：Roadmap 中每个节点都是工作节点，`NodeV1` 不再包含 `kind` 与 `controlPurpose`，携带这两个字段的数据会被公共校验拒绝。F5.5 不设计开始 / 结束 / 检查点等控制节点的展示样式，F5.6 的节点工作页对所有节点一致适用；前端当前未消费上述字段，无需迁移。
 - 归档/重新打开等需要新增公共操作接口的项目管理、资源正文预览与文件管理、Verification、RAG 和独立多会话管理另行规划，不作为 F5.8 收尾条件。
 - Main/Node 的每次 Agent 回合均由用户明确触发；节点解锁、消息到达、资源发布与上次回合结束都不会自动运行。当前运行期间的界面状态保留不等于已具备历史查询或重启恢复。
@@ -242,20 +240,14 @@ Final answer (outside collapse)
 
 ## 4. 当前下一步
 
-F4.1–F4.4 已全部完成。2026-09-14 用户明确确认 Navo Electron 体验验收成功，F4 正式收尾，没有剩余验收项。自动检查与用户验收分别记录于 [F4 验收收尾](54-devlog-tool-result-rows.md)。
+**下一前端步骤为 F5.4 Main 对话、目标确认与项目状态跟随，尚未开始，需用户确认后进入。** F5.3–F5.8 按第 3 节逐步实施，不授权连续执行；规划记录见 [88](88-devlog-f5-project-plan.md)。
 
-文本过程、活动摘要、工具结果、主题图标、高亮动画及单 HTML 演示的实现记录已合并至 [F4 实现汇总](52-devlog-f4-4-text-process.md)。工具列表配置诊断独立保留于 [工具列表排查](53-devlog-message-demo-tool-audit.md)。F5.1 已通过用户验收，**F5.2 真实项目入口已完成**：桌面可创建项目（目标可选）、查看真实项目列表并打开详情；代码、Mock 与真实 Host 的 Electron 自动验收以及 2026-10-08 用户人工验收均已通过，详见 [F5.2 开发记录](77-devlog-f5-2-project-entry.md)。
+- 已完成：F0–F4 全部收口并通过用户验收（F4 收尾见 [54](54-devlog-tool-result-rows.md)，实现汇总见 [52](52-devlog-f4-4-text-process.md)）；F5.1 工作区布局与导航、F5.2 真实项目入口（[75](75-devlog-f5-2-project-entry.md)）、F5.3 Project 工作区布局（[90](90-devlog-f5-3-workspace.md)，PR #53）。
+- 可用后端接口：`project.list.v1` / `project.create.v1` / `project.get.v1`、Mailbox 与 Resource 查询、`project.turn.v1`（含 review 目标）、`project.node.review.v1`（含 rework）和 `project.follow.v1`；回合复用既有 v2 内容事件，cancel 帧只取消目标回合，follow 使用完整基线与整份替换帧。具体后端交付状态以 [backend-plan.md](backend-plan.md) 为准，后端完成不代表前端 UI 已验收。
+- 待前端接入的后端交付：F9.10 目标确认（F5.4）、F10.4a 完成信号与待确认、F10.4b Main 复盘、控制节点移除（F5.5–F5.6），见第 3 节 F5“交接与阶段边界”。BUG-010 的 F5.4 Electron 真实验收也在 F5.4 中完成，见 [Bug 跟踪表](bug-plan.md)。
+- 仍未固化的候选方向：`/compact`、`/model`、`/clear` 等真实命令，多会话与历史展示，ChatGPT 登录与模型选择。
 
-**F5.3 实现与验收已完成，PR #53 已 squash 合入 master（e271d5b）；下一前端步骤为 F5.4 Main 对话、目标确认与项目状态跟随，尚未开始。** 2026-10-13 用户确认先完成当前运行期间的 Project 执行闭环，按第 3 节 F5.3–F5.8 逐步实施；后端仍在 F10 开发，本阶段不要求完整接入持久化与恢复。F5.3 已交付全区域 Roadmap 与覆盖式 Main/Node 会话布局，支持完全展开、收起、设计预览的拖拽与工作节点复位；正式入口使用真实项目信息，真实对话与路线展示按 F5.4–F5.7 接入，见 [F5.3 开发记录](92-devlog-f5-3-workspace.md)。规划记录见 [90](90-devlog-f5-project-plan.md)。
+## 5. 工程维护记录
 
-后端公共接口已有 `project.list.v1` / `project.create.v1` / `project.get.v1`、Mailbox 与 Resource 查询、`project.turn.v1`、`project.node.review.v1` 和 `project.follow.v1`；回合复用既有 v2 内容事件，cancel 帧只取消目标回合，follow 使用完整基线与整份替换帧。F9.10 的目标确认可在 F5.4 Main 对话接入后于桌面体验。交接见 [F5.2 接入核对](58-devlog-f5-2-project-handoff.md)，具体后端交付状态以 [backend-plan.md](backend-plan.md) 为准，后端完成不代表前端 UI 已验收。
-
-F3 阶段已全部收口：F3.10 Markdown 与 F3.11 数学公式的代码、测试、Electron 自动验收与真实模型人工桌面验收均已通过，详见 [F3.11 开发记录](42-devlog-f3-11-math.md) 与 [F3.10 开发记录](41-devlog-f3-10-markdown.md)。F4 之后仍未固化的候选方向有 `/compact`、`/model`、`/clear` 等真实命令，多会话与持久化，以及学习地图与 Node 内容面板。
-
-F3.7 思考内容修正已交由 `backend-plan.md` 实施并完成：真实模型的思考文本已接入既有事件链路，默认启用 thinking。F3.8 已修正滚动条导致的消息列水平偏移；F3.9 让消息滚动区覆盖顶部栏以下的完整窗口高度，并将输入框作为底部覆盖层，移除其顶部外间距。两项布局修正均通过 Electron 几何断言和截图验收；见 [F3.7 开发记录](38-devlog-f3-7-reasoning.md)、[F3.8 开发记录](39-devlog-f3-8-message-alignment.md)与 [F3.9 开发记录](40-devlog-f3-9-scroll-layout.md)。
-
-**F3.1 公共事件契约已完成**：`agent.turn.v2` 与 `session.command.v1` 已冻结并通过校验测试，F2 入口继续兼容；详见 [F3.1 开发与交接记录](22-devlog-step-f3-1-public-events.md)。**F3.2 后端事件与 RPC 对齐已完成**，具体状态以 [backend-plan.md](backend-plan.md) 为准。**F3.3 桌面桥接与会话状态已完成**，详见 [F3.3 开发记录](33-devlog-f3-3-desktop-bridge-state.md)。**F3.4 助手内容展示已完成**，详见 [F3.4 开发记录](34-devlog-f3-4-assistant-content-display.md)。**F3.5 命令入口与通知展示已完成**，详见 [F3.5 开发记录](35-devlog-f3-5-command-notifications.md)。**F3.6 完整链路验收已完成**，详见 [F3.6 开发记录](36-devlog-f3-6-full-chain-acceptance.md)。F3 之后的前端阶段已由 F4 承接，F4 已完成用户验收；F5.2 已基于公共项目接口完成接入。
-
-## 源码目录整理
-
-已按 [目录整理方案](23-structure.md) 完成单词文件命名、子模块目录归位与测试／脚本引用迁移，详见 [实施记录](24-structure.md)。RPC 传输实现位于 `rpc/stream/`，桌面共享契约位于 `frontend/shared/`；本次结构重构未推进后续功能步骤。
+- 源码目录整理：已按 [目录整理方案](23-structure-plan.md) 完成单词文件命名、子模块目录归位与测试／脚本引用迁移，详见 [实施记录](24-devlog-structure.md)。RPC 传输实现位于 `rpc/stream/`，桌面共享契约位于 `frontend/shared/`；该重构未推进功能步骤。
+- 工具列表配置诊断见 [53](53-devlog-message-demo-tool-audit.md)；Navo 品牌迁移见 [49](49-devlog-navo-brand-migration.md)。

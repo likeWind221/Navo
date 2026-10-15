@@ -1,26 +1,29 @@
 # Navo 后端与 Agent Core 开发计划
 
-> 当前产品定义以 `_docs/00-navo-prd.md` 为准。Phase 0–8 保留为已完成的通用执行基础；自 Phase 9 起，后端主线转向面向长期 Project 的 Roadmap、Main Agent 协调与隔离 Node Agent 执行。
+> 当前产品定义以 `_docs/00-navo-prd.md` 为准。Phase 0–8 是已完成的通用执行基础；Phase 9 起，后端主线转向面向长期 Project 的 Roadmap、Main Agent 协调与隔离 Node Agent 执行；Phase 10 让 Project 可持久恢复并由 Main 判断节点完成。已完成阶段只保留功能目标与记录入口，实现细节以对应开发记录为准。
 
 ## 1. 当前范围
 
-Phase 0–8 已完成 Session / Event、LLM、ToolService、AgentRuntime、Search / Fetch、文件工具、Node 原型、Kernel Host 与桌面 Agent 链路等基础能力。Phase 9 不重写这些执行基础，而是在其上建立长期 Project 级编排。
+Phase 0–10 与模型接入补充工作 M1 均已完成。系统现在具备：
 
-当前阶段：
+- 通用执行基础：Session / Event、LLM、ToolService、AgentRuntime、Search / Fetch、文件工具、Kernel Host 与桌面 Agent 链路（Phase 0–8）。
+- 长期 Project 编排：Project、Roadmap、Main / Node Agent、Mailbox、Workspace 与 Resource，以及面向桌面的 `project.*.v1` 公共契约（Phase 9）。
+- 持久恢复与完成判断：SQLite 持久保存与重启恢复、会话续接、中断收尾、Node 完成信号与 Main 复盘判定（Phase 10）。
+- 模型接入：公共 Chat Completions / Responses 协议、ChatGPT 订阅授权与 OpenAI 接入（M1）。
+
+当前主线是 Phase 11 全自动推进与上下文压缩，第一步 F11.0 设计收口尚未开始，见第 11 节。
 
 ```text
 Project Goal
     |
     v
-In-Memory Roadmap Map
+Roadmap (SQLite, recoverable)
     |
     +---------------------+
     |                     |
     v                     v
 Main Agent            Project Nodes
-(global planning)     (isolated work units)
-    |                     |
-    |                 Node Profiles
+(planning / review)   (isolated work units)
     |                     |
     +----------+----------+
                v
@@ -29,9 +32,7 @@ Main Agent            Project Nodes
         LLM / ToolService
 ```
 
-Phase 9 的目标不是把 Roadmap 塞进一次 Agent 会话，也不是建立一个以 Scheduler 为中心的全自动工作流引擎，而是让一个 Project 能够长期存在、持续演进，并由一个 Main Agent 管理整体路线、多个相互隔离的 Node Agent 执行节点工作，同时让 Human 对 Main / Node 的每一次 Agent Turn 都保留明确启动与中止权。Project 事实可以改变“下一步允许做什么”，但不能自行触发 Agent 执行。
-
-## 2. Phase 9 核心产品契约
+## 2. 核心产品契约（Phase 9 起持续有效）
 
 ### Project 是长期生命周期边界
 
@@ -41,7 +42,15 @@ Project 是长程目标的一级对象。Project 的 Goal、Roadmap、Main Agent
 
 Roadmap 是 Project 的权威进度模型，应支持长期展示为看板或“游戏地图”式进度视图。它描述 Node、节点关系、阶段状态、版本和变更历史，而不是 Main Agent 内部的一段临时计划文本。
 
-F9.3 以无环有向图表达路线，暂不实现循环。Core 需要表达必选节点、可选节点、并行汇合、节点跳过与动态插入等语义。当前是否可推进某 Node 是 Roadmap 状态的确定性结果，不单独把 Scheduler 提升为产品架构中心。
+Roadmap 以无环有向图表达路线，暂不实现循环。Core 需要表达必选节点、可选节点、并行汇合、节点跳过与动态插入等语义。当前是否可推进某 Node 是 Roadmap 状态的确定性结果，不单独把 Scheduler 提升为产品架构中心。
+
+自 2026-10-15（BUG-010，设计见 [78](78-devlog-f10-0-design.md) D12）起，Roadmap 中每个 Node 都是带目标与完成标准的工作节点，不再有开始 / 结束 / 检查点等控制节点；Human 或 Main 确认后才解锁后继，原 required checkpoint 的人工关卡由此覆盖。旧数据库中的控制节点在打开时被忽略，其前后节点直接相连。Roadmap 修改工具拆为 `add_node`、`edit_node`、`remove_node`、`set_dependency`、`reorder_nodes`，每个工具只公布自己的参数。
+
+### Node 状态约定
+
+新建 locked，解锁后 idle，实际执行时 working，回合结束回到 idle；回合内调用 `submit_completion` 的，回合结束进入 submitted（待确认，不能启动、不解锁下游），Human 或 Main 可将其返工回 idle；人工可将 idle / submitted 确认为 completing，或将 locked / idle / submitted 确认为 skipped；两种终态均满足后续依赖。RoadmapStore 在同一批 Node 事件中追加 node-unlocked，手动 unlock 不能绕过必选祖先；没有路线的独立 Node 仍可使用 NodeStore 原有生命周期。
+
+Main 不新增 locked / idle / working 等持久状态机：Project 创建时固定拥有 Main Session，ProjectRuntime 只维护“当前是否存在 active Main Turn”的瞬时运行时事实。
 
 ### Navo 只保留一个 AgentRuntime
 
@@ -56,7 +65,7 @@ Profile 决定模型看到的角色说明和工具集合；Binding 与领域授�
 
 ### Main Agent 是唯一跨节点协调者
 
-Main Agent 负责理解 Project Goal、规划与修改 Roadmap、协调 Node、处理阻塞和全局重规划。Node Agent 只负责自己的 Node，不读取其他 Node Agent 的 Session，不直接读取完整 Roadmap，也不能直接向其他 Node Agent 发消息。
+Main Agent 负责理解 Project Goal、规划与修改 Roadmap、协调 Node、复盘节点成果、处理阻塞和全局重规划。Node Agent 只负责自己的 Node，不读取其他 Node Agent 的 Session，不直接读取完整 Roadmap，也不能直接向其他 Node Agent 发消息。
 
 跨节点协作统一经过 Main Agent：
 
@@ -87,17 +96,17 @@ Resource Service
   +--> stable ResourceId
   +--> source Node
   +--> name / description / type
-  +--> access: private | shared(nodeIds) | project
+  +--> access: private | shared(nodeIds) | public
   +--> entryRef / revision
   |
-  +--> private in-memory Store (F9)
+  +--> SQLite metadata (F10.1c)
 ```
 
-Main 后续负责把 Resource 从 private 定向共享给指定 Node，或提升为 Project 共享。Node 启动时只需要持续知道自己可见的 Resource metadata，正文按需读取；Resource 到位仍不会自动启动 Node。通用 Context Builder、动态 reload 与 RAG 不在 F9.6 实现。
+Main 负责把 Resource 从 private 定向共享给指定 Node，或提升为本 Project 内 public。Node 启动时只需要持续知道自己可见的 Resource metadata，正文按需读取；Resource 到位仍不会自动启动 Node。通用 Context Builder、动态 reload 与 RAG 尚未实现。
 
 ### Human 是 Project Agent Turn 的最终 Gate
 
-Navo 不以“Project 事实一变化就自动唤醒 Agent”为目标。Project 创建、Roadmap 解锁、Mailbox 新消息、Resource 到位或 Main / Node 的上一次 Turn 结束，都不得自动触发下一次 Main Agent 或 Node Agent Turn。所有 Agent Turn 都必须来自明确 Human Action。
+Navo 不以“Project 事实一变化就自动唤醒 Agent”为目标。Project 创建、Roadmap 解锁、Mailbox 新消息、Resource 到位、Node 交作业或 Main / Node 的上一次 Turn 结束，都不得自动触发下一次 Main Agent 或 Node Agent Turn。所有 Agent Turn 都必须来自明确 Human Action；全自动推进只在 Phase 11 由用户显式切换后生效。
 
 ```text
 Project facts changed
@@ -112,48 +121,40 @@ Project facts changed
                       Main Agent Turn   Node Agent Turn
 ```
 
-Main Session 在 Project 创建时已经拥有稳定身份，因此这里控制的是 **Main Turn 是否开始**，不是重新创建 Main Session。Node 报告 result 也不等于 Node 已完成；F9.2 的人工确认 completing / skipped 规则继续生效。
+Main Session 在 Project 创建时已经拥有稳定身份，因此这里控制的是 **Main Turn 是否开始**，不是重新创建 Main Session。Node 报告 result 或交作业也不等于 Node 已完成，完成只能由 Human 确认或 Main 复盘判定。
 
-### 现有 Node 包是 Phase 9 的迁移基础
+### 长期有效的边界
 
-现有 `src/node` 已验证 Node 事件流、严格重放、Node–Session 一对一绑定、同 Node FIFO、跨 Node 并行和 Session 来源授权。这些能力继续作为通用 Project Node 的基础。Phase 9 会剥离其中 SkillWorld 的教材、练习与 capability 专属语义，而不是绕过现有 Node 重新建立平行 Task 系统。
+- 不创建 `MainAgentRuntime`、`NodeAgentRuntime` 或按角色复制 Agent 执行引擎；
+- 不让 AgentRuntime 感知 Project、Roadmap、Main/Node 角色或 Research 领域概念；
+- 不把 Roadmap 仅保存在 Main Agent Session、Prompt 或一次 LLM 输出里；
+- 不允许 Node Agent 直接读取、调用或向另一个 Node Agent 发消息；
+- Node 默认不读取完整 Roadmap，也不拥有 Roadmap 修改工具；
+- 不在消息工具调用中递归同步启动 Main 或另一个 Node；
+- 不让 LLM 直接提交未经验证的 Roadmap 最终状态；
+- RAG、向量检索、动态 Skill / Tool / Resource reload、Claim-Evidence Graph 与长期 Research Memory 留待后续阶段；
+- 只借鉴显式 Message / Artifact 的 A2A 思想，不实现标准 A2A 的 Agent Card、网络发现或跨服务 Transport。
 
 ## 3. 开发方式
 
-- 后端 Agent 只修改 `_docs/backend-plan.md`、`src/**`、`tests/**`、`scripts/**`、根 `package.json`、根 `pnpm-lock.yaml` 及明确分配给后端的开发记录；不修改 `frontend/**`。
+- 后端 Agent 只修改 `_docs/backend-plan.md`、`src/**`、`tests/**`、`scripts/**`、根 `package.json`、根 `pnpm-lock.yaml` 及明确分配给后端的开发记录；不修改 `frontend/**`。后端完成被前端依赖的交付后，按 AGENTS.md 同步 `frontend-plan.md` 的交接说明。
 - 每个 Step 都从最新 `master` 创建独立分支；Agent 完成开发后创建指向 `master` 的 PR，不直接向 `master` 提交功能改动。
-- PR 以 GitHub CI 作为唯一合并 gate，固定执行 `pnpm install --frozen-lockfile`、`pnpm typecheck`、`pnpm test`。
-- CI 失败时由 Agent 在同一 PR 分支修复并触发 CI 重跑；CI 全部通过后直接 Merge 到 `master`，不再设置单独的 Human Review / 人工审查 gate。
+- PR 以 GitHub CI 作为合并 gate，固定执行 `pnpm install --frozen-lockfile`、`pnpm typecheck`、`pnpm test`；本机完整验证同样必需。
+- CI 失败时由 Agent 在同一 PR 分支修复并触发 CI 重跑；本机与 CI 全部通过后直接 squash 合并到 `master`，不再设置单独的人工审查 gate。
 - 只有当前 Step 的 PR 已通过 CI 并合入 `master` 后，才开始下一 Step。
 
 ```text
-Agent 开发
-   |
-   v
-创建 PR
-   |
-   v
-GitHub CI
-├── pnpm install
-├── pnpm typecheck
-└── pnpm test
-   |
-   +-- FAIL --> Agent 修复 --> CI 重跑
-   |
-   +-- PASS
-        |
-        v
-      Merge
-        |
-        v
-      master
+Agent 开发 -> 本机完整验证 -> 创建 PR -> GitHub CI (install / typecheck / test)
+                                            |
+                                            +-- FAIL --> Agent 修复 --> CI 重跑
+                                            |
+                                            +-- PASS --> squash merge --> master
 ```
 
 - 计划只写功能目标与可验收结果；模块划分、协议字段、算法和文件级实现取舍写入对应开发记录。
-- Phase 9 优先确定可重放、可测试和权限明确的 Core，再接入真实 LLM 主规划行为。
 - `AgentRuntime`、`ToolService`、`SessionStore` 继续保持通用命名，不为 Multi-Agent 新增重复 Runtime。
-- 当 Phase 9 首次需要修改 Host、RPC、桌面共享契约或前端消费协议时，后端停止实现并先向用户报告，由前后端串行确认公共契约后再继续。
-- `_docs/00-navo-prd.md`、`_docs/index.md`、`_docs/frontend-plan.md` 与其他共享控制面不在当前后端独立修改范围内。
+- 需要修改 Host、RPC、桌面共享契约或前端消费协议时，后端停止实现并先向用户报告，由前后端串行确认公共契约后再继续。
+- `_docs/00-navo-prd.md`、`_docs/index.md` 与其他共享控制面按 AGENTS.md 由唯一写入者串行修改。
 
 ## 4. 状态说明
 
@@ -165,108 +166,42 @@ GitHub CI
 
 ## 5. 已完成基础：Phase 0–8
 
-下表只保留历史能力事实，不重新解释旧 SkillWorld 产品路线；详细实现和当时的阶段边界以对应 devlog 为准。
+下表只保留历史能力事实，不重新解释旧 SkillWorld 产品路线；详细实现和当时的阶段边界以对应开发记录为准，原始产品设计见 [48](48-legacy-skillworld-prd.md)。
 
-| Phase | 状态 | 已形成的通用能力 | 当前用途 |
-|---|---|---|---|
-| 0 | ✅ | TypeScript、Node、pnpm、Cordis 工程骨架 | Core 运行与模块装配基础 |
-| 1 | ✅ | 品牌化 ID、LLM / Tool 公共协议 | Project / Roadmap 新身份继续沿用同一协议风格 |
-| 2 | ✅ | SessionEvent、追加日志、消息投影与 Surface | Main / Node Session 的执行记录基础 |
-| 3 | ✅ | 流式 LLM、ToolService、Schema、错误与取消边界 | 所有 Agent Profile 共用模型和工具执行面 |
-| 4 | ✅ | 通用 `AgentRuntime`、Turn 生命周期、重试、取消、同 Session 串行 | Phase 9 唯一 Agent 执行内核 |
-| 5 | ✅ | 应用组合与模型 -> 工具 -> 模型闭环 | Project 级能力向下复用的稳定执行链 |
-| 6 | ✅ | NodeEvent / NodeStore、Node–Session 绑定、NodeAgent Profile、跨 Node 隔离 | Phase 9 Generic Node 的主要迁移基础 |
-| 7 | ✅ | `web_fetch`、公共网络策略、HTML -> Markdown | Node 工作中的网页调研能力 |
-| 8 | ✅ | `read`、`shell`、`edit`、`write`、Fetch spill、文件版本与并发保护 | Node 工作区执行能力 |
-
-桌面侧已有 Kernel Host、真实模型 Adapter、回合与工具事件、会话命令和 RPC 链路。这些属于已完成基础；Phase 9 的 Project / Roadmap 公共契约尚未接入桌面。
-
-## 6. Phase 9（F9）：Project-Oriented Multi-Agent Roadmap Runtime
-
-**阶段目标：** 让 Navo 能把一个长期 Goal 作为 Project 持续管理：Main Agent 维护可视化 Roadmap，多个隔离 Node Agent 分别推进节点；每个 Project 拥有独立 Workspace，Node 的报告、阻塞和 Resource 回到 Project / Main 协调；Main 可以安全修改 Roadmap 并为后续 Node 准备可发现资源，但 Main / Node 的每一次真实 Agent Turn 都只能由 Human 明确触发。
-
-**阶段验收场景：** 创建 Project 与 Goal 后，Main Session 已存在但 Main 不自动运行；Human 明确启动 Main Turn 形成多 Node Roadmap；Human 再启动 Node A，Node A 在当前 Project Workspace 中生成调研产物、注册 Resource 并向 Main 报告结果；Mailbox 新消息不会自动唤醒 Main，Human 再次启动 Main Turn 后由 Main 读取结果并将 Resource Reference 提供给 Node B；Resource 到位也不会自动运行 Node B，只有 Human 启动其 Turn 后才继续执行。若 Node 在工作中遇到阻塞或 Roadmap 修改要求，只能向 Main 报告 / escalation，不能直接联系其他 Node 或自行修改 Project Roadmap。
-
-```text
-Project
-  |
-  +--> Goal
-  +--> Roadmap <-------------------------------------+
-  |                                                  |
-  +--> Main Profile + Project Binding + Session      |
-  |                  |                               |
-  |                  v                               |
-  |             AgentRuntime                         |
-  |                                                  |
-  +--> Project Mailbox <--------- Node reports -------+
-  +--> Project Workspace <------- actual files --------+
-  +--> Resource Registry <------- metadata / refs -----+
-  |
-  +--> Node A --------X--------> Node B
-  |     Node Profile             Node Profile
-  |     + Node Binding           + Node Binding
-  |     + Session                + Session
-  |
-  +--> Human Gate: each Main / Node Turn starts explicitly
-```
-
-| 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
+| Phase | 状态 | 已形成的通用能力 | 当前用途 | 记录 |
 |---|---|---|---|---|
-| ✅ | F9.0 Project Runtime 架构与边界收口 | 后端计划与设计记录 | 明确 Project、Roadmap、Main Agent、Node Agent、单一 AgentRuntime 和通信边界，统一 Phase 9 后续路线 | 后续 Step 不再以 Scheduler / Coordinator 为中心；旧 Node 的复用与迁移方向明确；当前下一步唯一指向 F9.1 |
-| ✅ | F9.1 Project Domain | Project 领域 | 让系统拥有独立于单次会话的长期 Project 身份、Goal、主执行上下文和生命周期 | 可以创建、读取和重建 Project，保留唯一主会话归属，并支持归档和重新打开 |
-| ✅ | F9.2 Generic Project Node | Node 领域 | 让 Project 拥有通用工作节点，保留独立会话、串行与并行执行，并由人确认节点最终完成或跳过 | Node 不再依赖教材/练习；locked、idle、working、completing、skipped 可重建；模型不能自行完成节点；人工确认检查当前版本；会话隔离和取消通过验证 |
-| ✅ | F9.3 In-Memory Roadmap | Roadmap 领域 | 让 Project 在当前运行期间拥有可修改的路线图，记录节点关系、版本与修改历史，并按节点事实维护解锁状态 | 纯内存、不使用数据库；同一历史可重建同一 Roadmap；必选/可选节点、并行汇合、节点跳过和动态插入可验证；地图查询直接返回节点与 edges |
-| ✅ | F9.3.1 路线结构与关系表达 | Roadmap 结构与规则 | 让项目能表达工作节点、人工开始/结束/确认节点、必选/可选节点、分叉与汇合，并识别非法关系 | 控制节点无需 Agent 会话且只能人工完成；能表达菱形路线；Node 属性表达必选/可选；无效引用、重复边和结构环被拒绝；循环不在本阶段实现 |
-| ✅ | F9.3.2 路线变更与历史重建 | Roadmap 内存状态与变更 | 让调用方创建、查询、插入、调整关系、重排和增删路线节点，并能新增节点接续后续阶段、查看历史 | 整批变更全部成功或不生效，新建节点失败不留孤立节点；旧版本不能覆盖新版本；同一历史重建同一状态；complete/skip 后依赖满足的节点同步 unlock |
-| ✅ | F9.3.3 节点地图查询 | Roadmap 查询与领域集成 | 让调用方直接获取节点属性、已提交状态和依赖边以重建地图 | 无 Board 或成员状态；查询不修改节点；数据包含节点与路线版本，前端可据此重建地图 |
-| ✅ | F9.4 Agent Profile 与 Binding | Project / Node Agent 角色边界 | 让 Main Agent 与 Node Agent 在同一 AgentRuntime 上获得不同角色、上下文和能力，同时由可信作用域约束实际可访问资源 | Main / Node 不新增独立 Runtime；Profile 不是唯一安全边界；Node 无法通过伪造输入访问其他 Node 或 Project 管理能力 |
-| ✅ | F9.5 Main Agent Planning 与 Roadmap Mutation | Main Agent / Roadmap | 让 Main Agent 能基于 Goal 和项目现状读取、创建和修改 Roadmap，并由确定性边界决定方案能否成为新的项目事实 | `read_roadmap`、`read_node`、`create_roadmap`（原 `write_roadmap`，BUG-006 改名）、`modify_roadmap` 完成；陈旧版本、非法关系和跨 Project 访问被拒绝；Main 不拥有 Human completion / skip 权限 |
-| ✅ | F9.6 Project Workspace 与 Resource Handoff | Project 消息、工作空间、资源与跨 Node 协调 | 让每个 Project 绑定用户选择的真实工作目录，Navo 内部文件统一收口到 `.navo/`，并通过稳定 Resource 领域对象、权限和 Main 协调完成跨 Node 资源交接 | 用户项目目录保持纯净；Navo 管理文件只进入 `.navo/`；Resource 身份、来源和权限可追溯；不存在 Node-to-Node 通道；任何 handoff 都不自动启动 Node |
-| ✅ | F9.6a Project Mailbox Domain | Project 消息领域 | 建立可重放的 ProjectMessage / Mailbox history，并在领域层限制合法路由为 Node->Main 与 Main->Node | `postFromNode` / `postFromMain` 已形成方向明确的写入边界；Project / work Node 归属、历史连续性和合法路由可验证；跨 Project、control Node、Node-to-Node replay 被拒绝；append message 不依赖或触发 AgentRuntime |
-| ✅ | F9.6b Project Workspace Foundation | Project 文件工作空间 | 为每个 Project 建立独立 Workspace 根目录与安全路径解析，作为 Node 文件和后续 Resource 的物理承载层 | 不同 Project Workspace 互相隔离；资源路径以 Project 内相对引用表达；路径逃逸被拒绝；不引入数据库、Registry 或 Agent Tool |
-| ✅ | F9.6c Project Resource Registry | Project 资源领域 | 为 Workspace 中的重要产物建立内存 Resource Registry，记录稳定 ID、来源、描述和资源引用，不复制实际内容 | Resource 可 create/get/list by Project；来源 Node 必须属于当前 Project；跨 Project 引用被拒绝；Registry 在 F9 只驻内存，F10 再统一持久化 |
-| ✅ | F9.6d.1 Project Workspace Root Migration | Project 文件工作空间 | 让 Project 直接绑定用户选择的真实工作目录，并把 Navo 自身产生的内部文件统一收口到该目录下的 `.navo/`，为代码仓库、论文目录等真实项目提供干净工作区 | Project 可使用任意已有目录作为 Workspace；Navo 基础设施不在 `.navo/` 外散落管理文件；`.navo/assets`、`.navo/nodes` 成为稳定内部目录；Node 文件访问不能逃逸当前 Project Workspace |
-| ✅ | F9.6d.2 Resource Lifecycle 与 Access Domain | Project 资源领域 | 把 Resource 收敛为稳定、不可由目录扫描隐式改变的领域对象，通过统一服务管理身份、来源、元数据、内容入口和访问权限，并为 F10 数据库持久化保留稳定接口 | Resource 拥有稳定身份、来源、可修改元数据、内容入口、revision 与 `private / shared / project` 三态访问范围；所有生命周期变化只能经过 Resource 服务；删除不立即销毁物理内容；底层在 F9 仍为内存状态 |
-| ✅ | F9.6d.3 Resource Ownership 与 Main Communication Capability | Project Agent 协作能力 | 让 Main 与 Node 都能通过可信 Session Binding 发布并维护自己拥有的正式 Resource；非 owner 对获授权 Resource 只读；Node 可通过单向文本通信把需要进入全局决策的信息发送给 Main | Resource owner 只能来自 Session Binding；owner 可 register/fetch/update metadata/delete，自身之外只能按 access 读取；只有 Main 能改变 access；普通文件工具不能读取 `.navo/` 绕过 Resource ACL；`send_to_main` 不自动修改 Roadmap、完成 Node 或启动其他 Agent |
-| ✅ | F9.6e Main Resource Handoff 与 Node Resource Context | Main Agent 协调 / Node 启动上下文 | Main 通过 Resource 权限服务把资源提供给指定 Node 或提升为 Project 共享；Node 后续 Turn 只发现自己可见的 Resource metadata，需要正文时按 Resource ID 按需读取 | 不新增 Directive 事实源；任务变化继续使用 `modify_roadmap`；Node 上下文只注入 Resource ID / name / description 等元数据，不默认注入完整内容；资源到位不自动启动 Node；当前阶段不实现动态 reload 或 RAG |
-| ✅ | F9.6f Integration 与 Human Gate | F9.6 集成验收 | 用“Node A 产出文件 -> 创建 Resource -> send_to_main -> Main 授权 -> Human start Node B -> Node B fetch Resource”的完整链路验证 | Node B 在授权后保持未执行；Human 启动后才产生 Turn；Node A 无法直接联系或授权 Node B；Resource 内容读取同时受 Project Workspace 与 Resource 权限约束；完整链路不依赖自动 Scheduler |
-| ✅ | F9.7 Human-Controlled ProjectRuntime | Project Agent 执行控制面 | 让 ProjectRuntime 成为 Human 控制 Main / Node Agent Turn 的统一入口：Project 事实只决定当前允许哪些动作，真正的 Main / Node Turn 仍必须由 Human 明确触发；继续复用现有 MainSessionService、NodeSessionService 与单一 AgentRuntime | Project 创建、Mailbox 消息、Resource 到位、依赖满足或上一次 Turn 结束都不会自动唤醒任何 Agent；Main 与每个 Node 同时最多一个 active Turn；Node 五态继续由 NodeStore 权威维护，Main 不新增持久状态机；取消、失败和恢复不产生递归 Agent 调用或悬挂任务 |
-| ✅ | F9.7a ProjectRuntime Core | Node Human-start 入口 | 建立薄的 ProjectRuntime Core，先统一 Node Turn 的 Human-start 校验：active Project、Node 归属/kind/idle、当前 Roadmap membership 与同 Node 重复启动保护；不重新计算依赖、不自动启动 Agent | `canStartNode` / `startNode` 已形成 Project 级入口；NodeStore 五态仍是权威执行状态；无 Roadmap 独立 Node 保持兼容；瞬时 start reservation 阻止同 Node 双重 Human start；消息、Resource、依赖变化均不会触发 start |
-| ✅ | F9.7b Main + Node Human Control Lifecycle | Main / Node Human 操作入口 | 把 Main 与 Node 的显式执行控制统一收口到 ProjectRuntime：Main 支持 Human-started Turn 与取消；Node 区分首次启动与已有 Session 的后续 Human Turn，并支持取消；Node completion / skip 也通过 Project 级 Human control façade 调用既有领域能力 | Project 创建只创建 Main Session 身份，不自动执行 Main；首次和后续 Main Turn 都复用同一 Main Session 且禁止隐式并发；Node 后续 Turn 不能利用 Session FIFO 绕过 Human Gate；取消只影响目标 active Turn，不级联启动/停止其他 Agent；confirm / skip 保留 revision 与既有 NodeStore 规则 |
-| ✅ | F9.7c Runtime Failure / Recovery Integration | Project 执行异常与收口验收 | 验证 Main / Node Turn 在取消、模型失败、Tool failure、Project archive、Service dispose 与竞态下都能释放临时执行 reservation，并回到既有领域事实允许的稳定状态；补齐 ProjectRuntime 级集成场景 | 任一 Turn 失败或取消后无悬挂 active 标记；Node 不遗留非法 working；Main 不产生伪持久状态；Project archive 后不能启动新 Turn；Mailbox / Resource / Roadmap 变化在恢复过程中也不会自动递归唤醒 Agent；F9.7 的 Human Gate 可通过集成测试重复证明 |
-| ✅ | F9.8 长程 Core 集成验收 | 后端集成测试与阶段记录 | 用一个完整 Human-in-the-loop 长程场景证明 Project、Roadmap、Main Agent、多个 Node Agent、资产交接、阻塞协调和 Roadmap Mutation 可以共同工作 | Goal -> Roadmap -> Human start -> Node report / Resource -> Main 协调 -> Human start next Node -> Mutation -> 继续执行的完整链路可重复验证 |
-| ✅ | F9.9 Public Project / Roadmap Contract Handoff | Host / RPC / 桌面共享控制面 | 在 Core 稳定后，为桌面端提供 Project / Roadmap / Mailbox / Asset 的必要只读状态和 Human 操作入口 | 开始此 Step 前必须停止修改并向用户报告；前后端共同确认版本、人工 Gate、消息 / Resource 引用、取消与兼容语义后才能修改共享契约 |
-| ✅ | F9.9a 项目查询与创建 | Host / RPC 共享契约 | 让桌面能创建带名称和工作目录的项目、列出全部项目、查看项目详情（Roadmap 地图、节点状态及当前允许的操作），并分页读取 Mailbox 消息和 Resource 元数据；既有单会话回合方法统一带上版本名 | 每个方法带版本、两端严格校验、恰好返回一个结果；工作目录绑定失败不留下项目；失败以稳定错误码返回；不暴露 Resource 正文；真实 stdio 边界可创建并读取项目 |
-| ✅ | F9.9b Human 操作入口 | Host / RPC 共享契约 | 让桌面启动或继续 Main 与 Node 的回合并流式看到过程、随时取消，并确认节点完成或跳过 | 回合事件复用既有内容事件；取消只影响目标回合；同一 Main 或 Node 不能并发；过期版本的确认被拒绝；任何操作都不会自动启动其他 Agent |
-| ✅ | F9.9c 变化跟随 | Host / RPC 共享契约 | 让桌面打开项目后先获得完整状态，此后项目、Roadmap、节点、消息或资源任一变化都能实时收到最新状态 | 首帧为完整快照，后续为整份替换；关闭跟随即停止推送；跟随本身不改变任何项目事实 |
-| ✅ | F9.10 项目目标确认与规划前置 | Project 目标 / Main 规划行为 / Host / RPC 共享契约 | 让用户创建项目时可以不填目标；Main 在规划前先弄清用户意图，复述目标并得到用户同意后，才写入项目目标并生成初始 Roadmap；只打招呼或意图含糊时不规划；预填目标与对话意图不一致时先向用户确认再修改。前端 F5.2 的“目标可选”依赖本 Step | 不填目标可创建项目，项目详情能区分“目标待确定”；没有目标时无法生成初始 Roadmap；初始 Roadmap 生成后目标不能再被修改；目标变化对项目详情与变化跟随可见；真实模型验证打招呼不规划、预填目标执行规划先确认、意图冲突先确认、无预填目标提取并确认、意图含糊先澄清五个场景。Roadmap 生成后的目标修改与据此重规划留待后续 |
+| 0 | ✅ | TypeScript、Node、pnpm、Cordis 工程骨架 | Core 运行与模块装配基础 | [02](02-devlog-phase-0-scaffold.md) |
+| 1 | ✅ | 品牌化 ID、LLM / Tool 公共协议 | Project / Roadmap 新身份继续沿用同一协议风格 | [03](03-devlog-phase-1-core-protocol.md) |
+| 2 | ✅ | SessionEvent、追加日志、消息投影与 Surface | Main / Node Session 的执行记录基础 | [04](04-devlog-phase-2-session-log.md) |
+| 3 | ✅ | 流式 LLM、ToolService、Schema、错误与取消边界 | 所有 Agent Profile 共用模型和工具执行面 | [05](05-devlog-phase-3-llm-tools.md) |
+| 4 | ✅ | 通用 `AgentRuntime`、Turn 生命周期、重试、取消、同 Session 串行 | 唯一 Agent 执行内核 | [06](06-devlog-phase-4-agent-runtime.md) |
+| 5 | ✅ | 应用组合与模型 -> 工具 -> 模型闭环 | Project 级能力向下复用的稳定执行链 | [07](07-devlog-phase-5-app-composition.md)、[08](08-devlog-phase-5-loop-integration.md)、[09](09-devlog-version-closure.md) |
+| 6 | ✅ | NodeEvent / NodeStore、Node–Session 绑定、NodeAgent Profile、跨 Node 隔离 | Generic Node 的主要迁移基础 | [10](10-devlog-phase-6-node-learning.md) |
+| 7 | ✅ | `web_fetch`、公共网络策略、HTML -> Markdown | Node 工作中的网页调研能力 | [18](18-devlog-phase-7-fetch.md) |
+| 8 | ✅ | `read`、`shell`、`edit`、`write`、Fetch spill、文件版本与并发保护 | Node 工作区执行能力 | [21](21-devlog-phase-8-file-tools-plan.md) |
 
-## 7. Phase 9 关键边界
+桌面侧的 Kernel Host、真实模型 Adapter、回合与工具事件、会话命令和 RPC 链路见 [17](17-devlog-step-f2-2-kernel-host.md) 及前端计划 F2–F3 的后端交接记录；既有能力维护见 [19](19-devlog-tool-availability.md)。
 
-Phase 9 明确不做：
+## 6. Phase 9（F9）：Project-Oriented Multi-Agent Roadmap Runtime ✅
 
-- 不创建 `MainAgentRuntime`、`NodeAgentRuntime` 或按角色复制 Agent 执行引擎；
-- 不让 AgentRuntime 感知 Project、Roadmap、Main/Node 角色或 Research 领域概念；
-- 不把 Roadmap 仅保存在 Main Agent Session、Prompt 或一次 LLM 输出里；
-- 不允许 Node Agent 直接读取、调用或向另一个 Node Agent 发消息；
-- Node 默认不读取完整 Roadmap，也不拥有 `modify_roadmap`；
-- 不让 Project 创建、依赖满足、Mailbox 消息、Resource 到位、Roadmap mutation 或上一 Turn 结束自动触发 Main / Node Agent Turn；
-- 不让 Node 的 `result` 报告自动改变为人工确认后的终态；
-- 不在消息工具调用中递归同步启动 Main 或另一个 Node；
-- 不让 LLM 直接提交未经验证的 Roadmap 最终状态；
-- 不在 Phase 9 实现 Evidence、Verifier、评分器或“任务真的完成”的最终判定；验证闭环已排入 F10，见第 8 节；
-- F9.6 不加入 RAG、向量检索、动态 Skill / Tool / Resource reload、Claim-Evidence Graph 或长期 Research Memory；
-- F9.9 之前不改动 Host / RPC / 前端共享 Project 协议（历史约束，F9.9 已按共享契约流程交付 `project.*.v1`）；
-- Phase 9 不为 Project / Node / Roadmap / Mailbox / Resource Registry 元数据加入数据库持久化；Project Workspace 从 F9.6b 起承载真实文件，本阶段所说的领域状态恢复仍只指给定历史后的内存重建，不是进程重启恢复；
-- F9.6 只借鉴显式 Message / Artifact 的 A2A 思想，不实现标准 A2A 的 Agent Card、网络发现或跨服务 Transport。
+**阶段目标：** 让 Navo 能把一个长期 Goal 作为 Project 持续管理：Main Agent 维护可视化 Roadmap，多个隔离 Node Agent 分别推进节点；每个 Project 拥有独立 Workspace，Node 的报告、阻塞和 Resource 回到 Project / Main 协调；Main 可以安全修改 Roadmap 并为后续 Node 准备可发现资源，但 Main / Node 的每一次真实 Agent Turn 都只能由 Human 明确触发。2026-10-08 全部完成；架构收口见 [51](51-devlog-phase-9-project-runtime-design.md)。
 
-## 8. Phase 10（F10）：可恢复、由 Main 判断完成的长期 Project
+| 状态 | Step | 功能目标 | 记录 |
+|---|---|---|---|
+| ✅ | F9.0 Project Runtime 架构与边界收口 | 明确 Project、Roadmap、Main Agent、Node Agent、单一 AgentRuntime 和通信边界，不再以 Scheduler / Coordinator 为中心 | [51](51-devlog-phase-9-project-runtime-design.md) |
+| ✅ | F9.1–F9.2 Project 与通用 Node 领域 | 独立于单次会话的长期 Project 身份、Goal、主会话与生命周期；通用工作节点、独立会话、串行与并行执行，最终完成或跳过由人确认 | [55](55-devlog-project-node-domain.md) |
+| ✅ | F9.3 In-Memory Roadmap（F9.3.1–F9.3.3） | 可修改的路线图：节点关系、必选 / 可选、分叉汇合、原子变更、版本与历史重建、依赖解锁和地图查询（控制节点能力已于 2026-10-15 撤销） | [56](56-devlog-persistence-plan.md)、[58](58-devlog-f9.3-roadmap.md) |
+| ✅ | F9.4 Agent Profile 与 Binding | Main 与 Node 在同一 AgentRuntime 上获得不同角色与能力，由可信 Binding 约束实际可访问资源 | [59](59-devlog-f9.4-agent-profile-binding.md) |
+| ✅ | F9.5 Main Agent Planning 与 Roadmap Mutation | Main 基于 Goal 读取、创建和修改 Roadmap，陈旧版本、非法关系和跨 Project 访问被拒绝 | [61](61-devlog-f9.5-main-agent-planning.md) |
+| ✅ | F9.6 Project Workspace 与 Resource Handoff（F9.6a–F9.6f） | Mailbox、真实 Workspace 与 `.navo/`、Resource 生命周期与访问权限、Main 定向交接、Node 资源上下文与 Human Gate 端到端验收 | [62](62-devlog-f9.6-workspace-resource-handoff.md)、[70](70-devlog-resource-access-rename.md) |
+| ✅ | F9.7 Human-Controlled ProjectRuntime（F9.7a–F9.7c） | Human 控制 Main / Node Turn 的统一入口：显式启动、后续回合、定向取消、人工完成 / 跳过，以及失败、取消、归档与释放后的收口 | [63](63-devlog-f9.7a-project-runtime-core.md)、[64](64-devlog-f9.7b-human-control.md)、[65](65-devlog-f9.7c-runtime-recovery.md) |
+| ✅ | F9.8 长程 Core 集成验收 | 完整 Human-in-the-loop 长程场景证明 Project、Roadmap、Main、多个 Node、资产交接与路线调整共同工作；真实验收经 BUG-001 至 BUG-004 修复后收口 | [66](66-devlog-f9.8-longterm-acceptance.md)、[68](68-bugfix-bug-001-004-longterm.md) |
+| ✅ | F9.9 Public Project / Roadmap Contract（F9.9a–F9.9c） | 桌面可创建、列出和查看项目，启动、继续、取消 Main / Node 回合并确认节点，打开项目后实时跟随变化；交付 `project.*.v1`（PR #35–#37） | [71](71-devlog-f9.9a-project-query.md)、[72](72-devlog-f9.9b-human-control.md)、[73](73-devlog-f9.9c-project-follow.md) |
+| ✅ | F9.10 项目目标确认与规划前置 | 创建项目可不填目标；Main 复述目标并获用户同意后才写入目标并生成初始 Roadmap；Roadmap 生成后目标锁定（PR #38） | [74](74-devlog-f9.10-goal-confirm.md) |
 
-**阶段目标：** 让 Project 在应用退出并重新启动后仍能继续推进，并形成 PRD 中“执行 -> 验证 -> 再规划”的闭环：Node 认为任务完成时发出完成信号，节点进入待确认；Human 可以直接确认完成、发返工意见或跳过，也可以请 Main 复盘；Main 复盘时根据节点成果判定完成、返工或跳过，并按成果调整后续计划。执行者不能自行宣布完成。Human Gate 不变：保存、恢复、完成判断和 Roadmap 变化都不会自动启动任何 Agent Turn；全自动推进在 F11 实现，复用本阶段的完成信号与复盘判定。
+## 7. Phase 10（F10）：可恢复、由 Main 判断完成的长期 Project ✅
 
-**进入条件：** F9.8 的真实验收收口（BUG-001 至 BUG-004 按 [Bug 跟踪表](bug-plan.md) 关闭或经用户明确处置）后开始 F10.1；F10.0 设计调研可以提前进行。F9.9 公共契约交接与 F10 相互独立；F10 若需要向桌面公开新的状态或操作，仍先停止并按共享契约流程确认。
-
-**阶段验收场景：** Human 启动 Node 完成工作、发布产物并发出完成信号，节点进入待确认；Human 请 Main 复盘，Main 检查后判断不通过，把返工意见发给该 Node；此时关闭并重新启动后端，Project、Roadmap、会话、消息、资源与完成记录均可读取，退出时进行中的 Turn 处于明确的已中断状态；Human 再次启动该 Node，Node 在新回合中看到 Main 的返工意见并补做；Human 再次启动 Main，Main 判断通过并完成节点，下游节点随之解锁。
+**阶段目标：** 让 Project 在应用退出并重新启动后仍能继续推进，并形成 PRD 中“执行 -> 验证 -> 再规划”的闭环：Node 认为任务完成时发出完成信号，节点进入待确认；Human 可以直接确认完成、发返工意见或跳过，也可以请 Main 复盘；Main 复盘时根据节点成果判定完成、返工或跳过，并按成果调整后续计划。执行者不能自行宣布完成。Human Gate 不变。2026-10-15 全部完成；设计与历次修订见 [78](78-devlog-f10-0-design.md)（D1–D12，2026-10-15 撤销独立验证者，改由 Main 判断完成）。
 
 ```text
 Human start Node ---> Node works / publishes Resource
@@ -288,21 +223,30 @@ Human start Node ---> Node works / publishes Resource
 [ all facts above survive restart; interrupted Turns are never resumed automatically ]
 ```
 
-| 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
-|---|---|---|---|---|
-| ✅ | F10.0 持久化与验证设计收口 | 后端设计记录 | 确定持久保存的范围、写入成功的含义、重启恢复与中断处理规则，以及完成判断的归属 | 设计记录经用户确认；参考 DeepSeek Harness 与既有存储调研，写明采用与不采用的机制；不修改生产代码。2026-10-15 经用户决定撤销独立验证者（原 D7–D9），改由 Main 判断完成，修订见 [80](80-devlog-f10-0-design.md) |
-| ✅ | F10.1 Project 状态持久保存与重启恢复 | Project / Node / Roadmap / Mailbox / Resource 元数据 | 让 Project、节点、Roadmap 及其变更历史、Project 消息和资源登记在应用退出后仍然存在，重新启动后恢复为与退出前一致的状态；按下列 F10.1a–F10.1d 分步交付 | 子步骤全部完成；实际关闭并重新启动后端后读取到旧数据；只有保存成功的变更才对调用方表现为成功；不能用同进程内存或仅序列化测试替代 |
-| ✅ | F10.1a 项目与工作目录持久保存 | Project 与 Workspace 绑定 | 让已创建的 Project、项目目标、归档 / 重新打开状态和 Workspace 绑定在重启后仍然存在，项目列表与退出前一致 | 真实关闭并重启后端后列表一致；数据库无法打开或版本不认识时拒绝启动；保存失败时调用方收到失败且状态不变；Workspace 目录丢失时 Project 仍恢复，但使用 Workspace 处报告不可用 |
-| ✅ | F10.1b 节点与 Roadmap 持久保存 | Node 与 Roadmap | 让 Roadmap、其变更历史以及各 Node 的状态与解锁结果在重启后保持一致 | 一次 Roadmap 变更连同新节点和自动解锁要么全部保存、要么全部不保存；手动解锁、开始 / 结束工作、确认完成与跳过在重启后状态一致 |
-| ✅ | F10.1c 消息与资源登记持久保存 | Mailbox 与 Resource 元数据 | 让 Project 消息与资源登记（含访问范围与版本）在重启后仍然存在 | 重启后消息顺序连续、资源可读；资源只有在实体内容写好后才登记成功；登记保存失败时调用方看不到该资源 |
-| ✅ | F10.1d 损坏隔离与整体重启验收 | 恢复流程与集成验收 | 让单个 Project 的数据损坏只影响该 Project，其他 Project 照常恢复，并证明五类数据在完整场景下共同重启恢复 | 人为损坏一个 Project 后后端仍能启动、其他 Project 可用、该 Project 不加载且原始数据不变；完整场景真实重启验收通过；“无法恢复”状态的公开展示按共享契约流程另行提出并交由前端计划 |
-| ✅ | F10.2 会话与执行记录恢复 | Main / Node Session 与工具记录 | 让 Main 与 Node 的会话消息、工具调用与结果在重启后可以继续使用，后续 Turn 能接着原上下文工作 | 重启后同一 Session 可继续发起 Turn 且上下文完整；恢复过程不重新执行任何工具副作用 |
-| ✅ | F10.2a 普通会话保存与重启续接 | 通用 Session 与 Project 会话归属 | 让不属于 Project 的普通会话也能保存消息、工具调用与结果，并在重启后按原 Session 继续上下文；Main / Node 保持既有保存与恢复能力 | 实际关闭并重启 Host 后，普通会话按同一 Session ID 续接且上下文完整；恢复不运行模型或工具；保存失败不表现为成功；旧版本已保存的 Project 会话可继续恢复；普通会话损坏只隔离该会话，Project 损坏隔离规则保持；本步不交付会话列表或历史 UI |
-| ✅ | F10.3 中断处理 | 通用 Session 与 Project 执行控制面 | 让应用退出时正在进行的普通 / Main / Node Turn 在重启后处于明确、可解释的稳定状态，由用户决定是否继续 | 生产实现、本机完整检查、真实 Host 终止 / 重启验收与代码 head CI 已通过；重启后无悬挂执行状态，不自动续跑或标记完成；Node 与 Session 在同一事务收口，见 [PR #58](https://github.com/likeWind221/Navo/pull/58) 与 [98](98-devlog-f10-3-interruption.md) |
-| ✅ | F10.4 Main 判断节点完成与返工反馈 | Main 协调 / Node 完成 / Main 到 Node 消息 | 让 Node 能声明任务完成并等待确认，让 Human 或 Main 根据节点成果判定完成、返工或跳过，并让 Main 按成果调整后续计划；按下列 F10.4a、F10.4b 分步交付，同时是 F11 全自动推进的基础。2026-10-15 设计修订见 [80](80-devlog-f10-0-design.md) D11 | 子步骤全部完成 |
-| ✅ | F10.4a 完成信号与待确认 | Node 完成声明 / Human 确认 | 让 Node 在认为任务完成时发出完成信号，附成果摘要、产物和逐条对照完成标准的说明，节点随即进入待确认；Human 看到“Node 认为已完成”后可确认完成、发返工意见或跳过，Node 在下一回合开始时看到发给自己的返工意见 | Node 不能把自己标记为完成；待确认节点不能再被启动、下游不解锁；返工意见只送达指定节点、不改变其目标与完成标准，节点回到可启动状态；确认、返工与跳过只认当时的节点版本；待确认状态与返工意见随 Project 保存与恢复；完成判断不自动启动任何 Agent；待确认状态与返工意见的公开展示开始前按共享契约流程确认并交由前端计划。已完成：返工意见存于 Node 事件而非 Mailbox（经用户确认），提交后回合立即结束，契约见 `project.node.review.v1` 的 `rework` 与 `NodeV1.submission` / `pendingFeedback`，记录见 [100](100-devlog-f10-4a-done-signal.md)，交付见 [PR #59](https://github.com/likeWind221/Navo/pull/59) |
-| ✅ | F10.4b Main 复盘判定与计划调整 | Main 协调 / Roadmap 反馈 | 让 Human 可以请 Main 复盘某个节点回合：Main 依据系统整理的回合报告检查成果，给出完成、返工意见、跳过或交给 Human 中的一个判定，并在同一回合按成果调整下游计划 | 每次复盘必须且只能给出一个判定，版本已变化则被拒绝；Main 可以写明理由跳过节点；同一节点返工意见超过 2 次后只能交给 Human；完成记录区分由 Human 还是 Main 判断，复盘记录随 Project 保存与恢复；回合报告不依赖 Node 主动汇报；节点结束后不自动复盘；真实模型验证“成果达标则完成”“成果不足则发返工意见而不完成”“节点从未执行则不完成”“Node 下一回合按意见补做”“Main 从成果自行发现需要调整下游并修改计划”五个场景。生产实现与离线测试已完成：Main 在复盘回合里按核查清单、`fetch_resource`、`read_node_turn` 三层按需核查，用 `submit_review` 给出唯一判定，记录见 [101](101-devlog-f10-4b-main-review.md)；2026-10-15 经用户决定免除真实模型五场景验收、直接标记完成（仅用 Qwen 跑通“成果达标则完成”一个场景，其余未验收），交付见 [PR #60](https://github.com/likeWind221/Navo/pull/60) |
-| ✅ | F10.5 F10 长程集成验收 | 后端集成测试与阶段记录 | 用一个包含完成信号、Main 复盘判定不通过并发出返工意见、Node 按意见返工、Main 按成果调整计划、重启恢复和最终由 Main 完成的完整长程场景证明 F10 能力共同工作 | 离线完整场景可重复通过；真实模型验收保留完整记录，失败现场可用于定位。离线场景已完成，含两次重启，记录见 [102](102-devlog-f10-5-rework-loop.md)；`gpt-6-sol` 真实验收于 2026-10-15 首次运行时被 BUG-010 阻断在规划阶段（15 次 `create_roadmap` 全部被拒）；修复后同日复验通过前 6 个回合（规划、交作业、Main 返工、重启、按意见补交、Main 判完成并用 `edit_node` 调整下游），第 6 回合 Main 选择改写 synthesis 而非新增验证节点，未满足场景断言，第 7–11 回合未执行；2026-10-15 经用户决定免除第 7–11 回合的真实模型验收、直接标记完成（这些回合覆盖的“从未执行的节点不能被判完成”“新增验证节点后按依赖推进”“synthesis 由 Main 判完成”“第二次重启”仅由离线场景验证）；过程中发现 BUG-011，已修复（[103](103-bugfix-bug-011-restart-order.md)） |
+| 状态 | Step | 功能目标 | 验收与记录 |
+|---|---|---|---|
+| ✅ | F10.0 持久化与验证设计收口 | 确定持久保存范围、写入成功的含义、重启恢复与中断处理规则，以及完成判断的归属 | 只用 SQLite 并存于 `~/.navo/`；单个 Project 损坏只隔离；2026-10-10 经用户确认，见 [78](78-devlog-f10-0-design.md) |
+| ✅ | F10.1a 项目与工作目录持久保存 | Project、目标、归档状态和 Workspace 绑定在重启后仍然存在 | 真实 Host 重启验收，见 [79](79-devlog-f10-1a-project-persist.md) |
+| ✅ | F10.1b 节点与 Roadmap 持久保存 | Roadmap、变更历史及 Node 状态与解锁结果在重启后保持一致 | 同一事务提交，见 [81](81-devlog-f10-1b-roadmap-persist.md) |
+| ✅ | F10.1c 消息与资源登记持久保存 | Project 消息与资源登记（含访问范围与版本）在重启后仍然存在 | 实体写好后才登记，见 [82](82-devlog-f10-1c-mailbox-resource-persist.md) |
+| ✅ | F10.1d 损坏隔离与整体重启验收 | 单个 Project 损坏只影响该 Project，五类数据共同经历真实重启 | 见 [87](87-devlog-f10-1d-recovery-isolation.md) |
+| ✅ | F10.2 会话与执行记录恢复 | Main / Node 会话、工具调用与结果在重启后续接原上下文，不重新执行工具 | PR #55，见 [93](93-devlog-f10-2-session.md) |
+| ✅ | F10.2a 普通会话保存与重启续接 | 不属于 Project 的普通会话按原 Session ID 续接；普通会话损坏只隔离该会话 | PR #56，见 [93](93-devlog-f10-2-session.md) 第二、三节 |
+| ✅ | F10.3 中断处理 | 退出时进行中的普通 / Main / Node Turn 在重启后处于明确的已中断状态，由用户决定是否继续 | 真实 Host 终止 / 重启验收，PR #58，见 [94](94-devlog-f10-3-interruption.md) |
+| ✅ | F10.4a 完成信号与待确认 | Node 用 `submit_completion` 交作业后进入 submitted；Human 确认、返工或跳过，返工意见在 Node 下一回合开始时送达 | PR #59，见 [96](96-devlog-f10-4a-done-signal.md) |
+| ✅ | F10.4b Main 复盘判定与计划调整 | Human 请 Main 复盘节点，Main 用 `submit_review` 给出完成 / 返工 / 跳过 / 交给 Human 中的唯一判定，并可调整下游计划；返工上限 2 次 | PR #60；**经用户决定免除真实模型五场景验收**，仅 Qwen 跑通“成果达标则完成”场景，见 [97](97-devlog-f10-4b-main-review.md) |
+| ✅ | F10.5 F10 长程集成验收 | 交作业、Main 返工、按意见补做、Main 判完成并调整计划、两次重启恢复的完整长程场景 | 离线完整场景通过；`gpt-6-sol` 真实验收在 BUG-010 修复后通过前 6 个回合，**经用户决定免除第 7–11 回合**（相应能力仅离线验证）；过程中发现并修复 BUG-011，见 [98](98-devlog-f10-5-rework-loop.md)、[99](99-bugfix-bug-011-restart-order.md) |
+
+## 8. 模型接入补充工作（M1）✅
+
+用户选择新 ChatGPT 订阅接入，并要求公共模型协议可供后续厂商复用。M1 不占用 F10 编号；调研与方案见 [83](83-devlog-chatgpt-provider-research.md)、[84](84-devlog-model-protocol-design.md)。已交付步骤未修改前端或公开 RPC 契约，前端登录与模型选择另行规划。
+
+| 状态 | Step | 功能目标 | 验收与记录 |
+|---|---|---|---|
+| ✅ | M1.1 现有模型接入可复用的协议基础 | Qwen 继续正常工作，后续 Chat Completions 接入可直接复用消息、工具和流解析能力 | PR #49，见 [85](85-devlog-m1-1-protocols.md) |
+| ✅ | M1.2 新协议下的连续对话与工具往返 | 系统能正确理解 Responses 输出，并在下一次请求中带回足够的历史与工具结果 | PR #51，见 [86](86-devlog-m1-2-responses.md) |
+| ✅ | M1.3 本机订阅授权与账号模型查询 | 用户可独立登录 ChatGPT、查看自己的模型、刷新凭据及登出 | PR #52，见 [89](89-devlog-m1-3-chatgpt-auth.md) |
+| ✅ | M1.4 Navo 使用订阅模型完成工作 | 用户可通过配置选择订阅模型完成对话和现有工具闭环 | PR #54，见 [91](91-devlog-m1-4-openai.md)；BUG-009 见 [92](92-bugfix-bug-009-namespace.md) |
 
 ## 9. Phase 11（F11）：全自动推进与上下文压缩
 
@@ -334,7 +278,7 @@ Human switches Project to auto (or starts auto run)
 
 | 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
 |---|---|---|---|---|
-| ⬜ | F11.0 全自动推进设计收口 | 后端设计记录 | 在 [80](80-devlog-f10-0-design.md) D11 已确认的模式切换、推进规则、复盘钩子、暂停条件与重启规则基础上，补齐回合上限的默认值与调整方式、高风险操作的把关，以及上下文压缩的触发与保留规则 | 设计记录经用户确认；参考 DeepSeek Harness 的上下文压缩与长任务控制源码，写明采用与不采用的机制；不修改生产代码 |
+| ⬜ | F11.0 全自动推进设计收口 | 后端设计记录 | 在 [78](78-devlog-f10-0-design.md) D11 已确认的模式切换、推进规则、复盘钩子、暂停条件与重启规则基础上，补齐回合上限的默认值与调整方式、高风险操作的把关，以及上下文压缩的触发与保留规则 | 设计记录经用户确认；参考 DeepSeek Harness 的上下文压缩与长任务控制源码，写明采用与不采用的机制；不修改生产代码 |
 | ⬜ | F11.1 会话上下文压缩 | 通用 Session / Main / Node 会话 | 让长时间运行的普通、Main 与 Node 会话在上下文接近模型上限时自动压缩，压缩后仍能接着原任务工作 | 压缩后关键目标、决定与未完成事项仍在上下文中；完整执行记录仍保留可追溯；压缩结果随会话保存与恢复；压缩失败不破坏原会话 |
 | ⬜ | F11.2 推进模式与驱动循环 | Project 执行控制面 | 让用户为 Project 选择人工或全自动推进；全自动模式下依赖已满足的空闲节点自动启动，Node 回合结束后系统触发 Main 复盘，并按复盘结果继续推进 | 模式切换只能由用户发起、随 Project 保存，在下一个决策点生效且不打断进行中的回合；人工模式行为与 F10 一致、不自动启动任何 Agent；全自动模式下只启动依赖已满足、空闲、没有待确认或待复盘回合，且从未执行或最近被判返工的节点；未发完成信号就停止的回合同样交给 Main 复盘，失败或中断的回合不复盘；复盘按顺序进行，用户在 Main 会话中的消息优先，同一 Main 或 Node 不并发执行；原为全自动的 Project 重启后处于暂停 |
 | ⬜ | F11.3 停止条件与暂停求助 | Project 执行控制面 / Main 协调 | 让全自动推进在返工过多、超出回合上限、回合失败或 Main 需要用户决定时停下来，并让用户看到停止原因后决定继续或切回人工 | 单节点返工意见超过 2 次、Main 或 Node 回合数达到各自上限、复盘未给出判定、回合失败或中断、需要修改项目目标时停止推进并记录原因；Main 可以主动暂停并向用户提问；暂停期间不启动新回合；高风险操作在全自动模式下按 F11.0 约定先暂停等待用户 |
@@ -345,59 +289,15 @@ Human switches Project to auto (or starts auto run)
 
 | Phase | 核心问题 | 目标产物 |
 |---|---|---|
-| Phase 10（F10） | 应用退出后如何继续推进项目？系统如何判断节点真的完成？ | 见第 8 节：持久保存与重启恢复、中断处理、Main 判断节点完成 |
-| Phase 11（F11） | 项目能否在无人逐个确认时自动推进？ | 见第 9 节：上下文压缩、推进模式与驱动循环、停止条件与暂停求助 |
 | Phase 12 | Research Workspace 如何使用通用 Core？ | Research Agent Profile、Claim / Evidence、RAG 与研究领域适配 |
 | Phase 13 | 系统如何与研究者长期共同演进？ | Research Memory、长期反馈与 Human-AI Co-evolution |
 
-Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Phase 9 同时恢复为独立产品主线。
+Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不恢复为独立产品主线。
 
 ## 11. 当前下一步
 
-模型接入补充工作 M1.1–M1.3 已于 2026-10-13 经本机完整检查与 CI 后，分别经用户确认 squash 合入 [PR #49](https://github.com/likeWind221/Navo/pull/49)、[PR #51](https://github.com/likeWind221/Navo/pull/51)、[PR #52](https://github.com/likeWind221/Navo/pull/52)。M1.4 已完成并经 PR #54 squash 合入 master；该补充工作不替换 F10 持久化主线。方案见 [86](86-devlog-model-protocol-design.md)，四个步骤及验收标准见第 13 节。
+**Phase 10（F10.0–F10.5）与 M1 已全部完成（2026-10-15）。下一后端步骤为 F11.0 全自动推进设计收口，尚未开始，需用户确认后进入。**
 
-Phase 9 已全部完成（2026-10-07）：F9.0–F9.9c 均为 ✅，最后由 [PR #35](https://github.com/likeWind221/Navo/pull/35)、[#36](https://github.com/likeWind221/Navo/pull/36)、[#37](https://github.com/likeWind221/Navo/pull/37) 交付项目公共契约（记录见 [73](73-devlog-f9.9a-project-query.md)、[74](74-devlog-f9.9b-human-control.md)、[75](75-devlog-f9.9c-project-follow.md)）。各 Step 的实现、验证与 PR 经过见第 6 节表格及 [文档索引](index.md) 中对应开发记录。
-
-F9.10 项目目标确认与规划前置已于 2026-10-08 合入（[PR #38](https://github.com/likeWind221/Navo/pull/38)，记录见 [76](76-devlog-f9.10-goal-confirm.md)）：目标可选、Main 规划前须经用户同意、无目标不能生成 Roadmap；前端 F5.2 已据此完成接入（[PR #39](https://github.com/likeWind221/Navo/pull/39)）。真实验收中发现的 BUG-005、BUG-006 已于 2026-10-09 修复合入（[PR #40](https://github.com/likeWind221/Navo/pull/40)、[#41](https://github.com/likeWind221/Navo/pull/41)），BUG-007 经用户决定搁置，见 [Bug 跟踪表](bug-plan.md)。F10.0 持久化与验证设计收口已于 2026-10-10 经用户确认（[80](80-devlog-f10-0-design.md)）：只用 SQLite 并存于 `~/.navo/`，`project-goal-set` 与 Workspace 绑定纳入持久化范围，单个 Project 损坏只隔离该 Project，不设完成门禁（2026-10-15 进一步撤销独立验证者，改由 Main 判断完成）。F10.1 于 2026-10-10 经用户确认拆为 F10.1a–F10.1d（项目与工作目录 → 节点与 Roadmap → 消息与资源 → 损坏隔离与整体验收），已实测 Electron 44.2.0 自带 Node 24.20.0 支持 `node:sqlite`。F10.1a–F10.1c 已完成（[81](81-devlog-f10-1a-project-persist.md)、[83](83-devlog-f10-1b-roadmap-persist.md)、[84](84-devlog-f10-1c-mailbox-resource-persist.md)），F10.1d 损坏隔离与整体重启验收已完成，记录见 [89](89-devlog-f10-1d-recovery-isolation.md)。F10.2 会话与执行记录恢复已于 2026-10-14 经本机完整验证、实际跨进程续接验收和当前 head CI 后 squash 合入 [PR #55](https://github.com/likeWind221/Navo/pull/55)；记录见 [95](95-devlog-f10-2-session.md)。F10.2a 已于同日完成并经 [PR #56](https://github.com/likeWind221/Navo/pull/56) 合入，记录见 [96](96-devlog-f10-2a-session-design.md) 与 [97](97-devlog-f10-2a-session.md)。F10.3 已完成生产实现、本机 641 项完整检查、真实 Host 终止 / 重启验收及代码 head CI，交付见 [PR #58](https://github.com/likeWind221/Navo/pull/58) 与 [98](98-devlog-f10-3-interruption.md)。2026-10-15 经用户决定，撤销 F10.4–F10.6 的独立验证者设计，改为 F10.4 Main 判断节点完成，原 F10.7 改为 F10.5 长程集成验收，修订见 [80](80-devlog-f10-0-design.md)。同日用户确定项目支持人工与全自动两种推进方式：F10.4 扩展为 Main 判断节点完成与返工反馈，新增 F11 全自动推进与上下文压缩（第 9 节），原 Research 与长期记忆阶段顺延为 Phase 12、13。同日讨论 F10.4 时进一步确定完成信号、复盘判定与两种推进模式的共同流程（[80](80-devlog-f10-0-design.md) D11）：F10.4 拆为 F10.4a 完成信号与待确认、F10.4b Main 复盘判定与计划调整，Main 可以跳过节点、返工意见上限 2 次，全自动模式按 Roadmap 依赖推进并为 Main 与 Node 设回合上限。F10.4a 完成信号与待确认已完成（2026-10-15，记录见 [100](100-devlog-f10-4a-done-signal.md)）：Node 用 `submit_completion` 交作业后回合立即结束并进入 `submitted`，Human 可确认、返工或跳过，返工意见存于 Node 事件并在下一回合开始时送达；公共契约已同步，前端展示交由 `frontend-plan.md`。F10.4b Main 复盘判定与计划调整已完成生产实现与离线测试（记录见 [101](101-devlog-f10-4b-main-review.md)）：Main 在复盘回合里按需核查节点成果，用 `submit_review` 给出唯一判定（完成、返工、跳过或交给 Human），复盘记录随 Project 保存，复盘期间节点被锁定；2026-10-15 经用户决定免除真实模型五场景验收，F10.4b 与 F10.4 标记完成（仅用本地 Qwen 跑通“成果达标则完成”场景，其余四个场景未验收，见 [101](101-devlog-f10-4b-main-review.md)）。前端展示交由 `frontend-plan.md`。F10.5 长程集成验收已完成离线完整场景（2026-10-15，记录见 [102](102-devlog-f10-5-rework-loop.md)）：覆盖交作业、Main 返工、按意见补做、Main 判完成并调整计划、从未执行的节点不能被判完成，以及两次重启恢复。`gpt-6-sol` 真实验收（`scripts/rework.ts`）首次运行被 BUG-010 阻断在规划阶段；BUG-010 修复后（[PR #63](https://github.com/likeWind221/Navo/pull/63)、[#64](https://github.com/likeWind221/Navo/pull/64)、[#65](https://github.com/likeWind221/Navo/pull/65)）复验通过前 6 个回合，2026-10-15 经用户决定免除第 7–11 回合的真实验收，F10.5 标记完成，Phase 10（F10.0–F10.5）至此全部完成。过程中发现 BUG-011（重启后列表顺序改变），已于同日修复，见 [103](103-bugfix-bug-011-restart-order.md)。
-
-2026-10-15 设计修订（BUG-010 修复进行中，真实模型验收待完成）：经用户决定删除控制节点（start / end / checkpoint），Roadmap 中每个 Node 都是带目标与完成标准的工作节点，Human 或 Main 确认后才解锁后继，原 required checkpoint 的人工关卡由此覆盖。规划工具只接受这一种节点形状，多余的 `kind` / `control` 字段直接被拒绝；旧数据库中已有的控制节点在打开时被忽略，其前后节点直接相连，旧 Project 仍可打开和继续推进。F9.3.1 中“人工开始/结束/确认节点”的能力随之撤销。设计见 [80](80-devlog-f10-0-design.md) D12，修复记录见 [99](99-bugfix-bug-010-roadmap-schema.md)。同日为同一根因把原先按 `action` 区分的 Roadmap 修改工具拆为 `add_node`、`edit_node`、`remove_node`、`set_dependency`、`reorder_nodes`，每个工具只公布自己的参数且全部必填；Node 在 Human 明确要求提交复核时可带着未满足的标准提交，由复核者决定。
-
-BUG-002 经用户决定保持未关闭、等待复现，不阻塞 F10，状态见 [Bug 跟踪表](bug-plan.md)。
-
-Node 当前状态约定：新建 locked，解锁后 idle，实际执行时 working，回合结束回到 idle；回合内调用 `submit_completion` 的，回合结束进入 submitted（待确认，不能启动、不解锁下游），人工可将其返工回 idle；人工可将 idle/submitted 确认为 completing，或将 locked/idle/submitted 确认为 skipped；两种终态均满足后续依赖。RoadmapStore 在同一批 Node 事件中追加 node-unlocked，手动 unlock 不能绕过必选祖先；没有路线的独立 Node 仍可使用 NodeStore 原有生命周期。Main 不新增 locked/idle/working 等持久状态机：Project 创建时固定拥有 Main Session，F9.7 只维护“当前是否存在 active Main Turn”的瞬时运行时事实。F9.6 / F9.7 统一遵守 Human Gate：Main / Node 即使具备执行条件，也必须由用户明确触发下一次 Turn。
-
-## 12. 后端维护记录：桌面工具可用性排查（2026-09-14）
-
-- 做了什么：按用户要求排查现有工具注册与桌面模型可见性，修复配置 Exa 后普通桌面回合仅能看到 `web_search` 的问题。修改 `src/host/config.ts`、`tests/host/turn.spec.ts`，新增 `tests/host/tools.spec.ts`。属于既有能力修复，不推进 Phase 9 Step。
-- 关键决策：普通桌面回合显式开放 `web_fetch`；配置 Exa 时增加 `web_search`；配置 `NAVO_FILE_CWD` 时增加 `read`、`shell`、`edit`、`write`。保留 Node 专属工具的作用域，不将整个注册表直接暴露给普通会话。复用现有注册与回合链路，不修改前端或 RPC 契约。
-- 坑与发现：Search 和 Fetch 默认均已注册，但原 Host 搜索白名单遗漏其他工具；未配置搜索时原先不传白名单，又会暴露缺少 Adapter 的搜索和 Node 专属工具。文件工具注册本身依赖显式工作目录配置。现有配置测试还发现 `boundedInteger` 漏返解析值，一并恢复 `return parsed`。
-- 验证：Host 配置与新增工具测试共 13 项通过；四种 Search/File 配置组合检查真实应用注册表，并经过 v2 Handler 与 AgentRuntime 检查 Mock 模型实际收到的 Schema；`pnpm typecheck` 通过。未调用真实搜索/网络服务，未执行文件写入或 Shell，未验收正在运行的桌面实例。
-- 下一步：启动桌面应用前按需设置 `NAVO_FILE_CWD` 为已有绝对目录并重启，复验模型工具调用。无新增待落实契约；交付回复提供配置、注册、模型筛选链路的代码导读。该维护记录不推进 Phase 9。
-
-### 系统提示词补充排查
-
-- 桌面 Host 当前系统提示词只有 `You are Navo, a concise and helpful AI agent.`。v1/v2 Handler 均将它传入 Runtime，Session 将其作为首条 system 消息，Qwen Adapter 保留该角色和内容；工具 Schema 独立传输，不由系统提示词决定可用工具集合。
-- 内容缺口：没有明确工具执行与结果验证工作流，没有提供已配置文件工作目录，也没有说明搜索与全文获取、Fetch 长文落盘后继续读取之间的配合。工具描述已经提供部分局部规则，不能据此断言模型一定不会调用工具；真实行为仍需模型验收。
-- 排查时 Node Profile 仍为 SkillWorld 学习节点身份；已在 F9.2 泛化为通用工作节点，普通桌面入口仍不调用该 Profile。
-- 验证：`tests/session/messages.spec.ts` 四项通过，覆盖 system 消息前置且不写入历史 Surface；其余传递链路为源码检查，未进行真实模型实验。
-
-### 文件工具默认启用修复
-
-- 做了什么：修复未设置 NAVO_FILE_CWD 时桌面只暴露 Web 工具的问题。修改 `src/host/config.ts`、`tests/host/file-config.spec.ts`、`tests/host/turn.spec.ts`、`tests/host/tools.spec.ts`；属于既有能力维护，不推进计划 Step。
-- 关键决策：Host 默认使用 process.cwd()，显式 NAVO_FILE_CWD 仍覆盖默认且空值继续报错；本地四工具始终加入模型名单，现有 main.ts 创建并校验文件环境后注册工具。Electron 现有启动目录为仓库根目录。工作目录是相对路径基准，不是文件沙箱。
-- 坑与发现：此前只修复白名单，仍要求手动提供目录；缺省时注册和模型可见性同时缺失。测试现覆盖有无搜索配置、有无显式目录四种组合，并通过真实 Runtime 执行 read 读取 package.json，断言成功事件和结果回传模型；模型使用 Mock。
-- 验证：相关 16 项测试与 pnpm typecheck 通过。未执行 Shell 或写文件，未验收真实模型和正在运行的 Electron。未修改前端、RPC、WebFetch 网络限制或其他进行中的领域改动。
-- 下一步：重启 Electron 使 Host 重新读取配置；无新增待落实契约，完成回复交付配置与执行链路导读。
-
-## 13. 模型接入补充工作（M1）
-
-用户已选择新 ChatGPT 订阅接入，并要求公共模型协议可供后续厂商复用。M1 不占用 F10 持久化编号；实现与验收设计见 [86](86-devlog-model-protocol-design.md)。M1.1–M1.3 已合并完成，M1.4 已经本机、真实验收与当前 head CI 通过，PR #54 squash 合入。已交付步骤未修改前端或公开 RPC 契约。
-
-| 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
-|---|---|---|---|---|
-| ✅ | M1.1 现有模型接入可复用的协议基础 | Qwen 接入 / 公共模型协议 / 相关测试 | Qwen 继续正常工作，后续 Chat Completions 接入可直接复用消息、工具和流解析能力 | 原 Qwen 请求、事件、thinking、错误和取消断言保持；共享协议测试证明可独立复用；旧路径无运行引用；完整本机检查与 CI 通过 |
-| ✅ | M1.2 新协议下的连续对话与工具往返 | Responses 协议 / 助手消息与会话历史 | 系统能正确理解 Responses 输出，并在下一次请求中带回足够的历史与工具结果 | 离线完整闭环验证正文、reasoning、工具往返、原生回传信息、用量、失败、断流和取消；重建 Adapter 后同一 Session 可续接，不依赖其会话缓存 |
-| ✅ | M1.3 本机订阅授权与账号模型查询 | 本机认证 / 凭据 / 账号模型目录 | 用户可独立登录 ChatGPT、查看自己的模型、刷新凭据及登出 | 身份与授权验证、回调取消、文件权限、轮换刷新竞态通过；真实账号登录、模型目录与撤销结果明确记录；账号未获准时不标成功 |
-| ✅ | M1.4 Navo 使用订阅模型完成工作 | OpenAI 接入 / Host / 集成验收 | 用户可通过配置选择订阅模型完成对话和现有工具闭环 | gpt-6-luna 真实文本、read 续接、取消、重启凭据复用及主动刷新通过；Qwen 回归、额度失败不切计费与完整本机检查通过；当前 head CI 通过，PR #54 已合入，见 [93](93-devlog-m1-4-openai.md) |
-
-M1.4 已完成并合入 [PR #54](https://github.com/likeWind221/Navo/pull/54)，记录见 [93](93-devlog-m1-4-openai.md)。不自动开始下一 Step。M1.1–M1.3 分别合入 [PR #49](https://github.com/likeWind221/Navo/pull/49)、[PR #51](https://github.com/likeWind221/Navo/pull/51)、[PR #52](https://github.com/likeWind221/Navo/pull/52)，记录见 [87](87-devlog-m1-1-protocols.md)、[88](88-devlog-m1-2-responses.md)、[91](91-devlog-m1-3-chatgpt-auth.md)。Session 的进程重启恢复已由 F10.2 交付（PR #55，见 [95](95-devlog-f10-2-session.md)），前端登录与模型选择另行规划。
+- 免除记录：F10.4b 真实模型五场景验收与 F10.5 第 7–11 回合真实验收均经用户决定免除，相应能力只由离线测试覆盖，见第 7 节。
+- 未关闭 Bug（以 [Bug 跟踪表](bug-plan.md) 为准）：BUG-002 保持未关闭、等待复现；BUG-007 经用户决定搁置；BUG-010 修复已合入，Qwen 与 Electron 复验待本机完成。
+- 前端依赖：F10.4a / F10.4b 的公共契约变化与控制节点移除已同步到 [前端计划](frontend-plan.md) F5 交接说明，前端展示由 F5.4–F5.8 接入。
