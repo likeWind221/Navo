@@ -40,8 +40,18 @@ DeepSeek Harness 对照（本机 `D:\Program\Miracle\kernel`，commit `277c141`�
 - 未验证：gpt-6-luna（额度用尽），所以没有证据表明这版能修复 BUG-010 本身。
 - 额外发现：控制节点不是纯展示。required 控制节点不能执行，只能由 Human 确认或跳过，它未完成时后继不会解锁，等于人工关卡（`src/roadmap/graph.ts` 的 `requiredBefore`）。
 
+
+## 2026-10-15 复现：gpt-6-sol（F10.5 真实验收）
+
+- 环境：`scripts/rework.ts`，ChatGPT 订阅，`gpt-6-sol`，`maxSteps: 16`，`maxModelRetries: 0`；本机 Node 22.23.1。
+- 第 1 回合 Main 复述目标并请求同意，未规划，符合预期。第 2 回合用户同意后，Main 先 `read_roadmap`，之后 15 次 `create_roadmap` 全部被拒，回合在 16 步上限处 `blocked`，没有创建 Roadmap。
+- 15 次失败的原始参数形态相同：`kind: "work"` 的 evidence 节点同时带 `"control": "checkpoint"`，错误均为 `nodes[0].control is valid only for control Nodes.`。收到这条报错后，模型 15 次都没有删掉该字段，只是改写了 `reason`。
+- 结论：BUG-010 的直接失败点（扁平 Schema 允许跨分支字段，约束只写在描述里）在 gpt-6-sol 上同样成立；而且这次只出现了 work 节点误带 `control` 这一种形态。同一字段被连续拒绝 15 次，说明仅靠报错文案无法让该模型自行恢复。
+- 证据：本机 scratchpad `rework-run1/02-01-plan.json`、`failure.json`（未入库）。
+
 ## 后续
 
 - BUG-010 保持未修复。再次修复时须同时满足：gpt-6-luna 不再出现跨分支字段，且 Qwen 首调合法率不低于 14/15 基线。
 - 已评估、待选的方向：单个 `work_nodes` 数组加必填的 `review_after`，由 Navo 插入 checkpoint；或单数组加 `type`，让 checkpoint 也带目标与验收标准（需要改 Node 领域模型）。
 - 订阅额度恢复后，先取得 gpt-6-luna 失败调用的原始参数，再定方案。
+- 修复验收需同时覆盖 gpt-6-sol：F10.5 真实验收在它上面被本 Bug 阻断。

@@ -77,6 +77,11 @@ export function projectState(app: Context, projectId: ProjectId) {
       status: value.status,
       revision: value.revision,
       sessionId: value.sessionId ?? null,
+      submission: value.submission ?? null,
+      pendingFeedback: value.pendingFeedback ?? null,
+      lastReview: value.lastReview ?? null,
+      confirmation: value.confirmation ?? null,
+      reworkCount: value.reworkCount ?? 0,
     })),
     resources: app.resources.listByProject(projectId).map(value => ({
       id: value.id,

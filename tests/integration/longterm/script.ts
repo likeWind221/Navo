@@ -132,19 +132,19 @@ export function scenario(): Scenario {
   ] };
 }
 
-function step(respond: (request: GenerateRequest) => ReturnType<typeof modelResponse>): MockLLMEntry {
+export function step(respond: (request: GenerateRequest) => ReturnType<typeof modelResponse>): MockLLMEntry {
   return { kind: "handler", handle: request => respond(request).events };
 }
 
-function call(id: string, name: string, args: unknown) {
+export function call(id: string, name: string, args: unknown) {
   return modelResponse([{ type: "tool-call", id: createToolCallId(id), name, arguments: JSON.stringify(args) }], "tool-calls");
 }
 
-function answer(text: string) {
+export function answer(text: string) {
   return modelResponse([{ type: "text", text }]);
 }
 
-function resultText(request: GenerateRequest, callId: string): string {
+export function resultText(request: GenerateRequest, callId: string): string {
   for (const message of request.messages) {
     for (const block of message.content) {
       if (block.type === "tool-result" && block.toolCallId === callId) {

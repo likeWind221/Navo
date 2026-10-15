@@ -112,6 +112,7 @@
 
 ## 研究与自动审查
 
+- [F10.5 F10 长程集成验收](102-devlog-f10-5-rework-loop.md)：离线完整场景覆盖交作业、Main 返工、按意见补做、Main 判完成并调整计划、从未执行的节点不能被判完成和两次重启恢复；`gpt-6-sol` 真实验收脚本已写好但尚未运行；发现 BUG-011。
 - [F10.4b Main 核查节点成果与计划调整](101-devlog-f10-4b-main-review.md)：Human 请 Main 复盘某节点；核查清单（线索）+ `fetch_resource` 查产物 + `read_node_turn` 查过程三层按需核查；`submit_review` 唯一判定（完成 / 返工 / 跳过 / 交给 Human），返工上限 2 次、从未执行的节点不能被 Main 判完成、版本过期则拒绝；复盘期间节点被锁；复盘记录随 Project 保存；`project.turn.v1` 新增 review 目标；Harness auto-review 对照；经用户决定免除真实模型五场景验收并标记完成（仅 Qwen 跑通场景 1）。
 - [F10.4a 完成信号与待确认](100-devlog-f10-4a-done-signal.md)：Node 用 `submit_completion` 交作业（摘要、产物、逐条自查、未完成事项）后回合立即结束并进入 `submitted`；Human 确认、返工或跳过，返工意见存于 Node 事件并在下一回合开始时送达；工具输出 `endsTurn`；公共契约新增 `submitted`、`submission`、`pendingFeedback` 与 `rework` 动作；Harness goal / structured output 对照。
 - [F10.3 中断处理](98-devlog-f10-3-interruption.md)：启动恢复时确定性收口普通/Main/Node 未闭合 Turn，保守补齐工具结果，并与 working Node 的 work-ended 在同一事务提交；本机完整验证、真实 Host 终止 / 重启验收与代码 head CI 通过，交付见 PR #58。
@@ -125,6 +126,7 @@
 - [M1.4 Navo 使用订阅模型完成工作](93-devlog-m1-4-openai.md)：Host 配置与 OpenAIAdapter 接入，gpt-6-luna 真实文本、read 续接、取消、重启凭据复用与主动刷新通过；本机与当前 head CI 通过，PR #54 已合入。
 - [BUG-009 Responses namespace 必填描述](94-bugfix-bug-009-namespace.md)：真实 HTTP 400 的定位、最小协议补齐及回归边界。
 - [BUG-010 Roadmap 工具参数与运行时约束不一致](99-bugfix-bug-010-roadmap-schema.md)：gpt-6-luna 无法创建 Roadmap 的根因、双数组扁平参数尝试与 Qwen 首调合法率对照（14/15 → 12/15，已回退），以及后续候选方向；仍未修复。
+- [BUG-011 重启后节点与资源列表顺序改变](103-bugfix-bug-011-restart-order.md)：恢复时按 UUID 读取导致列表顺序改变的证据、影响面和关闭条件；仅排查，未修复。
 
 - [ChatGPT 订阅模型接入可行性调研](85-devlog-chatgpt-provider-research.md)：对照 Pi 新旧 OpenAI 接入与官方 Sign in with ChatGPT；记录授权、Responses 限制、Navo 适配边界及尚未实测的账号准入。
 - [公共模型协议层与 ChatGPT 订阅接入方案](86-devlog-model-protocol-design.md)：提取 Chat Completions、新增 Responses、独立订阅认证与 Host 接入；含不透明 replay、Harness 源码对照及四个实施步骤。
