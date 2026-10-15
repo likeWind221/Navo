@@ -25,8 +25,8 @@ const summary: ProjectSummaryV1 = {
   status: "active", revision: 1, createdAt: "2026-10-07T00:00:00.000Z",
 };
 const node: NodeV1 = {
-  nodeId: "n", revision: 1, kind: "work", requirement: "required", status: "idle",
-  title: "Collect", description: "", acceptanceCriteria: ["Done"], controlPurpose: null,
+  nodeId: "n", revision: 1, requirement: "required", status: "idle",
+  title: "Collect", description: "", acceptanceCriteria: ["Done"],
   hasSession: false, turnActive: false, actions: { run: true, complete: true, skip: true, rework: false, review: true }, confirmation: null,
   submission: null, pendingFeedback: null, review: null, reworkCount: 0, reviewPending: false,
 };
@@ -89,7 +89,8 @@ describe("F9.9a project contract", () => {
       { ...detail, project: { ...summary, goal: "" } },
       { ...detail, extra: 1 },
       { ...detail, project: { ...summary, status: "deleted" } },
-      { ...detail, roadmap: { ...detail.roadmap, nodes: [{ ...node, controlPurpose: "start" }] } },
+      { ...detail, roadmap: { ...detail.roadmap, nodes: [{ ...node, kind: "work" }] } },
+      { ...detail, roadmap: { ...detail.roadmap, nodes: [{ ...node, controlPurpose: null }] } },
       { ...detail, roadmap: { ...detail.roadmap, nodes: [{ ...node, status: "done" }] } },
       { ...detail, roadmap: { ...detail.roadmap, nodes: [{ ...node, actions: { run: true } }] } },
       { ...detail, roadmap: { ...detail.roadmap, nodes: [{ ...node, submission: undefined }] } },
