@@ -17,11 +17,12 @@ const incompatibleVariables = [
 
 export function createAcceptanceEnvironment(
   env: NodeJS.ProcessEnv = process.env,
+  model = REAL_ACCEPTANCE_MODEL,
 ): NodeJS.ProcessEnv {
   const result: NodeJS.ProcessEnv = {
     ...env,
     LLM_PROVIDER: "openai",
-    LLM_MODEL: REAL_ACCEPTANCE_MODEL,
+    LLM_MODEL: model,
   };
   for (const name of incompatibleVariables) delete result[name];
   return result;
@@ -29,8 +30,9 @@ export function createAcceptanceEnvironment(
 
 export function resolveAcceptanceHostConfig(
   env: NodeJS.ProcessEnv = process.env,
+  model = REAL_ACCEPTANCE_MODEL,
 ): AcceptanceHostConfig {
-  const config = resolveKernelHostConfig(createAcceptanceEnvironment(env));
+  const config = resolveKernelHostConfig(createAcceptanceEnvironment(env, model));
   if (config.provider !== "openai") throw new Error("Real acceptance requires the OpenAI subscription provider.");
   return config;
 }

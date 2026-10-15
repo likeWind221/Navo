@@ -43,4 +43,11 @@ describe("real acceptance model selection", () => {
       agent: { model: { provider: "openai", model: REAL_ACCEPTANCE_MODEL } },
     });
   });
+
+  it("lets a script select another subscription model", () => {
+    expect(createAcceptanceEnvironment({}, "gpt-6-sol")).toMatchObject({ LLM_PROVIDER: "openai", LLM_MODEL: "gpt-6-sol" });
+    expect(resolveAcceptanceHostConfig({}, "gpt-6-sol")).toMatchObject({
+      agent: { model: { provider: "openai", model: "gpt-6-sol" } },
+    });
+  });
 });
