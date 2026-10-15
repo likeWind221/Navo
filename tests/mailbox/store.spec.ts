@@ -63,28 +63,16 @@ describe("Project Mailbox domain", () => {
     expect(Object.isFrozen(report.sender)).toBe(true);
   });
 
-  it("rejects cross-Project Nodes, control Nodes, archived Projects, and empty bodies", async () => {
+  it("rejects cross-Project Nodes, archived Projects, and empty bodies", async () => {
     const ctx = await domain();
     const first = ctx.projects.create({ name: "Project", goal: "First" });
     const second = ctx.projects.create({ name: "Project", goal: "Second" });
     const otherNode = ctx.nodes.create({ projectId: second.id, objective: objective("other work") });
-    const control = ctx.nodes.create({
-      projectId: first.id,
-      kind: "control",
-      purpose: "checkpoint",
-      title: "Human checkpoint",
-    });
 
     expect(() => ctx.mailbox.postFromNode({
       projectId: first.id,
       nodeId: otherNode.node.id,
       body: "Cross project",
-    })).toThrow(expect.objectContaining({ code: "node-unavailable" }));
-
-    expect(() => ctx.mailbox.postFromMain({
-      projectId: first.id,
-      nodeId: control.node.id,
-      body: "Control directive",
     })).toThrow(expect.objectContaining({ code: "node-unavailable" }));
 
     const work = ctx.nodes.create({ projectId: first.id, objective: objective("local work") });

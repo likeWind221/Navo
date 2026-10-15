@@ -1,6 +1,6 @@
 # 99：BUG-010 Roadmap 工具参数与运行时约束不一致
 
-日期：2026-10-14 排查，2026-10-15 尝试修复后回退。状态：未修复，未勾选。
+日期：2026-10-14 排查，2026-10-15 尝试修复后回退；同日删除控制节点完成修复实现。状态：离线验证通过，待真实模型验收，未勾选。
 
 ## 现象与复现
 
@@ -55,3 +55,24 @@ DeepSeek Harness 对照（本机 `D:\Program\Miracle\kernel`，commit `277c141`�
 - 已评估、待选的方向：单个 `work_nodes` 数组加必填的 `review_after`，由 Navo 插入 checkpoint；或单数组加 `type`，让 checkpoint 也带目标与验收标准（需要改 Node 领域模型）。
 - 订阅额度恢复后，先取得 gpt-6-luna 失败调用的原始参数，再定方案。
 - 修复验收需同时覆盖 gpt-6-sol：F10.5 真实验收在它上面被本 Bug 阻断。
+
+## 2026-10-15 修复：删除控制节点
+
+### 修复内容
+
+- 用户决定不再在 Schema 上拆分 work / control 分支，而是整体删除控制节点（start / end / checkpoint）。理由：start / end 只起展示作用；required checkpoint 是人工关卡，但 F10.4 起每个 Node 都要由 Human 或 Main 确认后才解锁后继，已经覆盖该关卡。设计记录见 [80](80-devlog-f10-0-design.md) D12。
+- `create_roadmap` 的 `nodes[]` 条目为 `key / title / goal / done_when / required / depends_on`，全部必填、`additionalProperties: false`；`modify_roadmap` 的 `add_node` / `edit_node` 去掉 `kind` / `control`。Schema 中不再存在只对某类节点合法的字段，公布的 Schema 与运行时约束一致，多余的 `kind` / `control` 由 `ToolService` 结构校验拒绝。
+- Node 模型、创建输入与新事件只有工作节点；公共契约 `NodeV1` 在 v1 内去掉 `kind` / `controlPurpose`（前端未消费这两个字段，`frontend-plan.md` 已登记）。
+- 旧数据（方案 A）：不改写已存事件。恢复计划丢弃首个事件为 `control-created` 的 Node 历史（`src/storage/recovery.ts`），Roadmap 重放把 `前驱 -> 控制节点 -> 后继` 旁路为 `前驱 -> 后继`（`src/roadmap/legacy.ts`、`projector.ts`）；引用过旧控制节点的活跃 Project 在启动时解锁依赖已满足的 Node。已知边界见 [80](80-devlog-f10-0-design.md) D12。
+- 分工：RPC 契约、后端、前端计划分别由三个子 Agent 修改，编排者统一验收并维护本笔记、Bug 表与索引。
+- 文件规模：`src/storage/recovery.ts`（350 行）与 `src/tools/builtins/roadmap/modify-roadmap.ts`（373 行）本次之前已超过 300 行，本次前者 +15、后者 -37。前者只负责构建恢复计划，后者是一个工具的 Schema、解析与失败文案，均为单一变化原因，本次不拆分。
+- DeepSeek Harness 源码不在本次运行环境中，未重新对照；沿用上文结论（Harness 工具输入同为扁平参数，无更优形状）。
+
+### 验证结果与边界
+
+- 环境：云端容器，Node v22.22.0。
+- 后端：`pnpm typecheck` 通过；`pnpm test` 656 通过、6 失败、3 跳过。6 项失败位于 `tests/host/process.spec.ts` 与 `tests/tools/shell/execution.spec.ts`，在同一容器的 master 上同样失败（shell / 进程信号环境问题），与本次无关。
+- RPC：`pnpm vitest run --config rpc/vitest.config.ts` 46/46 通过，含携带 `kind` / `controlPurpose` 的 Node 被拒绝。
+- 前端：`frontend/` 下 `pnpm typecheck` 通过，`pnpm test` 135/135 通过。
+- 新增回归：`tests/roadmap/legacy.spec.ts` 覆盖旧数据库（start -> A -> required checkpoint -> B，后续变更加入 end，以及旧控制节点上的确认、改定义和 Roadmap 更新事件）恢复为 [A, B]、边 A -> B，B 解锁，已存记录不变，恢复后的新变更在再次重启后重放一致；`create_roadmap` / `modify_roadmap` 测试覆盖新形状与多余字段拒绝。
+- 未验证：真实模型。关闭本 Bug 仍需在本机完成：Qwen `scripts/goal.ts` 5 轮首调合法率不低于 14/15；gpt-6-luna 与 gpt-6-sol 能创建 Roadmap；随后重跑 `scripts/rework.ts` 完成 F10.5 真实验收，以及 F5.4 预填 / 空目标 Electron 真实验收。

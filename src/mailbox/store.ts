@@ -127,7 +127,7 @@ export class MailboxStore extends Service {
 
   private requireWorkNode(projectId: ProjectId, nodeId: NodeId): void {
     const node = this.ctx.nodes.get(nodeId);
-    if (!node || node.node.projectId !== projectId || node.node.kind !== "work") {
+    if (!node || node.node.projectId !== projectId) {
       throw new MailboxError("node-unavailable", "Mailbox Node must be a work Node in the same Project.");
     }
   }

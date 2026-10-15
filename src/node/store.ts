@@ -7,7 +7,6 @@ import type { NodeId, ProjectId, SessionId } from "../brand/ids.js";
 import { NodeError } from "./errors.js";
 import type { NodeDefinitionChange, NodeEvent, NodeEventDraft } from "./events.js";
 import type {
-  ControlPurpose,
   NodeConfirmation,
   NodeObjective,
   NodeReviewInput,
@@ -54,21 +53,13 @@ export class NodeStore extends Service {
 
   creation({ nodeId, input }: NewNodeInput): NodeEventDraft {
     const requirement = input.requirement ?? "required";
-    if (input.kind !== undefined && input.kind !== "work" && input.kind !== "control") {
-      throw new NodeError("invalid-state", "Invalid Node kind.");
-    }
-    return input.kind === "control"
-      ? { type: "control-created", nodeId, data: { projectId: input.projectId, requirement, purpose: input.purpose, title: input.title } }
-      : { type: "node-created", nodeId, data: { projectId: input.projectId, requirement, objective: input.objective } };
+    return { type: "node-created", nodeId, data: { projectId: input.projectId, requirement, objective: input.objective } };
   }
 
   definitionChange(input: DefinitionChangeInput): NodeEventDraft {
     const current = this.requireState(input.nodeId, "locked", "idle");
     if (current.revision !== input.reviewedRevision) {
       throw new NodeError("stale-revision", "Review current Node before editing.");
-    }
-    if (current.node.kind !== input.definition.kind) {
-      throw new NodeError("invalid-state", "Node kind cannot change.");
     }
     return {
       type: "definition-changed",
@@ -90,7 +81,7 @@ export class NodeStore extends Service {
   prepare(drafts: readonly NodeEventDraft[]): NodeBatch {
     const batch = new NodeBatch(id => this.getEvents(id));
     for (const draft of drafts) {
-      const projectId = draft.type === "node-created" || draft.type === "control-created"
+      const projectId = draft.type === "node-created"
         ? draft.data.projectId : batch.get(draft.nodeId)?.node.projectId;
       if (!projectId) throw new NodeError("node-not-found", "Node was not found.");
       if (draft.type !== "work-ended") this.requireProject(projectId);
@@ -147,7 +138,6 @@ export class NodeStore extends Service {
 
   bindSession(nodeId: NodeId, sessionId: SessionId): NodeSnapshot {
     const current = this.requireState(nodeId, "idle");
-    if (current.node.kind !== "work") throw new NodeError("invalid-state", "Control nodes cannot bind Sessions.");
     if (current.sessionId !== undefined) throw new NodeError("node-already-bound", "Node already owns a Session.");
     if (this.getBySession(sessionId) || this.ctx.projects.getByMainSession(sessionId)) throw new NodeError("session-already-bound", "Session already has an owner.");
     return this.append({ type: "session-bound", nodeId, data: { sessionId } });
@@ -164,7 +154,7 @@ export class NodeStore extends Service {
   }
 
   beginWork(nodeId: NodeId): NodeSnapshot {
-    if (this.requireState(nodeId, "idle").node.kind !== "work") throw new NodeError("invalid-state", "Control nodes cannot execute.");
+    this.requireState(nodeId, "idle");
     return this.append({ type: "work-started", nodeId, data: {} });
   }
 
@@ -251,10 +241,11 @@ export class NodeStore extends Service {
   }
 }
 
-export type CreateNodeInput = { readonly projectId: ProjectId; readonly requirement?: NodeRequirement } & (
-  | { readonly kind?: "work"; readonly objective: NodeObjective }
-  | { readonly kind: "control"; readonly purpose: ControlPurpose; readonly title: string }
-);
+export interface CreateNodeInput {
+  readonly projectId: ProjectId;
+  readonly requirement?: NodeRequirement;
+  readonly objective: NodeObjective;
+}
 export interface NewNodeInput { readonly nodeId: NodeId; readonly input: CreateNodeInput; }
 export interface DefinitionChangeInput {
   readonly nodeId: NodeId;

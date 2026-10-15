@@ -73,7 +73,7 @@ export function projectState(app: Context, projectId: ProjectId) {
     roadmapRevision: app.roadmaps.get(projectId)?.revision ?? null,
     nodes: app.nodes.getByProject(projectId).map(value => ({
       id: value.node.id,
-      title: value.node.kind === "work" ? value.node.objective.title : value.node.title,
+      title: value.node.objective.title,
       status: value.status,
       revision: value.revision,
       sessionId: value.sessionId ?? null,

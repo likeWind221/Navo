@@ -144,25 +144,19 @@ function parseRoadmap(value: unknown): RoadmapV1 {
 }
 
 export function parseNode(value: unknown): NodeV1 {
-  const node = shape(value, ["nodeId", "revision", "kind", "requirement", "status", "title", "description",
-    "acceptanceCriteria", "controlPurpose", "hasSession", "turnActive", "actions", "confirmation", "submission",
+  const node = shape(value, ["nodeId", "revision", "requirement", "status", "title", "description",
+    "acceptanceCriteria", "hasSession", "turnActive", "actions", "confirmation", "submission",
     "pendingFeedback", "review", "reworkCount", "reviewPending"], "node");
-  const kind = oneOf(node.kind, ["work", "control"] as const, "node kind");
-  const controlPurpose = node.controlPurpose === null ? null
-    : oneOf(node.controlPurpose, ["start", "end", "checkpoint"] as const, "control purpose");
-  if ((kind === "control") !== (controlPurpose !== null)) invalid("Control purpose must match node kind");
   const actions = shape(node.actions, ["run", "complete", "skip", "rework", "review"], "node actions");
   return {
     nodeId: id(node.nodeId, "nodeId"),
     revision: positive(node.revision, "node revision"),
-    kind,
     requirement: oneOf(node.requirement, ["required", "optional"] as const, "node requirement"),
     status: oneOf(node.status, ["locked", "idle", "working", "submitted", "completing", "skipped"] as const, "node status"),
     title: visibleText(node.title, "node title", TEXT_MAX),
     description: text(node.description, "node description"),
     acceptanceCriteria: array(node.acceptanceCriteria, "acceptanceCriteria")
       .map(entry => visibleText(entry, "acceptance criterion", TEXT_MAX)),
-    controlPurpose,
     hasSession: flag(node.hasSession, "hasSession"),
     turnActive: flag(node.turnActive, "turnActive"),
     actions: {

@@ -44,7 +44,6 @@ export function buildChecklist(
   turn: NodeTurnRecord | undefined,
   rework: { readonly used: number; readonly remaining: number },
 ): string {
-  if (snapshot.node.kind !== "work") throw new TypeError("Only work Nodes have a review checklist.");
   const nodeId: NodeId = snapshot.node.id;
   const events = snapshot.sessionId === undefined ? [] : ctx.sessions.getEvents(snapshot.sessionId);
   const inTurn = (timestamp: string): boolean => turn !== undefined

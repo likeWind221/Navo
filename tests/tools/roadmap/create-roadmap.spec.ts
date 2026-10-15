@@ -36,7 +36,6 @@ const initialProposal = {
   nodes: [
     {
       key: "research",
-      kind: "work",
       title: "Research architecture",
       goal: "Understand the existing architecture and constraints.",
       done_when: ["Architecture constraints are documented"],
@@ -45,15 +44,14 @@ const initialProposal = {
     },
     {
       key: "review",
-      kind: "control",
-      title: "Architecture checkpoint",
-      control: "checkpoint",
+      title: "Review architecture",
+      goal: "Agree on the architecture before building.",
+      done_when: ["Architecture is approved"],
       required: true,
       depends_on: ["research"],
     },
     {
       key: "build",
-      kind: "work",
       title: "Build prototype",
       goal: "Implement the first working prototype.",
       done_when: ["Prototype runs", "Integration path is documented"],
@@ -90,7 +88,6 @@ describe("create_roadmap", () => {
       nodes: [
         {
           title: "Research architecture",
-          kind: "work",
           goal: "Understand the existing architecture and constraints.",
           done_when: ["Architecture constraints are documented"],
           required: true,
@@ -98,15 +95,14 @@ describe("create_roadmap", () => {
           depends_on: [],
         },
         {
-          title: "Architecture checkpoint",
-          kind: "control",
-          control: "checkpoint",
+          title: "Review architecture",
+          goal: "Agree on the architecture before building.",
+          done_when: ["Architecture is approved"],
           required: true,
           status: "locked",
         },
         {
           title: "Build prototype",
-          kind: "work",
           goal: "Implement the first working prototype.",
           done_when: ["Prototype runs", "Integration path is documented"],
           required: false,
@@ -118,6 +114,30 @@ describe("create_roadmap", () => {
     expect(JSON.stringify(result.artifact)).not.toContain("confirmation");
   });
 
+  it("publishes one flat Node shape and rejects legacy kind or control fields", async () => {
+    const ctx = await createContext();
+    const project = ctx.projects.create({ name: "Project", goal: "Flat plan" });
+    const schema = ctx.tools.schemas([CREATE_ROADMAP_TOOL_NAME])[0]!.parameters as {
+      properties: { nodes: { items: { required: string[]; properties: Record<string, unknown>; additionalProperties: boolean } } };
+    };
+    const item = schema.properties.nodes.items;
+    expect(item.required).toEqual(["key", "title", "goal", "done_when", "required", "depends_on"]);
+    expect(Object.keys(item.properties).sort()).toEqual(item.required.slice().sort());
+    expect(item.additionalProperties).toBe(false);
+
+    const [first] = initialProposal.nodes;
+    for (const extra of [{ kind: "work" }, { control: "checkpoint" }]) {
+      const result = await ctx.tools.execute(
+        toolCall("legacy-roadmap", CREATE_ROADMAP_TOOL_NAME, { reason: "Legacy shape", nodes: [{ ...first, ...extra }] }),
+        signal,
+        { sessionId: project.mainSessionId, allowedTools: [CREATE_ROADMAP_TOOL_NAME] },
+      );
+      expect(result.kind).toBe("failure");
+    }
+    expect(ctx.roadmaps.get(project.id)).toBeUndefined();
+    expect(ctx.nodes.getByProject(project.id)).toEqual([]);
+  });
+
   it("rejects cyclic dependencies without leaving orphan Nodes or a partial Roadmap", async () => {
     const ctx = await createContext();
     const project = ctx.projects.create({ name: "Project", goal: "Protected plan" });
@@ -127,11 +147,11 @@ describe("create_roadmap", () => {
         reason: "Bad cycle",
         nodes: [
           {
-            key: "a", kind: "work", title: "A", goal: "Do A", done_when: ["A done"],
+            key: "a", title: "A", goal: "Do A", done_when: ["A done"],
             required: true, depends_on: ["b"],
           },
           {
-            key: "b", kind: "work", title: "B", goal: "Do B", done_when: ["B done"],
+            key: "b", title: "B", goal: "Do B", done_when: ["B done"],
             required: true, depends_on: ["a"],
           },
         ],
@@ -163,7 +183,7 @@ describe("create_roadmap", () => {
       toolCall("replace-roadmap", CREATE_ROADMAP_TOOL_NAME, {
         reason: "Replace it",
         nodes: [{
-          key: "replacement", kind: "work", title: "Replacement", goal: "Replace plan",
+          key: "replacement", title: "Replacement", goal: "Replace plan",
           done_when: ["Replacement done"], required: true, depends_on: [],
         }],
       }),

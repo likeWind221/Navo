@@ -5,8 +5,8 @@ import { createNodeId } from "../../../brand/ids.js";
 import type { NodeId, ProjectId } from "../../../brand/ids.js";
 import type { JsonObject, JsonValue } from "../../../llm/types.js";
 import { NodeError } from "../../../node/errors.js";
-import type { NodeDefinitionChange, } from "../../../node/events.js";
-import type { ControlPurpose, NodeRequirement } from "../../../node/model.js";
+import type { NodeDefinitionChange } from "../../../node/events.js";
+import type { NodeRequirement } from "../../../node/model.js";
 import type { CreateNodeInput } from "../../../node/store.js";
 import { AgentBindingError, requireMainBinding } from "../../../project/binding.js";
 import { RoadmapError } from "../../../roadmap/errors.js";
@@ -45,30 +45,27 @@ const modifyRoadmapSchema: JsonObject = {
       type: "string",
       description: "Proposal-local receipt key for add_node only. It is returned with the persistent Node ID and is not stored.",
     },
-    kind: {
+    title: {
       type: "string",
-      enum: ["work", "control"],
+      description: "Node title. Required for add_node and edit_node.",
     },
-    title: { type: "string" },
     goal: {
       type: "string",
-      description: "Work Node goal for add_node or edit_node.",
+      description: "What the Node must achieve. Required for add_node and edit_node.",
     },
     done_when: {
       type: "array",
       items: { type: "string" },
-      description: "Work Node acceptance criteria for add_node or edit_node.",
+      description: "Acceptance criteria, at least one. Required for add_node and edit_node.",
     },
-    control: {
-      type: "string",
-      enum: ["start", "end", "checkpoint"],
-      description: "Control purpose for a control Node.",
+    required: {
+      type: "boolean",
+      description: "Whether successors wait for this Node to be completed or skipped. Required for add_node and edit_node.",
     },
-    required: { type: "boolean" },
     depends_on: {
       type: "array",
       items: { type: "string" },
-      description: "Persistent predecessor Node IDs for add_node.",
+      description: "Persistent predecessor Node IDs. Required for add_node; use [] for none.",
     },
     index: {
       type: "integer",
@@ -95,12 +92,10 @@ const modifyRoadmapSchema: JsonObject = {
 };
 
 interface ParsedNodeDefinition {
-  readonly kind: "work" | "control";
   readonly title: string;
+  readonly goal: string;
+  readonly doneWhen: readonly string[];
   readonly required: boolean;
-  readonly goal?: string;
-  readonly doneWhen?: readonly string[];
-  readonly control?: ControlPurpose;
 }
 
 interface MutationResult {
@@ -177,11 +172,10 @@ function applyAction(
   switch (action) {
     case "add_node": {
       assertOnly(arguments_, [
-        "base_version", "reason", "action", "key", "kind", "title", "goal", "done_when", "control",
-        "required", "depends_on", "index",
+        "base_version", "reason", "action", "key", "title", "goal", "done_when", "required", "depends_on", "index",
       ]);
       const key = nonEmptyString(arguments_.key, "key");
-      const definition = parseNodeDefinition(arguments_, "add_node");
+      const definition = parseNodeDefinition(arguments_);
       const dependencies = nonEmptyStringArray(arguments_.depends_on, "depends_on", true);
       if (new Set(dependencies).size !== dependencies.length) {
         throw invalidMutation("depends_on contains duplicate Node IDs.");
@@ -206,12 +200,11 @@ function applyAction(
     }
     case "edit_node": {
       assertOnly(arguments_, [
-        "base_version", "reason", "action", "node_id", "node_version", "kind", "title", "goal", "done_when",
-        "control", "required",
+        "base_version", "reason", "action", "node_id", "node_version", "title", "goal", "done_when", "required",
       ]);
       const nodeId = createNodeId(nonEmptyString(arguments_.node_id, "node_id"));
       const nodeVersion = positiveInteger(arguments_.node_version, "node_version");
-      const definition = parseNodeDefinition(arguments_, "edit_node");
+      const definition = parseNodeDefinition(arguments_);
       const snapshot = ctx.roadmaps.change({
         projectId,
         baseRevision: baseVersion,
@@ -264,56 +257,26 @@ function applyAction(
   }
 }
 
-function parseNodeDefinition(arguments_: JsonObject, action: "add_node" | "edit_node"): ParsedNodeDefinition {
-  const kind = arguments_.kind;
-  if (kind !== "work" && kind !== "control") throw invalidMutation(`${action}.kind must be work or control.`);
+function parseNodeDefinition(arguments_: JsonObject): ParsedNodeDefinition {
   const title = nonEmptyString(arguments_.title, "title");
+  const goal = nonEmptyString(arguments_.goal, "goal");
+  const doneWhen = nonEmptyStringArray(arguments_.done_when, "done_when", false);
   if (typeof arguments_.required !== "boolean") throw invalidMutation("required must be a boolean.");
-
-  if (kind === "work") {
-    if (arguments_.control !== undefined) throw invalidMutation("control is valid only for control Nodes.");
-    const goal = nonEmptyString(arguments_.goal, "goal");
-    const doneWhen = nonEmptyStringArray(arguments_.done_when, "done_when", false);
-    return Object.freeze({ kind, title, goal, doneWhen: Object.freeze(doneWhen), required: arguments_.required });
-  }
-
-  if (arguments_.goal !== undefined || arguments_.done_when !== undefined) {
-    throw invalidMutation("goal and done_when are valid only for work Nodes.");
-  }
-  const control = arguments_.control;
-  if (control !== "start" && control !== "end" && control !== "checkpoint") {
-    throw invalidMutation("control must be start, end or checkpoint.");
-  }
-  return Object.freeze({ kind, title, control, required: arguments_.required });
+  return Object.freeze({ title, goal, doneWhen: Object.freeze(doneWhen), required: arguments_.required });
 }
 
 function toCreateNodeInput(projectId: ProjectId, definition: ParsedNodeDefinition): CreateNodeInput {
-  const nodeRequirement = requirement(definition.required);
-  if (definition.kind === "control") {
-    return { projectId, requirement: nodeRequirement, kind: "control", purpose: definition.control!, title: definition.title };
-  }
-  return {
-    projectId,
-    requirement: nodeRequirement,
-    objective: {
-      title: definition.title,
-      description: definition.goal!,
-      acceptanceCriteria: definition.doneWhen!,
-    },
-  };
+  return { projectId, requirement: requirement(definition.required), ...toDefinitionChange(definition) };
 }
 
 function toDefinitionChange(definition: ParsedNodeDefinition): NodeDefinitionChange {
-  return definition.kind === "control"
-    ? { kind: "control", purpose: definition.control!, title: definition.title }
-    : {
-        kind: "work",
-        objective: {
-          title: definition.title,
-          description: definition.goal!,
-          acceptanceCriteria: definition.doneWhen!,
-        },
-      };
+  return {
+    objective: {
+      title: definition.title,
+      description: definition.goal,
+      acceptanceCriteria: definition.doneWhen,
+    },
+  };
 }
 
 function requirement(required: boolean): NodeRequirement {
@@ -393,7 +356,7 @@ function nodeFailureMessage(error: NodeError): string {
     case "node-not-found":
       return "The requested Node does not exist in the current Project Roadmap.";
     case "invalid-state":
-      return "The Node cannot be edited in its current state. Node definitions may change only while locked or idle, and Node kind cannot change.";
+      return "The Node cannot be edited in its current state. Node definitions may change only while locked or idle.";
     case "project-unavailable":
       return "The Node can be edited only while the current Project is active.";
     default:

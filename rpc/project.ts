@@ -182,13 +182,11 @@ export interface RoadmapEdgeV1 {
 export interface NodeV1 {
   readonly nodeId: string;
   readonly revision: number;
-  readonly kind: "work" | "control";
   readonly requirement: "required" | "optional";
   readonly status: NodeStatusV1;
   readonly title: string;
   readonly description: string;
   readonly acceptanceCriteria: readonly string[];
-  readonly controlPurpose: "start" | "end" | "checkpoint" | null;
   readonly hasSession: boolean;
   readonly turnActive: boolean;
   readonly actions: NodeActionsV1;

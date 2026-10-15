@@ -81,7 +81,7 @@ describe("Kernel Host project methods", () => {
     expect(detail.roadmap?.edges).toEqual([{ from: first, to: second }]);
     expect(detail.roadmap?.nodes).toEqual([
       expect.objectContaining({
-        nodeId: first, kind: "work", status: "idle", title: "Collect", controlPurpose: null,
+        nodeId: first, status: "idle", title: "Collect",
         hasSession: false, turnActive: false, confirmation: null,
         actions: { run: true, complete: true, skip: true, rework: false, review: true },
       }),

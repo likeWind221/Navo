@@ -12,17 +12,11 @@ export interface NodeSnapshot {
   readonly reworkCount?: number;
 }
 
-export type Node = NodeIdentity & (
-  | { readonly kind: "work"; readonly objective: NodeObjective }
-  | { readonly kind: "control"; readonly purpose: ControlPurpose; readonly title: string }
-);
-
-export type ControlPurpose = "start" | "end" | "checkpoint";
-
-interface NodeIdentity {
+export interface Node {
   readonly id: NodeId;
   readonly projectId: ProjectId;
   readonly requirement: NodeRequirement;
+  readonly objective: NodeObjective;
 }
 
 export type NodeRequirement = "required" | "optional";

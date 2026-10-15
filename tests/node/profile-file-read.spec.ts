@@ -34,7 +34,6 @@ describe("NodeAgent file capability", () => {
       },
     });
 
-    if (node.node.kind !== "work") throw new Error("Expected work Node.");
     const context = {
       projectGoal: project.goal,
       objective: node.node.objective,

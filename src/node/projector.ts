@@ -1,6 +1,6 @@
 import type { NodeId } from "../brand/ids.js";
 import { NodeError } from "./errors.js";
-import type { NodeDefinitionChange, NodeEvent } from "./events.js";
+import type { NodeEvent } from "./events.js";
 import type { NodeObjective, NodeSnapshot, NodeStatus, NodeSubmissionInput } from "./model.js";
 
 export function projectNode(nodeId: NodeId, events: readonly NodeEvent[]): NodeSnapshot | undefined {
@@ -26,21 +26,9 @@ export function projectNode(nodeId: NodeId, events: readonly NodeEvent[]): NodeS
         requirement(event.data.requirement ?? "required");
         objective(event.data.objective);
         snapshot = {
-          node: { id: nodeId, projectId: event.data.projectId, kind: "work", objective: event.data.objective, requirement: event.data.requirement ?? "required" },
+          node: { id: nodeId, projectId: event.data.projectId, requirement: event.data.requirement ?? "required", objective: event.data.objective },
           revision: event.revision,
           status: "locked",
-        };
-        break;
-      }
-      case "control-created": {
-        if (snapshot) invalid("Node was already created.");
-        text(event.data.projectId);
-        requirement(event.data.requirement ?? "required");
-        text(event.data.title);
-        controlPurpose(event.data.purpose);
-        snapshot = {
-          node: { id: nodeId, projectId: event.data.projectId, kind: "control", purpose: event.data.purpose, title: event.data.title, requirement: event.data.requirement ?? "required" },
-          revision: event.revision, status: "locked",
         };
         break;
       }
@@ -52,34 +40,20 @@ export function projectNode(nodeId: NodeId, events: readonly NodeEvent[]): NodeS
         if (event.data.reviewedRevision !== snapshot.revision) invalid("Definition change refers to a stale Node revision.");
         text(event.data.reason);
         requirement(event.data.requirement);
-        validateDefinitionChange(snapshot, event.data.definition);
-        snapshot = event.data.definition.kind === "work"
-          ? {
-              ...snapshot,
-              node: {
-                id: snapshot.node.id,
-                projectId: snapshot.node.projectId,
-                kind: "work",
-                objective: event.data.definition.objective,
-                requirement: event.data.requirement,
-              },
-            }
-          : {
-              ...snapshot,
-              node: {
-                id: snapshot.node.id,
-                projectId: snapshot.node.projectId,
-                kind: "control",
-                purpose: event.data.definition.purpose,
-                title: event.data.definition.title,
-                requirement: event.data.requirement,
-              },
-            };
+        objective(event.data.definition?.objective);
+        snapshot = {
+          ...snapshot,
+          node: {
+            id: snapshot.node.id,
+            projectId: snapshot.node.projectId,
+            requirement: event.data.requirement,
+            objective: event.data.definition.objective,
+          },
+        };
         break;
       }
       case "session-bound":
         requireStatus(snapshot, "idle");
-        if (snapshot!.node.kind !== "work") invalid("Control nodes cannot bind Sessions.");
         if (snapshot!.sessionId !== undefined) invalid("Node already owns a Session.");
         text(event.data.sessionId);
         snapshot = { ...snapshot!, sessionId: event.data.sessionId };
@@ -96,7 +70,6 @@ export function projectNode(nodeId: NodeId, events: readonly NodeEvent[]): NodeS
         break;
       case "work-started": {
         requireStatus(snapshot, "idle");
-        if (snapshot!.node.kind !== "work") invalid("Control nodes cannot execute.");
         if (snapshot!.sessionId === undefined) invalid("Working Node requires a Session.");
         const { pendingFeedback: _, ...rest } = snapshot!;
         snapshot = { ...rest, status: "working" };
@@ -128,7 +101,6 @@ export function projectNode(nodeId: NodeId, events: readonly NodeEvent[]): NodeS
       }
       case "review-recorded":
         requireStatus(snapshot, "idle", "submitted", "completing", "skipped");
-        if (snapshot!.node.kind !== "work") invalid("Control nodes cannot be reviewed.");
         if (event.data.turnId !== undefined) text(event.data.turnId);
         text(event.data.reason);
         if (!["complete", "rework", "skip", "escalate"].includes(event.data.decision)) invalid("Invalid review decision.");
@@ -173,17 +145,7 @@ export function immutable<T>(value: T): T {
   return copy;
 }
 
-function validateDefinitionChange(snapshot: NodeSnapshot, definition: NodeDefinitionChange): void {
-  if (definition.kind !== snapshot.node.kind) invalid("Node kind cannot change.");
-  if (definition.kind === "work") {
-    objective(definition.objective);
-    return;
-  }
-  text(definition.title);
-  controlPurpose(definition.purpose);
-}
-
-function objective(value: NodeObjective): void {
+function objective(value: NodeObjective | undefined): void {
   if (!value || typeof value !== "object") invalid("Node objective is required.");
   text(value.title);
   text(value.description);
@@ -194,7 +156,6 @@ function objective(value: NodeObjective): void {
 }
 
 function submission(snapshot: NodeSnapshot, value: NodeSubmissionInput): void {
-  if (snapshot.node.kind !== "work") invalid("Control nodes cannot signal completion.");
   text(value.summary);
   if (!Array.isArray(value.resourceIds) || !Array.isArray(value.remaining) || !Array.isArray(value.criteria)) {
     invalid("Completion signal lists are required.");
@@ -210,10 +171,6 @@ function submission(snapshot: NodeSnapshot, value: NodeSubmissionInput): void {
     }
     text(check.note);
   });
-}
-
-function controlPurpose(value: unknown): void {
-  if (value !== "start" && value !== "end" && value !== "checkpoint") invalid("Invalid control purpose.");
 }
 
 function requireStatus(snapshot: NodeSnapshot | undefined, ...expected: readonly NodeStatus[]): void {

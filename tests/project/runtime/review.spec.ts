@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { createKit, createWorkNode, flushUntil } from "./helpers.js";
 
 describe("ProjectRuntime Human review", () => {
-  it("preserves revision and control-node rules and only unlocks downstream work", async () => {
+  it("lets a Human confirm an idle Node without a Turn and only unlocks downstream work", async () => {
     const { ctx, adapter } = await createKit([]);
     const project = ctx.projects.create({ name: "Project", goal: "Review" });
-    const control = ctx.nodes.create({ projectId: project.id, kind: "control", purpose: "checkpoint", title: "Review" });
+    const control = createWorkNode(ctx, project.id, "Review");
     const next = createWorkNode(ctx, project.id, "Next");
     ctx.roadmaps.create({
       definition: { projectId: project.id, nodes: [control.node.id, next.node.id], edges: [{ from: control.node.id, to: next.node.id }] },

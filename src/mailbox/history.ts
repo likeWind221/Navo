@@ -7,7 +7,7 @@ export function parseMailboxHistory(
   projectId: ProjectId,
   history: readonly unknown[],
   projects: ReadonlyMap<string, unknown> | { get(projectId: string): unknown },
-  nodes: ReadonlyMap<string, { readonly node: { readonly projectId: string; readonly kind: string } } | undefined>,
+  nodes: ReadonlyMap<string, { readonly node: { readonly projectId: string } } | undefined>,
 ): readonly ProjectMessage[] {
   if (projects instanceof Map ? !projects.has(projectId) : projects.get(projectId) === undefined) {
     throw new MailboxError("project-unavailable", "Mailbox restore requires an existing Project.");
@@ -26,7 +26,7 @@ function parseMessage(
   projectId: ProjectId,
   raw: unknown,
   expectedSequence: number,
-  nodes: ReadonlyMap<string, { readonly node: { readonly projectId: string; readonly kind: string } } | undefined>,
+  nodes: ReadonlyMap<string, { readonly node: { readonly projectId: string } } | undefined>,
 ): ProjectMessage {
   if (!raw || typeof raw !== "object") throw new MailboxError("invalid-history", "Mailbox history contains an invalid message.");
   const value = raw as Record<string, unknown>;
@@ -69,7 +69,7 @@ function requireRoute(
   projectId: ProjectId,
   sender: MailboxParticipant,
   recipient: MailboxParticipant,
-  nodes: ReadonlyMap<string, { readonly node: { readonly projectId: string; readonly kind: string } } | undefined>,
+  nodes: ReadonlyMap<string, { readonly node: { readonly projectId: string } } | undefined>,
 ): void {
   const nodeToMain = sender.kind === "node" && recipient.kind === "main";
   const mainToNode = sender.kind === "main" && recipient.kind === "node";
@@ -81,10 +81,10 @@ function requireRoute(
 function requireWorkNode(
   projectId: ProjectId,
   nodeId: NodeId,
-  nodes: ReadonlyMap<string, { readonly node: { readonly projectId: string; readonly kind: string } } | undefined>,
+  nodes: ReadonlyMap<string, { readonly node: { readonly projectId: string } } | undefined>,
 ): void {
   const node = nodes.get(nodeId);
-  if (!node || node.node.projectId !== projectId || node.node.kind !== "work") {
+  if (!node || node.node.projectId !== projectId) {
     throw new MailboxError("node-unavailable", "Mailbox Node must be a work Node in the same Project.");
   }
 }

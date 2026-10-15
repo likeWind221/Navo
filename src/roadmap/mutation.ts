@@ -1,12 +1,12 @@
 import type { NodeId } from "../brand/ids.js";
 import type { RoadmapChange } from "./events.js";
 import { RoadmapError } from "./errors.js";
-import type { RoadmapDefinition, RoadmapSnapshot } from "./model.js";
+import type { RoadmapDefinition } from "./model.js";
 
-export function applyRoadmapChanges(current: RoadmapSnapshot, changes: readonly RoadmapChange[]): RoadmapDefinition {
+export function applyRoadmapChanges(current: RoadmapDefinition, changes: readonly RoadmapChange[]): RoadmapDefinition {
   if (changes.length === 0) throw new RoadmapError("invalid-structure", "Changes must not be empty");
-  let nodes = [...current.graph.definition.nodes];
-  let edges = [...current.graph.definition.edges];
+  let nodes = [...current.nodes];
+  let edges = [...current.edges];
   const position = (id: NodeId): number => {
     const index = nodes.indexOf(id);
     if (index < 0) throw new RoadmapError("invalid-reference", `Node ${id} is not in the roadmap`);
@@ -43,5 +43,5 @@ export function applyRoadmapChanges(current: RoadmapSnapshot, changes: readonly 
       default: throw new RoadmapError("invalid-structure", "Unknown roadmap change");
     }
   }
-  return { projectId: current.graph.definition.projectId, nodes, edges };
+  return { projectId: current.projectId, nodes, edges };
 }

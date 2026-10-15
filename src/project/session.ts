@@ -52,9 +52,9 @@ export class MainSessionService extends Service {
     const project = this.requireProject(input.projectId);
     const binding = requireMainBinding(this.ctx, project.mainSessionId, project.id);
     const profile = createMainAgentProfile(project, input.review !== undefined);
-    const facts = this.ctx.nodes.getByProject(project.id).flatMap(value => value.node.kind === "work"
-      ? [{ kind: "node", id: String(value.node.id), label: value.node.objective.title, state: value.status }]
-      : []);
+    const facts = this.ctx.nodes.getByProject(project.id).map(value => (
+      { kind: "node", id: String(value.node.id), label: value.node.objective.title, state: value.status }
+    ));
     const changes = changedFacts(lastObservedFacts(this.ctx.sessions, binding.sessionId), facts);
     this.ctx.sessions.append({ type: "context-observed", sessionId: binding.sessionId, data: { facts } });
     const turn = await this.ctx.agentRuntime.runTurn({

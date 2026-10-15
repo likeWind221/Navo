@@ -98,7 +98,6 @@ export function createSubmitCompletionTool(ctx: Context): ToolDefinition {
 }
 
 function checks(node: NodeSnapshot, value: JsonValue | undefined): readonly NodeCriterionCheck[] {
-  if (node.node.kind !== "work") invalid("Control Nodes cannot submit completion.");
   const criteria = node.node.objective.acceptanceCriteria;
   if (!Array.isArray(value)) invalid("criteria must be an array.");
   const byIndex = new Map<number, NodeCriterionCheck>();

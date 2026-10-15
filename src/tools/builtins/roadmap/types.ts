@@ -1,4 +1,4 @@
-import type { ControlPurpose, NodeStatus } from "../../../node/model.js";
+import type { NodeStatus } from "../../../node/model.js";
 
 export type AgentRoadmapView = EmptyAgentRoadmapView | ReadyAgentRoadmapView;
 
@@ -12,44 +12,20 @@ export interface ReadyAgentRoadmapView {
   readonly nodes: readonly AgentRoadmapNode[];
 }
 
-export type AgentRoadmapNode = AgentRoadmapWorkNode | AgentRoadmapControlNode;
-
-interface AgentRoadmapNodeBase {
+export interface AgentRoadmapNode extends AgentNodeContent {
   readonly id: string;
-  readonly title: string;
-  readonly required: boolean;
-  readonly status: NodeStatus;
   readonly depends_on: readonly string[];
 }
 
-export interface AgentRoadmapWorkNode extends AgentRoadmapNodeBase {
-  readonly kind: "work";
-  readonly goal: string;
-  readonly done_when: readonly string[];
-}
-
-export interface AgentRoadmapControlNode extends AgentRoadmapNodeBase {
-  readonly kind: "control";
-  readonly control: ControlPurpose;
-}
-
-export type AgentNodeView = AgentWorkNodeView | AgentControlNodeView;
-
-interface AgentNodeViewBase {
+export interface AgentNodeView extends AgentNodeContent {
   readonly id: string;
   readonly version: number;
+}
+
+interface AgentNodeContent {
   readonly title: string;
   readonly required: boolean;
   readonly status: NodeStatus;
-}
-
-export interface AgentWorkNodeView extends AgentNodeViewBase {
-  readonly kind: "work";
   readonly goal: string;
   readonly done_when: readonly string[];
-}
-
-export interface AgentControlNodeView extends AgentNodeViewBase {
-  readonly kind: "control";
-  readonly control: ControlPurpose;
 }
