@@ -125,7 +125,7 @@
 
 - [M1.4 Navo 使用订阅模型完成工作](93-devlog-m1-4-openai.md)：Host 配置与 OpenAIAdapter 接入，gpt-6-luna 真实文本、read 续接、取消、重启凭据复用与主动刷新通过；本机与当前 head CI 通过，PR #54 已合入。
 - [BUG-009 Responses namespace 必填描述](94-bugfix-bug-009-namespace.md)：真实 HTTP 400 的定位、最小协议补齐及回归边界。
-- [BUG-010 Roadmap 工具参数与运行时约束不一致](99-bugfix-bug-010-roadmap-schema.md)：gpt-6-luna 无法创建 Roadmap 的根因、双数组扁平参数尝试与 Qwen 首调合法率对照（14/15 → 12/15，已回退），后续候选方向，以及 2026-10-15 删除控制节点的修复与 gpt-6-luna / gpt-6-sol 真实复验（规划通过，Qwen 与 Electron 验收待本机）。
+- [BUG-010 Roadmap 工具参数与运行时约束不一致](99-bugfix-bug-010-roadmap-schema.md)：gpt-6-luna 无法创建 Roadmap 的根因、双数组扁平参数尝试与 Qwen 首调合法率对照（14/15 → 12/15，已回退），后续候选方向，以及 2026-10-15 删除控制节点、拆分 Roadmap 修改工具的修复与 gpt-6-luna / gpt-6-sol 真实复验（规划与改计划通过，Qwen 与 Electron 验收待本机）。
 - [BUG-011 重启后节点与资源列表顺序改变](103-bugfix-bug-011-restart-order.md)：恢复时按 UUID 读取导致列表顺序改变的证据与修复；事件历史改按 owner 首条事件的写入顺序回放，附重启顺序回归测试。
 
 - [ChatGPT 订阅模型接入可行性调研](85-devlog-chatgpt-provider-research.md)：对照 Pi 新旧 OpenAI 接入与官方 Sign in with ChatGPT；记录授权、Responses 限制、Navo 适配边界及尚未实测的账号准入。

@@ -67,7 +67,7 @@ export function scenario(): Scenario {
     }),
     step(request => {
       expect(resultText(request, "consume-evidence")).toContain("EVIDENCE_BODY");
-      return call("forbidden-replan", "modify_roadmap", { base_version: 1, action: "remove_node", node_id: id("evidence"), reason: "Node cannot replan" });
+      return call("forbidden-replan", "remove_node", { base_version: 1, node_id: id("evidence"), reason: "Node cannot replan" });
     }),
     step(request => {
       expect(resultText(request, "forbidden-replan")).toContain("not allowed");
@@ -82,11 +82,11 @@ export function scenario(): Scenario {
     }),
     step(request => {
       expect(resultText(request, "replan-read")).toContain("Roadmap version: 1");
-      return call("add-validation", "modify_roadmap", { base_version: 1, action: "add_node", reason: "Resolve synthesis blocker", ...work("validation", [id("evidence")]) });
+      return call("add-validation", "add_node", { base_version: 1, index: null, reason: "Resolve synthesis blocker", ...work("validation", [id("evidence")]) });
     }),
     step(request => {
       mapping(request, "add-validation", "validation");
-      return call("stale-connect", "modify_roadmap", { base_version: 1, action: "connect", from_node_id: id("validation"), to_node_id: id("synthesis"), reason: "Stale plan" });
+      return call("stale-connect", "set_dependency", { base_version: 1, connected: true, from_node_id: id("validation"), to_node_id: id("synthesis"), reason: "Stale plan" });
     }),
     step(request => {
       expect(resultText(request, "stale-connect")).toContain("Call read_roadmap again");
@@ -94,7 +94,7 @@ export function scenario(): Scenario {
     }),
     step(request => {
       expect(resultText(request, "refresh-plan")).toContain("Roadmap version: 2");
-      return call("connect-validation", "modify_roadmap", { base_version: 2, action: "connect", from_node_id: id("validation"), to_node_id: id("synthesis"), reason: "Validation before synthesis" });
+      return call("connect-validation", "set_dependency", { base_version: 2, connected: true, from_node_id: id("validation"), to_node_id: id("synthesis"), reason: "Validation before synthesis" });
     }),
     answer("Validation inserted; synthesis must wait"),
 

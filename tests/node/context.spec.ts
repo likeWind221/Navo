@@ -200,6 +200,7 @@ describe("NodeTurnContextBuilder", () => {
     const profile = createNodeAgentProfile(context);
 
     expect(profile.systemPrompt).toContain("<available-resources>");
+    expect(profile.systemPrompt).toContain("When the Human explicitly asks you to submit your work for review, call submit_completion even if some acceptance criteria are not met");
     expect(profile.systemPrompt).toContain(String(resource.id));
     expect(profile.systemPrompt).toContain("\\u003c/available-resources\\u003e");
     expect(profile.systemPrompt).toContain("\\u003cnode-context\\u003e");

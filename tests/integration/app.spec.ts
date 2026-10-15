@@ -14,7 +14,7 @@ import { READ_MAILBOX_TOOL_NAME } from "../../src/tools/builtins/mailbox/read.js
 import { SUBMIT_REVIEW_TOOL_NAME } from "../../src/tools/builtins/project/review.js";
 import { READ_NODE_TURN_TOOL_NAME } from "../../src/tools/builtins/project/turnlog.js";
 import { SET_RESOURCE_ACCESS_TOOL_NAME } from "../../src/tools/builtins/resource/access.js";
-import { MODIFY_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/modify-roadmap.js";
+import { ROADMAP_MUTATION_TOOL_NAMES } from "../../src/tools/builtins/roadmap/modify.js";
 import { SET_PROJECT_GOAL_TOOL_NAME } from "../../src/tools/builtins/project/goal.js";
 import { READ_NODE_TOOL_NAME } from "../../src/tools/builtins/roadmap/read-node.js";
 import { READ_ROADMAP_TOOL_NAME } from "../../src/tools/builtins/roadmap/read.js";
@@ -38,7 +38,7 @@ describe("Navo application integration", () => {
       tools: { search: { adapter: new MockSearchAdapter([]) } },
     });
     expect(app.tools.schemas().map((tool) => tool.name).sort())
-      .toEqual([...NODE_AGENT_TOOL_NAMES, SET_RESOURCE_ACCESS_TOOL_NAME, READ_MAILBOX_TOOL_NAME, SUBMIT_REVIEW_TOOL_NAME, READ_NODE_TURN_TOOL_NAME, READ_ROADMAP_TOOL_NAME, READ_NODE_TOOL_NAME, CREATE_ROADMAP_TOOL_NAME, MODIFY_ROADMAP_TOOL_NAME, SET_PROJECT_GOAL_TOOL_NAME].sort());
+      .toEqual([...NODE_AGENT_TOOL_NAMES, SET_RESOURCE_ACCESS_TOOL_NAME, READ_MAILBOX_TOOL_NAME, SUBMIT_REVIEW_TOOL_NAME, READ_NODE_TURN_TOOL_NAME, READ_ROADMAP_TOOL_NAME, READ_NODE_TOOL_NAME, CREATE_ROADMAP_TOOL_NAME, ...ROADMAP_MUTATION_TOOL_NAMES, SET_PROJECT_GOAL_TOOL_NAME].sort());
     expect(app.nodes).toBeDefined();
     expect(app.nodeSessions).toBeDefined();
     const sessionId = createSessionId("integration-loop");

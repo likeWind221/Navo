@@ -5,7 +5,7 @@
 ## 当前状态
 
 - [x] BUG-009：Responses 工具 namespace 缺少必填 description，真实订阅请求返回 HTTP 400（M1.4 已补齐；真实文本/read、本机完整验证与当前 head CI 通过，PR #54 已合入）。笔记：[94](94-bugfix-bug-009-namespace.md)。
-- [ ] BUG-010：gpt-6-luna 为 `create_roadmap` 生成跨 Node 分支字段，运行时连续拒绝，真实 Project 无法创建 Roadmap（2026-10-15 已删除控制节点、Node 只剩一种形状，离线验证通过，待真实模型验收）。笔记：[99](99-bugfix-bug-010-roadmap-schema.md)。
+- [ ] BUG-010：gpt-6-luna 为 `create_roadmap` 生成跨 Node 分支字段，运行时连续拒绝，真实 Project 无法创建 Roadmap（2026-10-15 已删除控制节点并把 Roadmap 修改工具按动作拆分；gpt-6-luna / gpt-6-sol 真实复验规划与修改计划均通过，Qwen 对照与 F5.4 Electron 验收待本机）。笔记：[99](99-bugfix-bug-010-roadmap-schema.md)。
 - [x] BUG-011：重启后节点列表从创建顺序变为 ID 顺序（2026-10-15 F10.5 发现；同日修复：存储按每个 owner 首条事件的写入顺序回放，资源列表经核实本不受影响）。笔记：[103](103-bugfix-bug-011-restart-order.md)。
 
 2026-09-22：登记 4 项未关闭问题，尚未实施生产修复。用户明确要求将已发现问题转入此表后先合并 F9.8 阶段成果；本次允许带已知真实验收失败合并，不改变后续验证门禁，也不声称真实模型闭环已通过。阶段交付见 [PR #30](https://github.com/likeWind221/Navo/pull/30)。
@@ -46,6 +46,8 @@
 2026-10-15：分支 `fix/bug-010-remove-control-node` 按用户决定删除控制节点（start / end / checkpoint）：每个 Roadmap Node 都是带目标与完成标准的工作节点，`create_roadmap` / `modify_roadmap` 只接受这一种字段全部必填的形状，`NodeV1` 去掉 `kind` / `controlPurpose`；旧数据库中的控制节点在恢复时丢弃并把前后节点直接相连。离线验证通过，真实模型（Qwen 基线、gpt-6-luna、gpt-6-sol）尚未复验，因此保持未勾选。详见 [99](99-bugfix-bug-010-roadmap-schema.md)。
 
 2026-10-15：BUG-010 真实模型复验（云端容器）：gpt-6-luna `scripts/goal.ts` 5 个场景全部通过，3 次 `create_roadmap` 首调均合法；gpt-6-sol 在 F10.5 场景中首次 `create_roadmap` 即成功。F10.5 后续回合因 Node 拒绝提交未满足标准的作业而中断，与本 Bug 无关。Qwen 对照与 F5.4 Electron 真实验收仍待本机完成，保持未勾选。详见 [99](99-bugfix-bug-010-roadmap-schema.md)。
+
+2026-10-15：BUG-010 同根因扩展到 `modify_roadmap`：该工具用 `action` 承载 6 个动作并公布扁平 Schema，非当前动作的字段只在运行时拒绝；gpt-6-sol 在 F10.5 第 6 回合为 `edit_node` 填满所有字段的占位值，连续 13 次被拒。已拆为 `add_node`、`edit_node`、`remove_node`、`set_dependency`、`reorder_nodes` 五个参数全部必填的工具；复验中 sol 首次 `edit_node` 即成功。同时修正 Node 拒绝 Human 明确提交请求的问题。仍待本机 Qwen 对照与 F5.4 Electron 验收，保持未勾选。详见 [99](99-bugfix-bug-010-roadmap-schema.md)。
 
 ## 待修复表
 

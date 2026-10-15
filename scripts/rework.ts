@@ -44,7 +44,7 @@ async function main() {
     await app.projectWorkspaces.create(projectId, root);
     const turns: Execution[] = [];
     const node = (title: string) => {
-      const value = app.nodes.getByProject(projectId).find(value => value.node.objective.title === title);
+      const value = app.nodes.getByProject(projectId).find(value => value.node.objective.title.trim().toLowerCase() === title);
       assert(value, `Missing node ${title}`);
       return value;
     };
@@ -86,7 +86,7 @@ async function main() {
     const synthesisId = node("synthesis").node.id;
     assert.equal(status(synthesisId).status, "locked");
 
-    await run("02-draft", () => nodeTurn(evidenceId, "Publish the existing workspace file draft.txt as a text/plain resource, then submit your work with submit_completion. Do not edit files and do not use the internet."));
+    await run("02-draft", () => nodeTurn(evidenceId, "Publish the existing workspace file draft.txt as a text/plain resource, then submit it for review with submit_completion now, even if an acceptance criterion is not met: mark each unmet criterion as not satisfied and say what is missing, so the reviewer can decide. Do not edit files and do not use the internet."));
     assert.equal(status(evidenceId).status, "submitted", "evidence did not submit");
     assert.equal(status(synthesisId).status, "locked");
 

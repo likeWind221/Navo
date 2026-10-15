@@ -88,3 +88,26 @@ DeepSeek Harness 对照（本机 `D:\Program\Miracle\kernel`，commit `277c141`�
 - 证据（未入库）：容器 scratchpad 的 `goal-luna2/`、`rework-sol5/` 与各 `*-520/` 目录。
 - 仍未验证：Qwen 本机 5 轮首调合法率对照、F5.4 预填 / 空目标 Electron 真实验收（需本机），因此 BUG-010 保持未勾选。
 
+## 2026-10-15 修复：拆分 Roadmap 修改工具（同一根因）
+
+### 现象与根因
+
+- F10.5 场景调整后（第 2 回合由 Human 明确要求 Node 先提交未标来源的草稿），gpt-6-sol 走到第 6 回合：Main 判完成后想用 `modify_roadmap` 的 `edit_node` 改写 synthesis，连续 13 次被拒，回合在 16 步上限处 blocked。
+- 根因与本 Bug 相同：`modify_roadmap` 用 `action` 区分 6 个动作，公布一个扁平 Schema，非当前动作的字段只在运行时由 `assertOnly` 拒绝。sol 每次为所有字段填占位值（`key: ""`、`depends_on: []`、`index: 0`、`from_node_id: ""` 等），报错后只改写 `reason`。该拒绝规则在删除控制节点前已存在，不是回归。
+
+### 修复内容
+
+- 按行业惯例（参数互不重叠的动作拆为单一职责工具；严格 Schema 下字段全部必填，可选值用可为 null 表达）把 `modify_roadmap` 拆为：`add_node`（`index` 为 `["integer","null"]`，null 追加到末尾）、`edit_node`、`remove_node`、`set_dependency`（`connected` 为 true 连接、false 断开）、`reorder_nodes`。每个工具只公布自己的参数，全部必填、`additionalProperties: false`，多余或缺失字段由 `ToolService` 结构校验拒绝。
+- 代码：共用部分（Main 身份校验、`base_version` / `reason`、错误提示、结果渲染）在 `src/tools/builtins/roadmap/modify.ts`；`modify/node.ts`、`modify/graph.ts` 各放三个、两个工具；原 373 行的 `modify-roadmap.ts` 删除。`src/tools/schema.ts` 新增 `[string|number|integer|boolean, "null"]` 类型支持。Main 工具从 13 个变为 17 个。
+- 未采用：把空字符串 / 空数组视为未填（Schema 与运行时再次分叉，且 `index: 0` 无法区分）；`anyOf` 联合（`ToolService` 不支持，且 Qwen 在复杂结构上易写坏）。
+- 复验中另发现 Node 提交规则缺口：Node 提示写“Do not submit clearly unfinished work”，sol 在 Human 明确要求提交复核时仍拒绝（两次运行中一次照做、一次拒绝）。经用户同意，Node 提示与 `submit_completion` 说明补充：Human 明确要求时提交，并把未满足的标准标为未满足、写明缺什么；Node 仍不会主动提交未完成作业。
+- 场景调整（`scripts/rework.ts`，经用户选择方案 A）：draft 保持未标来源，第 2 回合由 Human 要求先提交复核；节点标题匹配改为不区分大小写（sol 曾把标题写成 `Evidence`）。
+
+### 验证结果与边界
+
+- 离线：`pnpm typecheck` 通过（另用覆盖 `src`、`tests`、全部 `scripts/**` 的临时 tsconfig 检查无错误）；`pnpm test` 662 通过、6 失败、3 跳过，6 项为容器环境已知失败；rpc 46/46。新增测试覆盖五个工具的行为、原样回放 sol 的占位字段被拒、`index: null` / `index: 0`、缺少 `connected` 被拒、可为 null 类型的校验与非法组合，以及 Node 提示中的新规则。
+- gpt-6-sol F10.5（`scripts/rework.ts`）：前 6 个回合通过——首次 `create_roadmap` 成功；Node 按要求提交草稿；Main 判返工；重启前后状态一致；Node 补交；Main 判完成并首次 `edit_node` 即成功（拆分前 13 次被拒）。第 6 回合 Main 选择把 synthesis 改为“暂定推荐并说明需独立验证”，而非新增验证节点，未满足场景断言，第 7–11 回合未执行；经用户决定暂不继续调整场景。
+- gpt-6-luna 回归（`scripts/goal.ts`，拆分与提交规则修改后）：5 个场景全部通过，3 次 `create_roadmap` 首调均合法。
+- 基础设施噪声：多次运行中 `/v1/responses` 间歇返回 HTTP 520，外层 `fetch` 包装透明重试后均为 200，不影响模型行为；原因未查明。
+- 仍未验证：Qwen 本机首调合法率（工具形状变化，需重测基线）、F5.4 预填 / 空目标 Electron 真实验收、F10.5 第 7–11 回合。BUG-010 保持未勾选。
+

@@ -55,7 +55,7 @@ const schema: JsonObject = {
 export function createSubmitCompletionTool(ctx: Context): ToolDefinition {
   return {
     name: SUBMIT_COMPLETION_TOOL_NAME,
-    description: "Submit this Node's work for review when you believe the objective is complete. The Node then waits for confirmation and this Turn ends immediately; it does not complete the Node or unlock other Nodes.",
+    description: "Submit this Node's work for review when you believe the objective is complete, or when the Human explicitly asks you to submit it for review; in that case mark every unmet criterion as not satisfied and say what is missing. The Node then waits for confirmation and this Turn ends immediately; it does not complete the Node or unlock other Nodes.",
     parameters: schema,
     execute(arguments_, execution) {
       try {
