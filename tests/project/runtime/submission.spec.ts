@@ -55,7 +55,7 @@ describe("Node completion signal and Human review", () => {
       },
     });
     expect(ctx.nodes.get(next)?.status).toBe("locked");
-    expect(ctx.projectRuntime.nodeActions(project.id, first)).toEqual({ run: false, complete: true, skip: true, rework: true });
+    expect(ctx.projectRuntime.nodeActions(project.id, first)).toEqual({ run: false, complete: true, skip: true, rework: true, review: true });
     expect(() => ctx.projectRuntime.continueNode({ projectId: project.id, nodeId: first, text: "More" }))
       .toThrow(expect.objectContaining({ code: "invalid-state" }));
 

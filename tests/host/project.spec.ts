@@ -83,10 +83,10 @@ describe("Kernel Host project methods", () => {
       expect.objectContaining({
         nodeId: first, kind: "work", status: "idle", title: "Collect", controlPurpose: null,
         hasSession: false, turnActive: false, confirmation: null,
-        actions: { run: true, complete: true, skip: true, rework: false },
+        actions: { run: true, complete: true, skip: true, rework: false, review: true },
       }),
       expect.objectContaining({
-        nodeId: second, status: "locked", actions: { run: false, complete: false, skip: true, rework: false },
+        nodeId: second, status: "locked", actions: { run: false, complete: false, skip: true, rework: false, review: false },
       }),
     ]);
 
@@ -94,7 +94,7 @@ describe("Kernel Host project methods", () => {
     const archived = await call(client, projectGetMethod, { projectId: created.projectId });
     expect(archived.project.status).toBe("archived");
     expect(archived.roadmap?.nodes.map(node => node.actions))
-      .toEqual([0, 1].map(() => ({ run: false, complete: false, skip: false, rework: false })));
+      .toEqual([0, 1].map(() => ({ run: false, complete: false, skip: false, rework: false, review: false })));
   });
 
   it("pages the Mailbox by sequence and lists Resource metadata only", async () => {

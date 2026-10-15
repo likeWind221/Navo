@@ -16,10 +16,15 @@ export interface NodeActions {
   readonly complete: boolean;
   readonly skip: boolean;
   readonly rework: boolean;
+  readonly review: boolean;
 }
 
 export interface ProjectNodeTurnInput extends NodeSessionMessageInput {
   readonly projectId: ProjectId;
+}
+
+export interface ProjectReviewTurnInput extends MainSessionMessageInput {
+  readonly nodeId: NodeId;
 }
 
 declare module "cordis" {
@@ -29,7 +34,7 @@ declare module "cordis" {
 }
 
 export class ProjectRuntime extends Service {
-  static inject = ["projects", "nodes", "roadmaps", "nodeSessions", "mainSessions"];
+  static inject = ["projects", "nodes", "roadmaps", "nodeSessions", "mainSessions", "reviews"];
 
   private readonly activeNodes = new Map<NodeId, ActiveTurn>();
   private readonly activeMains = new Map<ProjectId, ActiveTurn>();
@@ -59,6 +64,25 @@ export class ProjectRuntime extends Service {
       signal => this.ctx.mainSessions.sendMessage({ ...input, signal }));
   }
 
+  startReview(input: ProjectReviewTurnInput): Promise<MainSessionTurnResult> {
+    this.requireActiveProject(input.projectId);
+    this.requireProjectNode(input.projectId, input.nodeId);
+    if (this.activeMains.has(input.projectId)) {
+      throw new ProjectError("turn-active", "Main already has a Human-started Turn in progress.");
+    }
+    this.requireNodeAvailable(input.nodeId);
+    this.ctx.reviews.requireReviewable(input.projectId, input.nodeId);
+    const { nodeId, ...turn } = input;
+    return this.runReserved(input.projectId, this.activeMains, input.projectId, input.signal, async (signal) => {
+      const checklist = this.ctx.reviews.begin(input.projectId, nodeId);
+      try {
+        return await this.ctx.mainSessions.sendMessage({ ...turn, signal, review: { nodeId, checklist } });
+      } finally {
+        this.ctx.reviews.end(input.projectId);
+      }
+    });
+  }
+
   stopMain(projectId: ProjectId): boolean {
     this.requireProject(projectId);
     return this.abort(this.activeMains.get(projectId)?.controller);
@@ -75,7 +99,7 @@ export class ProjectRuntime extends Service {
   }
 
   private canRunNode(projectId: ProjectId, nodeId: NodeId): boolean {
-    if (this.unavailable || this.activeNodes.has(nodeId)) return false;
+    if (this.unavailable || this.activeNodes.has(nodeId) || this.ctx.reviews.activeNodeId(projectId) === nodeId) return false;
 
     const project = this.ctx.projects.get(projectId);
     if (project === undefined || project.status !== "active") return false;
@@ -121,13 +145,17 @@ export class ProjectRuntime extends Service {
   nodeActions(projectId: ProjectId, nodeId: NodeId): NodeActions {
     const node = this.ctx.nodes.get(nodeId);
     const reviewable = !this.unavailable && !this.activeNodes.has(nodeId)
+      && this.ctx.reviews.activeNodeId(projectId) !== nodeId
       && this.ctx.projects.get(projectId)?.status === "active"
       && node?.node.projectId === projectId;
+    const waiting = node?.status === "idle" || node?.status === "submitted";
     return {
       run: this.canStartNode(projectId, nodeId) || this.canContinueNode(projectId, nodeId),
-      complete: reviewable && (node.status === "idle" || node.status === "submitted"),
-      skip: reviewable && (node.status === "locked" || node.status === "idle" || node.status === "submitted"),
+      complete: reviewable && waiting,
+      skip: reviewable && (node.status === "locked" || waiting),
       rework: reviewable && node.status === "submitted",
+      review: reviewable && node.node.kind === "work" && waiting
+        && !this.activeMains.has(projectId) && this.ctx.reviews.get(projectId) === undefined,
     };
   }
 
@@ -163,6 +191,11 @@ export class ProjectRuntime extends Service {
         "invalid-state",
         "Node already has a Human-started Turn in progress.",
       );
+    }
+    for (const project of this.ctx.projects.list()) {
+      if (this.ctx.reviews.activeNodeId(project.id) === nodeId) {
+        throw new NodeError("invalid-state", "Node is under a Main review.");
+      }
     }
   }
 

@@ -10,6 +10,7 @@ import type {
   ControlPurpose,
   NodeConfirmation,
   NodeObjective,
+  NodeReviewInput,
   NodeReworkInput,
   NodeRequirement,
   NodeSnapshot,
@@ -181,6 +182,20 @@ export class NodeStore extends Service {
   requestRework(nodeId: NodeId, rework: NodeReworkInput): NodeSnapshot {
     this.review(nodeId, rework, "submitted");
     return this.append({ type: "rework-requested", nodeId, data: rework });
+  }
+
+  recordReview(nodeId: NodeId, review: NodeReviewInput, feedback: string | undefined): NodeSnapshot {
+    this.review(nodeId, review, "idle", "submitted");
+    const { reason, reviewedRevision } = review;
+    const decision: NodeEventDraft[] = review.decision === "complete"
+      ? [{ type: "completion-confirmed", nodeId, data: { confirmedBy: "main", reason, reviewedRevision } }]
+      : review.decision === "skip"
+        ? [{ type: "node-skipped", nodeId, data: { confirmedBy: "main", reason, reviewedRevision } }]
+        : review.decision === "rework"
+          ? [{ type: "rework-requested", nodeId, data: { requestedBy: "main", feedback: feedback ?? "", reviewedRevision } }]
+          : [];
+    this.dispatch([...decision, { type: "review-recorded", nodeId, data: review }]);
+    return this.get(nodeId)!;
   }
 
   confirmCompletion(nodeId: NodeId, confirmation: NodeConfirmation): NodeSnapshot {

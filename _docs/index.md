@@ -112,6 +112,7 @@
 
 ## 研究与自动审查
 
+- [F10.4b Main 核查节点成果与计划调整](101-devlog-f10-4b-main-review.md)：Human 请 Main 复盘某节点；核查清单（线索）+ `fetch_resource` 查产物 + `read_node_turn` 查过程三层按需核查；`submit_review` 唯一判定（完成 / 返工 / 跳过 / 交给 Human），返工上限 2 次、从未执行的节点不能被 Main 判完成、版本过期则拒绝；复盘期间节点被锁；复盘记录随 Project 保存；`project.turn.v1` 新增 review 目标；Harness auto-review 对照；真实模型验收待同意。
 - [F10.4a 完成信号与待确认](100-devlog-f10-4a-done-signal.md)：Node 用 `submit_completion` 交作业（摘要、产物、逐条自查、未完成事项）后回合立即结束并进入 `submitted`；Human 确认、返工或跳过，返工意见存于 Node 事件并在下一回合开始时送达；工具输出 `endsTurn`；公共契约新增 `submitted`、`submission`、`pendingFeedback` 与 `rework` 动作；Harness goal / structured output 对照。
 - [F10.3 中断处理](98-devlog-f10-3-interruption.md)：启动恢复时确定性收口普通/Main/Node 未闭合 Turn，保守补齐工具结果，并与 working Node 的 work-ended 在同一事务提交；本机完整验证、真实 Host 终止 / 重启验收与代码 head CI 通过，交付见 PR #58。
 
