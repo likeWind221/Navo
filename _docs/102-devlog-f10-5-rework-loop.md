@@ -22,7 +22,7 @@
 
 - **重启方式**：在同一进程内关闭 App，再用同一个数据库文件新建 App。状态全部从磁盘重新读出，不经过内存；跨进程的 Host 重启已由 `tests/host/process.spec.ts` 覆盖，不再重复。
 - **按会话切换脚本**：重启时新的 mock adapter 从上一次已消费的位置接着取脚本，节点 ID 和资源 ID 由脚本从工具结果中取出再回填。这一做法参考 DeepSeek Harness 的 `packages/test-support/llm-replay/README.md`（按会话编排脚本、用 `{{fromRequest:...}}` 从请求回填运行时 ID）。不采用它“录下真实会话再回放”的 fixture：真实运行只保留证据，避免模型输出一变离线测试也跟着变。
-- **比对时忽略列表顺序**：重启前后比较节点和资源时按 ID 排序，原因见下面的 BUG-011。其余内容（含会话事件顺序）严格比对。
+- **比对时忽略列表顺序**：重启前后比较节点和资源时按 ID 排序，原因见下面的 BUG-011。其余内容（含会话事件顺序）严格比对。BUG-011 修复后已改回严格比对（[103](103-bugfix-bug-011-restart-order.md)）。
 - 测试超时设为 20 秒：单独运行约 0.7 秒，全量并发时超过了默认的 5 秒。
 
 ## 坑与发现
@@ -45,4 +45,4 @@
 ## 下一步
 
 - 真实验收被 BUG-010 阻断：先修 BUG-010 再重跑 `scripts/rework.ts`；或者经用户决定，由脚本直接写入初始 Roadmap 以绕开规划阶段。通过后把 F10.5 和 Phase 10 标为 ✅。
-- BUG-011 另起 `fix/bug-011-restart-order` 修复。
+- BUG-011 已在 `fix/bug-011-restart-order` 修复（[103](103-bugfix-bug-011-restart-order.md)）。

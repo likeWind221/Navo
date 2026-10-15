@@ -6,6 +6,7 @@ import { parseSessionHistory } from "../session/history.js";
 import type { StoredHistory } from "./database.js";
 import { StorageError } from "./errors.js";
 import type { RecoveryFailure } from "./recovery.js";
+import { EVENT_HISTORY_QUERY } from "./schema.js";
 
 export interface SessionRecovery {
   readonly histories: ReadonlyMap<string, StoredHistory<string | null>>;
@@ -21,9 +22,7 @@ export function recoverSessions(
 ): SessionRecovery {
   let rows;
   try {
-    rows = db.prepare(
-      "SELECT owner_id, seq, project_id, payload FROM events WHERE domain = 'session' ORDER BY owner_id, seq",
-    ).all();
+    rows = db.prepare(EVENT_HISTORY_QUERY).all("session");
   } catch (error: unknown) {
     throw new StorageError("storage-unavailable", "Stored Session events could not be read.", { cause: error });
   }

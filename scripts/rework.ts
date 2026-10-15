@@ -166,8 +166,8 @@ async function durable(app: Context, projectId: ProjectId, sessions: readonly Se
     project: app.projects.get(projectId),
     workspace: await app.projectWorkspaces.get(projectId),
     roadmap: app.roadmaps.get(projectId),
-    nodes: app.nodes.getByProject(projectId).toSorted((left, right) => left.node.id.localeCompare(right.node.id)),
-    resources: app.resources.listByProject(projectId).toSorted((left, right) => left.id.localeCompare(right.id)),
+    nodes: app.nodes.getByProject(projectId),
+    resources: app.resources.listByProject(projectId),
     mailbox: app.mailbox.getHistory(projectId),
     sessions: sessions.map(sessionId => app.sessions.getEvents(sessionId)),
   };
