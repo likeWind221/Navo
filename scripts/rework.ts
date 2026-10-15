@@ -44,7 +44,7 @@ async function main() {
     await app.projectWorkspaces.create(projectId, root);
     const turns: Execution[] = [];
     const node = (title: string) => {
-      const value = app.nodes.getByProject(projectId).find(value => value.node.objective.title === title);
+      const value = app.nodes.getByProject(projectId).find(value => value.node.objective.title.trim().toLowerCase() === title);
       assert(value, `Missing node ${title}`);
       return value;
     };
