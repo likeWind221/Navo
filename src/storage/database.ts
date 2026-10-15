@@ -7,7 +7,7 @@ import { StorageError } from "./errors.js";
 import { planInterruptionRepair } from "./interruption.js";
 import { buildRecoveryPlan } from "./recovery.js";
 import type { RecoveryPlan } from "./recovery.js";
-import { openDatabase } from "./schema.js";
+import { EVENT_HISTORY_QUERY, openDatabase } from "./schema.js";
 
 export class StorageService extends Service {
   private readonly db: DatabaseSync;
@@ -60,9 +60,7 @@ export class StorageService extends Service {
 
   loadEvents<T extends EventDomain>(domain: T): ReadonlyMap<string, StoredHistory<T extends "session" ? string | null : string>>;
   loadEvents(domain: EventDomain): ReadonlyMap<string, StoredHistory<string | null>> {
-    const rows = read("Stored events could not be read.", () => this.db.prepare(
-      "SELECT owner_id, seq, project_id, payload FROM events WHERE domain = ? ORDER BY owner_id, seq",
-    ).all(domain));
+    const rows = read("Stored events could not be read.", () => this.db.prepare(EVENT_HISTORY_QUERY).all(domain));
     const owners = new Map<string, { readonly projectId: string | null; readonly events: unknown[] }>();
     for (const row of rows) {
       const ownerId = row.owner_id;

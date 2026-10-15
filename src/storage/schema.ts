@@ -7,6 +7,9 @@ import { StorageError } from "./errors.js";
 export const STORAGE_SCHEMA_VERSION = 2;
 export const STORAGE_APPLICATION_ID = 0x4e41564f;
 
+export const EVENT_HISTORY_QUERY =
+  "SELECT owner_id, seq, project_id, payload FROM events WHERE domain = ? ORDER BY min(rowid) OVER (PARTITION BY owner_id), seq";
+
 const EVENTS_SCHEMA = `
 CREATE TABLE events (
   domain     TEXT    NOT NULL,

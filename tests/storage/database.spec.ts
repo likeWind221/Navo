@@ -56,6 +56,27 @@ describe("StorageService", () => {
     expect(second.storage.loadEvents(domain).get("p1")?.events).toEqual([{ sequence: 1 }, { sequence: 2 }]);
   });
 
+  it("reopens owners in the order of their first stored event", async () => {
+    const path = await databasePath();
+    const first = await open(path);
+    const append = (ownerId: string, firstSeq: number) => first.storage.write(
+      tx => tx.appendEvents({ domain: "node", ownerId, projectId: "p1", firstSeq, events: [{ ownerId, firstSeq }] }),
+      () => {},
+    );
+    append("c", 1);
+    append("a", 1);
+    append("c", 2);
+    append("b", 1);
+    append("a", 2);
+    const before = [...first.storage.loadEvents("node")];
+    await close(first);
+
+    const second = await open(path);
+    const after = [...second.storage.loadEvents("node")];
+    expect(after.map(([ownerId, history]) => [ownerId, history.events.length])).toEqual([["c", 2], ["a", 2], ["b", 1]]);
+    expect(after).toEqual(before);
+  });
+
   it("initializes a new database and reads committed events after reopening", async () => {
     const path = await databasePath();
     const first = await open(path);

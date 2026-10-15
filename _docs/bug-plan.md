@@ -6,7 +6,7 @@
 
 - [x] BUG-009：Responses 工具 namespace 缺少必填 description，真实订阅请求返回 HTTP 400（M1.4 已补齐；真实文本/read、本机完整验证与当前 head CI 通过，PR #54 已合入）。笔记：[94](94-bugfix-bug-009-namespace.md)。
 - [ ] BUG-010：gpt-6-luna 为 `create_roadmap` 生成跨 Node 分支字段，运行时连续拒绝，真实 Project 无法创建 Roadmap。笔记：[99](99-bugfix-bug-010-roadmap-schema.md)。
-- [ ] BUG-011：重启后节点与资源列表从创建顺序变为 ID 顺序（2026-10-15 F10.5 发现，仅排查，未修复）。笔记：[103](103-bugfix-bug-011-restart-order.md)。
+- [x] BUG-011：重启后节点列表从创建顺序变为 ID 顺序（2026-10-15 F10.5 发现；同日修复：存储按每个 owner 首条事件的写入顺序回放，资源列表经核实本不受影响）。笔记：[103](103-bugfix-bug-011-restart-order.md)。
 
 2026-09-22：登记 4 项未关闭问题，尚未实施生产修复。用户明确要求将已发现问题转入此表后先合并 F9.8 阶段成果；本次允许带已知真实验收失败合并，不改变后续验证门禁，也不声称真实模型闭环已通过。阶段交付见 [PR #30](https://github.com/likeWind221/Navo/pull/30)。
 
@@ -41,6 +41,8 @@
 
 2026-10-15：F10.5 真实验收（`gpt-6-sol`）复现 BUG-010：用户同意规划后，Main 的 15 次 `create_roadmap` 都为 work 节点附带 `control: "checkpoint"`，全部被拒，回合在 16 步上限处 blocked，F10.5 真实验收停在规划阶段。详见 [99](99-bugfix-bug-010-roadmap-schema.md)。
 
+2026-10-15：分支 `fix/bug-011-restart-order` 修复 BUG-011：事件历史统一按每个 owner 首条事件的 rowid 排列、owner 内按 `seq` 回放，Node 与 Session 列表重启前后保持创建顺序；资源事件以 Project 为 owner，经核实本来就稳定。新增存储层与 NodeStore 重启顺序回归测试，F10.5 恢复严格比较；本机 typecheck 与 667 项测试通过。详见 [103](103-bugfix-bug-011-restart-order.md)。
+
 ## 待修复表
 
 优先级：P1 阻断目标闭环，P2 影响诊断或报告可信度。优先级不代表已确认生产代码缺陷。
@@ -49,7 +51,7 @@
 |---|---|---|---|---|---|
 | BUG-009 | P1 / 后端 | 真实订阅请求因工具 namespace 缺少 description 返回 HTTP 400 | gpt-6-luna 返回 missing_required_parameter；补齐后文本及 read 续接通过，根因已确认 | 真实文本/read、协议回归、本机完整检查和当前 head CI 通过 | [94：修复笔记](94-bugfix-bug-009-namespace.md) |
 | BUG-010 | P1 / 后端 | gpt-6-luna 在目标确认后无法创建 Roadmap，阻断真实 Project 规划与 F5.4 收口 | F5.4 两个独立 Project 均复现：模型为 control 节点发送 `goal` / `done_when`，也曾为 work 节点发送 `control`；运行时按互斥联合拒绝。直接失败点已确认：工具向模型公布的扁平 Schema 允许这些字段，条件约束只写在描述里 | 工具 Schema 与运行时约束一致；非法跨分支字段仍被拒绝；后端目标确认真实验收和 F5.4 预填/空目标 Electron 真实验收均能创建 Roadmap | [99：排查与修复笔记](99-bugfix-bug-010-roadmap-schema.md) |
-| BUG-011 | P2 / 后端 | 重启后 `getByProject` / `listByProject` 的顺序改变，资源列表 RPC、Main 项目事实、节点可见资源和复盘清单的顺序随之改变；数据不受影响 | F10.5 场景观察到节点顺序改变；已证实恢复时按 `ORDER BY owner_id, seq` 读取，Store 按读取顺序插入 `Map`。UI 上的影响根据代码推断，未实际观察 | 重启前后上述列表及依赖它们的 RPC、模型上下文顺序一致；有重启顺序回归测试；F10.5 测试改回严格比较 | [103：排查笔记](103-bugfix-bug-011-restart-order.md) |
+| BUG-011 | P2 / 后端 | 重启后 `getByProject` / `listByProject` 的顺序改变，资源列表 RPC、Main 项目事实、节点可见资源和复盘清单的顺序随之改变；数据不受影响 | F10.5 场景观察到节点顺序改变；已证实恢复时按 `ORDER BY owner_id, seq` 读取，Store 按读取顺序插入 `Map`。UI 上的影响根据代码推断，未实际观察。2026-10-15 已修复：按 owner 首条事件 rowid 回放；资源列表经核实本不受影响 | 重启前后上述列表及依赖它们的 RPC、模型上下文顺序一致；有重启顺序回归测试；F10.5 测试改回严格比较 | [103：排查与修复笔记](103-bugfix-bug-011-restart-order.md) |
 | BUG-001 | P1 / 后端 | synthesis 续接仍读取旧 evidence，报告缺少 validation，无法产出最终推荐 | 首次有效运行第 8 回合；Store 权限检查通过，但未留存该回合请求快照。上下文传递遗漏、模型漏读或旧历史干扰均待确认。2026-10-07 证据确认：新 Resource 已在续接提示中，失败为模型被历史“缺失”结论压过并把名称当 ID；修复后续接 8/8 成功（run 6-13），Resource 引用加固后工具调用零失败 | 留存该回合模型输入和调用结果，定位并处理原因；真实模型读取新 Resource 并形成有依据的结论，同时保持原 Session 和 Human Gate；笔记记录完整复验 | [发现记录](67-devlog-f9.8-longterm-acceptance.md)、[登记与排查边界](68-devlog-bug-tracking.md)、[修复笔记](70-bugfix-bug-001-004-longterm.md) |
 | BUG-002 | P1 / 后端 | validation 注册文件时出现 `Resource source file is unavailable`；模型随后恢复，但严格验收在第 6 回合停止 | 第二次有效运行；未留存失败调用的 path 和底层 I/O 原因。该消息可来自 realpath/stat 的 I/O 失败，不能据此断言一定是模型猜错文件名。2026-10-07：错误已携带 path 与 errno，验收改为“不得有未恢复错误”；run 2-13 均以正确路径注册成功，原错误未复现，原因仍未证实 | 捕获实际参数及失败原因，明确输入文件交接与工具错误恢复的预期；处理已证实问题，真实场景能正确发布/读取所需文件；明确可恢复工具错误的验收标准，不能仅删断言以通过 | [发现记录](67-devlog-f9.8-longterm-acceptance.md)、[登记与排查边界](68-devlog-bug-tracking.md)、[修复笔记](70-bugfix-bug-001-004-longterm.md) |
 | BUG-003 | P2 / 后端 | Main 在 synthesis 实际 idle 时仍报告 locked，误导用户下一步操作 | 首次有效运行的交接回复；属于可观察的文本与事实不一致，具体提示、历史或查询使用原因待确认。回合内 working 与回合后 idle 的正常转换不算此问题。2026-10-07：确认原因是人工确认发生在 Main 对话外且提示无重读规则；修复后状态探针 10/10 本回合读取并答 idle，Main 另收节点状态变化提醒 | 关键状态报告基于当前可信事实；以实际状态转换场景验证报告一致，无法确认时表达未知；保留真实复验文本与对应快照 | [发现记录](67-devlog-f9.8-longterm-acceptance.md)、[登记与排查边界](68-devlog-bug-tracking.md)、[修复笔记](70-bugfix-bug-001-004-longterm.md) |

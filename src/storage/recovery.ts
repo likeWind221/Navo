@@ -17,6 +17,7 @@ import type { ResourceHistoryContext } from "../resource/validation.js";
 import { SessionError } from "../session/errors.js";
 import type { StoredHistory, EventDomain, ProjectEventDomain, WorkspaceBindingRecord } from "./database.js";
 import { StorageError } from "./errors.js";
+import { EVENT_HISTORY_QUERY } from "./schema.js";
 import { recoverSessions } from "./session.js";
 
 export interface RecoveryPlan {
@@ -220,9 +221,7 @@ function readHistories(
   invalid: Set<string>,
   failures: RecoveryFailure[],
 ): ReadonlyMap<string, StoredHistory> {
-  const rows = read(db, `Stored ${domain} events could not be read.`, () => db.prepare(
-    "SELECT owner_id, seq, project_id, payload FROM events WHERE domain = ? ORDER BY owner_id, seq",
-  ).all(domain));
+  const rows = read(db, `Stored ${domain} events could not be read.`, () => db.prepare(EVENT_HISTORY_QUERY).all(domain));
   const owners = new Map<string, { projectId: string; events: unknown[] }>();
   for (const row of rows) {
     const ownerId = row.owner_id;

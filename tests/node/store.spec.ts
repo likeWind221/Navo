@@ -116,6 +116,19 @@ describe("generic Project Nodes", () => {
       .toMatchObject({ status: "skipped", revision: 7 });
   });
 
+  it("keeps Project Nodes in creation order after reopening storage", async () => {
+    const path = await temporaryDatabase(roots, "navo-node-");
+    const { ctx, project, objective } = await kit(path);
+    const ids = Array.from({ length: 8 }, () => ctx.nodes.create({ projectId: project.id, objective }).node.id);
+    ctx.nodes.unlock(ids[0]!, "Ready");
+    const before = ctx.nodes.getByProject(project.id);
+    expect(before.map(snapshot => snapshot.node.id)).toEqual(ids);
+    await close(ctx);
+
+    const restarted = await open(path);
+    expect(restarted.nodes.getByProject(project.id)).toEqual(before);
+  });
+
   it("isolates a Node whose Session collides with the Project Main Session", async () => {
     const path = await temporaryDatabase(roots, "navo-node-");
     const { ctx, project, objective } = await kit(path);
