@@ -262,28 +262,29 @@ Phase 9 明确不做：
 
 ## 8. Phase 10（F10）：可恢复、由 Main 判断完成的长期 Project
 
-**阶段目标：** 让 Project 在应用退出并重新启动后仍能继续推进，并让 Main 在 Human 启动的回合里检查节点成果、判断是否完成：执行者不能自行宣布完成，Main 判断通过即可完成节点，判断不通过时把返工意见发给该节点或修改 Roadmap，形成 PRD 中“执行 -> 验证 -> 再规划”的闭环。Human 仍可直接确认完成或跳过。Human Gate 不变：保存、恢复、完成判断和 Roadmap 变化都不会自动启动任何 Agent Turn；全自动推进在 F11 实现。
+**阶段目标：** 让 Project 在应用退出并重新启动后仍能继续推进，并形成 PRD 中“执行 -> 验证 -> 再规划”的闭环：Node 认为任务完成时发出完成信号，节点进入待确认；Human 可以直接确认完成、发返工意见或跳过，也可以请 Main 复盘；Main 复盘时根据节点成果判定完成、返工或跳过，并按成果调整后续计划。执行者不能自行宣布完成。Human Gate 不变：保存、恢复、完成判断和 Roadmap 变化都不会自动启动任何 Agent Turn；全自动推进在 F11 实现，复用本阶段的完成信号与复盘判定。
 
 **进入条件：** F9.8 的真实验收收口（BUG-001 至 BUG-004 按 [Bug 跟踪表](bug-plan.md) 关闭或经用户明确处置）后开始 F10.1；F10.0 设计调研可以提前进行。F9.9 公共契约交接与 F10 相互独立；F10 若需要向桌面公开新的状态或操作，仍先停止并按共享契约流程确认。
 
-**阶段验收场景：** Human 启动 Node 完成工作并发布产物；Human 启动 Main，Main 检查后判断不通过，把返工意见发给该 Node；此时关闭并重新启动后端，Project、Roadmap、会话、消息、资源与完成记录均可读取，退出时进行中的 Turn 处于明确的已中断状态；Human 再次启动该 Node，Node 在新回合中看到 Main 的返工意见并补做；Human 再次启动 Main，Main 判断通过并完成节点，下游节点随之解锁。
+**阶段验收场景：** Human 启动 Node 完成工作、发布产物并发出完成信号，节点进入待确认；Human 请 Main 复盘，Main 检查后判断不通过，把返工意见发给该 Node；此时关闭并重新启动后端，Project、Roadmap、会话、消息、资源与完成记录均可读取，退出时进行中的 Turn 处于明确的已中断状态；Human 再次启动该 Node，Node 在新回合中看到 Main 的返工意见并补做；Human 再次启动 Main，Main 判断通过并完成节点，下游节点随之解锁。
 
 ```text
 Human start Node ---> Node works / publishes Resource
                               |
-Human start Main ---> Main reads Node goal, criteria, Resources, Mailbox
+                Node sends done signal -> Node is awaiting confirmation
                               |
-            +-----------------+------------------+
-            | pass                               | not yet
-            v                                    v
-  Main completes Node                 Main sends rework feedback to Node
-  (reason + reviewed revision)        and/or modifies Roadmap
-            |                                    |
-            v                                    v
-  downstream Nodes unlock             Human starts Node again;
-                                      Node sees the feedback
-
-  Human may still confirm completion or skip directly at any time.
+        +---------------------+----------------------+
+        | Human decides directly                     | Human asks Main to review
+        v                                            v
+  complete / rework feedback / skip     Main reads turn report, goal, criteria,
+                                        Resources, Mailbox; gives one decision:
+                                        complete / rework feedback / skip / ask Human
+                                        and may modify downstream Roadmap
+        |                                            |
+        +---------------------+----------------------+
+                              v
+  complete -> downstream Nodes unlock;  rework -> Human starts Node again,
+  Node sees the feedback in its next Turn
 [ all facts above survive restart; interrupted Turns are never resumed automatically ]
 ```
 
@@ -298,12 +299,14 @@ Human start Main ---> Main reads Node goal, criteria, Resources, Mailbox
 | ✅ | F10.2 会话与执行记录恢复 | Main / Node Session 与工具记录 | 让 Main 与 Node 的会话消息、工具调用与结果在重启后可以继续使用，后续 Turn 能接着原上下文工作 | 重启后同一 Session 可继续发起 Turn 且上下文完整；恢复过程不重新执行任何工具副作用 |
 | ✅ | F10.2a 普通会话保存与重启续接 | 通用 Session 与 Project 会话归属 | 让不属于 Project 的普通会话也能保存消息、工具调用与结果，并在重启后按原 Session 继续上下文；Main / Node 保持既有保存与恢复能力 | 实际关闭并重启 Host 后，普通会话按同一 Session ID 续接且上下文完整；恢复不运行模型或工具；保存失败不表现为成功；旧版本已保存的 Project 会话可继续恢复；普通会话损坏只隔离该会话，Project 损坏隔离规则保持；本步不交付会话列表或历史 UI |
 | ✅ | F10.3 中断处理 | 通用 Session 与 Project 执行控制面 | 让应用退出时正在进行的普通 / Main / Node Turn 在重启后处于明确、可解释的稳定状态，由用户决定是否继续 | 生产实现、本机完整检查、真实 Host 终止 / 重启验收与代码 head CI 已通过；重启后无悬挂执行状态，不自动续跑或标记完成；Node 与 Session 在同一事务收口，见 [PR #58](https://github.com/likeWind221/Navo/pull/58) 与 [98](98-devlog-f10-3-interruption.md) |
-| ⬜ | F10.4 Main 判断节点完成与返工反馈 | Main 协调 / Node 完成 / Main 到 Node 消息 | 让 Main 在 Human 启动的回合里检查节点目标、完成标准与产物，判断通过时直接完成该节点并写明理由，判断不通过时把返工意见发给该节点，Node 下一次回合开始时能看到发给自己的意见；Human 仍可直接确认完成或跳过。该能力同时是 F11 全自动推进的基础 | Main 只能完成当前 Project 中处于空闲的 work 节点，且只认它检查过的节点版本，版本已变化则被拒绝；Node 不能完成自己，Main 不能跳过节点；完成记录区分由 Human 还是 Main 判断；返工意见只送达指定节点、不改变节点的目标与完成标准、不启动任何 Agent；完成记录与返工意见随 Project 保存与恢复；真实模型验证“成果达标则完成”“成果不足则发返工意见而不完成”“节点从未执行则不完成”“Node 下一回合按意见补做”四个场景；返工意见在桌面的展示按共享契约流程另行提出并交由前端计划 |
-| ⬜ | F10.5 F10 长程集成验收 | 后端集成测试与阶段记录 | 用一个包含 Main 判断不通过并发出返工意见、Node 按意见返工、重启恢复和最终由 Main 完成的完整长程场景证明 F10 能力共同工作 | 离线完整场景可重复通过；真实模型验收保留完整记录，失败现场可用于定位 |
+| ⬜ | F10.4 Main 判断节点完成与返工反馈 | Main 协调 / Node 完成 / Main 到 Node 消息 | 让 Node 能声明任务完成并等待确认，让 Human 或 Main 根据节点成果判定完成、返工或跳过，并让 Main 按成果调整后续计划；按下列 F10.4a、F10.4b 分步交付，同时是 F11 全自动推进的基础。2026-10-15 设计修订见 [80](80-devlog-f10-0-design.md) D11 | 子步骤全部完成 |
+| ⬜ | F10.4a 完成信号与待确认 | Node 完成声明 / Human 确认 | 让 Node 在认为任务完成时发出完成信号，附成果摘要、产物和逐条对照完成标准的说明，节点随即进入待确认；Human 看到“Node 认为已完成”后可确认完成、发返工意见或跳过，Node 在下一回合开始时看到发给自己的返工意见 | Node 不能把自己标记为完成；待确认节点不能再被启动、下游不解锁；返工意见只送达指定节点、不改变其目标与完成标准，节点回到可启动状态；确认、返工与跳过只认当时的节点版本；待确认状态与返工意见随 Project 保存与恢复；完成判断不自动启动任何 Agent；待确认状态与返工意见的公开展示开始前按共享契约流程确认并交由前端计划 |
+| ⬜ | F10.4b Main 复盘判定与计划调整 | Main 协调 / Roadmap 反馈 | 让 Human 可以请 Main 复盘某个节点回合：Main 依据系统整理的回合报告检查成果，给出完成、返工意见、跳过或交给 Human 中的一个判定，并在同一回合按成果调整下游计划 | 每次复盘必须且只能给出一个判定，版本已变化则被拒绝；Main 可以写明理由跳过节点；同一节点返工意见超过 2 次后只能交给 Human；完成记录区分由 Human 还是 Main 判断，复盘记录随 Project 保存与恢复；回合报告不依赖 Node 主动汇报；节点结束后不自动复盘；真实模型验证“成果达标则完成”“成果不足则发返工意见而不完成”“节点从未执行则不完成”“Node 下一回合按意见补做”“Main 从成果自行发现需要调整下游并修改计划”五个场景 |
+| ⬜ | F10.5 F10 长程集成验收 | 后端集成测试与阶段记录 | 用一个包含完成信号、Main 复盘判定不通过并发出返工意见、Node 按意见返工、Main 按成果调整计划、重启恢复和最终由 Main 完成的完整长程场景证明 F10 能力共同工作 | 离线完整场景可重复通过；真实模型验收保留完整记录，失败现场可用于定位 |
 
 ## 9. Phase 11（F11）：全自动推进与上下文压缩
 
-**阶段目标：** 让 Project 可以在人工推进与全自动推进两种模式间选择。全自动模式下由 Main 代替用户推进：Node 回合结束后系统启动 Main 审查回合，Main 决定完成、发返工意见、修改 Roadmap 或暂停求助，系统按决定启动返工的 Node 或下一个已解锁的 Node，直到项目完成、触发停止条件或需要用户介入。长时间运行的会话通过上下文压缩持续工作。人工模式的 Human Gate 保持不变。
+**阶段目标：** 让 Project 可以在人工推进与全自动推进两种模式间选择，模式只由用户切换。两种模式共用 F10.4 的完成信号、复盘判定与计划反馈，区别在于节点启动、完成确认与跳过由谁把控：全自动模式下，依赖已满足的空闲节点自动启动，Node 回合结束后系统触发 Main 复盘，Main 判定完成、发返工意见、跳过或暂停求助并调整计划，系统继续推进，直到项目完成、触发停止条件或需要用户介入。长时间运行的会话通过上下文压缩持续工作。人工模式的 Human Gate 保持不变。
 
 **进入条件：** F10 完成；F10.4 的 Main 完成判断与返工反馈是本阶段的基础。开始实现前先完成 F11.0 设计收口并经用户确认，Human Gate 在全自动模式下的调整范围必须明确。
 
@@ -315,23 +318,26 @@ Human switches Project to auto (or starts auto run)
   |                                                   v
   |                                 Main review Turn (driven by system)
   |                                                   |
-  |        +-----------------+------------------+-----+-------------+
-  |        | complete        | rework feedback  | modify Roadmap    | pause / ask user
+  |        +-----------------+------------------+-------------------+
+  |        | complete        | rework feedback  | skip              | ask Human
   |        v                 v                  v                   v
-  |   start next unlocked   start same Node    start next Node     stop, wait for Human
-  |   Node                  again              per new Roadmap
-  |        |                 |                  |
-  +--------+-----------------+------------------+
-  stop conditions (rework rounds, turn / cost budget, repeated failure) -> pause, wait for Human
+  |   downstream unlocks    same Node runnable downstream unlocks  auto paused, wait for Human
+  |        |  (Main may also modify downstream Roadmap in the same Turn)
+  |        v
+  |   scheduler starts every idle Node whose dependencies are met
+  +--------+
+  failed / cancelled / interrupted Node Turn -> auto paused (no review)
+  stop conditions (rework > 2, Main / Node turn limits, no decision) -> auto paused
+  restart of an auto Project -> auto paused
   Human may pause, take over, or switch back to manual at any time
 ```
 
 | 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
 |---|---|---|---|---|
-| ⬜ | F11.0 全自动推进设计收口 | 后端设计记录 | 确定全自动模式下 Human Gate 的调整范围、驱动循环与 Main 决定的关系、停止条件与预算、暂停求助与高风险操作的把关、重启后是否继续自动推进，以及上下文压缩的触发与保留规则 | 设计记录经用户确认；参考 DeepSeek Harness 的上下文压缩与长任务控制源码，写明采用与不采用的机制；不修改生产代码 |
+| ⬜ | F11.0 全自动推进设计收口 | 后端设计记录 | 在 [80](80-devlog-f10-0-design.md) D11 已确认的模式切换、推进规则、复盘钩子、暂停条件与重启规则基础上，补齐回合上限的默认值与调整方式、高风险操作的把关，以及上下文压缩的触发与保留规则 | 设计记录经用户确认；参考 DeepSeek Harness 的上下文压缩与长任务控制源码，写明采用与不采用的机制；不修改生产代码 |
 | ⬜ | F11.1 会话上下文压缩 | 通用 Session / Main / Node 会话 | 让长时间运行的普通、Main 与 Node 会话在上下文接近模型上限时自动压缩，压缩后仍能接着原任务工作 | 压缩后关键目标、决定与未完成事项仍在上下文中；完整执行记录仍保留可追溯；压缩结果随会话保存与恢复；压缩失败不破坏原会话 |
-| ⬜ | F11.2 推进模式与驱动循环 | Project 执行控制面 | 让用户为 Project 选择人工或全自动推进；全自动模式下系统在 Node 回合结束后启动 Main 审查回合，并按 Main 的决定启动返工的 Node 或下一个已解锁的 Node | 人工模式行为与 F10 一致、不自动启动任何 Agent；全自动模式下每次启动都来自 Main 的明确决定；同一 Main 或 Node 仍不会并发执行；用户随时可暂停、接管或切回人工模式，暂停后不再启动新回合 |
-| ⬜ | F11.3 停止条件与暂停求助 | Project 执行控制面 / Main 协调 | 让全自动推进在超出预算、返工过多、连续失败或 Main 需要用户决定时停下来，并让用户看到停止原因后决定如何继续 | 单节点返工轮数、总回合数或花费与连续失败次数均有上限，触发后停止推进并记录原因；Main 可以主动暂停并向用户提问；高风险操作在全自动模式下按 F11.0 约定先暂停等待用户 |
+| ⬜ | F11.2 推进模式与驱动循环 | Project 执行控制面 | 让用户为 Project 选择人工或全自动推进；全自动模式下依赖已满足的空闲节点自动启动，Node 回合结束后系统触发 Main 复盘，并按复盘结果继续推进 | 模式切换只能由用户发起、随 Project 保存，在下一个决策点生效且不打断进行中的回合；人工模式行为与 F10 一致、不自动启动任何 Agent；全自动模式下只启动依赖已满足、空闲、没有待确认或待复盘回合，且从未执行或最近被判返工的节点；未发完成信号就停止的回合同样交给 Main 复盘，失败或中断的回合不复盘；复盘按顺序进行，用户在 Main 会话中的消息优先，同一 Main 或 Node 不并发执行；原为全自动的 Project 重启后处于暂停 |
+| ⬜ | F11.3 停止条件与暂停求助 | Project 执行控制面 / Main 协调 | 让全自动推进在返工过多、超出回合上限、回合失败或 Main 需要用户决定时停下来，并让用户看到停止原因后决定继续或切回人工 | 单节点返工意见超过 2 次、Main 或 Node 回合数达到各自上限、复盘未给出判定、回合失败或中断、需要修改项目目标时停止推进并记录原因；Main 可以主动暂停并向用户提问；暂停期间不启动新回合；高风险操作在全自动模式下按 F11.0 约定先暂停等待用户 |
 | ⬜ | F11.4 全自动推进公共契约 | Host / RPC 共享契约 | 让桌面能切换推进模式、暂停与恢复自动推进，并看到当前是否在自动运行、停在哪里以及原因 | 开始前停止修改并按共享契约流程与前端确认；方法带版本、两端严格校验；跟随项目时能实时看到模式与停止原因的变化 |
 | ⬜ | F11.5 F11 长程集成验收 | 后端集成测试与阶段记录 | 用一个包含多个节点、返工、暂停求助、重启和最终完成的全自动长程场景证明 F11 能力共同工作 | 离线完整场景可重复通过；真实模型全自动运行保留完整记录，失败现场可用于定位 |
 
@@ -352,7 +358,7 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不在 Pha
 
 Phase 9 已全部完成（2026-10-07）：F9.0–F9.9c 均为 ✅，最后由 [PR #35](https://github.com/likeWind221/Navo/pull/35)、[#36](https://github.com/likeWind221/Navo/pull/36)、[#37](https://github.com/likeWind221/Navo/pull/37) 交付项目公共契约（记录见 [73](73-devlog-f9.9a-project-query.md)、[74](74-devlog-f9.9b-human-control.md)、[75](75-devlog-f9.9c-project-follow.md)）。各 Step 的实现、验证与 PR 经过见第 6 节表格及 [文档索引](index.md) 中对应开发记录。
 
-F9.10 项目目标确认与规划前置已于 2026-10-08 合入（[PR #38](https://github.com/likeWind221/Navo/pull/38)，记录见 [76](76-devlog-f9.10-goal-confirm.md)）：目标可选、Main 规划前须经用户同意、无目标不能生成 Roadmap；前端 F5.2 已据此完成接入（[PR #39](https://github.com/likeWind221/Navo/pull/39)）。真实验收中发现的 BUG-005、BUG-006 已于 2026-10-09 修复合入（[PR #40](https://github.com/likeWind221/Navo/pull/40)、[#41](https://github.com/likeWind221/Navo/pull/41)），BUG-007 经用户决定搁置，见 [Bug 跟踪表](bug-plan.md)。F10.0 持久化与验证设计收口已于 2026-10-10 经用户确认（[80](80-devlog-f10-0-design.md)）：只用 SQLite 并存于 `~/.navo/`，`project-goal-set` 与 Workspace 绑定纳入持久化范围，单个 Project 损坏只隔离该 Project，不设完成门禁（2026-10-15 进一步撤销独立验证者，改由 Main 判断完成）。F10.1 于 2026-10-10 经用户确认拆为 F10.1a–F10.1d（项目与工作目录 → 节点与 Roadmap → 消息与资源 → 损坏隔离与整体验收），已实测 Electron 44.2.0 自带 Node 24.20.0 支持 `node:sqlite`。F10.1a–F10.1c 已完成（[81](81-devlog-f10-1a-project-persist.md)、[83](83-devlog-f10-1b-roadmap-persist.md)、[84](84-devlog-f10-1c-mailbox-resource-persist.md)），F10.1d 损坏隔离与整体重启验收已完成，记录见 [89](89-devlog-f10-1d-recovery-isolation.md)。F10.2 会话与执行记录恢复已于 2026-10-14 经本机完整验证、实际跨进程续接验收和当前 head CI 后 squash 合入 [PR #55](https://github.com/likeWind221/Navo/pull/55)；记录见 [95](95-devlog-f10-2-session.md)。F10.2a 已于同日完成并经 [PR #56](https://github.com/likeWind221/Navo/pull/56) 合入，记录见 [96](96-devlog-f10-2a-session-design.md) 与 [97](97-devlog-f10-2a-session.md)。F10.3 已完成生产实现、本机 641 项完整检查、真实 Host 终止 / 重启验收及代码 head CI，交付见 [PR #58](https://github.com/likeWind221/Navo/pull/58) 与 [98](98-devlog-f10-3-interruption.md)。2026-10-15 经用户决定，撤销 F10.4–F10.6 的独立验证者设计，改为 F10.4 Main 判断节点完成，原 F10.7 改为 F10.5 长程集成验收，修订见 [80](80-devlog-f10-0-design.md)。同日用户确定项目支持人工与全自动两种推进方式：F10.4 扩展为 Main 判断节点完成与返工反馈，新增 F11 全自动推进与上下文压缩（第 9 节），原 Research 与长期记忆阶段顺延为 Phase 12、13。当前下一后端 Step 为 F10.4 Main 判断节点完成与返工反馈，不自动开始。
+F9.10 项目目标确认与规划前置已于 2026-10-08 合入（[PR #38](https://github.com/likeWind221/Navo/pull/38)，记录见 [76](76-devlog-f9.10-goal-confirm.md)）：目标可选、Main 规划前须经用户同意、无目标不能生成 Roadmap；前端 F5.2 已据此完成接入（[PR #39](https://github.com/likeWind221/Navo/pull/39)）。真实验收中发现的 BUG-005、BUG-006 已于 2026-10-09 修复合入（[PR #40](https://github.com/likeWind221/Navo/pull/40)、[#41](https://github.com/likeWind221/Navo/pull/41)），BUG-007 经用户决定搁置，见 [Bug 跟踪表](bug-plan.md)。F10.0 持久化与验证设计收口已于 2026-10-10 经用户确认（[80](80-devlog-f10-0-design.md)）：只用 SQLite 并存于 `~/.navo/`，`project-goal-set` 与 Workspace 绑定纳入持久化范围，单个 Project 损坏只隔离该 Project，不设完成门禁（2026-10-15 进一步撤销独立验证者，改由 Main 判断完成）。F10.1 于 2026-10-10 经用户确认拆为 F10.1a–F10.1d（项目与工作目录 → 节点与 Roadmap → 消息与资源 → 损坏隔离与整体验收），已实测 Electron 44.2.0 自带 Node 24.20.0 支持 `node:sqlite`。F10.1a–F10.1c 已完成（[81](81-devlog-f10-1a-project-persist.md)、[83](83-devlog-f10-1b-roadmap-persist.md)、[84](84-devlog-f10-1c-mailbox-resource-persist.md)），F10.1d 损坏隔离与整体重启验收已完成，记录见 [89](89-devlog-f10-1d-recovery-isolation.md)。F10.2 会话与执行记录恢复已于 2026-10-14 经本机完整验证、实际跨进程续接验收和当前 head CI 后 squash 合入 [PR #55](https://github.com/likeWind221/Navo/pull/55)；记录见 [95](95-devlog-f10-2-session.md)。F10.2a 已于同日完成并经 [PR #56](https://github.com/likeWind221/Navo/pull/56) 合入，记录见 [96](96-devlog-f10-2a-session-design.md) 与 [97](97-devlog-f10-2a-session.md)。F10.3 已完成生产实现、本机 641 项完整检查、真实 Host 终止 / 重启验收及代码 head CI，交付见 [PR #58](https://github.com/likeWind221/Navo/pull/58) 与 [98](98-devlog-f10-3-interruption.md)。2026-10-15 经用户决定，撤销 F10.4–F10.6 的独立验证者设计，改为 F10.4 Main 判断节点完成，原 F10.7 改为 F10.5 长程集成验收，修订见 [80](80-devlog-f10-0-design.md)。同日用户确定项目支持人工与全自动两种推进方式：F10.4 扩展为 Main 判断节点完成与返工反馈，新增 F11 全自动推进与上下文压缩（第 9 节），原 Research 与长期记忆阶段顺延为 Phase 12、13。同日讨论 F10.4 时进一步确定完成信号、复盘判定与两种推进模式的共同流程（[80](80-devlog-f10-0-design.md) D11）：F10.4 拆为 F10.4a 完成信号与待确认、F10.4b Main 复盘判定与计划调整，Main 可以跳过节点、返工意见上限 2 次，全自动模式按 Roadmap 依赖推进并为 Main 与 Node 设回合上限。当前下一后端 Step 为 F10.4a 完成信号与待确认，开始前先按共享契约流程确认待确认状态的公开形态，不自动开始。
 
 BUG-002 经用户决定保持未关闭、等待复现，不阻塞 F10，状态见 [Bug 跟踪表](bug-plan.md)。
 
