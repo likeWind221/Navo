@@ -366,6 +366,7 @@ submit_review
 - Human 主动发起的 Turn 不计入 AutoRun；
 - 任一预算达到上限，AutoRun → PAUSED，停止自动启动新 Turn；
 - 新的 AutoRun 重新计数；
+- F11.2 的 Resume 从当前 Project 状态重新建立连续 AutoRun，因此使用新的 runId 与新的预算窗口，不恢复上一连续窗口的预算计数；
 - F10 已有的单 Turn maxSteps = 150 继续有效；
 - AgentRuntime 自身已有的瞬时/模型级错误处理不由 F11 重复实现。
 

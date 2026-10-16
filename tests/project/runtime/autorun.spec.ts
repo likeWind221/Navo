@@ -4,8 +4,9 @@ import { createToolCallId } from "../../../src/brand/ids.js";
 import type { ToolCallContentBlock } from "../../../src/llm/types.js";
 import { SUBMIT_COMPLETION_TOOL_NAME } from "../../../src/tools/builtins/node/submit.js";
 import { SUBMIT_REVIEW_TOOL_NAME } from "../../../src/tools/builtins/project/review.js";
+import { SEND_TO_MAIN_TOOL_NAME } from "../../../src/tools/builtins/mailbox/send.js";
 import { ADD_NODE_TOOL_NAME } from "../../../src/tools/builtins/roadmap/modify.js";
-import { modelResponse } from "../../helpers/runtime.js";
+import { modelError, modelResponse } from "../../helpers/runtime.js";
 import { createKit, createWorkNode, flushUntil } from "./helpers.js";
 
 function call(id: string, name: string, arguments_: unknown): ToolCallContentBlock {
@@ -31,7 +32,7 @@ function review(id: string, decision: "complete" | "rework" | "skip" | "escalate
 
 const text = (value = "Done.") => modelResponse([{ type: "text", text: value }]);
 
-describe("F11.1 AutoRun minimal loop", () => {
+describe("F11 AutoRun control and execution loop", () => {
   it("runs one Node through multiple Turns in the same Session before automatic Main review", async () => {
     const { ctx, adapter } = await createKit([
       text("I need another Turn."),
@@ -190,8 +191,8 @@ describe("F11.1 AutoRun minimal loop", () => {
     expect(() => ctx.autoRun.start(project.id)).toThrow(expect.objectContaining({ code: "auto-run-active" }));
     expect(ctx.projectRuntime.stopNode(project.id, id)).toBe(true);
     const result = await running;
-    expect(result).toMatchObject({ status: "stopped", reason: "turn-stopped" });
-    expect(ctx.autoRun.get(project.id)).toBeUndefined();
+    expect(result).toMatchObject({ status: "paused", reason: "turn-cancelled" });
+    expect(ctx.autoRun.get(project.id)).toMatchObject(result);
     expect(ctx.projectRuntime.canContinueNode(project.id, id)).toBe(true);
   });
 
@@ -205,7 +206,7 @@ describe("F11.1 AutoRun minimal loop", () => {
     const id = createWorkNode(escalated.ctx, project.id, "Collect").node.id;
     escalated.ctx.roadmaps.create({ definition: { projectId: project.id, nodes: [id], edges: [] }, reason: "Approved" });
     const result = await escalated.ctx.autoRun.start(project.id);
-    expect(result).toMatchObject({ status: "stopped", reason: "review-escalated", nodeTurns: 1, mainTurns: 1 });
+    expect(result).toMatchObject({ status: "paused", reason: "review-escalated", nodeTurns: 1, mainTurns: 1 });
     expect(escalated.ctx.nodes.get(id)?.status).toBe("submitted");
 
     const undecided = await createKit([submit("submit-again"), text("Looks good.")]);
@@ -213,8 +214,187 @@ describe("F11.1 AutoRun minimal loop", () => {
     const otherId = createWorkNode(undecided.ctx, other.id, "Collect").node.id;
     undecided.ctx.roadmaps.create({ definition: { projectId: other.id, nodes: [otherId], edges: [] }, reason: "Approved" });
     const missing = await undecided.ctx.autoRun.start(other.id);
-    expect(missing).toMatchObject({ status: "stopped", reason: "review-undecided", nodeTurns: 1, mainTurns: 1 });
+    expect(missing).toMatchObject({ status: "paused", reason: "review-undecided", nodeTurns: 1, mainTurns: 1 });
     expect(undecided.ctx.nodes.get(otherId)?.status).toBe("submitted");
+  });
+
+  it("pauses at a Turn boundary and resumes with a fresh AutoRun budget", async () => {
+    const first = {
+      ...text("Pause after this Turn."),
+      eventDelayMs: 20,
+    };
+    const { ctx, adapter } = await createKit([
+      first,
+      submit("submit-after-resume"),
+      review("approve-after-resume", "complete"),
+      text(),
+    ]);
+    const project = ctx.projects.create({ name: "Project", goal: "Pause safely" });
+    const id = createWorkNode(ctx, project.id, "Collect").node.id;
+    ctx.roadmaps.create({ definition: { projectId: project.id, nodes: [id], edges: [] }, reason: "Approved" });
+
+    const running = ctx.autoRun.start(project.id);
+    await flushUntil(() => adapter.requests.length === 1);
+    const requested = ctx.autoRun.pause(project.id);
+    expect(requested).toMatchObject({ status: "running", nodeTurns: 0, mainTurns: 0 });
+
+    const paused = await running;
+    expect(paused).toMatchObject({
+      status: "paused",
+      reason: "human-paused",
+      nodeTurns: 1,
+      mainTurns: 0,
+    });
+    expect(ctx.autoRun.get(project.id)).toMatchObject(paused);
+
+    const resumed = await ctx.autoRun.resume(project.id);
+    expect(resumed.status).toBe("completed");
+    expect(resumed.runId).not.toBe(paused.runId);
+    expect(resumed.nodeTurns).toBe(1);
+    expect(resumed.mainTurns).toBe(1);
+  });
+
+  it("pauses at the Node Turn budget without starting another Turn", async () => {
+    const { ctx, adapter } = await createKit(
+      Array.from({ length: 64 }, () => text("Continue working.")),
+    );
+    const project = ctx.projects.create({ name: "Project", goal: "Bound Node turns" });
+    const id = createWorkNode(ctx, project.id, "Collect").node.id;
+    ctx.roadmaps.create({ definition: { projectId: project.id, nodes: [id], edges: [] }, reason: "Approved" });
+
+    const result = await ctx.autoRun.start(project.id);
+    expect(result).toMatchObject({
+      status: "paused",
+      reason: "node-turn-limit",
+      nodeTurns: 64,
+      mainTurns: 0,
+    });
+    expect(adapter.requests).toHaveLength(64);
+    expect(ctx.autoRun.get(project.id)).toMatchObject(result);
+  });
+
+  it("resets the AutoRun budget when resuming after a budget pause", async () => {
+    const { ctx, adapter } = await createKit([
+      ...Array.from({ length: 64 }, () => text("Continue working.")),
+      submit("submit-after-budget"),
+      review("approve-after-budget", "complete"),
+      text(),
+    ]);
+    const project = ctx.projects.create({ name: "Project", goal: "Resume after budget" });
+    const id = createWorkNode(ctx, project.id, "Collect").node.id;
+    ctx.roadmaps.create({ definition: { projectId: project.id, nodes: [id], edges: [] }, reason: "Approved" });
+
+    const paused = await ctx.autoRun.start(project.id);
+    expect(paused).toMatchObject({ status: "paused", reason: "node-turn-limit", nodeTurns: 64, mainTurns: 0 });
+
+    const resumed = await ctx.autoRun.resume(project.id);
+    expect(resumed).toMatchObject({ status: "completed", nodeTurns: 1, mainTurns: 1 });
+    expect(resumed.runId).not.toBe(paused.runId);
+    expect(adapter.requests).toHaveLength(67);
+  });
+
+  it("pauses at the Main Turn budget before dispatching another Node", async () => {
+    const entries = Array.from({ length: 2 }, (_, index) => [
+      submit(`submit-${index}`),
+      review(`review-${index}`, "complete"),
+      text(),
+    ]).flat();
+    const { ctx, adapter } = await createKit(entries, [], {}, { mainTurnLimit: 2 });
+    const project = ctx.projects.create({ name: "Project", goal: "Bound Main turns" });
+    const nodeIds = Array.from({ length: 3 }, (_, index) =>
+      createWorkNode(ctx, project.id, `Task ${index}`).node.id,
+    );
+    ctx.roadmaps.create({
+      definition: { projectId: project.id, nodes: nodeIds, edges: [] },
+      reason: "Approved",
+    });
+
+    const result = await ctx.autoRun.start(project.id);
+    expect(result).toMatchObject({
+      status: "paused",
+      reason: "main-turn-limit",
+      nodeTurns: 2,
+      mainTurns: 2,
+    });
+    expect(adapter.requests).toHaveLength(6);
+    const extraNodeId = nodeIds.at(2);
+    expect(extraNodeId).toBeDefined();
+    expect(ctx.nodes.get(extraNodeId!)?.status).toBe("idle");
+  }, 15000);
+
+  it("pauses when a Turn is blocked by the AgentRuntime step limit", async () => {
+    const { ctx, adapter } = await createKit([
+      modelResponse([
+        call("send-blocker", SEND_TO_MAIN_TOOL_NAME, { message: "I need Main to make a decision." }),
+      ], "tool-calls"),
+    ], [], { maxSteps: 1 });
+    const project = ctx.projects.create({ name: "Project", goal: "Handle blocked work" });
+    const id = createWorkNode(ctx, project.id, "Blocked").node.id;
+    ctx.roadmaps.create({ definition: { projectId: project.id, nodes: [id], edges: [] }, reason: "Approved" });
+
+    const result = await ctx.autoRun.start(project.id);
+    expect(result).toMatchObject({
+      status: "paused",
+      reason: "turn-blocked",
+      nodeTurns: 1,
+      mainTurns: 0,
+    });
+    expect(adapter.requests).toHaveLength(1);
+  });
+
+  it("pauses on failed and interrupted Turns instead of retrying", async () => {
+    const failedKit = await createKit([modelError("provider-failed")]);
+    const failedProject = failedKit.ctx.projects.create({ name: "Project", goal: "Handle failure" });
+    const failedNode = createWorkNode(failedKit.ctx, failedProject.id, "Fail").node.id;
+    failedKit.ctx.roadmaps.create({ definition: { projectId: failedProject.id, nodes: [failedNode], edges: [] }, reason: "Approved" });
+    await expect(failedKit.ctx.autoRun.start(failedProject.id)).resolves.toMatchObject({
+      status: "paused",
+      reason: "turn-failed",
+      nodeTurns: 1,
+    });
+    expect(failedKit.adapter.requests).toHaveLength(1);
+
+    const interruptedKit = await createKit([modelError("interrupted")]);
+    const interruptedProject = interruptedKit.ctx.projects.create({ name: "Project", goal: "Handle interruption" });
+    const interruptedNode = createWorkNode(interruptedKit.ctx, interruptedProject.id, "Interrupt").node.id;
+    interruptedKit.ctx.roadmaps.create({
+      definition: { projectId: interruptedProject.id, nodes: [interruptedNode], edges: [] },
+      reason: "Approved",
+    });
+    await expect(interruptedKit.ctx.autoRun.start(interruptedProject.id)).resolves.toMatchObject({
+      status: "paused",
+      reason: "turn-interrupted",
+      nodeTurns: 1,
+    });
+    expect(interruptedKit.adapter.requests).toHaveLength(1);
+  });
+
+  it("rejects invalid pause/resume controls and keeps a paused run single-owned", async () => {
+    const { ctx, adapter } = await createKit([
+      { kind: "hang" },
+      submit("submit-after-cancel"),
+      review("approve-after-cancel", "complete"),
+      text(),
+    ]);
+    const project = ctx.projects.create({ name: "Project", goal: "Control lifecycle" });
+    const id = createWorkNode(ctx, project.id, "Collect").node.id;
+    ctx.roadmaps.create({ definition: { projectId: project.id, nodes: [id], edges: [] }, reason: "Approved" });
+
+    expect(() => ctx.autoRun.pause(project.id)).toThrow(expect.objectContaining({ code: "auto-run-not-found" }));
+    expect(() => ctx.autoRun.resume(project.id)).toThrow(expect.objectContaining({ code: "auto-run-not-found" }));
+
+    const running = ctx.autoRun.start(project.id);
+    await flushUntil(() => adapter.requests.length === 1);
+    expect(() => ctx.autoRun.resume(project.id)).toThrow(expect.objectContaining({ code: "auto-run-not-paused" }));
+    ctx.autoRun.pause(project.id);
+    expect(ctx.projectRuntime.stopNode(project.id, id)).toBe(true);
+
+    const paused = await running;
+    expect(paused).toMatchObject({ status: "paused", reason: "turn-cancelled" });
+    expect(() => ctx.autoRun.start(project.id)).toThrow(expect.objectContaining({ code: "auto-run-active" }));
+
+    const resumed = await ctx.autoRun.resume(project.id);
+    expect(resumed.status).toBe("completed");
   });
 
   it("requires a Goal and an existing Roadmap before starting", async () => {

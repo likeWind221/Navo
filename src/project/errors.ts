@@ -7,6 +7,8 @@ export class ProjectError extends Error {
 
 export type ProjectErrorCode =
   | "auto-run-active"
+  | "auto-run-not-found"
+  | "auto-run-not-paused"
   | "auto-run-unavailable"
   | "turn-active"
   | "runtime-unavailable"
