@@ -34,8 +34,10 @@ function review(id: string, decision: "complete" | "rework" | "skip", feedback?:
 
 export function reworkSkipScenario(): readonly MockLLMEntry[] {
   const first = submit("a-draft");
+  const delayed = first[0]!;
+  if (delayed.kind !== "events") throw new Error("submit mock must be an events entry");
   return [
-    { ...first[0]!, eventDelayMs: 10 },
+    { ...delayed, eventDelayMs: 10 },
     first[1]!,
     ...review("a-rework", "rework", "Address the missing detail."),
     ...submit("a-final"),
