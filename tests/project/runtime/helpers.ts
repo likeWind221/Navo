@@ -11,6 +11,7 @@ import { NodeSessionService } from "../../../src/node/session.js";
 import { NodeStore } from "../../../src/node/store.js";
 import { ProjectRuntime } from "../../../src/project/runtime.js";
 import { AutoRunService } from "../../../src/project/autorun.js";
+import type { AutoRunServiceConfig } from "../../../src/project/autorun.js";
 import { ProjectStore } from "../../../src/project/store.js";
 import { ResourceService } from "../../../src/resource/service.js";
 import { RoadmapStore } from "../../../src/roadmap/store.js";
@@ -45,6 +46,7 @@ export async function createKit(
   entries: ConstructorParameters<typeof MockLLMAdapter>[0],
   searchEntries: ConstructorParameters<typeof MockSearchAdapter>[0] = [],
   agentLimits: Partial<AgentRuntimeLimits> = {},
+  autoRunConfig: AutoRunServiceConfig = {},
 ) {
   const ctx = new Context();
   contexts.add(ctx);
@@ -84,7 +86,7 @@ export async function createKit(
   await mainFiber;
   const runtimeFiber = ctx.plugin(ProjectRuntime);
   await runtimeFiber;
-  await ctx.plugin(AutoRunService);
+  await ctx.plugin(AutoRunService, autoRunConfig);
 
   return { ctx, adapter, searchAdapter, runtimeFiber, nodeFiber, mainFiber };
 }
