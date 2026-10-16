@@ -250,38 +250,34 @@ Human start Node ---> Node works / publishes Resource
 
 ## 9. Phase 11（F11）：全自动推进与上下文压缩
 
-**阶段目标：** 让 Project 可以在人工推进与全自动推进两种模式间选择，模式只由用户切换。两种模式共用 F10.4 的完成信号、复盘判定与计划反馈，区别在于节点启动、完成确认与跳过由谁把控：全自动模式下，依赖已满足的空闲节点自动启动，Node 回合结束后系统触发 Main 复盘，Main 判定完成、发返工意见、跳过或暂停求助并调整计划，系统继续推进，直到项目完成、触发停止条件或需要用户介入。长时间运行的会话通过上下文压缩持续工作。人工模式的 Human Gate 保持不变。
+**阶段目标：** 让 Project 可以在人工推进与全自动推进两种模式间选择，模式只由用户切换。两种模式共用 F10.4 的完成信号、复盘判定与计划反馈；全自动模式由一个独立驱动层负责在安全决策点自动发起已有 Main / Node Turn，并在停止条件、高风险动作或无法判断时退回 Human。长时间运行的 Session 通过上下文压缩持续工作。人工模式的 Human Gate 保持不变。
 
-**进入条件：** F10 完成；F10.4 的 Main 完成判断与返工反馈是本阶段的基础。开始实现前先完成 F11.0 设计收口并经用户确认，Human Gate 在全自动模式下的调整范围必须明确。
+**F11.0 收口结果：** 设计记录见 [100](100-devlog-f11-0-design.md)。已明确 manual / auto 与 running / paused 两层状态、Main / Node 调度顺序、64 / 32 的连续 Auto Run 回合预算、失败 / 取消 / 中断语义、高风险操作的 fail-closed 边界，以及 80% 压缩阈值、16% recent tail 与 overflow recovery。当前仅完成设计文档，生产代码仍保持 F10 的 Human Gate 行为。
 
 ```text
-Human switches Project to auto (or starts auto run)
+Human switch / resume
         |
         v
-  +--> Node Turn ends -------------------------------+
-  |                                                   v
-  |                                 Main review Turn (driven by system)
-  |                                                   |
-  |        +-----------------+------------------+-------------------+
-  |        | complete        | rework feedback  | skip              | ask Human
-  |        v                 v                  v                   v
-  |   downstream unlocks    same Node runnable downstream unlocks  auto paused, wait for Human
-  |        |  (Main may also modify downstream Roadmap in the same Turn)
-  |        v
-  |   scheduler starts every idle Node whose dependencies are met
-  +--------+
-  failed / cancelled / interrupted Node Turn -> auto paused (no review)
-  stop conditions (rework > 2, Main / Node turn limits, no decision) -> auto paused
-  restart of an auto Project -> auto paused
-  Human may pause, take over, or switch back to manual at any time
+  +--> Auto Driver decision point
+  |          |
+  |          +--> Human Main input --------> Main Turn
+  |          +--> pending Node review -----> Main Review
+  |          +--> eligible Nodes ----------> Node Turn(s)
+  |          +--> no runnable Node ---------> Main Planning
+  |          +--> no safe decision --------> Auto paused
+  |
+  +-- Node normal stop --------------------> Main Review
+  +-- Node failed/cancelled/interrupted ---> Auto paused (no review)
+  +-- Main ask_human / limit / high-risk -> Auto paused
+  +-- restart of auto Project -------------> Auto paused
 ```
 
 | 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
 |---|---|---|---|---|
-| ⬜ | F11.0 全自动推进设计收口 | 后端设计记录 | 在 [78](78-devlog-f10-0-design.md) D11 已确认的模式切换、推进规则、复盘钩子、暂停条件与重启规则基础上，补齐回合上限的默认值与调整方式、高风险操作的把关，以及上下文压缩的触发与保留规则 | 设计记录经用户确认；参考 DeepSeek Harness 的上下文压缩与长任务控制源码，写明采用与不采用的机制；不修改生产代码 |
+| 🔄 | F11.0 全自动推进设计收口 | 后端设计记录 | 在 [78](78-devlog-f10-0-design.md) D11 已确认的模式切换、推进规则、复盘钩子、暂停条件与重启规则基础上，收口两层状态、自动调度顺序、Main / Node 连续 Auto Run 预算、高风险操作边界及上下文压缩契约 | [100](100-devlog-f11-0-design.md) 已落地；设计记录明确采用 / 不采用的 Harness 机制与 F11 验收项；待用户确认后进入 F11.1 |
 | ⬜ | F11.1 会话上下文压缩 | 通用 Session / Main / Node 会话 | 让长时间运行的普通、Main 与 Node 会话在上下文接近模型上限时自动压缩，压缩后仍能接着原任务工作 | 压缩后关键目标、决定与未完成事项仍在上下文中；完整执行记录仍保留可追溯；压缩结果随会话保存与恢复；压缩失败不破坏原会话 |
-| ⬜ | F11.2 推进模式与驱动循环 | Project 执行控制面 | 让用户为 Project 选择人工或全自动推进；全自动模式下依赖已满足的空闲节点自动启动，Node 回合结束后系统触发 Main 复盘，并按复盘结果继续推进 | 模式切换只能由用户发起、随 Project 保存，在下一个决策点生效且不打断进行中的回合；人工模式行为与 F10 一致、不自动启动任何 Agent；全自动模式下只启动依赖已满足、空闲、没有待确认或待复盘回合，且从未执行或最近被判返工的节点；未发完成信号就停止的回合同样交给 Main 复盘，失败或中断的回合不复盘；复盘按顺序进行，用户在 Main 会话中的消息优先，同一 Main 或 Node 不并发执行；原为全自动的 Project 重启后处于暂停 |
-| ⬜ | F11.3 停止条件与暂停求助 | Project 执行控制面 / Main 协调 | 让全自动推进在返工过多、超出回合上限、回合失败或 Main 需要用户决定时停下来，并让用户看到停止原因后决定继续或切回人工 | 单节点返工意见超过 2 次、Main 或 Node 回合数达到各自上限、复盘未给出判定、回合失败或中断、需要修改项目目标时停止推进并记录原因；Main 可以主动暂停并向用户提问；暂停期间不启动新回合；高风险操作在全自动模式下按 F11.0 约定先暂停等待用户 |
+| ⬜ | F11.2 推进模式与驱动循环 | Project 执行控制面 | 让用户为 Project 选择人工或全自动推进；全自动模式下依赖已满足的空闲节点自动启动，Node 回合结束后系统触发 Main 复盘，并按复盘结果继续推进 | 依 [100](100-devlog-f11-0-design.md) 的状态机、优先级、64 / 32 Auto Run 预算与并发边界实施；人工模式行为与 F10 一致 |
+| ⬜ | F11.3 停止条件与暂停求助 | Project 执行控制面 / Main 协调 | 让全自动推进在返工过多、超出回合上限、回合失败或 Main 需要用户决定时停下来，并让用户看到停止原因后决定继续或切回人工 | 失败 / 取消 / 中断不隐式重试；单节点返工意见超过 2 次、Main / Node Auto Run 预算耗尽、复盘无判定、高风险或需要 Human 决策时暂停；暂停期间不启动新回合 |
 | ⬜ | F11.4 全自动推进公共契约 | Host / RPC 共享契约 | 让桌面能切换推进模式、暂停与恢复自动推进，并看到当前是否在自动运行、停在哪里以及原因 | 开始前停止修改并按共享契约流程与前端确认；方法带版本、两端严格校验；跟随项目时能实时看到模式与停止原因的变化 |
 | ⬜ | F11.5 F11 长程集成验收 | 后端集成测试与阶段记录 | 用一个包含多个节点、返工、暂停求助、重启和最终完成的全自动长程场景证明 F11 能力共同工作 | 离线完整场景可重复通过；真实模型全自动运行保留完整记录，失败现场可用于定位 |
 
