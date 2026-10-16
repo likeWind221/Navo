@@ -10,6 +10,10 @@ import type { WorkspaceErrorCode } from "../../workspace/errors.js";
 const projectCodes: Partial<Record<ProjectErrorCode, ProjectFailureCode>> = {
   "project-not-found": "project-not-found",
   "project-unavailable": "project-unavailable",
+  "auto-run-active": "auto-run-active",
+  "auto-run-not-found": "auto-run-not-found",
+  "auto-run-not-paused": "auto-run-not-paused",
+  "auto-run-unavailable": "auto-run-unavailable",
   "turn-active": "turn-active",
   "runtime-unavailable": "runtime-unavailable",
   "invalid-event-stream": "invalid-request",
