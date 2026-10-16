@@ -13,6 +13,11 @@ import type { MainSessionTurnResult } from "./session.js";
 export const DEFAULT_NODE_TURN_LIMIT = 64;
 export const DEFAULT_MAIN_TURN_LIMIT = 32;
 
+export interface AutoRunServiceConfig {
+  readonly nodeTurnLimit?: number;
+  readonly mainTurnLimit?: number;
+}
+
 export interface AutoRunSnapshot {
   readonly runId: string;
   readonly projectId: ProjectId;
@@ -66,10 +71,12 @@ export class AutoRunService extends Service {
   static inject = ["projects", "nodes", "roadmaps", "reviews", "projectRuntime"];
 
   private readonly runs = new Map<ProjectId, AutoRunRun>();
+  private readonly limits: AutoRunLimits;
   private unavailable = false;
 
-  constructor(ctx: Context) {
+  constructor(ctx: Context, config: AutoRunServiceConfig = {}) {
     super(ctx, "autoRun");
+    this.limits = resolveAutoRunLimits(config);
     this.ctx.effect(() => async () => {
       this.unavailable = true;
       const runs = [...this.runs.values()];
@@ -127,10 +134,7 @@ export class AutoRunService extends Service {
   private createRun(): AutoRunRun {
     return {
       runId: randomUUID(),
-      limits: {
-        nodeTurns: DEFAULT_NODE_TURN_LIMIT,
-        mainTurns: DEFAULT_MAIN_TURN_LIMIT,
-      },
+      limits: this.limits,
       controller: new AbortController(),
       status: "running",
       pauseRequested: false,
@@ -295,5 +299,22 @@ export class AutoRunService extends Service {
       mainTurns: run.mainTurns,
       ...(run.reason === undefined ? {} : { reason: run.reason }),
     });
+  }
+}
+
+
+function resolveAutoRunLimits(config: AutoRunServiceConfig): AutoRunLimits {
+  const limits = {
+    nodeTurns: config.nodeTurnLimit ?? DEFAULT_NODE_TURN_LIMIT,
+    mainTurns: config.mainTurnLimit ?? DEFAULT_MAIN_TURN_LIMIT,
+  };
+  assertPositiveSafeInteger("nodeTurnLimit", limits.nodeTurns);
+  assertPositiveSafeInteger("mainTurnLimit", limits.mainTurns);
+  return Object.freeze(limits);
+}
+
+function assertPositiveSafeInteger(name: string, value: number): void {
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new RangeError(`${name} must be a positive safe integer.`);
   }
 }
