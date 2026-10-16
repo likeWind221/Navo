@@ -292,7 +292,7 @@ describe("F11.1 AutoRun minimal loop", () => {
     expect(adapter.requests).toHaveLength(67);
   });
 
-  it("pauses on failed, blocked and interrupted Turns instead of retrying", async () => {
+  it("pauses on failed and interrupted Turns instead of retrying", async () => {
     const failedKit = await createKit([modelError("provider-failed")]);
     const failedProject = failedKit.ctx.projects.create({ name: "Project", goal: "Handle failure" });
     const failedNode = createWorkNode(failedKit.ctx, failedProject.id, "Fail").node.id;
@@ -320,7 +320,12 @@ describe("F11.1 AutoRun minimal loop", () => {
   });
 
   it("rejects invalid pause/resume controls and keeps a paused run single-owned", async () => {
-    const { ctx, adapter } = await createKit([{ kind: "hang" }]);
+    const { ctx, adapter } = await createKit([
+      { kind: "hang" },
+      submit("submit-after-cancel"),
+      review("approve-after-cancel", "complete"),
+      text(),
+    ]);
     const project = ctx.projects.create({ name: "Project", goal: "Control lifecycle" });
     const id = createWorkNode(ctx, project.id, "Collect").node.id;
     ctx.roadmaps.create({ definition: { projectId: project.id, nodes: [id], edges: [] }, reason: "Approved" });
@@ -330,11 +335,16 @@ describe("F11.1 AutoRun minimal loop", () => {
 
     const running = ctx.autoRun.start(project.id);
     await flushUntil(() => adapter.requests.length === 1);
+    expect(() => ctx.autoRun.resume(project.id)).toThrow(expect.objectContaining({ code: "auto-run-not-paused" }));
     ctx.autoRun.pause(project.id);
-    ctx.projectRuntime.stopNode(project.id, id);
-    await running;
+    expect(ctx.projectRuntime.stopNode(project.id, id)).toBe(true);
 
-    expect(() => ctx.autoRun.resume(project.id)).not.toThrow();
+    const paused = await running;
+    expect(paused).toMatchObject({ status: "paused", reason: "turn-cancelled" });
+    expect(() => ctx.autoRun.start(project.id)).toThrow(expect.objectContaining({ code: "auto-run-active" }));
+
+    const resumed = await ctx.autoRun.resume(project.id);
+    expect(resumed.status).toBe("completed");
   });
 
   it("requires a Goal and an existing Roadmap before starting", async () => {
