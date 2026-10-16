@@ -9,6 +9,7 @@ import { MailboxStore } from "../../../src/mailbox/store.js";
 import { NodeSessionService } from "../../../src/node/session.js";
 import { NodeStore } from "../../../src/node/store.js";
 import { ProjectRuntime } from "../../../src/project/runtime.js";
+import { AutoRunService } from "../../../src/project/autorun.js";
 import { ProjectStore } from "../../../src/project/store.js";
 import { ResourceService } from "../../../src/resource/service.js";
 import { RoadmapStore } from "../../../src/roadmap/store.js";
@@ -81,6 +82,7 @@ export async function createKit(
   await mainFiber;
   const runtimeFiber = ctx.plugin(ProjectRuntime);
   await runtimeFiber;
+  await ctx.plugin(AutoRunService);
 
   return { ctx, adapter, searchAdapter, runtimeFiber, nodeFiber, mainFiber };
 }
