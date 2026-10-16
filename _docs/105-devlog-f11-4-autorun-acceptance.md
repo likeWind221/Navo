@@ -1,7 +1,7 @@
 # F11.4：F11 长程自动化验收
 
 > 日期：2026-10-16  
-> 状态：🔄 离线长程场景已实现，等待本机与 CI 验证。  
+> 状态：🔄 离线长程场景已实现；CI 已通过，等待本机验证。  
 > 基线：F11.3 `5f6112c`；开发分支 `phase11-f11.4-longterm-acceptance`。
 
 ## 做了什么
@@ -81,6 +81,6 @@ start a new AutoRun from current domain state
 
 ## 下一步
 
-- 本机执行 `pnpm typecheck` 与 `pnpm test`，重点复验新增 `tests/integration/autorun.spec.ts`。
-- 推送当前分支并检查 GitHub Actions 的完整 `verify`。
-- 本机与 CI 均通过后再更新本记录为最终验收结果，并进入 F11 收口；真实模型 `scripts/autorun.ts` 单独按需执行。
+- CI `verify`：通过，`pnpm typecheck` 与 `pnpm test` 均通过，最终为 112 个测试文件、695 个测试全部通过。
+- 本机：尚未执行；当前环境没有本地仓库运行能力，因此不能把 CI 通过等同于本机验证完成。
+- 下一步由本机执行 `pnpm typecheck` 与 `pnpm test`；若本机也通过，再将 F11.4 标记 `✅` 并按 Step 门禁合并。真实模型 `scripts/autorun.ts` 单独按需执行。
