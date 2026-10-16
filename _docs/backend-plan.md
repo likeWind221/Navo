@@ -287,13 +287,6 @@ Human switch / resume
 
 Phase 12 专注“压缩已有上下文”，不负责自动推进；Phase 13 专注“从上下文之外检索信息”，不替代 Phase 12 的 Session 压缩。两者均建立在 F11 已形成的长程自动运行基础上。
 
-## 10. 后续阶段
-
-| Phase | 核心问题 | 目标产物 |
-|---|---|---|
-| Phase 12 | Research Workspace 如何使用通用 Core？ | Research Agent Profile、Claim / Evidence、RAG 与研究领域适配 |
-| Phase 13 | 系统如何与研究者长期共同演进？ | Research Memory、长期反馈与 Human-AI Co-evolution |
-
 Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不恢复为独立产品主线。
 
 ## 11. 当前下一步
