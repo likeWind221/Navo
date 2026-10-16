@@ -112,6 +112,7 @@ describe("F11.1 AutoRun minimal loop", () => {
   it("lets Main replan during review and AutoRun follows the new Roadmap", async () => {
     const { ctx } = await createKit([
       submit("submit"),
+      review("approve", "complete"),
       modelResponse([
         call("add-node", ADD_NODE_TOOL_NAME, {
           base_version: 1,
@@ -124,11 +125,8 @@ describe("F11.1 AutoRun minimal loop", () => {
           depends_on: [],
           index: null,
         }),
-        call("approve", SUBMIT_REVIEW_TOOL_NAME, {
-          decision: "complete",
-          reason: "The Node met its acceptance criteria; the new validation step is now on the Roadmap.",
-        }),
       ], "tool-calls"),
+      text("Plan updated."),
       submit("validate"),
       review("approve-validation", "complete"),
       text(),
