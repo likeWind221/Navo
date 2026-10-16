@@ -3,6 +3,8 @@ import { AGENT_TEXT_MAX_CHARS } from "../agent.js";
 import type {
   NodeReviewInput,
   NodeV1,
+  AutoRunSnapshotV1,
+  AutoRunTargetV1,
   ProjectCreateInput,
   ProjectDetailV1,
   ProjectFollowV1,
@@ -120,6 +122,39 @@ export function parseProjectDetail(value: unknown): ProjectDetailV1 {
     main: { sessionId: id(main.sessionId, "sessionId"), turnActive: flag(main.turnActive, "turnActive") },
     roadmap: detail.roadmap === null ? null : parseRoadmap(detail.roadmap),
   };
+}
+
+export function parseProjectAutoRunSnapshot(value: unknown): AutoRunSnapshotV1 {
+  const snapshot = shape(value,
+    ["runId", "projectId", "status", "nodeTurns", "mainTurns", "currentTarget", "reason"],
+    "project AutoRun snapshot");
+  return {
+    runId: id(snapshot.runId, "runId"),
+    projectId: id(snapshot.projectId, "projectId"),
+    status: oneOf(snapshot.status, ["running", "paused", "completed"] as const, "AutoRun status"),
+    nodeTurns: count(snapshot.nodeTurns, "nodeTurns"),
+    mainTurns: count(snapshot.mainTurns, "mainTurns"),
+    currentTarget: snapshot.currentTarget === null ? null : parseAutoRunTarget(snapshot.currentTarget),
+    reason: snapshot.reason === null ? null : oneOf(snapshot.reason, [
+      "roadmap-complete", "no-eligible-node", "review-escalated", "review-undecided",
+      "turn-failed", "turn-cancelled", "turn-interrupted", "turn-blocked",
+      "node-turn-limit", "main-turn-limit", "human-paused", "project-unavailable",
+      "busy", "aborted",
+    ] as const, "AutoRun stop reason"),
+  };
+}
+
+export function parseProjectAutoRunSnapshotOrNull(value: unknown): AutoRunSnapshotV1 | null {
+  return value === null ? null : parseProjectAutoRunSnapshot(value);
+}
+
+function parseAutoRunTarget(value: unknown): AutoRunTargetV1 {
+  const target = requireRecord(value, "AutoRun target");
+  if (target.kind === "main" && exactKeys(target, ["kind"])) return { kind: "main" };
+  if (target.kind === "node" && exactKeys(target, ["kind", "nodeId"])) {
+    return { kind: "node", nodeId: id(target.nodeId, "AutoRun nodeId") };
+  }
+  return invalid("Malformed AutoRun target");
 }
 
 export function parseProjectFollow(value: unknown): ProjectFollowV1 {

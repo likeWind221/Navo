@@ -1,7 +1,17 @@
-import { parseProjectDetail, parseProjectList, parseProjectSummary } from "../../../rpc/project/validation.js";
+import {
+  parseProjectAutoRunSnapshot,
+  parseProjectAutoRunSnapshotOrNull,
+  parseProjectDetail,
+  parseProjectList,
+  parseProjectSummary,
+} from "../../../rpc/project/validation.js";
 import type { DesktopBridgeFailureCode, DesktopProjectApi, DesktopProjectResult } from "../../shared/project.js";
 import { parseDesktopProjectResult, parseWorkspaceChoice } from "../../shared/project/validation.js";
 import {
+  PROJECT_AUTORUN_GET_CHANNEL,
+  PROJECT_AUTORUN_PAUSE_CHANNEL,
+  PROJECT_AUTORUN_RESUME_CHANNEL,
+  PROJECT_AUTORUN_START_CHANNEL,
   PROJECT_CHOOSE_WORKSPACE_CHANNEL,
   PROJECT_CREATE_CHANNEL,
   PROJECT_GET_CHANNEL,
@@ -31,6 +41,10 @@ export function createDesktopProjectApi(ipc: ProjectIpcRenderer): DesktopProject
     list: () => request(PROJECT_LIST_CHANNEL, {}, parseProjectList),
     create: input => request(PROJECT_CREATE_CHANNEL, input, parseProjectSummary),
     get: input => request(PROJECT_GET_CHANNEL, input, parseProjectDetail),
+    autoRunStart: input => request(PROJECT_AUTORUN_START_CHANNEL, input, parseProjectAutoRunSnapshot),
+    autoRunPause: input => request(PROJECT_AUTORUN_PAUSE_CHANNEL, input, parseProjectAutoRunSnapshot),
+    autoRunResume: input => request(PROJECT_AUTORUN_RESUME_CHANNEL, input, parseProjectAutoRunSnapshot),
+    autoRunGet: input => request(PROJECT_AUTORUN_GET_CHANNEL, input, parseProjectAutoRunSnapshotOrNull),
     chooseWorkspace: () => request(PROJECT_CHOOSE_WORKSPACE_CHANNEL, null, parseWorkspaceChoice),
   } satisfies DesktopProjectApi);
 }

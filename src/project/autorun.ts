@@ -24,8 +24,13 @@ export interface AutoRunSnapshot {
   readonly status: "running" | "paused" | "completed";
   readonly nodeTurns: number;
   readonly mainTurns: number;
-  readonly reason?: AutoRunStopReason;
+  readonly currentTarget: AutoRunTarget | null;
+  readonly reason: AutoRunStopReason | null;
 }
+
+export type AutoRunTarget =
+  | { readonly kind: "main" }
+  | { readonly kind: "node"; readonly nodeId: string };
 
 export type AutoRunStopReason =
   | "roadmap-complete"
@@ -54,6 +59,7 @@ interface AutoRunRun {
   controller: AbortController;
   status: "running" | "paused" | "completed";
   reason?: AutoRunStopReason;
+  currentTarget: AutoRunTarget | null;
   pauseRequested: boolean;
   turnActive: boolean;
   nodeTurns: number;
@@ -137,6 +143,7 @@ export class AutoRunService extends Service {
       limits: this.limits,
       controller: new AbortController(),
       status: "running",
+      currentTarget: null,
       pauseRequested: false,
       turnActive: false,
       nodeTurns: 0,
@@ -205,6 +212,7 @@ export class AutoRunService extends Service {
           }
           if (run.mainTurns >= run.limits.mainTurns) return stop("main-turn-limit");
 
+          run.currentTarget = { kind: "main" };
           run.turnActive = true;
           let reviewed: MainSessionTurnResult;
           try {
@@ -242,6 +250,7 @@ export class AutoRunService extends Service {
         if (this.ctx.projectRuntime.isNodeActive(eligible.node.id)) return stop("busy");
         if (run.nodeTurns >= run.limits.nodeTurns) return stop("node-turn-limit");
 
+        run.currentTarget = { kind: "node", nodeId: eligible.node.id };
         run.turnActive = true;
         let turn: NodeSessionTurnResult;
         try {
@@ -297,7 +306,8 @@ export class AutoRunService extends Service {
       status: run.status,
       nodeTurns: run.nodeTurns,
       mainTurns: run.mainTurns,
-      ...(run.reason === undefined ? {} : { reason: run.reason }),
+      currentTarget: run.currentTarget,
+      reason: run.reason ?? null,
     });
   }
 }

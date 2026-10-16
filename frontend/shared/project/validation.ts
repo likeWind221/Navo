@@ -21,6 +21,10 @@ const PROJECT_FAILURE_CODES: readonly ProjectFailureCode[] = [
   "workspace-conflict",
   "workspace-invalid",
   "runtime-unavailable",
+  "auto-run-active",
+  "auto-run-not-found",
+  "auto-run-not-paused",
+  "auto-run-unavailable",
   "internal",
 ];
 

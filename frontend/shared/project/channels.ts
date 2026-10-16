@@ -2,3 +2,7 @@ export const PROJECT_LIST_CHANNEL = "navo:project:list";
 export const PROJECT_CREATE_CHANNEL = "navo:project:create";
 export const PROJECT_GET_CHANNEL = "navo:project:get";
 export const PROJECT_CHOOSE_WORKSPACE_CHANNEL = "navo:project:choose-workspace";
+export const PROJECT_AUTORUN_START_CHANNEL = "navo:project:autorun:start";
+export const PROJECT_AUTORUN_PAUSE_CHANNEL = "navo:project:autorun:pause";
+export const PROJECT_AUTORUN_RESUME_CHANNEL = "navo:project:autorun:resume";
+export const PROJECT_AUTORUN_GET_CHANNEL = "navo:project:autorun:get";

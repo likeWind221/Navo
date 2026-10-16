@@ -2,6 +2,10 @@ import { BrowserWindow, dialog, ipcMain } from "electron";
 import type { WebContents } from "electron";
 
 import {
+  PROJECT_AUTORUN_GET_CHANNEL,
+  PROJECT_AUTORUN_PAUSE_CHANNEL,
+  PROJECT_AUTORUN_RESUME_CHANNEL,
+  PROJECT_AUTORUN_START_CHANNEL,
   PROJECT_CHOOSE_WORKSPACE_CHANNEL,
   PROJECT_CREATE_CHANNEL,
   PROJECT_GET_CHANNEL,
@@ -18,11 +22,19 @@ export function registerProjectIpc(
   ipcMain.handle(PROJECT_LIST_CHANNEL, (_event, candidate: unknown) => handlers.list(candidate));
   ipcMain.handle(PROJECT_CREATE_CHANNEL, (_event, candidate: unknown) => handlers.create(candidate));
   ipcMain.handle(PROJECT_GET_CHANNEL, (_event, candidate: unknown) => handlers.get(candidate));
+  ipcMain.handle(PROJECT_AUTORUN_START_CHANNEL, (_event, candidate: unknown) => handlers.autoRunStart(candidate));
+  ipcMain.handle(PROJECT_AUTORUN_PAUSE_CHANNEL, (_event, candidate: unknown) => handlers.autoRunPause(candidate));
+  ipcMain.handle(PROJECT_AUTORUN_RESUME_CHANNEL, (_event, candidate: unknown) => handlers.autoRunResume(candidate));
+  ipcMain.handle(PROJECT_AUTORUN_GET_CHANNEL, (_event, candidate: unknown) => handlers.autoRunGet(candidate));
   ipcMain.handle(PROJECT_CHOOSE_WORKSPACE_CHANNEL, event => chooseWorkspace(() => openDialog(event.sender)));
   return () => {
     ipcMain.removeHandler(PROJECT_LIST_CHANNEL);
     ipcMain.removeHandler(PROJECT_CREATE_CHANNEL);
     ipcMain.removeHandler(PROJECT_GET_CHANNEL);
+    ipcMain.removeHandler(PROJECT_AUTORUN_START_CHANNEL);
+    ipcMain.removeHandler(PROJECT_AUTORUN_PAUSE_CHANNEL);
+    ipcMain.removeHandler(PROJECT_AUTORUN_RESUME_CHANNEL);
+    ipcMain.removeHandler(PROJECT_AUTORUN_GET_CHANNEL);
     ipcMain.removeHandler(PROJECT_CHOOSE_WORKSPACE_CHANNEL);
   };
 }
