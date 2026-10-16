@@ -316,7 +316,7 @@ describe("F11 AutoRun control and execution loop", () => {
       nodeTurns: 2,
       mainTurns: 2,
     });
-    expect(adapter.requests).toHaveLength(4);
+    expect(adapter.requests).toHaveLength(6);
     const extraNodeId = nodeIds.at(2);
     expect(extraNodeId).toBeDefined();
     expect(ctx.nodes.get(extraNodeId!)?.status).toBe("idle");
