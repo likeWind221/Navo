@@ -21,7 +21,7 @@ function submit(id: string): MockLLMEntry[] {
     resource_ids: [],
     criteria: [{ criterion_index: 1, satisfied: true, note: "Checked" }],
     remaining: [],
-  }), text()];
+  })];
 }
 
 function review(id: string, decision: "complete" | "rework" | "skip", feedback?: string): MockLLMEntry[] {
@@ -38,7 +38,6 @@ export function reworkSkipScenario(): readonly MockLLMEntry[] {
   if (delayed.kind !== "events") throw new Error("submit mock must be an events entry");
   return [
     { ...delayed, eventDelayMs: 10 },
-    first[1]!,
     ...review("a-rework", "rework", "Address the missing detail."),
     ...submit("a-final"),
     ...review("a-complete", "complete"),
