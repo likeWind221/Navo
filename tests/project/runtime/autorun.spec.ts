@@ -32,7 +32,7 @@ function review(id: string, decision: "complete" | "rework" | "skip" | "escalate
 
 const text = (value = "Done.") => modelResponse([{ type: "text", text: value }]);
 
-describe("F11.1 AutoRun minimal loop", () => {
+describe("F11 AutoRun control and execution loop", () => {
   it("runs one Node through multiple Turns in the same Session before automatic Main review", async () => {
     const { ctx, adapter } = await createKit([
       text("I need another Turn."),
