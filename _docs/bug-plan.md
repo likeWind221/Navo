@@ -4,6 +4,8 @@
 
 ## 当前状态
 
+- [x] BUG-012：F11.4 真实验收脚本未调用入口且未提供下游所需材料；已修正，本机完整检查、gpt-6-sol 双节点真实完成及代码 head CI 通过（PR #70，收口提交仍遵循当前 head CI 门禁）。笔记：[106](106-bugfix-bug-012-autorun-acceptance.md)。
+
 未关闭：BUG-002、BUG-007、BUG-010。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 修复已合入、待本机 Qwen 对照与 F5.4 Electron 真实验收。
 
 - [x] BUG-001：Node 续接时未读取已共享的新验证资源（已修复：续接资源变化通知 + Resource ID 语义）
@@ -24,6 +26,7 @@
 
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
+| BUG-012 | P2 / 后端验收 | AutoRun 真实脚本空退出，补齐入口后空材料导致下游等待，不能证明完成链路 | 入口缺失、空 Workspace 与无共享 Resource 均已确认；原真实现场已保留 | 入口真实执行并在失败时非零退出；有效输入下两个 Node 经 Main 判完成；本机检查与当前 head CI 通过 | [106](106-bugfix-bug-012-autorun-acceptance.md) |
 | BUG-001 | P1 / 后端 | synthesis 续接仍读取旧 evidence，报告缺少 validation，无法产出最终推荐 | 首次有效运行第 8 回合；Store 权限检查通过，但未留存该回合请求快照。上下文传递遗漏、模型漏读或旧历史干扰均待确认。2026-10-07 证据确认：新 Resource 已在续接提示中，失败为模型被历史“缺失”结论压过并把名称当 ID；修复后续接 8/8 成功（run 6-13），Resource 引用加固后工具调用零失败 | 留存该回合模型输入和调用结果，定位并处理原因；真实模型读取新 Resource 并形成有依据的结论，同时保持原 Session 和 Human Gate；笔记记录完整复验 | [发现记录](66-devlog-f9.8-longterm-acceptance.md)、[登记与排查边界](67-devlog-bug-tracking.md)、[修复笔记](68-bugfix-bug-001-004-longterm.md) |
 | BUG-002 | P1 / 后端 | validation 注册文件时出现 `Resource source file is unavailable`；模型随后恢复，但严格验收在第 6 回合停止 | 第二次有效运行；未留存失败调用的 path 和底层 I/O 原因。该消息可来自 realpath/stat 的 I/O 失败，不能据此断言一定是模型猜错文件名。2026-10-07：错误已携带 path 与 errno，验收改为“不得有未恢复错误”；run 2-13 均以正确路径注册成功，原错误未复现，原因仍未证实 | 捕获实际参数及失败原因，明确输入文件交接与工具错误恢复的预期；处理已证实问题，真实场景能正确发布/读取所需文件；明确可恢复工具错误的验收标准，不能仅删断言以通过 | [发现记录](66-devlog-f9.8-longterm-acceptance.md)、[登记与排查边界](67-devlog-bug-tracking.md)、[修复笔记](68-bugfix-bug-001-004-longterm.md) |
 | BUG-003 | P2 / 后端 | Main 在 synthesis 实际 idle 时仍报告 locked，误导用户下一步操作 | 首次有效运行的交接回复；属于可观察的文本与事实不一致，具体提示、历史或查询使用原因待确认。回合内 working 与回合后 idle 的正常转换不算此问题。2026-10-07：确认原因是人工确认发生在 Main 对话外且提示无重读规则；修复后状态探针 10/10 本回合读取并答 idle，Main 另收节点状态变化提醒 | 关键状态报告基于当前可信事实；以实际状态转换场景验证报告一致，无法确认时表达未知；保留真实复验文本与对应快照 | [发现记录](66-devlog-f9.8-longterm-acceptance.md)、[登记与排查边界](67-devlog-bug-tracking.md)、[修复笔记](68-bugfix-bug-001-004-longterm.md) |
