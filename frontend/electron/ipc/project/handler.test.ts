@@ -5,13 +5,14 @@ import {
   projectAutoRunStartMethod,
 } from "../../../../rpc/project.js";
 import { RpcError } from "../../../../rpc/errors.js";
+import type { RpcMethod } from "../../../../rpc/index.js";
 import { createProjectHandlers } from "./handler.js";
 
 describe("desktop project AutoRun handlers", () => {
   it("forwards AutoRun start through the Kernel Host", async () => {
     const calls: string[] = [];
     const host = {
-      async *stream(method: typeof projectAutoRunStartMethod, input: { projectId: string }) {
+      async *stream<TInput, TOutput>(method: RpcMethod<TInput, TOutput>, input: TInput) {
         calls.push(method.name);
         expect(input).toEqual({ projectId: "project-1" });
         yield {
@@ -22,7 +23,7 @@ describe("desktop project AutoRun handlers", () => {
           mainTurns: 0,
           currentTarget: { kind: "node", nodeId: "node-1" },
           reason: null,
-        };
+        } as TOutput;
       },
     };
     const handlers = createProjectHandlers(host);
@@ -35,9 +36,9 @@ describe("desktop project AutoRun handlers", () => {
 
   it("returns null when no AutoRun exists", async () => {
     const host = {
-      async *stream(method: typeof projectAutoRunGetMethod) {
+      async *stream<TInput, TOutput>(method: RpcMethod<TInput, TOutput>) {
         expect(method.name).toBe(projectAutoRunGetMethod.name);
-        yield null;
+        yield null as TOutput;
       },
     };
     const handlers = createProjectHandlers(host);
@@ -50,9 +51,9 @@ describe("desktop project AutoRun handlers", () => {
   it("rejects malformed AutoRun input before contacting the Host", async () => {
     let called = false;
     const host = {
-      async *stream() {
+      async *stream<TInput, TOutput>(_method: RpcMethod<TInput, TOutput>) {
         called = true;
-        yield null;
+        yield null as TOutput;
       },
     };
     const handlers = createProjectHandlers(host);
@@ -65,11 +66,11 @@ describe("desktop project AutoRun handlers", () => {
 
   it("maps AutoRun remote failures to stable desktop failures", async () => {
     const host = {
-      async *stream() {
+      async *stream<TInput, TOutput>(_method: RpcMethod<TInput, TOutput>) {
         throw new RpcError("remote-error", "AutoRun already active", {
           failure: { code: "auto-run-active", message: "AutoRun already active", details: {} },
         });
-        yield null;
+        yield null as TOutput;
       },
     };
     const handlers = createProjectHandlers(host);
