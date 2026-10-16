@@ -38,6 +38,8 @@ export interface TurnModelConfig {
   readonly model: string;
   readonly temperature?: number;
   readonly maxTokens?: number;
+  readonly contextWindow?: number;
+  readonly autoCompactLimit?: number;
 }
 
 export interface AgentRuntimeLimits {

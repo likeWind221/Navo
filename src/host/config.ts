@@ -36,6 +36,7 @@ const DEFAULT_BASE_URL = "http://192.168.99.2:8090/v1";
 const DEFAULT_MODEL = "qwen3.8-27b";
 const DEFAULT_MAX_TOKENS = 8_192;
 const MAX_OUTPUT_TOKENS = 65_536;
+const MAX_CONTEXT_TOKENS = 10_000_000;
 
 /** Resolve trusted process environment once so credentials stay inside Host. */
 export function resolveKernelHostConfig(
@@ -55,8 +56,16 @@ export function resolveKernelHostConfig(
     }
   }
   const model = env.LLM_MODEL?.trim() || DEFAULT_MODEL;
-  const modelConfig = provider === "openai" ? { provider, model } : {
-    provider, model, maxTokens: boundedInteger("LLM_MAX_TOKENS", env.LLM_MAX_TOKENS, DEFAULT_MAX_TOKENS, MAX_OUTPUT_TOKENS),
+  const contextWindow = optionalInteger("LLM_CONTEXT_WINDOW", env.LLM_CONTEXT_WINDOW, MAX_CONTEXT_TOKENS);
+  const autoCompactLimit = optionalInteger("LLM_AUTO_COMPACT_LIMIT", env.LLM_AUTO_COMPACT_LIMIT, MAX_CONTEXT_TOKENS);
+  const modelConfig = {
+    provider,
+    model,
+    ...(provider === "openai" ? {} : {
+      maxTokens: boundedInteger("LLM_MAX_TOKENS", env.LLM_MAX_TOKENS, DEFAULT_MAX_TOKENS, MAX_OUTPUT_TOKENS),
+    }),
+    ...(contextWindow === undefined ? {} : { contextWindow }),
+    ...(autoCompactLimit === undefined ? {} : { autoCompactLimit }),
   };
   const apiKey = env.LLM_API_KEY;
   if (apiKey !== undefined && (apiKey.length === 0 || /[\r\n]/.test(apiKey))) {
@@ -122,6 +131,10 @@ function boundedInteger(
     throw new TypeError(`${name} must be an integer from 1 through ${maximum}.`);
   }
   return parsed;
+}
+
+function optionalInteger(name: string, value: string | undefined, maximum: number): number | undefined {
+  return value === undefined ? undefined : boundedInteger(name, value.trim(), 0, maximum);
 }
 
 function optionalBoolean(name: string, value: string | undefined, fallback: boolean): boolean {
