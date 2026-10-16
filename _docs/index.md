@@ -72,6 +72,7 @@
 
 - Phase 12：记忆压缩——Context Meter、Session Compaction、Summary Checkpoint 与长程上下文恢复。
 - [F12.0 上下文压缩设计收口](109-devlog-f12-0-design.md)：收口 Context Meter、压力与超窗两类触发、工具配对选区、`compaction-started/ended` 事务与摘要检查点、失败 / 取消 / 中断及与 AutoRun 的衔接，拆分 F12.1–F12.5；只修改文档。
+- [F12.1 Context Meter 与模型容量](110-devlog-f12-1-context-meter.md)：`LLM_CONTEXT_WINDOW` / `LLM_AUTO_COMPACT_LIMIT` 配置、阈值与保留预算公式、usage 锚点加有符号估算差的上下文压力测量，以及 Harness / Codex 对照；尚未接入回合执行。
 - Phase 13：RAG——Workspace / Resource / Session 检索、权限感知 Retrieval 与 RAG Pipeline。
 
 ## 模型接入 M1

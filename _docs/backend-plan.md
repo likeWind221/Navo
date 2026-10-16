@@ -11,7 +11,7 @@ Phase 0–10 与模型接入补充工作 M1 均已完成。系统现在具备：
 - 持久恢复与完成判断：SQLite 持久保存与重启恢复、会话续接、中断收尾、Node 完成信号与 Main 复盘判定（Phase 10）。
 - 模型接入：公共 Chat Completions / Responses 协议、ChatGPT 订阅授权与 OpenAI 接入（M1）。
 
-Phase 11 自动化流程已收口：F11.0–F11.4 完成，F11.3 已补齐前端独立检查与 Electron bridge 实际调用验收，见 [108](108-devlog-f11-3-desktop-acceptance.md)。正式页面 AutoRun 控件未包含在本次公共契约验收。Phase 12 上下文压缩已完成 F12.0 设计收口（[109](109-devlog-f12-0-design.md)），F12.1 起待用户确认后实施；RAG 留待 Phase 13。
+Phase 11 自动化流程已收口：F11.0–F11.4 完成，F11.3 已补齐前端独立检查与 Electron bridge 实际调用验收，见 [108](108-devlog-f11-3-desktop-acceptance.md)。正式页面 AutoRun 控件未包含在本次公共契约验收。Phase 12 上下文压缩已完成 F12.0 设计收口与 F12.1 Context Meter（[109](109-devlog-f12-0-design.md)、[110](110-devlog-f12-1-context-meter.md)），F12.2 起待用户确认后实施；RAG 留待 Phase 13。
 
 ```text
 Project Goal
@@ -305,7 +305,7 @@ Host restart -> replay surface -> unmatched compaction marked interrupted -> res
 | 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
 |---|---|---|---|---|
 | ✅ | F12.0 上下文压缩设计收口 | 后端设计记录 | 收口上下文测量、压缩触发、选区与工具配对、摘要检查点、事务事件、失败 / 取消 / 中断及与 AutoRun 的衔接，并拆分后续子 Step | [109](109-devlog-f12-0-design.md) 已落地；附 DeepSeek Harness 对照与不采用项；不修改生产代码 |
-| ⬜ | F12.1 Context Meter 与模型容量 | Agent 请求前检查与模型配置 | 每个模型声明上下文容量；每次请求前能算出 Session 当前上下文压力并判断是否越过压缩阈值；容量缺失或配置矛盾时明确禁用自动压缩 | 离线测试覆盖 usage 锚点、估算、阈值与保留预算计算和配置校验；现有回合行为不变 |
+| ✅ | F12.1 Context Meter 与模型容量 | Agent 请求前检查与模型配置 | 每个模型声明上下文容量与可选压缩上限；每次请求前能算出 Session 当前上下文压力并判断是否越过压缩阈值；容量缺失或配置矛盾时明确禁用自动压缩 | 离线测试覆盖 usage 锚点、估算、阈值与保留预算计算和配置校验；现有回合行为不变；见 [110](110-devlog-f12-1-context-meter.md) |
 | ⬜ | F12.2 压力触发的 Session 压缩 | Agent 执行与 Session 日志 | 上下文越过阈值时自动把最早的历史替换为摘要检查点，保留近期尾部且不拆开工具调用与结果，后续回合从摘要续接；压缩失败只记录不打断回合 | 离线多回合 Session 触发压缩后继续完成任务；日志可回放出相同 surface；失败、不收缩、无有效选区均有测试 |
 | ⬜ | F12.3 超窗恢复与重启对账 | 模型错误归一、Agent 执行与重启恢复 | 模型确认超窗后压缩一次再重试；压不动时回合以明确原因失败并让 AutoRun 暂停；重启后未完成的压缩记为中断，从已落盘内容续接 | Qwen / OpenAI 超窗错误被识别；恢复成功与无进展两条路径、取消和重启对账均有测试 |
 | ⬜ | F12.4 压缩与上下文压力公共契约 | Host / RPC 共享契约 | 让桌面调用方读到每个 Session 的上下文用量、压缩发生与结果，并在历史中区分摘要检查点 | 契约含版本、运行时校验与错误语义；Electron bridge 可实际读取；前端展示交由前端计划 |
@@ -323,7 +323,7 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不恢复�
 
 ## 12. 当前下一步
 
-**Phase 10、M1 与 Phase 11（F11.0–F11.4）已完成。F11.3 于 2026-10-16 补齐前端独立检查与 Electron bridge 实际调用验证，代码 head CI 通过，见 [108](108-devlog-f11-3-desktop-acceptance.md) 与 [PR #71](https://github.com/likeWind221/Navo/pull/71)，收口提交仍按当前 head CI 门禁合并。F11.4 的离线和真实模型证据见 [105](105-devlog-f11-4-autorun-acceptance.md) 与 [PR #70](https://github.com/likeWind221/Navo/pull/70)。Phase 12 已完成 F12.0 设计收口（[109](109-devlog-f12-0-design.md)），后端下一步是 F12.1 Context Meter 与模型容量，待用户确认后开始，不自动实施；正式页面 AutoRun 控件和前端 F5.4–F5.8 不因此视为完成。**
+**Phase 10、M1 与 Phase 11（F11.0–F11.4）已完成。F11.3 于 2026-10-16 补齐前端独立检查与 Electron bridge 实际调用验证，代码 head CI 通过，见 [108](108-devlog-f11-3-desktop-acceptance.md) 与 [PR #71](https://github.com/likeWind221/Navo/pull/71)，收口提交仍按当前 head CI 门禁合并。F11.4 的离线和真实模型证据见 [105](105-devlog-f11-4-autorun-acceptance.md) 与 [PR #70](https://github.com/likeWind221/Navo/pull/70)。Phase 12 已完成 F12.0 设计收口与 F12.1 Context Meter（[109](109-devlog-f12-0-design.md)、[110](110-devlog-f12-1-context-meter.md)），后端下一步是 F12.2 压力触发的 Session 压缩，待用户确认后开始，不自动实施；正式页面 AutoRun 控件和前端 F5.4–F5.8 不因此视为完成。**
 
 - 免除记录：F10.4b 真实模型五场景验收与 F10.5 第 7–11 回合真实验收均经用户决定免除，相应能力只由离线测试覆盖，见第 7 节。
 - 未关闭 Bug（以 [Bug 跟踪表](bug-plan.md) 为准）：BUG-002 保持未关闭、等待复现；BUG-007 经用户决定搁置；BUG-010 修复已合入，Qwen 与 Electron 复验待本机完成。
