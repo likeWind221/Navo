@@ -71,6 +71,7 @@
 ## 后端 Phase 12–13
 
 - Phase 12：记忆压缩——Context Meter、Session Compaction、Summary Checkpoint 与长程上下文恢复。
+- [F12.0 上下文压缩设计收口](109-devlog-f12-0-design.md)：收口 Context Meter、压力与超窗两类触发、工具配对选区、`compaction-started/ended` 事务与摘要检查点、失败 / 取消 / 中断及与 AutoRun 的衔接，拆分 F12.1–F12.5；只修改文档。
 - Phase 13：RAG——Workspace / Resource / Session 检索、权限感知 Retrieval 与 RAG Pipeline。
 
 ## 模型接入 M1
