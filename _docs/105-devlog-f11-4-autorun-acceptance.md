@@ -10,12 +10,12 @@ F11.4 不新增 AutoRun 生产状态机，而是把 F11.1、F11.2 与 F11.3 的�
 
 新增两类离线场景：
 
-1. **暂停 → 重启 → Resume → 完成**
+1. **暂停 → 重启 → 显式 Start → 完成**
    - Node A 提交；
    - Human 在 Turn 边界请求暂停；
    - App 重启后验证 Project / Roadmap / Node / Session 持久状态不变；
    - 确认重启不会自动恢复 AutoRun；
-   - Human 显式 Resume；
+   - Human 显式 Start，重新建立 AutoRun；
    - Main 对 A 返工，A 使用原 Session 再次提交；
    - Main 完成 A；
    - Node B 提交后由 Main skip；
@@ -63,10 +63,10 @@ Pause / Failure
        +--> AutoRun runtime absent
        |
        v
-Human Resume
+Human Start
        |
        v
-continue from current domain state
+start a new AutoRun from current domain state
 ~~~
 
 离线场景使用真实 SQLite 文件，并在同一个数据库文件上重新创建 App；不引入新的 AutoRun 持久化表。这样可以直接验证 F11.2 “重启不自动恢复”的边界。
@@ -75,6 +75,7 @@ continue from current domain state
 
 - F11.4 不应通过修改 `AutoRunService` 的预算配置来制造短测试，否则会把测试专用配置扩散到生产 App 配置；暂停场景使用 Human pause，预算边界继续由 F11.2 专项测试覆盖。
 - 重启前后比较的是 Project、Workspace、Roadmap、Node、Session 等持久事实；AutoRun snapshot 本身不参与比较，因为它本来就是进程内运行许可。
+- 发现：`resume()` 只操作当前进程中仍存在的 paused AutoRun；重启后旧 AutoRun 已不存在，符合 F11.0/F11.2 “重新建立 AutoRun” 的设计，因此恢复入口应是 Human 显式 `start()`，而不是跨重启调用 `resume()`。
 - 真实模型场景只验证实际 AutoRun 链路，不把模型具体回答当作确定性断言；确定性的 rework / skip / failure / restart 分支由离线脚本完整覆盖。
 
 ## 下一步
