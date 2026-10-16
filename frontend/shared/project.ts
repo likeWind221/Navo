@@ -1,4 +1,5 @@
 import type {
+  AutoRunSnapshotV1,
   ProjectCreateInput,
   ProjectDetailV1,
   ProjectFailureCode,
@@ -11,6 +12,10 @@ export interface DesktopProjectApi {
   list(): Promise<DesktopProjectResult<ProjectListV1>>;
   create(input: ProjectCreateInput): Promise<DesktopProjectResult<ProjectSummaryV1>>;
   get(input: ProjectRefInput): Promise<DesktopProjectResult<ProjectDetailV1>>;
+  autoRunStart(input: ProjectRefInput): Promise<DesktopProjectResult<AutoRunSnapshotV1>>;
+  autoRunPause(input: ProjectRefInput): Promise<DesktopProjectResult<AutoRunSnapshotV1>>;
+  autoRunResume(input: ProjectRefInput): Promise<DesktopProjectResult<AutoRunSnapshotV1>>;
+  autoRunGet(input: ProjectRefInput): Promise<DesktopProjectResult<AutoRunSnapshotV1 | null>>;
   chooseWorkspace(): Promise<DesktopProjectResult<string | null>>;
 }
 
