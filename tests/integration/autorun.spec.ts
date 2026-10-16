@@ -1,19 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { createNodeId, type ProjectId } from "../../src/brand/ids.js";
+import type { ProjectId, SessionId } from "../../src/brand/ids.js";
 import { projectNode } from "../../src/node/projector.js";
 import { projectRoadmap } from "../../src/roadmap/projector.js";
 import { createWorld, flushUntil } from "./autorun/helpers.js";
 import { failureScenario, reworkSkipScenario } from "./autorun/script.js";
 
-async function durableState(app: Awaited<ReturnType<typeof createWorld>> extends infer _ ? never : never, _projectId: ProjectId) {
-  throw new Error("unreachable");
-}
 
 async function state(app: import("cordis").Context, projectId: ProjectId) {
   const sessions = app.nodes.getByProject(projectId)
     .map(node => node.sessionId)
-    .filter((sessionId): sessionId is string => sessionId !== undefined);
+    .filter((sessionId): sessionId is SessionId => sessionId !== undefined);
   return {
     project: app.projects.get(projectId),
     workspace: await app.projectWorkspaces.get(projectId),
