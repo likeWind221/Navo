@@ -4,6 +4,7 @@ import { createToolCallId } from "../../../src/brand/ids.js";
 import type { ToolCallContentBlock } from "../../../src/llm/types.js";
 import { SUBMIT_COMPLETION_TOOL_NAME } from "../../../src/tools/builtins/node/submit.js";
 import { SUBMIT_REVIEW_TOOL_NAME } from "../../../src/tools/builtins/project/review.js";
+import { ADD_NODE_TOOL_NAME } from "../../../src/tools/builtins/roadmap/modify.js";
 import { modelResponse } from "../../helpers/runtime.js";
 import { createKit, createWorkNode, flushUntil } from "./helpers.js";
 
@@ -106,6 +107,46 @@ describe("F11.1 AutoRun minimal loop", () => {
     expect(node).toMatchObject({ status: "completing", reworkCount: 1 });
     expect(ctx.sessions.getEvents(node.sessionId!).filter(event => event.type === "turn-started")).toHaveLength(2);
     expect(JSON.stringify(adapter.requests[3]?.messages)).toContain("Add the missing source");
+  });
+
+  it("lets Main replan during review and AutoRun follows the new Roadmap", async () => {
+    const { ctx } = await createKit([
+      submit("submit"),
+      modelResponse([
+        call("add-node", ADD_NODE_TOOL_NAME, {
+          base_version: 1,
+          reason: "The completed work revealed a missing validation step.",
+          key: "validate",
+          title: "Validate",
+          goal: "Validate the completed work",
+          done_when: ["Validation complete"],
+          required: true,
+          depends_on: [],
+          index: null,
+        }),
+        call("approve", SUBMIT_REVIEW_TOOL_NAME, {
+          decision: "complete",
+          reason: "The Node met its acceptance criteria; the new validation step is now on the Roadmap.",
+        }),
+      ], "tool-calls"),
+      submit("validate"),
+      review("approve-validation", "complete"),
+      text(),
+    ]);
+    const project = ctx.projects.create({ name: "Project", goal: "Adapt the plan" });
+    const first = createWorkNode(ctx, project.id, "Collect").node.id;
+    ctx.roadmaps.create({
+      definition: { projectId: project.id, nodes: [first], edges: [] },
+      reason: "Approved",
+    });
+
+    const result = await ctx.autoRun.start(project.id);
+    const roadmap = ctx.roadmaps.get(project.id)!;
+    const added = roadmap.graph.definition.nodes.find(nodeId => nodeId !== first);
+    expect(added).toBeDefined();
+    expect(result).toMatchObject({ status: "completed", nodeTurns: 2, mainTurns: 2 });
+    expect(ctx.nodes.get(first)?.lastReview?.decision).toBe("complete");
+    expect(ctx.nodes.get(added!)?.lastReview?.decision).toBe("complete");
   });
 
   it("continues a Node already started by Human without rebinding its Session", async () => {
