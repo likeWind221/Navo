@@ -273,7 +273,7 @@ Human switch / resume
 | 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
 |---|---|---|---|---|
 | ✅ | F11.0 自动化流程与自主运行架构设计收口 | 后端设计记录 | 收口 manual / auto 与 running / paused 两层状态、Main / Node 自动调度顺序、连续 Auto Run 回合预算、失败 / 取消 / 中断、高风险操作与 Human 接管边界 | [100](100-devlog-f11-0-design.md) 已落地；明确 F11 的状态机、调度、预算、停止与验收规则；不修改生产代码；设计已收口 |
-| 🔄 | F11.1 自动推进驱动最小闭环 | Project 执行控制面 | 在用户开启 Auto 后，自动选择 eligible Node，Node 正常收口后触发 Main Review，并按 complete / rework / skip 继续推进 | 人工模式行为与 F10 一致；全自动模式可完成一个多 Node 离线闭环；同一 Node 不并发，Main 同时最多一个 Turn | 
+| 🔄 | F11.1 自动推进驱动最小闭环 | Project 执行控制面 | 在用户开启 Auto 后，自动选择 eligible Node，Node 正常收口后触发 Main Review；Main 可基于复盘结果修改 Roadmap，AutoRun 每轮重新读取最新计划并按 complete / rework / skip 继续推进 | 人工模式行为与 F10 一致；全自动模式可完成一个多 Node 离线闭环，并覆盖 Main 复盘中的动态重规划；同一 Node 不并发，Main 同时最多一个 Turn | 
 | ⬜ | F11.2 暂停、恢复与失败处理 | Project 执行控制面 | 实现 turn limit、pause / resume、failed / cancelled / interrupted、ask_human 以及 Human 随时接管 | 达到任一 Auto Run 预算或停止条件后自动暂停并记录原因；失败不无限重试；重启后的 Auto Project 不自动运行 |
 | ⬜ | F11.3 全自动推进公共契约 | Host / RPC 共享契约 | 让桌面能切换人工 / 全自动模式、暂停与恢复，并看到当前运行状态、停在哪里及原因 | 开始前停止修改并按共享契约流程与前端确认；方法带版本、两端严格校验 |
 | ⬜ | F11.4 F11 长程自动化验收 | 后端集成测试与阶段记录 | 用多 Node、返工、暂停求助、失败、重启和最终完成场景证明自动推进共同工作 | 离线完整场景可重复通过；真实模型运行保留完整记录，失败现场可定位 |
