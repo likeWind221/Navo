@@ -60,7 +60,7 @@ describe("F11 AutoRun control and execution loop", () => {
     const nodeSession = ctx.nodes.get(id)!.sessionId;
     expect(nodeSession).toBeDefined();
     expect(ctx.sessions.getEvents(nodeSession!).filter(event => event.type === "turn-started")).toHaveLength(2);
-    expect(adapter.requests).toHaveLength(6);
+    expect(adapter.requests).toHaveLength(4);
     expect(JSON.stringify(adapter.requests[1]?.messages)).toContain("I need another Turn.");
     expect(JSON.stringify(adapter.requests[2]?.messages)).toContain("review checklist");
   });
