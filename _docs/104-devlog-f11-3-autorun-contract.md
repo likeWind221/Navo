@@ -1,7 +1,7 @@
 # F11.3：AutoRun 全自动推进公共契约
 
 > 日期：2026-10-16  
-> 状态：🔄 代码已实现，等待 GitHub CI 与本机完整验证。  
+> 状态：🔄 Kernel Host CI 已通过；前端独立 typecheck/test 与本机 Electron 验证待完成。  
 > 基线：F11.2 已合入 `master`。
 
 ## 1. 阶段定位
@@ -144,7 +144,7 @@ AutoRun 本身仍然是进程内运行许可，不新增 SQLite 持久化表。
 - [x] AutoRun 错误映射到稳定 Project failure code；
 - [x] Electron IPC / preload / shared API 已接入；
 - [x] Start / Resume 不阻塞等待整个 AutoRun；
-- [ ] Kernel Host typecheck / test；
+- [x] Kernel Host typecheck / test（GitHub CI：111 files / 693 tests）
 - [ ] Frontend typecheck / test；
 - [ ] 本机 Electron 实际调用验证。
 
