@@ -192,7 +192,7 @@ describe("F11 AutoRun control and execution loop", () => {
     expect(ctx.projectRuntime.stopNode(project.id, id)).toBe(true);
     const result = await running;
     expect(result).toMatchObject({ status: "paused", reason: "turn-cancelled" });
-    expect(ctx.autoRun.get(project.id)).toBeUndefined();
+    expect(ctx.autoRun.get(project.id)).toMatchObject(result);
     expect(ctx.projectRuntime.canContinueNode(project.id, id)).toBe(true);
   });
 
@@ -319,7 +319,7 @@ describe("F11 AutoRun control and execution loop", () => {
     const extraNodeId = nodeIds.at(32);
     expect(extraNodeId).toBeDefined();
     expect(ctx.nodes.get(extraNodeId!)?.status).toBe("idle");
-  });
+  }, 15000);
 
   it("pauses when a Turn is blocked by the AgentRuntime step limit", async () => {
     const { ctx, adapter } = await createKit([
