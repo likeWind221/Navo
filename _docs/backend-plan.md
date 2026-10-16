@@ -11,7 +11,7 @@ Phase 0–10 与模型接入补充工作 M1 均已完成。系统现在具备：
 - 持久恢复与完成判断：SQLite 持久保存与重启恢复、会话续接、中断收尾、Node 完成信号与 Main 复盘判定（Phase 10）。
 - 模型接入：公共 Chat Completions / Responses 协议、ChatGPT 订阅授权与 OpenAI 接入（M1）。
 
-当前主线是 Phase 11 全自动推进与上下文压缩，第一步 F11.0 设计收口尚未开始，见第 11 节。
+当前主线是 Phase 11 自动化流程；F11.0 设计已落地，待用户确认后进入自动推进实现。上下文压缩与 RAG 分别留待 Phase 12、Phase 13。
 
 ```text
 Project Goal
@@ -248,13 +248,11 @@ Human start Node ---> Node works / publishes Resource
 | ✅ | M1.3 本机订阅授权与账号模型查询 | 用户可独立登录 ChatGPT、查看自己的模型、刷新凭据及登出 | PR #52，见 [89](89-devlog-m1-3-chatgpt-auth.md) |
 | ✅ | M1.4 Navo 使用订阅模型完成工作 | 用户可通过配置选择订阅模型完成对话和现有工具闭环 | PR #54，见 [91](91-devlog-m1-4-openai.md)；BUG-009 见 [92](92-bugfix-bug-009-namespace.md) |
 
-## 9. Phase 11（F11）：全自动推进与上下文压缩
+## 9. Phase 11（F11）：自动化流程
 
-**阶段目标：** 让 Project 可以在人工推进与全自动推进两种模式间选择，模式只由用户切换。两种模式共用 F10.4 的完成信号、复盘判定与计划反馈；全自动模式由一个独立驱动层负责在安全决策点自动发起已有 Main / Node Turn，并在停止条件、高风险动作或无法判断时退回 Human。长时间运行的 Session 通过上下文压缩持续工作。人工模式的 Human Gate 保持不变。
+**阶段目标：** 让 Project 从 F10 的 Human Gate 驱动，升级为可由 Human 显式开启、可暂停、可接管的全自动推进流程。Main / Node 的领域职责与 F10.4 的完成信号、复盘判定和计划反馈保持不变；Phase 11 只增加“由谁在什么条件下发起下一次 Agent Turn”的自动驱动层。上下文压缩归入 Phase 12，RAG 归入 Phase 13。
 
-**F11.0 收口结果：** 设计记录见 [100](100-devlog-f11-0-design.md)。已明确 manual / auto 与 running / paused 两层状态、Main / Node 调度顺序、64 / 32 的连续 Auto Run 回合预算、失败 / 取消 / 中断语义、高风险操作的 fail-closed 边界，以及 80% 压缩阈值、16% recent tail 与 overflow recovery。当前仅完成设计文档，生产代码仍保持 F10 的 Human Gate 行为。
-
-```text
+~~~text
 Human switch / resume
         |
         v
@@ -262,24 +260,32 @@ Human switch / resume
   |          |
   |          +--> Human Main input --------> Main Turn
   |          +--> pending Node review -----> Main Review
-  |          +--> eligible Nodes ----------> Node Turn(s)
+  |          +--> eligible Node ----------> Node Turn(s)
   |          +--> no runnable Node ---------> Main Planning
   |          +--> no safe decision --------> Auto paused
   |
   +-- Node normal stop --------------------> Main Review
-  +-- Node failed/cancelled/interrupted ---> Auto paused (no review)
+  +-- Node failed/cancelled/interrupted ---> Auto paused
   +-- Main ask_human / limit / high-risk -> Auto paused
   +-- restart of auto Project -------------> Auto paused
-```
+~~~
 
 | 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
 |---|---|---|---|---|
-| 🔄 | F11.0 全自动推进设计收口 | 后端设计记录 | 在 [78](78-devlog-f10-0-design.md) D11 已确认的模式切换、推进规则、复盘钩子、暂停条件与重启规则基础上，收口两层状态、自动调度顺序、Main / Node 连续 Auto Run 预算、高风险操作边界及上下文压缩契约 | [100](100-devlog-f11-0-design.md) 已落地；设计记录明确采用 / 不采用的 Harness 机制与 F11 验收项；待用户确认后进入 F11.1 |
-| ⬜ | F11.1 会话上下文压缩 | 通用 Session / Main / Node 会话 | 让长时间运行的普通、Main 与 Node 会话在上下文接近模型上限时自动压缩，压缩后仍能接着原任务工作 | 压缩后关键目标、决定与未完成事项仍在上下文中；完整执行记录仍保留可追溯；压缩结果随会话保存与恢复；压缩失败不破坏原会话 |
-| ⬜ | F11.2 推进模式与驱动循环 | Project 执行控制面 | 让用户为 Project 选择人工或全自动推进；全自动模式下依赖已满足的空闲节点自动启动，Node 回合结束后系统触发 Main 复盘，并按复盘结果继续推进 | 依 [100](100-devlog-f11-0-design.md) 的状态机、优先级、64 / 32 Auto Run 预算与并发边界实施；人工模式行为与 F10 一致 |
-| ⬜ | F11.3 停止条件与暂停求助 | Project 执行控制面 / Main 协调 | 让全自动推进在返工过多、超出回合上限、回合失败或 Main 需要用户决定时停下来，并让用户看到停止原因后决定继续或切回人工 | 失败 / 取消 / 中断不隐式重试；单节点返工意见超过 2 次、Main / Node Auto Run 预算耗尽、复盘无判定、高风险或需要 Human 决策时暂停；暂停期间不启动新回合 |
-| ⬜ | F11.4 全自动推进公共契约 | Host / RPC 共享契约 | 让桌面能切换推进模式、暂停与恢复自动推进，并看到当前是否在自动运行、停在哪里以及原因 | 开始前停止修改并按共享契约流程与前端确认；方法带版本、两端严格校验；跟随项目时能实时看到模式与停止原因的变化 |
-| ⬜ | F11.5 F11 长程集成验收 | 后端集成测试与阶段记录 | 用一个包含多个节点、返工、暂停求助、重启和最终完成的全自动长程场景证明 F11 能力共同工作 | 离线完整场景可重复通过；真实模型全自动运行保留完整记录，失败现场可用于定位 |
+| 🔄 | F11.0 自动化流程与自主运行架构设计收口 | 后端设计记录 | 收口 manual / auto 与 running / paused 两层状态、Main / Node 自动调度顺序、连续 Auto Run 回合预算、失败 / 取消 / 中断、高风险操作与 Human 接管边界 | [100](100-devlog-f11-0-design.md) 已落地；明确 F11 的状态机、调度、预算、停止与验收规则；不修改生产代码；待用户确认后进入 F11.1 |
+| ⬜ | F11.1 自动推进驱动最小闭环 | Project 执行控制面 | 在用户开启 Auto 后，自动选择 eligible Node，Node 正常收口后触发 Main Review，并按 complete / rework / skip 继续推进 | 人工模式行为与 F10 一致；全自动模式可完成一个多 Node 离线闭环；同一 Node 不并发，Main 同时最多一个 Turn |
+| ⬜ | F11.2 暂停、恢复与失败处理 | Project 执行控制面 | 实现 turn limit、pause / resume、failed / cancelled / interrupted、ask_human 以及 Human 随时接管 | 达到任一 Auto Run 预算或停止条件后自动暂停并记录原因；失败不无限重试；重启后的 Auto Project 不自动运行 |
+| ⬜ | F11.3 全自动推进公共契约 | Host / RPC 共享契约 | 让桌面能切换人工 / 全自动模式、暂停与恢复，并看到当前运行状态、停在哪里及原因 | 开始前停止修改并按共享契约流程与前端确认；方法带版本、两端严格校验 |
+| ⬜ | F11.4 F11 长程自动化验收 | 后端集成测试与阶段记录 | 用多 Node、返工、暂停求助、失败、重启和最终完成场景证明自动推进共同工作 | 离线完整场景可重复通过；真实模型运行保留完整记录，失败现场可定位 |
+
+## 10. Phase 12–13：长程记忆与检索
+
+| Phase | 核心问题 | 目标产物 |
+|---|---|---|
+| Phase 12 | 长时间运行后，Agent 如何保持有效上下文？ | Context Meter、Session Compaction、Summary Checkpoint、长程上下文恢复 |
+| Phase 13 | 当前需要的信息不在上下文时，Agent 如何主动找到？ | Workspace / Resource / Session 检索、RAG Pipeline、权限感知 Retrieval |
+
+Phase 12 专注“压缩已有上下文”，不负责自动推进；Phase 13 专注“从上下文之外检索信息”，不替代 Phase 12 的 Session 压缩。两者均建立在 F11 已形成的长程自动运行基础上。
 
 ## 10. 后续阶段
 
@@ -292,7 +298,7 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不恢复�
 
 ## 11. 当前下一步
 
-**Phase 10（F10.0–F10.5）与 M1 已全部完成（2026-10-15）。F11.0 设计收口已落地到 [100](100-devlog-f11-0-design.md)，当前等待用户确认；确认后下一步进入 F11.1 会话上下文压缩。**
+**Phase 10（F10.0–F10.5）与 M1 已全部完成（2026-10-15）。F11.0 自动化流程设计已落地到 [100](100-devlog-f11-0-design.md)，当前等待用户确认；确认后下一步进入 F11.1 自动推进驱动最小闭环。**
 
 - 免除记录：F10.4b 真实模型五场景验收与 F10.5 第 7–11 回合真实验收均经用户决定免除，相应能力只由离线测试覆盖，见第 7 节。
 - 未关闭 Bug（以 [Bug 跟踪表](bug-plan.md) 为准）：BUG-002 保持未关闭、等待复现；BUG-007 经用户决定搁置；BUG-010 修复已合入，Qwen 与 Electron 复验待本机完成。
