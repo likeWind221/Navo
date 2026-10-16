@@ -11,7 +11,7 @@ Phase 0–10 与模型接入补充工作 M1 均已完成。系统现在具备：
 - 持久恢复与完成判断：SQLite 持久保存与重启恢复、会话续接、中断收尾、Node 完成信号与 Main 复盘判定（Phase 10）。
 - 模型接入：公共 Chat Completions / Responses 协议、ChatGPT 订阅授权与 OpenAI 接入（M1）。
 
-当前主线是 Phase 11 自动化流程；F11.0 设计已收口，F11.1 实现与 CI 已通过，待本机完整验证与 PR 合并。上下文压缩与 RAG 分别留待 Phase 12、Phase 13。
+当前主线是 Phase 11 自动化流程；F11.0–F11.2 已完成，F11.4 本机离线、真实模型与代码 head CI 已通过，F11.3 仍待前端独立验收。上下文压缩与 RAG 分别留待 Phase 12、Phase 13。
 
 ```text
 Project Goal
@@ -276,7 +276,7 @@ Human switch / resume
 | ✅ | F11.1 自动推进驱动最小闭环 | Project 执行控制面 | 在用户开启 Auto 后，自动选择 eligible Node，Node 正常收口后触发 Main Review；Main 可基于复盘结果修改 Roadmap，AutoRun 每轮重新读取最新计划并按 complete / rework / skip 继续推进 | 人工模式行为与 F10 一致；全自动模式可完成一个多 Node 离线闭环，并覆盖 Main 复盘中的动态重规划；同一 Node 不并发，Main 同时最多一个 Turn |
 | ✅ | F11.2 暂停、恢复与失败处理 | Project 执行控制面 | 实现 turn limit、pause / resume、failed / cancelled / interrupted、ask_human 以及 Human 随时接管 | 达到任一 Auto Run 预算或停止条件后自动暂停并记录原因；失败不无限重试；重启后的 Auto Project 不自动运行 |
 | 🔄 | F11.3 全自动推进公共契约 | Host / RPC 共享契约 | 让桌面能切换人工 / 全自动模式、暂停与恢复，并看到当前运行状态、停在哪里及原因 | project.autorun.*.v1 已接入 Host / RPC / Electron；两端严格校验；等待 CI 与本机 Electron 验证 |
-| 🔄 | F11.4 F11 长程自动化验收 | 后端集成测试与阶段记录 | 用多 Node、返工、暂停求助、失败、重启和最终完成场景证明自动推进共同工作 | 离线完整场景可重复通过；真实模型运行保留完整记录，失败现场可定位 |
+| ✅ | F11.4 F11 长程自动化验收 | 后端集成测试与阶段记录 | 用多 Node、返工、暂停求助、失败、重启和最终完成场景证明自动推进共同工作 | 本机 695 项完整测试、gpt-6-sol 双节点自动完成与代码 head CI 通过；离线覆盖暂停/失败/重启/返工/skip，真实证据与失败现场见 [105](105-devlog-f11-4-autorun-acceptance.md) |
 
 ## 10. Phase 12–13：长程记忆与检索
 
@@ -291,7 +291,7 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不恢复�
 
 ## 11. 当前下一步
 
-**Phase 10（F10.0–F10.5）与 M1 已全部完成（2026-10-15）。F11.0 已收口；F11.1、F11.2、F11.3 的后端公共契约代码已合入 master；F11.3 的前端独立验证仍保持 🔄。经用户明确授权，当前先进入 F11.4 长程自动化验收，见 [105](105-devlog-f11-4-autorun-acceptance.md)。**
+**Phase 10（F10.0–F10.5）与 M1 已全部完成（2026-10-15）。F11.0–F11.2 已完成；F11.3 的后端公共契约代码已合入 master，前端独立验证仍保持 🔄。F11.4 已于 2026-10-16 完成本机离线、真实模型与代码 head CI 验收，见 [105](105-devlog-f11-4-autorun-acceptance.md) 与 [PR #70](https://github.com/likeWind221/Navo/pull/70)。当前下一步是 F11.3 前端独立验收；本次不自动开始该项或 Phase 12。**
 
 - 免除记录：F10.4b 真实模型五场景验收与 F10.5 第 7–11 回合真实验收均经用户决定免除，相应能力只由离线测试覆盖，见第 7 节。
 - 未关闭 Bug（以 [Bug 跟踪表](bug-plan.md) 为准）：BUG-002 保持未关闭、等待复现；BUG-007 经用户决定搁置；BUG-010 修复已合入，Qwen 与 Electron 复验待本机完成。

@@ -1,7 +1,7 @@
 # F11.4：F11 长程自动化验收
 
 > 日期：2026-10-16  
-> 状态：🔄 本机离线与真实模型验收通过，等待修正后当前 head CI。  
+> 状态：✅ 本机离线、真实模型与代码 head CI 已通过；收口文档提交仍按当前 head CI 门禁合并。
 > 基线：F11.3 `5f6112c`；开发分支 `phase11-f11.4-longterm-acceptance`。
 
 ## 做了什么
@@ -81,7 +81,7 @@ start a new AutoRun from current domain state
 
 ## 下一步
 
-- 原代码 head `ee9e9af` 的 CI `verify` 已通过；本机修正后的当前 head 仍须重新通过 CI 才能收口与合并。
+- 修正后代码 head `17ee6e3` 的 CI `verify` 已通过（[运行 38904406198](https://github.com/likeWind221/Navo/actions/runs/38904406198)，1 分 29 秒）；本机和真实模型验收均通过。F11.4 完成，交付走 [PR #70](https://github.com/likeWind221/Navo/pull/70)，收口文档提交仍待当前 head CI 通过后才合并。
 - F11.3 前端独立验证继续保持原状态，本次不把后端场景通过等同于 Electron 验收。
 
 ## 2026-10-16 本机验收

@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-- [ ] BUG-012：F11.4 真实验收脚本未调用入口且未提供下游所需材料；已修正，等待本机真实运行与当前 head CI。笔记：[106](106-bugfix-bug-012-autorun-acceptance.md)。
+- [x] BUG-012：F11.4 真实验收脚本未调用入口且未提供下游所需材料；已修正，本机完整检查、gpt-6-sol 双节点真实完成及代码 head CI 通过（PR #70，收口提交仍遵循当前 head CI 门禁）。笔记：[106](106-bugfix-bug-012-autorun-acceptance.md)。
 
 未关闭：BUG-002、BUG-007、BUG-010。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 修复已合入、待本机 Qwen 对照与 F5.4 Electron 真实验收。
 

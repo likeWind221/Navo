@@ -25,7 +25,9 @@
 - 使用 Node 24.19.0 直接执行 `node --use-env-proxy --import tsx scripts/autorun.ts` 后，真实请求正常发出。
 - 原空输入场景由操作方停止；SQLite 事件现场保留于 `%TEMP%/navo-f114-acceptance-direct-20261016/fixture-blocked.json`。不得算为通过。
 - 修正后的本机检查和真实结果见 [105：F11.4 验收记录](105-devlog-f11-4-autorun-acceptance.md)。
+- 修正后类型检查与 695 项完整测试通过；`gpt-6-sol` 在 2 个 Node Turn、2 个 Main Review 后以 `roadmap-complete` 结束，两个节点均被判 complete。4 份 Turn evidence、11 次模型请求、0 个记录错误。
+- 代码提交 `17ee6e3` 的 [CI 38904406198](https://github.com/likeWind221/Navo/actions/runs/38904406198) 已通过，BUG-012 达到关闭条件；收口文档提交继续经过当前 head CI 后才合并。
 
 ## 后续
 
-本机检查与当前 PR head CI 均通过后随 PR #70 收口；F11.3 Electron 与 BUG-010 的既有关闭条件不在本次范围。
+随 PR #70 收口；F11.3 Electron 与 BUG-010 的既有关闭条件不在本次范围。
