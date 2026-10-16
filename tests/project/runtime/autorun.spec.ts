@@ -206,7 +206,7 @@ describe("F11.1 AutoRun minimal loop", () => {
     const id = createWorkNode(escalated.ctx, project.id, "Collect").node.id;
     escalated.ctx.roadmaps.create({ definition: { projectId: project.id, nodes: [id], edges: [] }, reason: "Approved" });
     const result = await escalated.ctx.autoRun.start(project.id);
-    expect(result).toMatchObject({ status: "stopped", reason: "review-escalated", nodeTurns: 1, mainTurns: 1 });
+    expect(result).toMatchObject({ status: "paused", reason: "review-escalated", nodeTurns: 1, mainTurns: 1 });
     expect(escalated.ctx.nodes.get(id)?.status).toBe("submitted");
 
     const undecided = await createKit([submit("submit-again"), text("Looks good.")]);
@@ -214,7 +214,7 @@ describe("F11.1 AutoRun minimal loop", () => {
     const otherId = createWorkNode(undecided.ctx, other.id, "Collect").node.id;
     undecided.ctx.roadmaps.create({ definition: { projectId: other.id, nodes: [otherId], edges: [] }, reason: "Approved" });
     const missing = await undecided.ctx.autoRun.start(other.id);
-    expect(missing).toMatchObject({ status: "stopped", reason: "review-undecided", nodeTurns: 1, mainTurns: 1 });
+    expect(missing).toMatchObject({ status: "paused", reason: "review-undecided", nodeTurns: 1, mainTurns: 1 });
     expect(undecided.ctx.nodes.get(otherId)?.status).toBe("submitted");
   });
 
