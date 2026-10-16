@@ -62,7 +62,12 @@
 
 ## 后端 Phase 11
 
-- [F11.0 全自动推进与上下文压缩设计收口](100-devlog-f11-0-design.md)：收口 manual / auto 与 running / paused 两层状态、64 / 32 连续 Auto Run 回合预算、Main / Node 自动调度顺序、失败 / 取消 / 中断、高风险操作 fail-closed，以及 80% 压缩阈值、16% recent tail、工具配对与 overflow recovery；只修改文档，待用户确认后进入 F11.1。
+- [F11.0 自动化流程与自主运行架构设计收口](100-devlog-f11-0-design.md)：收口 manual / auto 与 running / paused 两层状态、Main / Node 自动调度顺序、64 / 32 连续 Auto Run 回合预算、失败 / 取消 / 中断、高风险操作与 Human 接管边界；只修改文档，待用户确认后进入 F11.1。
+
+## 后端 Phase 12–13
+
+- Phase 12：记忆压缩——Context Meter、Session Compaction、Summary Checkpoint 与长程上下文恢复。
+- Phase 13：RAG——Workspace / Resource / Session 检索、权限感知 Retrieval 与 RAG Pipeline。
 
 ## 模型接入 M1
 
