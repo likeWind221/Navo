@@ -45,7 +45,7 @@ function createProject(app: import("cordis").Context, workspaceRoot: string, tit
 }
 
 describe("F11.4 long-term AutoRun acceptance", () => {
-  it("survives a pause and restart, then completes rework, dependency and skip flow", async () => {
+  it("survives a pause and restart, then starts a new run and completes rework, dependency and skip flow", async () => {
     const world = await createWorld(reworkSkipScenario());
     let app = await world.open();
     const { project, nodeIds } = await createProject(app, world.workspaceRoot, ["Draft", "Optional"]);
@@ -75,7 +75,7 @@ describe("F11.4 long-term AutoRun acceptance", () => {
     expect(app.autoRun.get(project.id)).toBeUndefined();
     expect(world.requests()).toBe(1);
 
-    const resumed = await app.autoRun.resume(project.id);
+    const resumed = await app.autoRun.start(project.id);
     expect(resumed).toMatchObject({
       status: "completed",
       reason: "roadmap-complete",
@@ -104,7 +104,7 @@ describe("F11.4 long-term AutoRun acceptance", () => {
       .toEqual(finalState.roadmap);
   });
 
-  it("pauses on a failed Turn, does not retry, and resumes only after restart", async () => {
+  it("pauses on a failed Turn, does not retry, and starts again only after restart", async () => {
     const world = await createWorld(failureScenario());
     let app = await world.open();
     const { project, nodeIds } = await createProject(app, world.workspaceRoot, ["Recover"]);
@@ -125,7 +125,7 @@ describe("F11.4 long-term AutoRun acceptance", () => {
     expect(app.autoRun.get(project.id)).toBeUndefined();
     expect(world.requests()).toBe(1);
 
-    const resumed = await app.autoRun.resume(project.id);
+    const resumed = await app.autoRun.start(project.id);
     expect(resumed).toMatchObject({
       status: "completed",
       reason: "roadmap-complete",
