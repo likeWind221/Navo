@@ -5,7 +5,7 @@ import type { ToolCallContentBlock } from "../../../src/llm/types.js";
 import { SUBMIT_COMPLETION_TOOL_NAME } from "../../../src/tools/builtins/node/submit.js";
 import { SUBMIT_REVIEW_TOOL_NAME } from "../../../src/tools/builtins/project/review.js";
 import { ADD_NODE_TOOL_NAME } from "../../../src/tools/builtins/roadmap/modify.js";
-import { modelResponse } from "../../helpers/runtime.js";
+import { modelError, modelResponse } from "../../helpers/runtime.js";
 import { createKit, createWorkNode, flushUntil } from "./helpers.js";
 
 function call(id: string, name: string, arguments_: unknown): ToolCallContentBlock {
@@ -290,6 +290,32 @@ describe("F11.1 AutoRun minimal loop", () => {
     expect(resumed).toMatchObject({ status: "completed", nodeTurns: 1, mainTurns: 1 });
     expect(resumed.runId).not.toBe(paused.runId);
     expect(adapter.requests).toHaveLength(67);
+  });
+
+  it("pauses at the Main Turn budget before dispatching another Node", async () => {
+    const entries = Array.from({ length: 32 }, (_, index) => [
+      submit(`submit-${index}`),
+      review(`review-${index}`, "complete"),
+    ]).flat();
+    const { ctx, adapter } = await createKit(entries);
+    const project = ctx.projects.create({ name: "Project", goal: "Bound Main turns" });
+    const nodeIds = Array.from({ length: 33 }, (_, index) =>
+      createWorkNode(ctx, project.id, `Task ${index}`).node.id,
+    );
+    ctx.roadmaps.create({
+      definition: { projectId: project.id, nodes: nodeIds, edges: [] },
+      reason: "Approved",
+    });
+
+    const result = await ctx.autoRun.start(project.id);
+    expect(result).toMatchObject({
+      status: "paused",
+      reason: "main-turn-limit",
+      nodeTurns: 32,
+      mainTurns: 32,
+    });
+    expect(adapter.requests).toHaveLength(64);
+    expect(ctx.nodes.get(nodeIds[32])?.status).toBe("idle");
   });
 
   it("pauses on failed and interrupted Turns instead of retrying", async () => {
