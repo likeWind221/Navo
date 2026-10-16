@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { Service } from "cordis";
 import type { Context } from "cordis";
 
-import type { NodeId, ProjectId } from "../brand/ids.js";
+import type { ProjectId } from "../brand/ids.js";
 import type { NodeSnapshot } from "../node/model.js";
 import { ProjectError } from "./errors.js";
 
@@ -118,11 +118,12 @@ export class AutoRunService extends Service {
         run.mainTurns += 1;
         if (reviewed.turn.status !== "completed") return stop("turn-stopped");
         const current = this.ctx.nodes.get(submitted.node.id);
-        if (current?.lastReview?.reviewedRevision !== submitted.revision) {
+        const decision = current?.lastReview;
+        if (decision === undefined || decision.reviewedRevision !== submitted.revision) {
           return stop("review-undecided");
         }
-        if (current.lastReview.decision === "escalate") return stop("review-escalated");
-        if (current.status === "idle" || current.status === "completing" || current.status === "skipped") continue;
+        if (decision.decision === "escalate") return stop("review-escalated");
+        if (current?.status === "idle" || current?.status === "completing" || current?.status === "skipped") continue;
         return stop("review-undecided");
       }
 
