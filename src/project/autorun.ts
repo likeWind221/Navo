@@ -47,7 +47,7 @@ interface AutoRunRun {
   readonly runId: string;
   readonly limits: AutoRunLimits;
   controller: AbortController;
-  status: "running" | "paused";
+  status: "running" | "paused" | "completed";
   reason?: AutoRunStopReason;
   pauseRequested: boolean;
   turnActive: boolean;
