@@ -143,6 +143,9 @@
 
 - [BUG-012：AutoRun 真实验收入口与输入](106-bugfix-bug-012-autorun-acceptance.md)：补齐真实入口、共享测试材料与逐回合证据，保留原失败现场。
 
+- [BUG-013：AutoRun 桌面验收阻塞](107-bugfix-bug-013-autorun-desktop.md)：前端错误提示、测试发现规则与 Electron bridge 验收边界。
+- [F11.3：桌面公共契约独立验收](108-devlog-f11-3-desktop-acceptance.md)：前端完整检查与真实 Electron bridge 的独立验收。
+
 ## 调研与归档
 
 - [DeepSeek Harness 参考分析](01-harness-design.md)：单对话核心与最小 Agent 闭环设计。

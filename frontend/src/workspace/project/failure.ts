@@ -14,6 +14,14 @@ export function projectFailureMessage(failure: DesktopProjectFailure): string {
       return "项目当前不可用，请稍后重试。";
     case "runtime-unavailable":
       return "Agent 运行时暂不可用，请稍后重试。";
+    case "auto-run-active":
+      return "项目已有自动运行，请恢复已有运行。";
+    case "auto-run-not-found":
+      return "项目没有可控制的自动运行，请先启动。";
+    case "auto-run-not-paused":
+      return "自动运行尚未暂停，无法恢复。";
+    case "auto-run-unavailable":
+      return "自动运行需要已确定的目标和路线图。";
     case "internal":
       return "后端内部错误，请稍后重试。";
     case "node-not-found":
