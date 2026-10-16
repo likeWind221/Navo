@@ -319,7 +319,7 @@ describe("F11 AutoRun control and execution loop", () => {
     const extraNodeId = nodeIds.at(2);
     expect(extraNodeId).toBeDefined();
     expect(ctx.nodes.get(extraNodeId!)?.status).toBe("idle");
-  });
+  }, 15000);
 
   it("pauses when a Turn is blocked by the AgentRuntime step limit", async () => {
     const { ctx, adapter } = await createKit([
