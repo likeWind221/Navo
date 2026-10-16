@@ -66,6 +66,7 @@
 - [F11.1 AutoRun 最小自动推进闭环](101-devlog-f11-1-autorun.md)：单 Node 多 Turn、自动 Main Review、返工与依赖推进；已合入 master。
 - [F11.2 AutoRun 暂停、恢复与失败处理](102-devlog-f11-2-pause-resume.md)：Turn 边界暂停、Resume 新预算窗口、64/32 回合上限、失败/取消/中断/blocked 停止语义与重启安全边界。
 - [F11.3 AutoRun 全自动推进公共契约](104-devlog-f11-3-autorun-contract.md)：Host / RPC / Electron 公共契约、Start / Pause / Resume / Get、运行状态 / currentTarget / 停止原因与严格两端校验。
+- [F11.4 F11 长程自动化验收](105-devlog-f11-4-autorun-acceptance.md)：多 Node、返工、暂停、失败、重启、显式 Resume 与最终完成的离线长程验收，以及真实模型 evidence 落盘入口。
 
 ## 后端 Phase 12–13
 
