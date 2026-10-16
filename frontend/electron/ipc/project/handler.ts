@@ -1,5 +1,18 @@
-import { projectCreateMethod, projectGetMethod, projectListMethod } from "../../../../rpc/project.js";
-import type { ProjectDetailV1, ProjectListV1, ProjectSummaryV1 } from "../../../../rpc/project.js";
+import {
+  projectAutoRunGetMethod,
+  projectAutoRunPauseMethod,
+  projectAutoRunResumeMethod,
+  projectAutoRunStartMethod,
+  projectCreateMethod,
+  projectGetMethod,
+  projectListMethod,
+} from "../../../../rpc/project.js";
+import type {
+  AutoRunSnapshotV1,
+  ProjectDetailV1,
+  ProjectListV1,
+  ProjectSummaryV1,
+} from "../../../../rpc/project.js";
 import { RpcError } from "../../../../rpc/errors.js";
 import type { RpcMethod, RpcStreamOptions } from "../../../../rpc/index.js";
 import type { DesktopProjectFailure, DesktopProjectResult } from "../../../shared/project.js";
@@ -20,6 +33,10 @@ export interface ProjectHandlers {
   list(candidate: unknown): Promise<DesktopProjectResult<ProjectListV1>>;
   create(candidate: unknown): Promise<DesktopProjectResult<ProjectSummaryV1>>;
   get(candidate: unknown): Promise<DesktopProjectResult<ProjectDetailV1>>;
+  autoRunStart(candidate: unknown): Promise<DesktopProjectResult<AutoRunSnapshotV1>>;
+  autoRunPause(candidate: unknown): Promise<DesktopProjectResult<AutoRunSnapshotV1>>;
+  autoRunResume(candidate: unknown): Promise<DesktopProjectResult<AutoRunSnapshotV1>>;
+  autoRunGet(candidate: unknown): Promise<DesktopProjectResult<AutoRunSnapshotV1 | null>>;
 }
 
 export interface DirectoryDialogResult {
@@ -32,6 +49,10 @@ export function createProjectHandlers(host: ProjectHost): ProjectHandlers {
     list: candidate => callProject(host, projectListMethod, candidate),
     create: candidate => callProject(host, projectCreateMethod, candidate),
     get: candidate => callProject(host, projectGetMethod, candidate),
+    autoRunStart: candidate => callProject(host, projectAutoRunStartMethod, candidate),
+    autoRunPause: candidate => callProject(host, projectAutoRunPauseMethod, candidate),
+    autoRunResume: candidate => callProject(host, projectAutoRunResumeMethod, candidate),
+    autoRunGet: candidate => callProject(host, projectAutoRunGetMethod, candidate),
   };
 }
 
