@@ -14,6 +14,7 @@ import {
   parseProjectResources,
   parseProjectSummary,
   parseProjectAutoRunSnapshot,
+  parseProjectAutoRunSnapshotOrNull,
   parseEmptyInput,
   parseNodeReviewInput,
   parseNode,
