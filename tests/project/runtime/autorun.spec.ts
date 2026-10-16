@@ -316,7 +316,9 @@ describe("F11 AutoRun control and execution loop", () => {
       mainTurns: 32,
     });
     expect(adapter.requests).toHaveLength(64);
-    expect(ctx.nodes.get(nodeIds[32])?.status).toBe("idle");
+    const extraNodeId = nodeIds.at(32);
+    expect(extraNodeId).toBeDefined();
+    expect(ctx.nodes.get(extraNodeId!)?.status).toBe("idle");
   });
 
   it("pauses when a Turn is blocked by the AgentRuntime step limit", async () => {
