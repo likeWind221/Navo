@@ -1,6 +1,10 @@
 import type { Context } from "cordis";
 
 import {
+  projectAutoRunGetMethod,
+  projectAutoRunPauseMethod,
+  projectAutoRunResumeMethod,
+  projectAutoRunStartMethod,
   projectCreateMethod,
   projectFollowMethod,
   projectGetMethod,
@@ -11,6 +15,7 @@ import {
   projectTurnMethod,
 } from "../../rpc/project.js";
 import type {
+  AutoRunSnapshotV1,
   NodeReviewInput,
   NodeV1,
   ProjectCreateInput,
@@ -48,8 +53,53 @@ export function registerProjectMethods(router: StreamRpcRouter, ctx: Context): (
     router.register(projectTurnMethod, createProjectTurnHandler(ctx)),
     router.register(projectNodeReviewMethod, unary(input => reviewNode(ctx, input))),
     router.register(projectFollowMethod, createProjectFollowHandler(ctx)),
+    router.register(projectAutoRunStartMethod, unary(input => startAutoRun(ctx, input))),
+    router.register(projectAutoRunPauseMethod, unary(input => pauseAutoRun(ctx, input))),
+    router.register(projectAutoRunResumeMethod, unary(input => resumeAutoRun(ctx, input))),
+    router.register(projectAutoRunGetMethod, unary(input => getAutoRun(ctx, input))),
   ];
   return () => { for (const dispose of unregister) dispose(); };
+}
+
+function startAutoRun(ctx: Context, input: { readonly projectId: string }): AutoRunSnapshotV1 {
+  const projectId = createProjectId(input.projectId);
+  void ctx.autoRun.start(projectId);
+  const snapshot = ctx.autoRun.get(projectId);
+  if (snapshot === undefined) {
+    throw new RpcError("invalid-output", "AutoRun ended before its initial snapshot was available");
+  }
+  return describeAutoRun(snapshot);
+}
+
+function pauseAutoRun(ctx: Context, input: { readonly projectId: string }): AutoRunSnapshotV1 {
+  return describeAutoRun(ctx.autoRun.pause(createProjectId(input.projectId)));
+}
+
+function resumeAutoRun(ctx: Context, input: { readonly projectId: string }): AutoRunSnapshotV1 {
+  const projectId = createProjectId(input.projectId);
+  void ctx.autoRun.resume(projectId);
+  const snapshot = ctx.autoRun.get(projectId);
+  if (snapshot === undefined) {
+    throw new RpcError("invalid-output", "AutoRun ended before its initial snapshot was available");
+  }
+  return describeAutoRun(snapshot);
+}
+
+function getAutoRun(ctx: Context, input: { readonly projectId: string }): AutoRunSnapshotV1 | null {
+  const snapshot = ctx.autoRun.get(createProjectId(input.projectId));
+  return snapshot === undefined ? null : describeAutoRun(snapshot);
+}
+
+function describeAutoRun(snapshot: import("../../src/project/autorun.js").AutoRunSnapshot): AutoRunSnapshotV1 {
+  return {
+    runId: snapshot.runId,
+    projectId: snapshot.projectId,
+    status: snapshot.status,
+    nodeTurns: snapshot.nodeTurns,
+    mainTurns: snapshot.mainTurns,
+    currentTarget: snapshot.currentTarget === null ? null : { ...snapshot.currentTarget },
+    reason: snapshot.reason,
+  };
 }
 
 async function listProjects(ctx: Context): Promise<ProjectListV1> {
