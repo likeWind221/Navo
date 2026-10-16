@@ -76,6 +76,7 @@ start a new AutoRun from current domain state
 - F11.4 不应通过修改 `AutoRunService` 的预算配置来制造短测试，否则会把测试专用配置扩散到生产 App 配置；暂停场景使用 Human pause，预算边界继续由 F11.2 专项测试覆盖。
 - 重启前后比较的是 Project、Workspace、Roadmap、Node、Session 等持久事实；AutoRun snapshot 本身不参与比较，因为它本来就是进程内运行许可。
 - 发现：`resume()` 只操作当前进程中仍存在的 paused AutoRun；重启后旧 AutoRun 已不存在，符合 F11.0/F11.2 “重新建立 AutoRun” 的设计，因此恢复入口应是 Human 显式 `start()`，而不是跨重启调用 `resume()`。
+- Mock 场景中 `submit_completion` 是 Node Turn 的终止工具，因此工具调用后不再额外安排模型请求；`submit_review` 则允许 Main 在记录决定后继续总结，所以 fixture 为“tool call → text”。这一区分避免重启后的请求序列错位。
 - 真实模型场景只验证实际 AutoRun 链路，不把模型具体回答当作确定性断言；确定性的 rework / skip / failure / restart 分支由离线脚本完整覆盖。
 
 ## 下一步
