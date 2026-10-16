@@ -60,7 +60,7 @@ describe("F11 AutoRun control and execution loop", () => {
     const nodeSession = ctx.nodes.get(id)!.sessionId;
     expect(nodeSession).toBeDefined();
     expect(ctx.sessions.getEvents(nodeSession!).filter(event => event.type === "turn-started")).toHaveLength(2);
-    expect(adapter.requests).toHaveLength(4);
+    expect(adapter.requests).toHaveLength(6);
     expect(JSON.stringify(adapter.requests[1]?.messages)).toContain("I need another Turn.");
     expect(JSON.stringify(adapter.requests[2]?.messages)).toContain("review checklist");
   });
@@ -297,6 +297,7 @@ describe("F11 AutoRun control and execution loop", () => {
     const entries = Array.from({ length: 2 }, (_, index) => [
       submit(`submit-${index}`),
       review(`review-${index}`, "complete"),
+      text(),
     ]).flat();
     const { ctx, adapter } = await createKit(entries, [], {}, { mainTurnLimit: 2 });
     const project = ctx.projects.create({ name: "Project", goal: "Bound Main turns" });
