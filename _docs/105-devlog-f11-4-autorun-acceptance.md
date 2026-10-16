@@ -21,11 +21,11 @@ F11.4 不新增 AutoRun 生产状态机，而是把 F11.1、F11.2 与 F11.3 的�
    - Node B 提交后由 Main skip；
    - 最终 AutoRun 以 `roadmap-complete` 完成。
 
-2. **失败 → 重启 → 显式 Resume**
+2. **失败 → 重启 → 显式 Start**
    - Node 首个 Turn 失败；
    - AutoRun 停止为 `turn-failed`，不自动重试；
    - App 重启后没有 AutoRun runtime，也没有新增模型请求；
-   - Human 显式 Resume；
+   - Human 显式 Start，重新建立 AutoRun；
    - Node 使用已绑定 Session 继续，最终由 Main 完成。
 
 同时新增真实模型验收入口 `scripts/autorun.ts`，复用现有 acceptance 配置与 evidence 落盘机制；真实运行失败时保存 `failure.json` 与当前 Project 状态。
