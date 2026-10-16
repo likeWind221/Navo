@@ -66,7 +66,7 @@
 - [F11.1 AutoRun 最小自动推进闭环](101-devlog-f11-1-autorun.md)：单 Node 多 Turn、自动 Main Review、返工与依赖推进；已合入 master。
 - [F11.2 AutoRun 暂停、恢复与失败处理](102-devlog-f11-2-pause-resume.md)：Turn 边界暂停、Resume 新预算窗口、64/32 回合上限、失败/取消/中断/blocked 停止语义与重启安全边界。
 - [F11.3 AutoRun 全自动推进公共契约](104-devlog-f11-3-autorun-contract.md)：Host / RPC / Electron 公共契约、Start / Pause / Resume / Get、运行状态 / currentTarget / 停止原因与严格两端校验。
-- [F11.4 F11 长程自动化验收](105-devlog-f11-4-autorun-acceptance.md)：多 Node、返工、暂停、失败、重启、显式 Resume 与最终完成的离线长程验收，以及真实模型 evidence 落盘入口。
+- [F11.4 F11 长程自动化验收](105-devlog-f11-4-autorun-acceptance.md)：离线覆盖返工、暂停、失败、重启后显式 Start；本机 695 项测试与 gpt-6-sol 双节点真实自动完成通过。
 
 ## 后端 Phase 12–13
 
@@ -140,6 +140,8 @@
 - [计划功能性描述重写与 F3.2 拆分](25-devlog-plan-functional-rewrite.md)：计划步骤改为功能性目标描述、CLAUDE.md 新增撰写原则、F3.2 拆为四个功能子步骤并确定 /hello 占位命令。
 - [Navo 品牌迁移](49-devlog-navo-brand-migration.md)：SkillWorld → Navo 的 package、应用标识、环境变量、IPC、UI 与文档迁移边界。
 - [CI 与 PR 流程接入](60-devlog-ci-pr-flow.md)：GitHub Actions 的 typecheck/test 门禁、Step 分支与 squash 合并约定，以及 CI 暴露的平台测试问题。
+
+- [BUG-012：AutoRun 真实验收入口与输入](106-bugfix-bug-012-autorun-acceptance.md)：补齐真实入口、共享测试材料与逐回合证据，保留原失败现场。
 
 ## 调研与归档
 

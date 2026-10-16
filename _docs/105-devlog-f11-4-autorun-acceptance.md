@@ -1,7 +1,7 @@
 # F11.4：F11 长程自动化验收
 
 > 日期：2026-10-16  
-> 状态：🔄 离线长程场景已实现；CI 已通过，等待本机验证。  
+> 状态：🔄 本机离线与真实模型验收通过，等待修正后当前 head CI。  
 > 基线：F11.3 `5f6112c`；开发分支 `phase11-f11.4-longterm-acceptance`。
 
 ## 做了什么
@@ -81,6 +81,26 @@ start a new AutoRun from current domain state
 
 ## 下一步
 
-- CI `verify`：通过，`pnpm typecheck` 与 `pnpm test` 均通过，最终为 112 个测试文件、695 个测试全部通过。
-- 本机：尚未执行；当前环境没有本地仓库运行能力，因此不能把 CI 通过等同于本机验证完成。
-- 下一步由本机执行 `pnpm typecheck` 与 `pnpm test`；若本机也通过，再将 F11.4 标记 `✅` 并按 Step 门禁合并。真实模型 `scripts/autorun.ts` 单独按需执行。
+- 原代码 head `ee9e9af` 的 CI `verify` 已通过；本机修正后的当前 head 仍须重新通过 CI 才能收口与合并。
+- F11.3 前端独立验证继续保持原状态，本次不把后端场景通过等同于 Electron 验收。
+
+## 2026-10-16 本机验收
+
+环境：Windows / Node 24.19.0。用户授权同步 F11.4 分支并完成验收；本次只修正验收入口、输入与证据，不修改 AutoRun 生产逻辑。问题登记为 [BUG-012](106-bugfix-bug-012-autorun-acceptance.md)。
+
+本机默认 `node` 为 22.23.1，低于仓库要求，检查时使用 Codex 随附的 Node 24.19.0。本机 pnpm 10.33.0 启动 `test` 时停留在包管理器进程；另一 bundled pnpm 尝试重整依赖并因无 TTY 拒绝，未修改依赖。最终直接运行 package scripts 指向的本地 TypeScript / Vitest 入口：
+
+~~~text
+node node_modules/typescript/bin/tsc --noEmit
+node node_modules/vitest/vitest.mjs run --maxWorkers=4
+node --use-env-proxy --import tsx scripts/autorun.ts
+~~~
+
+- 类型检查通过。
+- 首轮完整测试 694/695 通过：既有 `tests/tools/fetch/network.spec.ts` 的 pinned HTTP 场景在 5 秒处超时；单独复验该文件 7/7 通过。未修改断言或超时；限制 4 个 worker 后完整套件 112 文件、695 测试通过。脚本最终修正后再跑同一完整检查，695/695 通过（50.10 秒）。该证据不证明最初超时的根因。
+- 初始真实运行因 transport 失败暂停，随后显式代理直连脚本成功发出请求；空材料场景不能完成，已保留现场并结束。失败情况没有改写成通过，详见 BUG-012。
+- 修正后真实模型 `gpt-6-sol` 通过：2 个 Node Turn、2 个 Main Review、4 份 Turn evidence、11 次模型请求、0 个记录错误；两个 Node 都读取共享的虚构输入并获 Main `complete` 判定，最终 `status=completed`、`reason=roadmap-complete`。
+- 成功证据：`C:/Users/likeW/AppData/Local/Temp/navo-f114-acceptance-final-20261016/result.json`。内容包括模型请求、工具参数/结果、错误与 Project 状态；不包含凭据，复用现有机制去除 reasoning。
+- 离线证明暂停/失败/重启/显式 Start/返工/依赖/skip；真实模型证明给定批准计划和有效共享材料后的自动完成链路。真实场景没有覆盖重启、返工、skip、桌面 UI 或上下文压缩。
+
+本次新增的 `main()` 顶层调用保证脚本实际执行且失败非零退出；`evidence()` 收集 Main 与所有已绑定 Node Session 的 Turn，再复用 `captureTurn` 输出诊断记录。创建输入后以 Main 发布并公开 Resource，两个节点各自取材；不把领域硬依赖理解成自动转发上游私有内容。临时数据库和工作目录由脚本 finally 清理，证据单独保留。因原空材料运行由操作方结束，其临时现场另行保留用于诊断。
