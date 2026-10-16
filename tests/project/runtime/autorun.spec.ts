@@ -4,6 +4,7 @@ import { createToolCallId } from "../../../src/brand/ids.js";
 import type { ToolCallContentBlock } from "../../../src/llm/types.js";
 import { SUBMIT_COMPLETION_TOOL_NAME } from "../../../src/tools/builtins/node/submit.js";
 import { SUBMIT_REVIEW_TOOL_NAME } from "../../../src/tools/builtins/project/review.js";
+import { SEND_TO_MAIN_TOOL_NAME } from "../../../src/tools/builtins/mailbox/send.js";
 import { ADD_NODE_TOOL_NAME } from "../../../src/tools/builtins/roadmap/modify.js";
 import { modelError, modelResponse } from "../../helpers/runtime.js";
 import { createKit, createWorkNode, flushUntil } from "./helpers.js";
@@ -316,6 +317,26 @@ describe("F11.1 AutoRun minimal loop", () => {
     });
     expect(adapter.requests).toHaveLength(64);
     expect(ctx.nodes.get(nodeIds[32])?.status).toBe("idle");
+  });
+
+  it("pauses when a Turn is blocked by the AgentRuntime step limit", async () => {
+    const { ctx, adapter } = await createKit([
+      modelResponse([
+        call("send-blocker", SEND_TO_MAIN_TOOL_NAME, { message: "I need Main to make a decision." }),
+      ], "tool-calls"),
+    ], [], { maxSteps: 1 });
+    const project = ctx.projects.create({ name: "Project", goal: "Handle blocked work" });
+    const id = createWorkNode(ctx, project.id, "Blocked").node.id;
+    ctx.roadmaps.create({ definition: { projectId: project.id, nodes: [id], edges: [] }, reason: "Approved" });
+
+    const result = await ctx.autoRun.start(project.id);
+    expect(result).toMatchObject({
+      status: "paused",
+      reason: "turn-blocked",
+      nodeTurns: 1,
+      mainTurns: 0,
+    });
+    expect(adapter.requests).toHaveLength(1);
   });
 
   it("pauses on failed and interrupted Turns instead of retrying", async () => {
