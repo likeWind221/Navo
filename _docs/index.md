@@ -63,6 +63,7 @@
 ## 后端 Phase 11
 
 - [F11.0 自动化流程与自主运行架构设计收口](100-devlog-f11-0-design.md)：收口 manual / auto 与 running / paused 两层状态、Main / Node 自动调度顺序、64 / 32 连续 Auto Run 回合预算、失败 / 取消 / 中断、高风险操作与 Human 接管边界；只修改文档，待用户确认后进入 F11.1。
+- [F11.1 AutoRun 最小自动推进闭环](101-devlog-f11-1-autorun.md)：单 Node 多 Turn、自动 Main Review、返工与依赖推进；代码和 CI 通过，待本机完整验证及合并。
 
 ## 后端 Phase 12–13
 
