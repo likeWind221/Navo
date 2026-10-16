@@ -13,6 +13,7 @@ import {
   parseProjectRefInput,
   parseProjectResources,
   parseProjectSummary,
+  parseProjectAutoRunSnapshot,
   parseEmptyInput,
   parseNodeReviewInput,
   parseNode,
@@ -68,6 +69,34 @@ export const projectNodeReviewMethod: RpcMethod<NodeReviewInput, NodeV1> = Objec
   createOutputValidator: () => singleOutput(parseNode),
 });
 
+export const projectAutoRunStartMethod: RpcMethod<ProjectRefInput, AutoRunSnapshotV1> = Object.freeze({
+  name: "project.autorun.start.v1",
+  parseInput: parseProjectRefInput,
+  parseOutput: parseProjectAutoRunSnapshot,
+  createOutputValidator: () => singleOutput(parseProjectAutoRunSnapshot),
+});
+
+export const projectAutoRunPauseMethod: RpcMethod<ProjectRefInput, AutoRunSnapshotV1> = Object.freeze({
+  name: "project.autorun.pause.v1",
+  parseInput: parseProjectRefInput,
+  parseOutput: parseProjectAutoRunSnapshot,
+  createOutputValidator: () => singleOutput(parseProjectAutoRunSnapshot),
+});
+
+export const projectAutoRunResumeMethod: RpcMethod<ProjectRefInput, AutoRunSnapshotV1> = Object.freeze({
+  name: "project.autorun.resume.v1",
+  parseInput: parseProjectRefInput,
+  parseOutput: parseProjectAutoRunSnapshot,
+  createOutputValidator: () => singleOutput(parseProjectAutoRunSnapshot),
+});
+
+export const projectAutoRunGetMethod: RpcMethod<ProjectRefInput, AutoRunSnapshotV1 | null> = Object.freeze({
+  name: "project.autorun.get.v1",
+  parseInput: parseProjectRefInput,
+  parseOutput: parseProjectAutoRunSnapshotOrNull,
+  createOutputValidator: () => singleOutput(parseProjectAutoRunSnapshotOrNull),
+});
+
 export const projectFollowMethod: RpcMethod<ProjectRefInput, ProjectFollowV1> = Object.freeze({
   name: "project.follow.v1",
   parseInput: parseProjectRefInput,
@@ -97,6 +126,10 @@ export type ProjectFailureCode =
   | "workspace-conflict"
   | "workspace-invalid"
   | "runtime-unavailable"
+  | "auto-run-active"
+  | "auto-run-not-found"
+  | "auto-run-not-paused"
+  | "auto-run-unavailable"
   | "internal";
 
 export type ProjectListInput = Readonly<Record<string, never>>;
@@ -110,6 +143,36 @@ export interface ProjectCreateInput {
 export interface ProjectRefInput {
   readonly projectId: string;
 }
+
+export interface AutoRunSnapshotV1 {
+  readonly runId: string;
+  readonly projectId: string;
+  readonly status: "running" | "paused" | "completed";
+  readonly nodeTurns: number;
+  readonly mainTurns: number;
+  readonly currentTarget: AutoRunTargetV1 | null;
+  readonly reason: AutoRunStopReasonV1 | null;
+}
+
+export type AutoRunTargetV1 =
+  | { readonly kind: "main" }
+  | { readonly kind: "node"; readonly nodeId: string };
+
+export type AutoRunStopReasonV1 =
+  | "roadmap-complete"
+  | "no-eligible-node"
+  | "review-escalated"
+  | "review-undecided"
+  | "turn-failed"
+  | "turn-cancelled"
+  | "turn-interrupted"
+  | "turn-blocked"
+  | "node-turn-limit"
+  | "main-turn-limit"
+  | "human-paused"
+  | "project-unavailable"
+  | "busy"
+  | "aborted";
 
 export interface ProjectMailboxInput {
   readonly projectId: string;
