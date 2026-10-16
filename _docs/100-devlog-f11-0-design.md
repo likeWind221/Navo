@@ -1,8 +1,8 @@
 # F11.0 自动化流程与自主运行架构设计收口
 
 > 日期：2026-10-16  
-> 状态：🔄 设计已落地，待用户确认  
-> 范围：只收口 Phase 11 自动化流程；不修改生产代码。上下文压缩归入 Phase 12，RAG 归入 Phase 13。
+> 状态：🔄 设计已确认，待进入 F11.1  
+> 范围：只收口 Phase 11 的自动化流程；不修改生产代码。记忆/上下文压缩归入 Phase 12，RAG 归入 Phase 13。
 
 ## 1. Phase 11 的目标
 
@@ -18,162 +18,342 @@ Agent 执行
 Human 决定下一步
 ~~~
 
-Phase 11 的目标不是改变 Main / Node 的职责，而是增加一个**自动驱动层**：
+Phase 11 的目标，是在**不改变 Project、Roadmap、Main、Node 的既有职责**的前提下，增加一个程序化的自动驱动层，使一个已经具备明确 Goal 和 Roadmap 的 Project 可以连续运行：
 
 ~~~text
-                 Human
-                   │
-             开启 / 暂停 / 接管
-                   │
-                   ▼
-              Auto Driver
-                   │
-          ┌────────┼────────┐
-          ▼        ▼        ▼
-        Main     Node     Human
-          │        │
-          └────┬───┘
-               ▼
-          下一决策点
-               │
-               └──────→ 继续推进
+Human 显式启动 AutoRun
+          ↓
+      Auto Driver
+          ↓
+   Main / Node Turn
+          ↓
+      产生事件
+          ↓
+   Reconcile + Dispatch
+          ↓
+      下一次 Turn
+          ↓
+        继续推进
 ~~~
 
-核心问题只有一个：
+核心问题是：
 
-> **一个 Agent Turn 结束后，在什么条件下由谁发起下一个 Turn？**
+> **一个 Turn 结束后，系统如何根据当前 Project 事实确定下一步由谁继续工作，并避免重复、冲突和无限运行？**
 
-F11 不负责“记住更多历史”，也不负责“从历史知识库检索信息”；这些分别留给 F12、F13。
+F11 只解决**自动执行闭环**。上下文压缩和长期知识检索分别留给 F12、F13。
 
-## 2. F11 的核心设计原则
+### 1.1 F11 与现有 Human Gate 的边界
 
-1. **Human 显式开启自动化。** 新 Project 默认仍为人工模式。
-2. **自动化不取消 Human Gate。** 正常低风险工作由系统连续推进；暂停、接管、高风险或无法判断时重新回到 Human。
-3. **自动驱动不创建新的 Agent Runtime。** Main / Node 继续复用唯一的 AgentRuntime。
-4. **Project / Roadmap / Node 是事实来源。** Auto Driver 只负责根据已有状态决定下一次 Turn。
-5. **一个 Node 不允许并发执行多个 Turn；Main 同一时间最多一个 Turn。**
-6. **失败默认停止自动推进。** 不对完整 Turn 无限自动重试。
-7. **应用重启后不自动恢复运行。** 原本处于 auto 的 Project 必须等待 Human resume。
+F11 的“全自动”指：
 
-## 3. 人工 / 全自动模式
+> **在已经确认的 Project Goal / Roadmap 范围内，自动完成 Main / Node 的连续执行与复盘。**
 
-Project 的自动化语义分为两个维度：
+F11 **不绕过既有的两个人工 Gate**：
 
-| 状态 | 含义 |
-|---|---|
-| mode = manual | Human 决定每一次 Agent Turn 是否启动 |
-| mode = auto | Project 允许 Auto Driver 在安全决策点继续推进 |
-| autoState = running | 当前 Auto Run 获得执行许可 |
-| autoState = paused | 当前 Auto Run 已停止，不得自动启动新 Turn |
+- F9.10：新的 Project 规划或 Roadmap 重大调整仍需用户同意；
+- F10.4b：Node 的最终完成仍由 Main 通过 submit_review 作出唯一判定。
 
-推荐状态关系：
+因此：
 
 ~~~text
-                 Human switch
-                      │
-          ┌───────────▼───────────┐
-          │                       │
-       MANUAL ────────────────→ AUTO
-          ▲                       │
-          │                       ▼
-          │                    PAUSED
-          │                       │
-          │                    resume
-          │                       ▼
-          └────────────── RUNNING
-                              │
-                         pause / stop
-                              │
-                              └──→ PAUSED
+已有 Roadmap
+    ↓
+AutoRun 自动执行
+    ↓
+Node 自主推进
+    ↓
+submit_completion
+    ↓
+Main 自动 Review
+    ├── complete → 解锁后继
+    ├── rework   → Node 继续
+    ├── skip     → 沿用现有跳过语义
+    └── ask_human / 需要新规划 → 停止自动推进
 ~~~
 
-规则：
+F11 暂不设计 Human-in-the-loop 的交互细节，只保留上述边界；具体接管、审批、恢复 UI 留待后续阶段。
 
-- manual → auto 不打断正在执行的 Turn；当前 Turn 收口后才进入自动决策。
-- auto → manual 不打断当前 Turn；收口后停止自动启动。
-- running → paused 禁止新的自动 Turn；正在执行的 Turn 默认自然收口。
-- paused → running 必须由 Human 明确恢复。
-- Project complete / archived 时自动运行强制停止。
-- 应用重启后，mode = auto 的 Project 恢复为 paused，不自动唤醒 Agent。
+## 2. 现有架构映射：F11 不新增重复领域模型
 
-## 4. Main / Node 自动推进顺序
+本次对当前 master 的 ProjectRuntime、Roadmap、Node、NodeSession、Mailbox、ReviewService 和 AgentRuntime 进行映射后，结论是：
 
-每次 Turn 收口后进入一个新的 Decision Point：
+| 现有组件 | 已有职责 | F11 的使用方式 |
+|---|---|---|
+| Project | 长期项目边界与 Goal | AutoRun 的宿主 |
+| Roadmap | Node + dependency 的权威 DAG | 直接作为自动调度依据 |
+| Node | goal、done_when、依赖、生命周期 | 自动执行的基本工作单元 |
+| NodeSession | Node 的连续上下文与多 Turn | 同一 Node 内持续推进 |
+| Main Session | 项目级长期上下文 | 自动规划/复盘的执行上下文 |
+| ProjectRuntime | Main / Node 执行入口、占用与收口 | Auto Driver 的执行落点 |
+| Mailbox | Node → Main 的项目级消息 | 触发 Main 自动处理 |
+| ReviewService | submit_review 完成/返工/跳过/Human 判定 | 自动复盘直接复用 |
+| AgentRuntime | 通用 Agent 执行引擎 | Main / Node 继续共用 |
+
+因此 F11 **不新增**：
+
+- Work Graph：Roadmap 本身就是项目任务图；
+- Task Packet：Node 本身已经携带目标、完成标准、依赖和 Session；
+- MainAgentRuntime / NodeAgentRuntime：继续复用唯一 AgentRuntime；
+- 独立 Workflow Engine：自动流程由 Auto Driver 消费现有领域状态完成。
+
+## 3. Auto Driver 的定位
+
+Auto Driver 是**程序控制层，不是另一个大脑**。
 
 ~~~text
-Decision Point
-      │
-      ├─ Project 非 active / Auto 非 running → STOP
-      │
-      ├─ Human Main 输入待处理 → Main Turn
-      │
-      ├─ Node 有待复盘结果 → Main Review Turn
-      │
-      ├─ 存在 eligible Node → Node Turn
-      │
-      ├─ Roadmap 未完成但无 eligible Node
-      │       ↓
-      │   Main Planning Turn
-      │
-      └─ 无法形成安全决策 → PAUSED + Human
+                 ┌──────────────────┐
+                 │      Main        │
+                 │ 项目级决策 / 复盘 │
+                 └────────┬─────────┘
+                          │
+                 ┌────────▼─────────┐
+                 │      Node        │
+                 │ 具体任务自主执行  │
+                 └────────┬─────────┘
+                          │
+                    Domain Events
+                          │
+                 ┌────────▼─────────┐
+                 │   Auto Driver    │
+                 │ Reconcile/Dispatch│
+                 └────────┬─────────┘
+                          │
+                     下一次 Turn
 ~~~
 
-Human 输入优先于自动任务；同一 Project 内 Main 同一时间最多一个 Turn。
+Auto Driver 负责：
 
-### Node 的 eligible 条件
+1. 监听/接收 Project、Node、Mailbox、Turn 等变化；
+2. 将事件合并为一次幂等的 Reconcile；
+3. 根据 Roadmap 和现有生命周期判断谁现在可以运行；
+4. 调用已有 ProjectRuntime / NodeSession 启动或继续 Turn；
+5. 防止同一个 Main / Node 被重复启动；
+6. 记录本次 AutoRun 的回合预算与停止原因；
+7. 在完成、失败、阻塞、取消、中断等终点停止或继续调度。
 
-Node 必须同时满足：
+Auto Driver **不负责**：
 
-- Project active；
-- Node 为 idle；
-- 必要依赖已满足；
-- 不存在待确认 / 待复盘状态；
-- 未被其他 Turn 占用；
-- 属于当前 Roadmap；
-- 首次执行，或最近一次 Main 复盘明确要求返工。
+- 不自己进行 LLM 推理；
+- 不替 Main 决定项目方向；
+- 不替 Node 完成任务；
+- 不直接修改 Roadmap；
+- 不创建新的 AgentRuntime。
 
-多个互不冲突的 Node 可以并行，但同一个 Node 永远不并发。多个 Node 完成后的 Main Review 按完成事件进入 Project 的顺序逐个处理。
+## 4. AutoRun 生命周期
 
-### Node → Main Review
+F11.0 不再新增一个持久化的 manual / auto Project 领域状态机。自动化首先被定义为**一次运行许可（AutoRun）**：
 
-正常结束的 Node Turn，即使没有提交完成信号，也进入 Main Review；“没有完成信号”不等于失败。
+~~~text
+IDLE
+  │ start
+  ▼
+RUNNING
+  │
+  ├── 正常完成 ──→ COMPLETED
+  ├── 失败/中断 ─→ PAUSED
+  ├── 无可执行节点 ─→ PAUSED
+  └── 达到预算 ──→ PAUSED
+~~~
 
-Main Review 必须给出：
+AutoRun 至少需要在运行时记录：
 
-- complete
-- rework
-- skip
-- ask_human
+- runId
+- status
+- mainTurnCount
+- nodeTurnCount
+- 当前活跃 Main / Node
+- 最近一次停止原因
+
+其中 Project / Roadmap / Node 仍然是**事实来源**，AutoRun 只记录本次自动运行过程。
+
+同一 Project 同时只能存在一个有效 AutoRun；同一 AutoRun 内同一 Main 不得并发两个 Turn，同一 Node 不得并发两个 Turn。
+
+## 5. 自动推进闭环
+
+### 5.1 基本调度循环
+
+每次 Turn 或领域事件收口后，Auto Driver 都进入一次 Reconcile：
+
+~~~text
+Event
+  ↓
+Reconcile
+  ↓
+读取 Project / Roadmap / Node / Mailbox 当前事实
+  ↓
+判断当前最高优先级动作
+  ↓
+Dispatch 一个或多个合法 Turn
+  ↓
+等待新的 Event
+  ↓
+再次 Reconcile
+~~~
+
+Reconcile 必须是幂等的；同一 Project 同时到来的多个事件可以合并，不能因为一个事实变化触发多个重复 Turn。
+
+### 5.2 Main / Node 自动推进顺序
+
+在 AutoRun = RUNNING 时，按以下顺序处理：
+
+~~~text
+Reconcile
+   │
+   ├─ Project 已完成/归档/不可运行
+   │       → COMPLETED / STOP
+   │
+   ├─ 存在未处理的 Node → Main 请求
+   │       → Main Turn
+   │
+   ├─ 存在 submitted Node
+   │       → Main Review Turn
+   │
+   ├─ 存在已经开始但尚未完成的 Node
+   │       → 继续该 Node Session
+   │
+   ├─ 存在 eligible Node
+   │       → 启动 Node Turn
+   │
+   └─ 无 eligible Node
+           → PAUSED
+             等待用户批准新的 Roadmap / 规划
+~~~
+
+这里有三个关键规则：
+
+**第一，Main 不是自由聊天循环。**
+
+Main 只因明确的项目级事件被唤醒：
+
+- Node 发送 Project-level request；
+- Node 已 submitted，需要 Main Review。
+
+Main Turn 必须产生可观察的领域动作或判定；普通文本输出不能再次自触发 Main。
+
+**第二，Node Turn 结束不等于 Node 完成。**
+
+~~~text
+Node Turn 1
+    ↓
+正常结束、未 submit_completion
+    ↓
+继续同一 Node Session
+    ↓
+Node Turn 2
+    ↓
+...
+    ↓
+submit_completion
+    ↓
+submitted
+    ↓
+Main Review
+~~~
+
+只有 submit_completion 才进入 F10.4b 的 Main Review。
+
+**第三，Roadmap 没有可执行节点时，不允许 Main 自动绕过 F9.10 重新规划。**
+
+此时自动流程停止，等待用户批准新的规划/路线后再继续。
+
+## 6. Node 并行与资源边界
+
+F11.0 从架构上支持多个独立 Node 并行，但首版实现默认：
+
+> maxConcurrentNodes = 1
+
+原因是当前 Project Workspace 是共享真实目录；已有文件级并发控制只能防止部分写冲突，不能证明两个 Node 在语义上可以安全并行。
+
+因此调度原则冻结为：
+
+~~~text
+A ──→ C
+B ──→ C
+
+A、B 无依赖
+    ↓
+理论上可以并行
+
+C 依赖 A、B
+    ↓
+必须等待
+~~~
+
+进一步放开并行时必须同时满足：
+
+- Roadmap dependency 不冲突；
+- Node 不共享同一个正在变更的资源；
+- 不违反现有 Workspace / Resource 权限；
+- 不绕过 ProjectRuntime 的 Node 占用保护。
+
+因此：
+
+- **F11.1** 先做单 Node 自动闭环；
+- **F11.2** 再实现多 Node 调度；
+- **F11.3** 再放开并行与资源冲突控制。
+
+## 7. Node → Main 自动唤醒
+
+现有 Mailbox 已经承担 Node → Main 的事实记录，但过去不会自动启动 Main。
+
+F11 的变化是：
+
+~~~text
+Node
+  ↓
+send_to_main
+  ↓
+Mailbox 持久化
+  ↓
+Domain Event
+  ↓
+Auto Driver Reconcile
+  ↓
+Main Turn
+  ↓
+read_mailbox
+  ↓
+处理请求
+~~~
+
+这里必须解决**重复唤醒**：
+
+- 同一 Mailbox 消息只能被一次自动 Main Turn 消费；
+- Driver 必须记录已处理的消息位置/序号；
+- 同一消息不能因为多次 Reconcile 被重复触发 Main；
+- 消息进入 Mailbox 不直接递归调用 Main，而是统一经过 Auto Driver 调度。
+
+## 8. Main Review 与 Roadmap 边界
+
+Main Review 继续严格复用 F10.4b：
+
+~~~text
+submitted Node
+      ↓
+Main Review
+      ↓
+submit_review
+ ┌────┼────┬──────────┐
+ ↓    ↓    ↓          ↓
+完成  返工  跳过     交给 Human
+~~~
 
 其中：
 
-- complete：沿用 F10.4b 的完成判定与下游解锁；
-- rework：Node 返回可执行状态并携带返工意见；
+- complete：沿用 F10.4b，完成 Node 并解锁合法后继；
+- rework：把 Node 返回可执行状态，并将反馈送入下一 Turn；
 - skip：沿用现有跳过语义；
-- ask_human：立即暂停自动推进。
+- ask_human：停止 AutoRun。
 
-Main 可以修改下游 Roadmap，但不能越权把尚未执行的 Node 判定为完成。
+**Main 可以在已有用户批准的 Roadmap 范围内推进和复盘，但不能通过 AutoRun 绕过 F9.10 新增一条未经用户同意的规划路线。**
 
-## 5. 没有可运行 Node 时的处理
+这保证 F11 的自动化是：
 
-不能因为当前没有 eligible Node 就静默等待。
+> **自动执行已经确定的工作，而不是自动替用户决定新的项目方向。**
 
-~~~text
-No eligible Node
-      │
-      ▼
-Main Planning Turn
-      │
-      ├─ 形成新的合法路线 → 重新进入调度
-      │
-      └─ 仍无法继续 → PAUSED + Human
-~~~
+## 9. 回合预算
 
-这样可以把“暂时没有可执行节点”和“系统已经无法继续”区分开，避免自动流程产生隐性死锁。
-
-## 6. 回合预算
-
-预算按**一次连续 Auto Run**计算，而不是 Project 生命周期累计：
+预算按**一次连续 AutoRun**计算，而不是 Project 生命周期累计：
 
 | 预算 | 首版默认值 | 计数对象 |
 |---|---:|---|
@@ -182,98 +362,105 @@ Main Planning Turn
 
 规则：
 
-- 排队后因暂停、模式切换、竞态而未真正进入 Turn，不计数；
-- Human 主动发起的 Turn 不计入 Auto Run 预算；
-- 任一预算达到上限，自动状态变为 paused，原因记录为 turn-limit；
-- Human resume 后重新建立预算；
-- F10 已有的单 Turn maxSteps = 150 和模型级 transient retry 继续有效，F11 不重复定义。
+- 排队后未真正进入 Turn 的请求不计数；
+- Human 主动发起的 Turn 不计入 AutoRun；
+- 任一预算达到上限，AutoRun → PAUSED，停止自动启动新 Turn；
+- 新的 AutoRun 重新计数；
+- F10 已有的单 Turn maxSteps = 150 继续有效；
+- AgentRuntime 自身已有的瞬时/模型级错误处理不由 F11 重复实现。
 
-64 / 32 是首版安全上限，不作为最终性能结论；后续根据长程验收数据调整。
+64 / 32 是首版安全上限，用于防止自动流程无限运行；后续通过 F11 长程验收再调整。
 
-## 7. 失败、取消与中断
+## 10. 失败、取消、中断与重启
 
-| 情况 | 当前 Turn | 是否继续自动推进 |
-|---|---|---|
-| Node 正常结束 | 正常收口 | 进入 Main Review |
-| Node failed | 收口 | 否，暂停 |
-| Node cancelled | 收口 | 否，暂停 |
-| Node interrupted | 收口为 interrupted | 否，暂停 |
-| Main Review failed | 收口 | 否，暂停 |
-| Main cancelled / interrupted | 收口 | 否，暂停 |
-| Main ask_human | 收口 | 否，暂停 |
-| Auto Run 达到预算 | 收口 | 否，暂停 |
-
-F11 不允许：
-
-- 完整 Turn 失败后无限自动重跑；
-- 因旧调度事件重新启动已经取消的 Turn；
-- 在应用重启后隐式恢复 Auto Run。
-
-Human resume 后，失败 Node 是否重新执行仍遵循现有 Node 生命周期和 Main / Human 的决定，而不是由失败处理逻辑隐式重试。
-
-## 8. 高风险操作与 Human 接管
-
-自动模式只自动执行当前权限模型允许的普通项目工作。
-
-以下情况默认暂停：
-
-- 删除或覆盖 Project 外数据；
-- 对外发布、发送或提交不可逆变更；
-- 访问或传输 Secret / Token / 凭据；
-- 修改权限、安全策略或执行策略；
-- 可能造成系统级或不可逆副作用的操作；
-- Main 无法确认目标、范围或影响边界。
+### 10.1 Turn 级异常
 
 ~~~text
-Auto Tool
-   │
-   ▼
-Risk / Boundary Check
-   ├── normal → execute
-   │
-   └── high / ambiguous
-             ↓
-          PAUSED
-             ↓
-           Human
+Turn
+ │
+ ├─ success
+ │    └→ Reconcile → 继续
+ │
+ ├─ failed
+ │    └→ PAUSED
+ │
+ ├─ cancelled
+ │    └→ PAUSED
+ │
+ └─ interrupted
+      └→ PAUSED
 ~~~
 
-F11.0 第一版不引入额外 LLM Reviewer；先利用现有权限边界 + Human Gate 建立 fail-closed 自动化流程。
+F11.0 的原则是：
 
-## 9. F11.0 验收标准
+> **完整 Turn 失败后默认不自动重跑。**
 
-F11.0 只验收设计，不运行代码：
+避免因为旧事件、网络异常或状态竞争造成重复副作用。后续如果需要有限重试，应作为独立设计，不隐式加入 F11.0。
 
-- [x] manual / auto 语义明确；
-- [x] running / paused 生命周期明确；
-- [x] 模式切换不打断当前 Turn；
-- [x] 重启后 Auto Project 不自动运行；
-- [x] Main / Node 自动推进优先级明确；
-- [x] Node eligible 条件与并发边界明确；
-- [x] Node 正常结束、失败、取消、中断分别处理；
-- [x] Main Review 的四种结果明确；
-- [x] 无 eligible Node 时不会静默卡死；
-- [x] Node / Main Auto Run 预算明确；
-- [x] 失败不无限自动重试；
-- [x] 高风险操作回到 Human Gate；
-- [x] F11 与 F12 / F13 的职责边界明确。
+### 10.2 AutoRun 级停止
 
-## 10. 下一步开发顺序
+以下情况统一停止自动推进：
 
-F11 后续只围绕自动化流程推进：
+- Node / Main Turn failed；
+- Node / Main Turn cancelled；
+- Node / Main Turn interrupted；
+- Main Review 返回 ask_human；
+- 达到 Main / Node 回合预算；
+- Roadmap 无 eligible Node 且需要新的规划；
+- Project 已完成、归档或不可运行。
+
+应用重启后：
+
+> **不恢复原 AutoRun 的运行态，不自动唤醒 Agent。**
+
+已有 Project / Roadmap / Node / Session 事实继续从 SQLite 恢复，但需要重新建立 AutoRun。
+
+## 11. F11.0 验收标准
+
+F11.0 只验收设计，不修改生产代码：
+
+- [x] 明确 Phase 11 只负责自动执行，不负责 F12/F13；
+- [x] 明确 Roadmap 即项目任务图，不新增 Work Graph；
+- [x] 明确 Node 自带 Goal / done_when，不新增 Task Packet；
+- [x] 明确 Auto Driver 是程序调度层，不是 Agent；
+- [x] 明确 AutoRun 生命周期；
+- [x] 明确 Event → Reconcile → Dispatch 闭环；
+- [x] 明确 Node 多 Turn 连续推进；
+- [x] 明确 submit_completion → Main Review 边界；
+- [x] 明确 Node → Main 自动唤醒与消息去重；
+- [x] 明确 Main 同时最多一个 Turn、Node 同时最多一个 Turn；
+- [x] 明确多 Node 并行的架构支持与首版默认串行；
+- [x] 明确 F9.10 新规划需用户同意，不被 AutoRun 绕过；
+- [x] 明确 F10.4b submit_review 仍是 Node 完成的唯一判定；
+- [x] 明确 64 / 32 AutoRun 回合预算；
+- [x] 明确失败、取消、中断、预算耗尽和无可执行节点的停止语义；
+- [x] 明确重启不自动恢复 AutoRun；
+- [x] 明确 F11.1–F11.4 最小开发顺序。
+
+## 12. 下一步最小开发顺序
 
 ~~~text
-F11.0 设计确认
-       ↓
-F11.1 Auto Driver 最小闭环
-       ↓
-F11.2 Pause / Resume / Failure
-       ↓
-F11.3 Public Contract / Desktop
-       ↓
-F11.4 长程自动化验收
+F11.0  设计确认
+   ↓
+F11.1  单 Node 自动闭环
+       AutoRun
+        → Node Turn
+        → Node 继续 Turn
+        → submit_completion
+        → Main Review
+        → 下一 Node
+   ↓
+F11.2  Auto Driver 多 Node 调度
+       Roadmap eligible / blocked
+       Main 唤醒 / 事件去重
+   ↓
+F11.3  并行与资源冲突控制
+       maxConcurrentNodes > 1
+   ↓
+F11.4  长程自动化验收
+       完成 / 返工 / 跳过 / 异常 / 重启
 ~~~
 
-**F12 再单独实现 Context Meter + Session Compaction；F13 再实现 RAG。**
+F11 的最终完成标准：
 
-F11 的完成标准是：在不破坏 F10 Human Gate、Project / Roadmap / Main / Node 领域语义的前提下，Navo 可以由 Human 显式开启自动模式，并安全地连续推进一个多 Node Project，直到完成或明确回到 Human。
+> **在一个已经确认 Goal 与 Roadmap 的 Project 中，Human 只需启动一次 AutoRun，Navo 即可通过 Auto Driver 连续驱动 Node 多 Turn 执行、自动触发 Main Review、按照 Roadmap 依赖继续推进，并在完成、异常、预算耗尽或需要新的人工规划时明确停止。**
