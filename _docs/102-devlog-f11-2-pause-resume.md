@@ -174,4 +174,4 @@ Human 显式重新 Start
 - [x] 暂停状态保持单一 AutoRun 所有权；
 - [x] AutoRun 不持久化运行态，重启不会自动执行。
 
-代码已提交到 F11.2 专用分支；本机与 CI 验证结果待阶段验收后补入本文。
+代码已提交到 F11.2 专用分支。GitHub Actions 已通过 `pnpm typecheck` 与完整 `pnpm test`（109 个测试文件、687 个测试）；本机完整验证仍待用户侧执行。
