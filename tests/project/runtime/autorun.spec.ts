@@ -108,6 +108,37 @@ describe("F11.1 AutoRun minimal loop", () => {
     expect(JSON.stringify(adapter.requests[3]?.messages)).toContain("Add the missing source");
   });
 
+  it("continues a Node already started by Human without rebinding its Session", async () => {
+    const { ctx, adapter } = await createKit([
+      text("I have started the work."),
+      submit("complete-later"),
+      review("approve", "complete"),
+      text(),
+    ]);
+    const project = ctx.projects.create({ name: "Project", goal: "Continue existing work" });
+    const id = createWorkNode(ctx, project.id, "Collect").node.id;
+    ctx.roadmaps.create({ definition: { projectId: project.id, nodes: [id], edges: [] }, reason: "Approved" });
+    const manual = await ctx.projectRuntime.startNode({ projectId: project.id, nodeId: id, text: "Human start" });
+    const result = await ctx.autoRun.start(project.id);
+    expect(result).toMatchObject({ status: "completed", nodeTurns: 1, mainTurns: 1 });
+    expect(ctx.nodes.get(id)?.sessionId).toBe(manual.sessionId);
+    expect(JSON.stringify(adapter.requests[1]?.messages)).toContain("I have started the work.");
+  });
+
+  it("honors Main skip as a terminal Roadmap decision", async () => {
+    const { ctx } = await createKit([
+      submit("submit"),
+      review("skip", "skip"),
+      text(),
+    ]);
+    const project = ctx.projects.create({ name: "Project", goal: "Skip unnecessary work" });
+    const id = createWorkNode(ctx, project.id, "Optional").node.id;
+    ctx.roadmaps.create({ definition: { projectId: project.id, nodes: [id], edges: [] }, reason: "Approved" });
+    const result = await ctx.autoRun.start(project.id);
+    expect(result).toMatchObject({ status: "completed", nodeTurns: 1, mainTurns: 1 });
+    expect(ctx.nodes.get(id)?.status).toBe("skipped");
+  });
+
   it("rejects duplicate AutoRuns and leaves Human Turn cancellation intact", async () => {
     const { ctx, adapter } = await createKit([{ kind: "hang" }]);
     const project = ctx.projects.create({ name: "Project", goal: "Avoid duplicate runs" });
