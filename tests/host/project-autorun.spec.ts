@@ -6,7 +6,7 @@ import {
   projectAutoRunStartMethod,
   projectCreateMethod,
 } from "../../rpc/project.js";
-import { createProjectId } from "../../src/brand/ids.js";
+import { createNodeId, createProjectId } from "../../src/brand/ids.js";
 import { call, failureOf, host, seedRoadmap, workspace } from "./project/helpers.js";
 
 describe("Kernel Host AutoRun methods", () => {
@@ -37,8 +37,8 @@ describe("Kernel Host AutoRun methods", () => {
     expect(await call(client, projectAutoRunPauseMethod, { projectId: created.projectId }))
       .toMatchObject({ status: "running", currentTarget: { kind: "node", nodeId: first }, reason: null });
 
-    expect(ctx.projectRuntime.stopNode(created.projectId, first)).toBe(true);
-    await vi.waitFor(() => expect(ctx.autoRun.get(created.projectId)?.status).toBe("paused"));
+    expect(ctx.projectRuntime.stopNode(createProjectId(created.projectId), createNodeId(first))).toBe(true);
+    await vi.waitFor(() => expect(ctx.autoRun.get(createProjectId(created.projectId))?.status).toBe("paused"));
 
     expect(await call(client, projectAutoRunGetMethod, { projectId: created.projectId }))
       .toMatchObject({ status: "paused", reason: "turn-cancelled" });
