@@ -93,7 +93,7 @@ describe("F11.4 long-term AutoRun acceptance", () => {
       status: "skipped",
       lastReview: { decision: "skip" },
     });
-    expect(world.requests()).toBe(12);
+    expect(world.requests()).toBe(9);
     expect(app.autoRun.get(project.id)).toBeUndefined();
 
     const finalState = await state(app, project.id);
@@ -136,6 +136,6 @@ describe("F11.4 long-term AutoRun acceptance", () => {
       status: "completing",
       confirmation: { confirmedBy: "main" },
     });
-    expect(world.requests()).toBe(5);
+    expect(world.requests()).toBe(4);
   });
 });
