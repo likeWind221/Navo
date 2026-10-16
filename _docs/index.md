@@ -60,6 +60,10 @@
 - [F10.4b Main 核查节点成果与计划调整](97-devlog-f10-4b-main-review.md)：Human 请 Main 复盘某节点；核查清单（线索）+ `fetch_resource` 查产物 + `read_node_turn` 查过程三层按需核查；`submit_review` 唯一判定（完成 / 返工 / 跳过 / 交给 Human），返工上限 2 次、从未执行的节点不能被 Main 判完成、版本过期则拒绝；复盘期间节点被锁；复盘记录随 Project 保存；`project.turn.v1` 新增 review 目标；Harness auto-review 对照；经用户决定免除真实模型五场景验收并标记完成（仅 Qwen 跑通场景 1）。
 - [F10.5 F10 长程集成验收](98-devlog-f10-5-rework-loop.md)：离线完整场景覆盖交作业、Main 返工、按意见补做、Main 判完成并调整计划、从未执行的节点不能被判完成和两次重启恢复；`gpt-6-sol` 真实验收在 BUG-010 修复后通过前 6 个回合，第 7–11 回合经用户决定免除，已完成；过程中发现并修复 BUG-011。
 
+## 后端 Phase 11
+
+- [F11.0 全自动推进与上下文压缩设计收口](100-devlog-f11-0-design.md)：收口 manual / auto 与 running / paused 两层状态、64 / 32 连续 Auto Run 回合预算、Main / Node 自动调度顺序、失败 / 取消 / 中断、高风险操作 fail-closed，以及 80% 压缩阈值、16% recent tail、工具配对与 overflow recovery；只修改文档，待用户确认后进入 F11.1。
+
 ## 模型接入 M1
 
 - [ChatGPT 订阅模型接入可行性调研](83-devlog-chatgpt-provider-research.md)：对照 Pi 新旧 OpenAI 接入与官方 Sign in with ChatGPT；记录授权、Responses 限制、Navo 适配边界及尚未实测的账号准入。
