@@ -1,7 +1,7 @@
 # F11.3：桌面公共契约独立验收
 
 > 日期：2026-10-16；基线：master `e1afdcf`。
-> 状态：🔄 本机检查与 Electron 最终复验通过，当前 PR head CI 待收口。
+> 状态：✅ 本机完整检查、Electron 实际调用与代码 head CI 通过；收口提交仍执行当前 head CI 门禁。
 
 ## 做了什么
 
@@ -31,6 +31,8 @@
 
 最终 Electron 退出码 0，断言全部通过，成功证据为 `C:/Users/likeW/AppData/Local/Temp/navo-f113-desktop-acceptance-20261016-contract/result.json`。失败与成功证据分开保留。本次覆盖回合内暂停请求、已暂停幂等操作；`human-paused` 回合边界收口由已有后端测试覆盖，本次没有用成功模型回合重验。
 
-等待当前 PR head CI 后关闭 BUG-013、完成 F11.3 公共契约收口。F12 只进入可规划状态，不自动实施。
+代码 head `a6859a8` 的 [CI verify](https://github.com/likeWind221/Navo/actions/runs/38907912137) 已成功（93 秒），[PR #71](https://github.com/likeWind221/Navo/pull/71)。BUG-013 与 F11.3 公共契约收口；收口文档提交仍须当前 head CI 成功后合并。后端 F12 只进入可规划状态，不自动实施。
+
+本次清理临时 Electron 缓存的命令被自动审批拒绝，工具仅返回 `blocked by policy`，未绕过；六个本次创建的 `Temp/navo-f113-desktop-*` 随机目录残留。独立的验收证据目录保留。主仓库与其他 worktree 未清理。
 
 本次授权范围为前端验收及阻塞它的最小修正；共享计划与索引由当前 Agent 唯一串行维护。代码导读在最终交付提供。

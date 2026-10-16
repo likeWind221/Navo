@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-- [ ] BUG-013：F11.3 新增错误码未被 Renderer 提示覆盖，前端类型检查失败；AutoRun handler 测试命名不匹配发现规则，四项测试漏跑。修复与桌面验收进行中，见 [107](107-bugfix-bug-013-autorun-desktop.md)。
+- [x] BUG-013：补齐 F11.3 四个错误提示并修正测试命名；前端完整检查、139 测试、Electron bridge 实际调用、根目录 695 测试与代码 head CI 通过（PR #71，收口提交仍执行当前 head CI 门禁）。见 [107](107-bugfix-bug-013-autorun-desktop.md)。
 
 - [x] BUG-012：F11.4 真实验收脚本未调用入口且未提供下游所需材料；已修正，本机完整检查、gpt-6-sol 双节点真实完成及代码 head CI 通过（PR #70，收口提交仍遵循当前 head CI 门禁）。笔记：[106](106-bugfix-bug-012-autorun-acceptance.md)。
 

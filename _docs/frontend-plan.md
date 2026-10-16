@@ -240,7 +240,7 @@ Final answer (outside collapse)
 
 ## 4. 当前下一步
 
-F11.3 后端公共契约的前端独立验收进行中，记录见 [108](108-devlog-f11-3-desktop-acceptance.md)，问题见 [BUG-013](107-bugfix-bug-013-autorun-desktop.md)。此次只验收 Electron bridge 的启动、查询、暂停、恢复和状态返回，不新增正式页面 AutoRun 控件，也不推进 F5.4–F5.8；阶段状态以 [backend-plan.md](backend-plan.md) 为准。
+F11.3 后端公共契约的前端独立验收已通过：前端 typecheck/test/build、Electron bridge 实际调用和代码 head CI 均通过（收口提交仍执行当前 head CI 门禁），记录见 [108](108-devlog-f11-3-desktop-acceptance.md)，[BUG-013](107-bugfix-bug-013-autorun-desktop.md) 已关闭。此次只验收 Electron bridge 的启动、查询、暂停、恢复和状态返回，不新增正式页面 AutoRun 控件，也不推进 F5.4–F5.8；阶段状态以 [backend-plan.md](backend-plan.md) 为准。
 
 **下一前端步骤为 F5.4 Main 对话、目标确认与项目状态跟随，尚未开始，需用户确认后进入。** F5.3–F5.8 按第 3 节逐步实施，不授权连续执行；规划记录见 [88](88-devlog-f5-project-plan.md)。
 

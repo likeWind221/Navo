@@ -24,4 +24,4 @@
 
 ## 后续
 
-验收与 CI 通过后再关闭本项；F12 未开始。
+代码 head `a6859a8` 的 [CI verify](https://github.com/likeWind221/Navo/actions/runs/38907912137) 已成功，93 秒；[PR #71](https://github.com/likeWind221/Navo/pull/71)。本机与 CI 达到本项关闭条件，BUG-013 关闭；收口文档提交仍执行当前 head CI 门禁。F12 未开始。

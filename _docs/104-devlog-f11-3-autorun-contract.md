@@ -1,7 +1,7 @@
 # F11.3：AutoRun 全自动推进公共契约
 
 > 日期：2026-10-16  
-> 状态：🔄 Kernel Host CI 已通过；前端独立 typecheck/test 与本机 Electron 验证待完成。  
+> 状态：✅ Kernel Host、前端独立检查与本机 Electron bridge 验证通过；2026-10-16 收口见 [108](108-devlog-f11-3-desktop-acceptance.md)，PR #71 的代码 head CI 已通过，收口提交仍按当前 head CI 门禁合并。  
 > 基线：F11.2 已合入 `master`。
 
 ## 1. 阶段定位
@@ -145,13 +145,11 @@ AutoRun 本身仍然是进程内运行许可，不新增 SQLite 持久化表。
 - [x] Electron IPC / preload / shared API 已接入；
 - [x] Start / Resume 不阻塞等待整个 AutoRun；
 - [x] Kernel Host typecheck / test（GitHub CI：111 files / 693 tests）
-- [ ] Frontend typecheck / test；
-- [ ] 本机 Electron 实际调用验证。
+- [x] Frontend typecheck / test / build（139 项测试）；
+- [x] 本机 Electron 实际调用验证（正式 preload / IPC 与 Mock Kernel Host，退出码 0）；正式页面 AutoRun 控件与视觉交互未包含在本次验收范围。
 
 ## 8. 下一阶段
 
-F11.3 完成后进入 F11.4：
+F11.4 已完成，见 [105](105-devlog-f11-4-autorun-acceptance.md)。F11.3 本次补齐前端独立检查与 Electron 公共契约调用验收；正式页面当前无 AutoRun 控件，不能把本次结果解读为产品交互验收完成。
 
-> 用多 Node、返工、暂停、失败、重启和最终完成场景进行长程 AutoRun 验收。
-
-F11.4 重点验证“公共契约接入后，真实 Host / Desktop 与 F11.1/F11.2 自动执行内核共同工作”，不再新增 AutoRun 核心状态机。
+后端下一步可规划 Phase 12 上下文压缩，须独立介绍、确认，不自动实施。前端 F5.4–F5.8 保持原状态。
