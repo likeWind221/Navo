@@ -294,13 +294,13 @@ describe("F11 AutoRun control and execution loop", () => {
   });
 
   it("pauses at the Main Turn budget before dispatching another Node", async () => {
-    const entries = Array.from({ length: 32 }, (_, index) => [
+    const entries = Array.from({ length: 2 }, (_, index) => [
       submit(`submit-${index}`),
       review(`review-${index}`, "complete"),
     ]).flat();
-    const { ctx, adapter } = await createKit(entries);
+    const { ctx, adapter } = await createKit(entries, [], {}, { mainTurnLimit: 2 });
     const project = ctx.projects.create({ name: "Project", goal: "Bound Main turns" });
-    const nodeIds = Array.from({ length: 33 }, (_, index) =>
+    const nodeIds = Array.from({ length: 3 }, (_, index) =>
       createWorkNode(ctx, project.id, `Task ${index}`).node.id,
     );
     ctx.roadmaps.create({
@@ -312,14 +312,14 @@ describe("F11 AutoRun control and execution loop", () => {
     expect(result).toMatchObject({
       status: "paused",
       reason: "main-turn-limit",
-      nodeTurns: 32,
-      mainTurns: 32,
+      nodeTurns: 2,
+      mainTurns: 2,
     });
-    expect(adapter.requests).toHaveLength(64);
-    const extraNodeId = nodeIds.at(32);
+    expect(adapter.requests).toHaveLength(4);
+    const extraNodeId = nodeIds.at(2);
     expect(extraNodeId).toBeDefined();
     expect(ctx.nodes.get(extraNodeId!)?.status).toBe("idle");
-  }, 30000);
+  });
 
   it("pauses when a Turn is blocked by the AgentRuntime step limit", async () => {
     const { ctx, adapter } = await createKit([
