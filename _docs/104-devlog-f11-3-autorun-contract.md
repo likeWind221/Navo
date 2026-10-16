@@ -1,7 +1,7 @@
 # F11.3：AutoRun 全自动推进公共契约
 
 > 日期：2026-10-16  
-> 状态：✅ Kernel Host、前端独立检查与本机 Electron bridge 验证通过；2026-10-16 收口见 [108](108-devlog-f11-3-desktop-acceptance.md)，PR #71 的代码 head CI 已通过，收口提交仍按当前 head CI 门禁合并。  
+> 状态：✅ Kernel Host、前端独立检查与本机 Electron bridge 验证通过；2026-10-16 收口见 [108](108-devlog-f11-3-desktop-acceptance.md)，PR #71 的代码 head CI 已通过，收口提交仍按当前 head CI 门禁合并。
 > 基线：F11.2 已合入 `master`。
 
 ## 1. 阶段定位
