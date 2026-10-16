@@ -4,6 +4,7 @@ import { Service } from "cordis";
 import type { Context } from "cordis";
 
 import type { ProjectId } from "../brand/ids.js";
+import type { TurnResult } from "../agent/types.js";
 import type { NodeSnapshot } from "../node/model.js";
 import { ProjectError } from "./errors.js";
 
