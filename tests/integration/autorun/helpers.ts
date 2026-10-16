@@ -19,8 +19,6 @@ afterEach(async () => {
 });
 
 export async function createWorld(entries: readonly MockLLMEntry[]) {
-  const databaseRoot = await mkdtemp(join(tmpdir(), "navo-f114-db-"));
-  roots.push(databaseRoot);
   const path = await temporaryDatabase(roots, "navo-f114-storage-");
   const workspaceRoot = await mkdtemp(join(tmpdir(), "navo-f114-workspace-"));
   roots.push(workspaceRoot);
