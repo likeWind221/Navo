@@ -17,7 +17,7 @@
 
 ~~~text
 W = contextWindow, O = maxTokens ?? 32768, H = 16384, L = autoCompactLimit
-有 W:   threshold = min(floor(min(0.8W, W - O - H)), L)
+有 W:   threshold = min(floor(min(0.9W, W - O - H)), L)
         retain    = min(floor((W - O) * 0.16), floor(threshold * 0.2))
         W - O - H <= 0          -> disabled: no-pressure-budget（即使设置了 L）
 只有 L: threshold = L, retain = floor(L * 0.2)
@@ -25,7 +25,7 @@ W = contextWindow, O = maxTokens ?? 32768, H = 16384, L = autoCompactLimit
 ~~~
 
 - `L` 对应 Codex `model_auto_compact_token_limit`（`codex-rs/protocol/src/openai_models.rs` `auto_compact_token_limit()`：取配置值与 90% 窗口的较小者，没有窗口时单独生效）。Navo 用它把阈值调低，用于真实模型上的压缩验收，或在 Qwen 服务端窗口不确定时给保守值。
-- 保留预算额外限制为阈值的 20%（等于默认 0.16 / 0.8）：F12.0 原计划沿用 Harness `resolveCompactSpec` 的“retain ≥ threshold 则报错”，但在低 `L` 的验收场景下这条规则会直接禁用压缩，因此改为按阈值收缩保留预算，`retain-not-below-threshold` 这个禁用原因随之删除。
+- 保留预算额外限制为阈值的 20%（独立于 90% 的压力触发比例）：F12.0 原计划沿用 Harness `resolveCompactSpec` 的“retain ≥ threshold 则报错”，但在低 `L` 的验收场景下这条规则会直接禁用压缩，因此改为按阈值收缩保留预算，`retain-not-below-threshold` 这个禁用原因随之删除。
 - 窗口太小时，即使设置了 `L` 也禁用：输出预留与余量已经吃掉窗口，压缩后的请求同样装不下。
 - ChatGPT 订阅模型没有 `maxTokens`，输出预留按 32768 计。
 
@@ -63,7 +63,7 @@ used           = baseline + estimate(当前请求) - anchorEstimate
 - F12.3：是否在被遮蔽区域中保留人类直接输入的用户消息原文（Codex `compact.rs` `build_compacted_history` 保留最近 20k token 的用户消息，以免纠正类指令丢失），需排除 system-reminder 与旧检查点；摘要请求本身超窗时从头部逐条删除后重试（Codex `remove_first_item`）。
 - F12.4：无法恢复的超窗把用量标记为已满（Codex `set_total_tokens_full`）。
 - F12.5：ChatGPT 模型目录若返回 `context_window`，可在公共模型信息中展示，方便配置。
-- 不采用：后台预压缩、回合结束后压缩、向模型注入剩余上下文提示、远程压缩接口（`compact_remote_v2*` 未细读）、95% 可用窗口（Navo 阈值公式已更严格）。
+- 不采用：后台预压缩、回合结束后压缩、向模型注入剩余上下文提示、远程压缩接口（`compact_remote_v2*` 未细读）、95% 可用窗口（Navo 的 90% 比例与 Codex 默认比例一致，但仍受输出预留和安全余量约束）。
 
 ## 下一步
 

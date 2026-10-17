@@ -25,7 +25,7 @@ export interface ContextPressure {
   readonly exceeded: boolean;
 }
 
-export const THRESHOLD_RATIO = 0.8;
+export const THRESHOLD_RATIO = 0.9;
 export const RETAIN_RATIO = 0.16;
 export const LIMIT_RETAIN_RATIO = 0.2;
 export const HEADROOM_TOKENS = 16_384;

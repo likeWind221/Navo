@@ -95,6 +95,31 @@ describe("AgentRuntime", () => {
     await expect(first).resolves.toMatchObject({ status: "completed" });
   });
 
+  it("publishes a context-pressure trigger before sending an oversized request", async () => {
+    const kit = await createRuntime([modelResponse([{ type: "text", text: "still completed" }])]);
+    const input = turnInput("pressure-trigger");
+    const pressureEvents: unknown[] = [];
+    kit.ctx.on("context/pressure", (event) => pressureEvents.push(event));
+
+    await expect(kit.ctx.agentRuntime.runTurn({
+      ...input,
+      userMessage: {
+        ...input.userMessage,
+        content: [{ type: "text", text: "x".repeat(140_000) }],
+      },
+      model: { provider: "mock", model: "test", maxTokens: 1_000, contextWindow: 50_000 },
+    })).resolves.toMatchObject({ status: "completed" });
+
+    expect(pressureEvents).toHaveLength(1);
+    expect(pressureEvents[0]).toMatchObject({
+      sessionId: input.sessionId,
+      provider: "mock",
+      model: "test",
+      thresholdTokens: 32_616,
+    });
+    expect(kit.adapter.requests).toHaveLength(1);
+  });
+
   it("records a completed direct-answer Turn", async () => {
     const kit = await createRuntime([modelResponse([
       { type: "reasoning", text: "think" },
