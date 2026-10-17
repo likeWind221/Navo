@@ -8,7 +8,7 @@
 
 - 只读调研 DeepSeek Harness（commit `d743267388641bc76f17c45ce8b4c231aed1d32c`）的压缩子系统，对照 Navo 现有 Session surface、请求构建、模型配置和重启恢复。
 - 收口 Phase 12 的状态、触发、事务事件、选区、摘要、失败 / 取消 / 中断以及与 F11 AutoRun 的衔接规则。
-- 在 [backend-plan.md](backend-plan.md) 中拆出 F12.1–F12.6 的功能目标；经用户确认，将压力检测接入与摘要检查点实现分为两个独立 Step。
+- 在 [backend-plan.md](backend-plan.md) 中拆出 F12.1–F12.7 的功能目标；经用户确认，将压力检测接入与摘要检查点实现分为两个独立 Step。
 
 ## 2. 问题与现状
 
@@ -93,13 +93,13 @@ Compaction(trigger = overflow, 忽略阈值, 最大平衡缩减)
 
 ### 4.5 事务事件与检查点
 
-新增两种 log-only 事件，并给 `user-message` 增加可选字段：
+新增压缩开始/结束 log-only 事件，以及可改变 surface 的 `compaction-checkpoint` 消息事件：
 
 | 事件 | 数据 | 作用 |
 |---|---|---|
 | `compaction-started` | `{ compactionId, turnId?, trigger: "pressure" \| "overflow" \| "manual" }` | 事务锁，必须先于摘要请求写入；pressure / overflow 需要 turnId，manual 不属于 Turn |
 | `compaction-checkpoint`（`surfaceOp: replace`） | `{ message, compactionId, turnId? }` | 唯一的 surface 变更：用摘要检查点替换选区；manual 检查点不伪造 turnId |
-| `compaction-ended` | `{ compactionId, status: "completed" \| "failed" \| "cancelled" \| "interrupted", shadowedSequences?, shadowedTokens?, summaryTokens?, provider?, model?, usage?, failure? }` | 释放锁，并记录统计与失败原因 |
+| `compaction-ended` | `{ compactionId, turnId?, status: "completed" \| "failed" \| "cancelled" \| "interrupted", shadowedSequences?, shadowedTokens?, summaryTokens?, provider?, model?, usage?, failure? }` | 释放锁，并记录统计与失败原因；manual 事务没有 turnId |
 
 - 写入顺序固定为 started → replace（仅成功时）→ ended。崩溃留下未闭合 started 可被检测；不把摘要元数据单独成事件，统计信息并入 ended。
 - 摘要请求不写 `llm-requested`，避免污染 Turn / Step 请求快照与 Meter 锚点；provider / model / usage 记录在 ended 中。
@@ -144,7 +144,7 @@ F12.6 定义：每个 Session 的上下文用量（已用 / 容量 / 阈值）�
 
 ## 6. 明确不采用
 
-- 工具结果剪枝：Navo 的 fetch / file / shell 工具已在输出端截断，先观察 F12.5 实测是否仍有单个超大结果，再决定是否新增；
+- 工具结果剪枝：Navo 的 fetch / file / shell 工具已在输出端截断，先观察 F12.7 实测是否仍有单个超大结果，再决定是否新增；
 - 图片省略：Navo 当前不发送图片输入；
 - 独立摘要模型配置：摘要沿用当前 Session 对应的模型；手动 `/compact` 已纳入 F12.5，不再视为明确不采用项；
 - 可召回压缩、跨 Session 检索：归入 Phase 13；
