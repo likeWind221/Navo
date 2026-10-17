@@ -27,11 +27,13 @@ export interface CompactSessionInput {
   readonly signal: AbortSignal;
   readonly cancelSignal: AbortSignal;
   readonly maxRetries: number;
+  readonly trigger?: "pressure" | "overflow";
 }
 
 export async function compactSession(ctx: Context, input: CompactSessionInput): Promise<CompactionOutcome> {
+  const trigger = input.trigger ?? "pressure";
   const budget = resolveContextBudget(input.model);
-  if (budget.kind === "disabled") return { kind: "no-progress" };
+  if (budget.kind === "disabled" && trigger !== "overflow") return { kind: "no-progress" };
   const snapshot = ctx.sessions.getSurfaceSnapshot(input.sessionId);
   const systemMessages = input.request.messages.filter(message => message.role === "system");
   const summaryMaxTokens = Math.min(
@@ -39,13 +41,13 @@ export async function compactSession(ctx: Context, input: CompactSessionInput): 
     8192,
     Math.max(256, Math.floor((budget.contextWindow ?? input.thresholdTokens) / 8)),
   );
-  const maxInputTokens = budget.contextWindow === undefined
-    ? input.thresholdTokens - summaryMaxTokens
-    : budget.contextWindow - summaryMaxTokens - HEADROOM_TOKENS;
+  const maxInputTokens = budget.kind === "enabled" && budget.contextWindow !== undefined
+    ? budget.contextWindow - summaryMaxTokens - HEADROOM_TOKENS
+    : input.thresholdTokens - summaryMaxTokens;
   const fixedTokens = summaryFixedTokens(systemMessages);
   const selection = selectCompactablePrefix(
     snapshot.entries,
-    input.retainTokens,
+    trigger === "overflow" ? 0 : input.retainTokens,
     maxInputTokens - fixedTokens,
     Math.ceil(input.thresholdTokens * 0.1),
   );
@@ -60,7 +62,7 @@ export async function compactSession(ctx: Context, input: CompactSessionInput): 
       data: {
         turnId: input.turnId,
         compactionId,
-        trigger: "pressure",
+        trigger,
         coveredStart: selection.coveredStart,
         coveredEnd: selection.coveredEnd,
       },
