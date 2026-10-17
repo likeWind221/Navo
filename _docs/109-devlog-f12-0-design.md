@@ -29,7 +29,7 @@ F11 让 Main / Node Session 可以连续推进几十个 Turn，而 Navo 目前�
 | Harness 源码 | 机制 | Navo 采用方式 |
 |---|---|---|
 | `docs/subsystems/compaction.md`、`packages/compaction/compaction/src/index.ts` | 压缩是可选能力，不进入 agent loop 主干；`compaction/start` → summary → 替换 user/message → `compaction/end`，未闭合 start 即崩溃证据 | 采用事务形态与“最后才写 end”的锁语义；压缩逻辑放在 Agent 核心的独立模块，由 Step 在请求前调用，不做 Cordis 能力 seam 和可替换 provider |
-| `compaction-basic/src/config.ts` `resolveCompactSpec` | 阈值 `floor(min(W×0.8, W−O−headroom))`，尾部保留 `(W−O)×0.16`，`retain < threshold` 校验 | 采用公式与校验；headroom 默认改为 16384（Harness 65536 对 Navo 常用窗口过大），不做 `modelPolicies` 表，按当前模型配置一份 |
+| `compaction-basic/src/config.ts` `resolveCompactSpec` | 阈值 `floor(min(W×0.9, W−O−headroom))`，尾部保留 `(W−O)×0.16`，`retain < threshold` 校验 | 采用公式与校验；headroom 默认改为 16384（Harness 65536 对 Navo 常用窗口过大），不做 `modelPolicies` 表，按当前模型配置一份 |
 | `compaction-basic/src/summarizer.ts` | 回放系统提示 + 被遮蔽区域 + 一条结构化指令；摘要用 `<compacted-summary>` 包裹并加续接前言；旧摘要合并而非照抄 | 采用回放与包裹方式；指令改为不绑定编码领域的研究 / 项目通用结构，并要求使用对话主要语言（对应 Harness `2026-07-31-english-compaction-checkpoints` 的教训） |
 | `token-meter` | 以最近 provider usage 为锚点，加 surface 变化的有符号重定价；按路由给图片定价 | 只采用“usage 锚点 + 新增节点启发式估算”；不做路由定价、图片定价和 shadow-price 事件 |
 | `agent/request-error` 溢出恢复、`maxOverflowRetries` | provider 确认超窗后绕过阈值做一次最大平衡缩减，只有 surface generation 前进才重试 | 采用；由 adapter 把超窗归一为 `CONTEXT_WINDOW_EXCEEDED` |
@@ -51,7 +51,7 @@ F11 让 Main / Node Session 可以连续推进几十个 Turn，而 Navo 目前�
 
 ~~~text
 W = contextWindow, O = 请求 maxTokens, H = headroomTokens (默认 16384)
-thresholdTokens = floor(min(W * 0.8, W - O - H))
+thresholdTokens = floor(min(W * 0.9, W - O - H))
 retainTokens    = floor((W - O) * 0.16)
 约束: W - O - H > 0, retainTokens < thresholdTokens, 否则视为配置错误并禁用压力触发
 ~~~
