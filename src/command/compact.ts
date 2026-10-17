@@ -5,7 +5,6 @@ import { createGenerateRequest } from "../agent/request.js";
 import type { SessionId } from "../brand/ids.js";
 import { resolveContextBudget } from "../context/budget.js";
 import { compactSession } from "../context/compaction/compact.js";
-import type { CompactionOutcome } from "../context/compaction/compact.js";
 import { measureContext } from "../context/meter.js";
 import { CommandError } from "./errors.js";
 
