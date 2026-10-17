@@ -2,12 +2,14 @@ import type { Context } from "cordis";
 
 import type { MessageId, StepId } from "../brand/ids.js";
 import { collectStream } from "../llm/collect.js";
+import type { CollectedStream } from "../llm/collect.js";
 import type { FinishReason, GenerateRequest, LlmFailure } from "../llm/types.js";
 import { createDeadline } from "./limits.js";
 import type { RetryableAttempt } from "./limits.js";
 import type { ModelCompletion, TurnScope } from "./types.js";
 import { inspectContextPressure, publishContextPressure } from "../context/pressure.js";
 import { compactSession } from "../context/compaction/compact.js";
+import { measureContext } from "../context/meter.js";
 
 export async function requestModel(
   ctx: Context,
@@ -67,13 +69,49 @@ export async function requestModel(
         } };
       }
     }
-    appendRequest(ctx, input.sessionId, turnId, stepId, request);
-    turn.output.beginAttempt();
-    let publishedContent = false;
-    const collected = await collectStream(ctx.llm.stream(request), async (event) => {
-      const published = await turn.output.model(event);
-      publishedContent = published || publishedContent;
-    });
+    let attempt = await runModelAttempt(ctx, turn, stepId, request, true);
+    if (attempt.overflow) {
+      if (signal.aborted) return { kind: "cancelled" };
+      if (deadline.timedOut) return { kind: "failed", failure: {
+        code: "TIMEOUT",
+        message: `Model request timed out after ${timeoutMs}ms.`,
+      } };
+      const measurement = measureContext(ctx.sessions.getEvents(input.sessionId), request);
+      const compacted = await compactSession(ctx, {
+        sessionId: input.sessionId,
+        turnId,
+        stepId,
+        model: input.model,
+        request,
+        thresholdTokens: Math.max(1, measurement.usedTokens),
+        retainTokens: 0,
+        trigger: "overflow",
+        signal: deadline.signal,
+        cancelSignal: signal,
+        maxRetries: limits.maxModelRetries,
+      });
+      if (compacted.kind === "cancelled") {
+        if (deadline.timedOut) return { kind: "failed", failure: {
+          code: "context-compaction-timeout",
+          message: "Context compaction timed out while recovering from context overflow.",
+        } };
+        return { kind: "cancelled" };
+      }
+      if (compacted.kind !== "compacted") {
+        if (deadline.timedOut) return { kind: "failed", failure: {
+          code: "context-compaction-timeout",
+          message: "Context compaction timed out while recovering from context overflow.",
+        } };
+        return { kind: "failed", failure: {
+          code: compacted.kind === "failed" ? compacted.code : "context-window-exceeded",
+          message: compacted.kind === "failed" ? compacted.message
+            : "The request exceeded the model context window and no safe history reduction was possible.",
+        } };
+      }
+      request = buildRequest(ctx, input, deadline.signal);
+      attempt = await runModelAttempt(ctx, turn, stepId, request, false);
+    }
+    const { collected, publishedContent } = attempt;
     if (signal.aborted) return { kind: "cancelled" };
     const finishReason: FinishReason = deadline.timedOut
       ? { kind: "error", failure: {
@@ -119,6 +157,30 @@ export async function requestModel(
   } finally {
     deadline.dispose();
   }
+}
+
+async function runModelAttempt(
+  ctx: Context,
+  turn: TurnScope,
+  stepId: StepId,
+  request: GenerateRequest,
+  interceptOverflow: boolean,
+): Promise<{ readonly collected: CollectedStream; readonly publishedContent: boolean; readonly overflow: boolean }> {
+  appendRequest(ctx, turn.input.sessionId, turn.turnId, stepId, request);
+  turn.output.beginAttempt();
+  let publishedContent = false;
+  let overflow = false;
+  const collected = await collectStream(ctx.llm.stream(request), async (event) => {
+    if (interceptOverflow && !publishedContent && event.type === "finished"
+      && event.reason.kind === "error"
+      && event.reason.failure.code === "CONTEXT_WINDOW_EXCEEDED") {
+      overflow = true;
+      return;
+    }
+    const published = await turn.output.model(event);
+    publishedContent = published || publishedContent;
+  });
+  return { collected, publishedContent, overflow };
 }
 
 function stripInternalFailure(failure: LlmFailure): LlmFailure {
