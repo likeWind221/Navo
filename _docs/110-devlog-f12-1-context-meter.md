@@ -56,15 +56,15 @@ used           = baseline + estimate(当前请求) - anchorEstimate
 
 - 本机 Windows 11：`pnpm typecheck` 通过；PowerShell 下 `pnpm test` 114 个文件 / 711 项全部通过（新增 `tests/context` 18 项、配置 2 项）。
 - 在 Git Bash 下运行 `pnpm test` 会有 12 项 ChatGPT 凭据测试失败：PATH 中 `whoami.exe` 解析到 Git 自带的 GNU coreutils，而不是 Windows 自带版本，与本次改动无关；完整验证以 PowerShell 结果为准。
-- 未验证：Meter 尚未接入回合执行，真实模型下的估算偏差留待 F12.2 / F12.5 观察。
+- 未验证：Meter 尚未接入回合执行，真实模型下的估算偏差留待 F12.2 / F12.6 观察。
 
 ## Codex 调研留给后续 Step 的待定项
 
-- F12.2：是否在被遮蔽区域中保留人类直接输入的用户消息原文（Codex `compact.rs` `build_compacted_history` 保留最近 20k token 的用户消息，以免纠正类指令丢失），需排除 system-reminder 与旧检查点；摘要请求本身超窗时从头部逐条删除后重试（Codex `remove_first_item`）。
-- F12.3：无法恢复的超窗把用量标记为已满（Codex `set_total_tokens_full`）。
-- F12.4：ChatGPT 模型目录若返回 `context_window`，可在模型列表中展示，方便配置。
+- F12.3：是否在被遮蔽区域中保留人类直接输入的用户消息原文（Codex `compact.rs` `build_compacted_history` 保留最近 20k token 的用户消息，以免纠正类指令丢失），需排除 system-reminder 与旧检查点；摘要请求本身超窗时从头部逐条删除后重试（Codex `remove_first_item`）。
+- F12.4：无法恢复的超窗把用量标记为已满（Codex `set_total_tokens_full`）。
+- F12.5：ChatGPT 模型目录若返回 `context_window`，可在公共模型信息中展示，方便配置。
 - 不采用：后台预压缩、回合结束后压缩、向模型注入剩余上下文提示、远程压缩接口（`compact_remote_v2*` 未细读）、95% 可用窗口（Navo 阈值公式已更严格）。
 
 ## 下一步
 
-F12.2 压力触发的 Session 压缩：在 Step 请求前接入本 Step 的预算与测量，待用户确认后开始。
+F12.2 上下文压力检测与执行接入：在模型请求前接入本 Step 的预算与测量；摘要生成与检查点写入独立安排在 F12.3。
