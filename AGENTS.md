@@ -54,6 +54,7 @@
 - Step 收口走 PR：推送分支后用 `gh pr create --base master --head <分支>` 开 PR，PR 标题与 Step 对应，描述写明本 Step 的改动与验证结果。
 - PR 触发 GitHub Actions CI（`.github/workflows/ci.yml` 运行 `pnpm typecheck` 与 `pnpm test`）。确认当前 PR head 的全部必需 CI 检查成功后，直接用 `gh pr merge --squash --delete-branch` 合并：一个 Step 对应一条 `master` 提交，源分支自动删除。
 - 本机与 CI 双重验证：本地合入前仍必须完成完整验证并把结果写入开发记录；本机或 CI 任一未通过不得合并、不得标记 `✅`。
+- **Windows + Git Bash 测试环境**：完整测试前把 Windows 系统目录置于 `PATH` 最前（`PATH="/c/Windows/System32:$PATH" pnpm test`）。否则 Git Bash 的 `/usr/bin/whoami.exe` 会遮蔽系统 `whoami.exe`，使 `tests/llm/auth/*` 的权限探针拿不到 SID，误报 12 项失败。这类失败先在同一提交的 `master` 上复跑对照，确认为环境问题而非代码回归后再记录。
 - CI 失败时先修分支再推送，不得绕过检查，不得用 `--admin` 或临时关闭 CI 强行合并。
 - 合并与推送属于共享控制面操作，必须串行执行；推送前确认本地 `master` 与远端一致，推送后核对 `git status` 干净；合并前报告验证结果；本地必需验证与当前 PR head 的全部必需 CI 均通过后直接合并，无需再次确认。该规则不自动授权开始下一 Step。
 - 私有免费仓库的 branch protection 不生效，CI 目前是约定门禁；仓库转公开或升级套餐后应把 CI 设为合并的必需检查。
