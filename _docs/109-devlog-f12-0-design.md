@@ -128,7 +128,7 @@ replace 已落盘但 ended 未写时，重启后仍补写 `interrupted`；surfac
 
 ### 4.8 公共契约方向
 
-F12.6 定义：每个 Session 的上下文用量（已用 / 容量 / 阈值）查询、压缩开始与结束的实时事件，以及历史查询中把检查点标记为摘要而非普通用户消息。F12.5 先补齐主动压缩命令。前端展示交由 [frontend-plan.md](frontend-plan.md) 的后续步骤，不在 F12 后端范围内。
+F12.6 的具体设计见 [115-devlog-f12-6-public-context-contract.md](115-devlog-f12-6-public-context-contract.md)：session.context.v1 查询上下文快照，session.context.follow.v1 订阅上下文变化与压缩生命周期事件，session.history.v1 分页读取当前有效历史并将摘要检查点标记为独立类型。F12.6 包含 RPC / Host 与 Electron Bridge 的稳定契约、运行时校验、取消和历史分页一致性；不开发 UI，前端页面仍由 [frontend-plan.md](frontend-plan.md) 后续步骤负责。
 
 ## 5. 子 Step 拆分
 
@@ -158,4 +158,4 @@ F12.6 定义：每个 Session 的上下文用量（已用 / 容量 / 阈值）�
 
 ## 8. 下一步
 
-F12.1–F12.4 已有对应实现与记录；F12.3 的本机完整验证仍需按 backend-plan 跟踪。下一步经用户确认进入 F12.5 主动 `/compact` 命令。
+F12.1–F12.5 已有对应实现与记录；F12.3 的本机完整验证仍需按 backend-plan 跟踪。F12.5 已通过 PR #77 合入 master（3c464f5）。下一步进入 F12.6 公共契约，设计与实现边界见 [115-devlog-f12-6-public-context-contract.md](115-devlog-f12-6-public-context-contract.md)。
