@@ -43,12 +43,12 @@ function payload(type: unknown, data: Record<string, unknown>): boolean {
   if (type === "compaction-started") {
     return text(data.turnId) && text(data.compactionId) && data.trigger === "pressure"
       && integer(data.coveredStart) && integer(data.coveredEnd)
-      && (data.coveredStart as number) > 0 && (data.coveredEnd as number) >= (data.coveredStart as number);
+      && (data.coveredStart as number) > 0 && (data.coveredEnd as number) > 0;
   }
   if (type === "compaction-checkpoint") {
     return text(data.turnId) && text(data.compactionId) && message(data.message, "user")
       && integer(data.coveredStart) && integer(data.coveredEnd)
-      && (data.coveredStart as number) > 0 && (data.coveredEnd as number) >= (data.coveredStart as number)
+      && (data.coveredStart as number) > 0 && (data.coveredEnd as number) > 0
       && data.summaryVersion === 1;
   }
   if (type === "compaction-ended") {
