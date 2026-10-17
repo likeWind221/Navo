@@ -95,7 +95,7 @@ describe("AgentRuntime", () => {
     await expect(first).resolves.toMatchObject({ status: "completed" });
   });
 
-  it("publishes a context-pressure trigger before sending an oversized request", async () => {
+  it("fails closed when pressure is high and no safe prefix can be compacted", async () => {
     const kit = await createRuntime([modelResponse([{ type: "text", text: "still completed" }])]);
     const input = turnInput("pressure-trigger");
     const pressureEvents: unknown[] = [];
@@ -108,7 +108,7 @@ describe("AgentRuntime", () => {
         content: [{ type: "text", text: "x".repeat(140_000) }],
       },
       model: { provider: "mock", model: "test", maxTokens: 1_000, contextWindow: 50_000 },
-    })).resolves.toMatchObject({ status: "completed" });
+    })).resolves.toMatchObject({ status: "failed" });
 
     expect(pressureEvents).toHaveLength(1);
     expect(pressureEvents[0]).toMatchObject({
@@ -117,7 +117,7 @@ describe("AgentRuntime", () => {
       model: "test",
       thresholdTokens: 32_616,
     });
-    expect(kit.adapter.requests).toHaveLength(1);
+    expect(kit.adapter.requests).toHaveLength(0);
   });
 
   it("records a completed direct-answer Turn", async () => {
