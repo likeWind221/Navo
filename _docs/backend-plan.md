@@ -313,7 +313,6 @@ Host restart -> unmatched compaction marked interrupted -> replay committed chec
 | 🔄 | F12.3 摘要压缩与 Session 检查点 | 上下文压缩与 Session 日志 | 越过阈值后选择可压缩历史并生成摘要检查点，保留近期尾部且不拆开工具调用与结果；压缩失败保留历史，只有重新测量仍在可接受预算内才继续请求 | 离线多回合 Session 触发压缩后继续完成任务；日志可回放出相同 surface；失败、不收缩、无有效选区及历史配对均有测试 |
 | ✅ | F12.4 超窗恢复与重启对账 | 模型错误归一、Agent 执行与重启恢复 | 模型确认超窗后压缩一次再重试；压不动时回合以明确原因失败并让 AutoRun 暂停；重启后未完成的压缩记为中断，从已落盘内容续接 | 本机 typecheck 与完整测试、当前 PR head CI 均通过；见 [113](113-devlog-f12-4-overflow-recovery.md) 与 [PR #76](https://github.com/likeWind221/Navo/pull/76) |
 | ✅ | F12.5 主动压缩命令 /compact | CommandService、Session 压缩与恢复 | Human 可在未达到压力阈值时主动压缩；复用现有 selector / summarizer / checkpoint，使用当前 Session 上下文，串行执行且支持独立事务恢复 | session.command.v1 可调用；Main / Node / 普通 Session 上下文解析正确；无虚构 Turn；no-op / failure / cancel / restart 均有测试；本机 typecheck 与 748 项完整测试通过，PR #77 当前 head CI 通过并已合入 master（3c464f5）；Host 命令入口成功 / no-op 已验证，未做 Electron 点击级验收；见 [114](114-devlog-f12-5-manual-compact.md) |
-| ⬜ | F12.6 压缩与上下文压力公共契约 | Host / RPC 共享契约 | 让桌面调用方读到每个 Session 的上下文用量、压缩发生与结果，并在历史中区分摘要检查点 | 契约含版本、运行时校验与错误语义；Electron bridge 可实际读取；前端展示交由前端计划 |
 | ⬜ | F12.6 压缩与上下文压力公共契约 | Host / RPC / Electron 共享契约 | 让桌面调用方查询 Session 当前上下文用量、订阅上下文与压缩状态，并分页读取有效历史且识别摘要检查点 | 三个版本化接口有严格运行时校验和明确错误 / 取消语义；快照与现有请求测量一致；实时订阅无遗漏、重复或乱序且可取消；历史分页在压缩后检测 generation 变化；Electron Bridge 实际调用通过；仅提供 API，不开发 UI；见 [115](115-devlog-f12-6-public-context-contract.md) |
 | ⬜ | F12.7 长程压缩验收 | 后端集成测试与阶段记录 | 证明 AutoRun 驱动的 Project 能跨越多次压缩、超窗恢复和重启后完成 | 离线长程场景与真实模型小窗口配置均通过；记录压缩次数、释放量与失败现场 |
 
