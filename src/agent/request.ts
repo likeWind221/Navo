@@ -42,11 +42,11 @@ export async function requestModel(
           maxRetries: limits.maxModelRetries,
         });
         if (compacted.kind === "cancelled") {
-          if (deadline.timedOut) return { kind: "failed", failure: { code: "TIMEOUT", message: "Context compaction timed out." } };
+          if (deadline.timedOut) return { kind: "failed", failure: { code: "context-compaction-timeout", message: "Context compaction timed out." } };
           return { kind: "cancelled" };
         }
         if (compacted.kind === "failed" || compacted.kind === "no-progress") {
-          if (deadline.timedOut) return { kind: "failed", failure: { code: "TIMEOUT", message: "Context compaction timed out." } };
+          if (deadline.timedOut) return { kind: "failed", failure: { code: "context-compaction-timeout", message: "Context compaction timed out." } };
           return { kind: "failed", failure: {
             code: compacted.kind === "failed" ? compacted.code : "context-compaction-no-progress",
             message: compacted.kind === "failed" ? compacted.message : "No safe, useful history prefix can be compacted.",

@@ -170,7 +170,7 @@ export class AgentRuntime extends Service {
               status: "failed",
               stepId,
               failure: response.failure,
-              failureSource: "llm",
+              failureSource: response.failure.code.startsWith("context-compaction") ? "runtime" : "llm",
             };
     } catch (error: unknown) {
       outcome = signal.aborted
