@@ -183,7 +183,7 @@ type SessionCompactionEventV1 =
 订阅语义：
 
 1. Host 先注册 session/event 监听，再读取初始快照；首帧必须是 snapshot，确保调用方无需在“先查再订阅”的窗口中承担漏事件风险。
-2. 订阅只处理输入中的 sessionId。事件按 Session sequence 排序、去重；内部先处理完整连续事件序列，再发出对应状态快照，避免 Cordis 异步观察造成重复或乱序。
+2. 订阅只处理输入中的 sessionId。事件按 Session sequence 排序、去重；内部先处理完整连续事件序列，再发出对应状态快照，避免 Cordis 异步观察造成重复或乱序。首帧 snapshot 的 eventSequence 是订阅线性化点：该高水位以内的事件视为初始基线，不回放；若订阅恰在压缩中途建立，后续可能只收到 checkpoint / ended，调用方不得假设每个 ended 都配有当前订阅内的 started。
 3. 用户消息、带内容的 Assistant 消息、工具结果和检查点改变模型可见 surface 后，发送 context-updated。压缩 started / checkpoint / ended 均发送 compaction-event；checkpoint 同时触发新的上下文快照。
 4. compaction-event 不携带摘要正文或原始 SessionEvent。摘要正文只通过 session.history.v1 的检查点条目读取。
 5. 订阅基线 eventSequence 之前的事件忽略；取消、RPC stream abort、Renderer 销毁或 Host 关闭时必须移除监听并结束队列。
