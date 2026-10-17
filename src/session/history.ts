@@ -134,7 +134,7 @@ function usage(value: unknown): boolean {
 
 function surfaceOp(value: unknown): boolean {
   return value === undefined || value === "append" || (record(value) && value.op === "replace"
-    && integer(value.start) && integer(value.end) && (value.start as number) > 0 && (value.end as number) >= (value.start as number));
+    && integer(value.start) && integer(value.end) && (value.start as number) > 0 && (value.end as number) > 0);
 }
 
 function status(value: unknown, step: boolean): boolean {
