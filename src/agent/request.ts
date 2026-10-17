@@ -1,12 +1,12 @@
 import type { Context } from "cordis";
 
-import type { MessageId, StepId } from "../brand/ids.js";
+import type { MessageId, SessionId, StepId } from "../brand/ids.js";
 import { collectStream } from "../llm/collect.js";
 import type { CollectedStream } from "../llm/collect.js";
 import type { FinishReason, GenerateRequest, LlmFailure } from "../llm/types.js";
 import { createDeadline } from "./limits.js";
 import type { RetryableAttempt } from "./limits.js";
-import type { ModelCompletion, TurnScope } from "./types.js";
+import type { ModelCompletion, TurnModelConfig, TurnScope } from "./types.js";
 import { inspectContextPressure, publishContextPressure } from "../context/pressure.js";
 import { compactSession } from "../context/compaction/compact.js";
 import { measureContext } from "../context/meter.js";
@@ -21,7 +21,7 @@ export async function requestModel(
   const timeoutMs = limits.modelTimeoutMs;
   const deadline = createDeadline(signal, timeoutMs);
   try {
-    let request = buildRequest(ctx, input, deadline.signal);
+    let request = createGenerateRequest(ctx, input, deadline.signal);
     let pressure = inspectContextPressure(
       input.sessionId,
       ctx.sessions.getEvents(input.sessionId),
@@ -34,7 +34,6 @@ export async function requestModel(
         const compacted = await compactSession(ctx, {
           sessionId: input.sessionId,
           turnId,
-          stepId,
           model: input.model,
           request,
           thresholdTokens: pressure.pressure.thresholdTokens,
@@ -54,7 +53,7 @@ export async function requestModel(
             message: compacted.kind === "failed" ? compacted.message : "No safe, useful history prefix can be compacted.",
           } };
         }
-        request = buildRequest(ctx, input, deadline.signal);
+        request = createGenerateRequest(ctx, input, deadline.signal);
         pressure = inspectContextPressure(
           input.sessionId,
           ctx.sessions.getEvents(input.sessionId),
@@ -80,7 +79,6 @@ export async function requestModel(
       const compacted = await compactSession(ctx, {
         sessionId: input.sessionId,
         turnId,
-        stepId,
         model: input.model,
         request,
         thresholdTokens: Math.max(1, measurement.usedTokens),
@@ -108,7 +106,7 @@ export async function requestModel(
             : "The request exceeded the model context window and no safe history reduction was possible.",
         } };
       }
-      request = buildRequest(ctx, input, deadline.signal);
+      request = createGenerateRequest(ctx, input, deadline.signal);
       attempt = await runModelAttempt(ctx, turn, stepId, request, false);
     }
     const { collected, publishedContent } = attempt;
@@ -188,9 +186,17 @@ function stripInternalFailure(failure: LlmFailure): LlmFailure {
   return publicFailure;
 }
 
-function buildRequest(
+export interface GenerateRequestInput {
+  readonly sessionId: SessionId;
+  readonly model: TurnModelConfig;
+  readonly systemPrompt?: string;
+  readonly toolNames?: readonly string[];
+}
+
+/** Builds the exact request envelope shared by Turns and standalone Session operations. */
+export function createGenerateRequest(
   ctx: Context,
-  input: TurnScope["input"],
+  input: GenerateRequestInput,
   signal: AbortSignal,
 ): GenerateRequest {
   return {

@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { Service } from "cordis";
 import type { Context } from "cordis";
 
-import type { RunTurnInput, TurnResult, TurnModelConfig } from "../agent/types.js";
+import type { RunTurnInput, SessionAgentContext, TurnResult, TurnModelConfig } from "../agent/types.js";
 import {
   createMessageId,
   createSessionId,
@@ -94,6 +94,32 @@ export class NodeSessionService extends Service {
       );
     }
     return this.dispatch(input, node.sessionId);
+  }
+
+  resolveContext(sessionId: SessionId): SessionAgentContext {
+    const node = this.ctx.nodes.getBySession(sessionId);
+    if (node === undefined) {
+      throw new NodeError("node-session-required", `Session '${sessionId}' is not bound to a Node.`);
+    }
+    requireNodeProjectBinding(this.ctx, sessionId, node.node.projectId);
+    const builder = this.contextBuilder;
+    if (builder === undefined) {
+      throw new NodeError(
+        "node-context-unavailable",
+        "Node Turn context is unavailable for the current Project.",
+      );
+    }
+    const context = builder.build(node);
+    const profile = createNodeAgentProfile(context, {
+      allowFileRead: this.ctx.tools.schemas().some(
+        (tool) => tool.name === FILE_TOOL_SCHEMAS.read.name,
+      ),
+    });
+    return Object.freeze({
+      model: this.model,
+      systemPrompt: profile.systemPrompt,
+      toolNames: profile.toolNames,
+    });
   }
 
   stop(nodeId: NodeId): boolean {

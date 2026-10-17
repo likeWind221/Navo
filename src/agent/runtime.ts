@@ -56,6 +56,10 @@ export class AgentRuntime extends Service {
     return this.inbox.sendCommand(sessionId, handle, signal);
   }
 
+  get limits(): AgentRuntimeLimits {
+    return this.defaultLimits;
+  }
+
   commandAnchor(sessionId: SessionId): CommandAnchor {
     const state = this.turns.get(sessionId);
     if (state?.activeTurnId !== undefined) return { kind: "turn", turnId: state.activeTurnId };

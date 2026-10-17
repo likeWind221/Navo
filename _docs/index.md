@@ -71,8 +71,12 @@
 ## 后端 Phase 12–13
 
 - Phase 12：记忆压缩——Context Meter、Session Compaction、Summary Checkpoint 与长程上下文恢复。
-- [F12.0 上下文压缩设计收口](109-devlog-f12-0-design.md)：收口 Context Meter、压力与超窗两类触发、工具配对选区、`compaction-started/ended` 事务与摘要检查点、失败 / 取消 / 中断及与 AutoRun 的衔接，拆分 F12.1–F12.5；只修改文档。
-- [F12.1 Context Meter 与模型容量](110-devlog-f12-1-context-meter.md)：`LLM_CONTEXT_WINDOW` / `LLM_AUTO_COMPACT_LIMIT` 配置、阈值与保留预算公式、usage 锚点加有符号估算差的上下文压力测量，以及 Harness / Codex 对照；尚未接入回合执行。
+- [F12.0 上下文压缩设计收口](109-devlog-f12-0-design.md)：收口 Context Meter、pressure / overflow / manual 三类触发、工具配对选区、压缩事务与摘要检查点、失败 / 取消 / 中断及与 AutoRun 的衔接；F12.5 主动 `/compact` 已纳入计划。
+- [F12.1 Context Meter 与模型容量](110-devlog-f12-1-context-meter.md)：`LLM_CONTEXT_WINDOW` / `LLM_AUTO_COMPACT_LIMIT` 配置、阈值与保留预算公式、usage 锚点加有符号估算差的上下文压力测量，以及 Harness / Codex 对照。
+- [F12.2 上下文压力检测与执行接入](111-devlog-f12-2-pressure-integration.md)：请求前压力检查、内部触发事件与执行链路。
+- [F12.3 摘要压缩与 Session 检查点](112-devlog-f12-3-compaction.md)：安全选区、摘要生成、检查点安装、历史投影与失败语义。
+- [F12.4 超窗恢复与重启对账](113-devlog-f12-4-overflow-recovery.md)：provider 超窗归一、压缩后重试及未闭合事务恢复。
+- [F12.5 主动压缩命令 `/compact`](114-devlog-f12-5-manual-compact.md)：复用现有命令与压缩核心，补齐 Main / Node / 普通 Session 上下文解析、manual 独立事务身份、queued 串行执行和重启恢复；本机 748 项完整测试通过，见 PR #77。
 - Phase 13：RAG——Workspace / Resource / Session 检索、权限感知 Retrieval 与 RAG Pipeline。
 
 ## 模型接入 M1
@@ -139,6 +143,10 @@
 - [F12.1 Context Meter 与模型容量](110-devlog-f12-1-context-meter.md)：模型容量配置、Token 预算与请求前压力测量。
 - [F12.2 上下文压力检测与执行接入](111-devlog-f12-2-pressure-integration.md)：在真实模型请求路径接入 Context Meter 并发布内部压力触发事件。
 - [F12.3 摘要压缩与 Session 检查点](112-devlog-f12-3-compaction.md)：结构化累积摘要、安全前缀选区、检查点写入与请求重测量。
+- [F12.4 超窗恢复与重启对账](113-devlog-f12-4-overflow-recovery.md)：provider 超窗归一、压缩后重试及未闭合事务恢复。
+- [F12.5 主动压缩命令 `/compact`](114-devlog-f12-5-manual-compact.md)：复用现有命令与压缩核心，补齐当前 Session 上下文解析、独立事务身份、串行执行和重启恢复；本机完整验证通过，等待 PR #77 CI。
+- F12.6 压缩与上下文压力公共契约：桌面读取上下文快照、压缩记录与摘要检查点标识。
+- F12.7 长程压缩验收：验证多次压缩、超窗恢复与重启后的 AutoRun 闭环。
 - [F12.4 超窗恢复与重启对账](113-devlog-f12-4-overflow-recovery.md)：统一识别 provider 超窗错误、强制压缩后单次重试，以及启动时未闭合压缩事务的中断对账。
 
 ## 工程治理与迁移

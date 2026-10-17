@@ -1,8 +1,10 @@
 import { Context } from "cordis";
 
 import { AgentRuntime } from "./agent/runtime.js";
-import type { AgentRuntimeLimits } from "./agent/types.js";
+import type { AgentRuntimeLimits, TurnModelConfig } from "./agent/types.js";
 import type { SessionId } from "./brand/ids.js";
+import { CompactCommand } from "./command/compact.js";
+import { SessionContextResolver } from "./command/context.js";
 import { CommandService } from "./command/service.js";
 import { LLMService } from "./llm/service.js";
 import { MailboxStore } from "./mailbox/store.js";
@@ -41,6 +43,11 @@ export interface NavoAppConfig {
   readonly runtime?: Partial<AgentRuntimeLimits>;
   readonly tools?: ToolsPluginConfig;
   readonly node: NodePluginConfig;
+  readonly agent?: {
+    readonly model: TurnModelConfig;
+    readonly systemPrompt?: string;
+    readonly toolNames?: readonly string[];
+  };
 }
 
 export async function NavoApp(
@@ -104,6 +111,8 @@ export async function NavoApp(
   await ctx.plugin(SubmitReviewTool);
   await ctx.plugin(ReadNodeTurnTool);
   await ctx.plugin(MainSessionService, { model: config.node.session.model });
+  await ctx.plugin(SessionContextResolver, config.agent === undefined ? {} : { agent: config.agent });
+  await ctx.plugin(CompactCommand);
   await ctx.plugin(RoadmapStore);
   await ctx.plugin(ProjectRuntime);
   await ctx.plugin(AutoRunService);

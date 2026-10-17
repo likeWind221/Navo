@@ -34,6 +34,7 @@ export async function runKernelHost(): Promise<void> {
   const ctx = await createApp({
     storage: config.storage,
     node: { session: { model: config.agent.model } },
+    agent: config.agent,
     ...(config.search === undefined && fileEnvironment === undefined
       ? {}
       : { tools }),

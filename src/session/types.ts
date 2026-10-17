@@ -107,9 +107,9 @@ export interface ContextFact {
 export interface CompactionStartedEvent extends EventRecord<
   "compaction-started",
   {
-    readonly turnId: TurnId;
+    readonly turnId?: TurnId;
     readonly compactionId: string;
-    readonly trigger: "pressure" | "overflow";
+    readonly trigger: "pressure" | "overflow" | "manual";
     readonly coveredStart: number;
     readonly coveredEnd: number;
   }
@@ -118,7 +118,7 @@ export interface CompactionStartedEvent extends EventRecord<
 export interface CompactionCheckpointEvent extends EventRecord<
   "compaction-checkpoint",
   {
-    readonly turnId: TurnId;
+    readonly turnId?: TurnId;
     readonly compactionId: string;
     readonly message: UserMessage;
     readonly coveredStart: number;
@@ -130,7 +130,7 @@ export interface CompactionCheckpointEvent extends EventRecord<
 export interface CompactionEndedEvent extends EventRecord<
   "compaction-ended",
   {
-    readonly turnId: TurnId;
+    readonly turnId?: TurnId;
     readonly compactionId: string;
     readonly status: "completed" | "failed" | "cancelled" | "interrupted";
     readonly beforeTokens?: number;

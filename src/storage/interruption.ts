@@ -32,7 +32,7 @@ function interruptedCompactionClosers(
       timestamp: event.timestamp,
       type: "compaction-ended",
       data: {
-        turnId: event.data.turnId,
+        ...(event.data.turnId === undefined ? {} : { turnId: event.data.turnId }),
         compactionId,
         status: "interrupted",
         failure: {
