@@ -13,7 +13,7 @@ describe("context budget", () => {
   it("derives the threshold from the window ratio and the retained tail from the message budget", () => {
     expect(resolveContextBudget({ ...model, maxTokens: 8_192, contextWindow: 262_144 })).toEqual({
       kind: "enabled", contextWindow: 262_144, reservedOutputTokens: 8_192,
-      thresholdTokens: Math.floor(262_144 * 0.8),
+      thresholdTokens: Math.floor(262_144 * 0.9),
       retainTokens: Math.floor((262_144 - 8_192) * 0.16),
     });
   });
@@ -29,7 +29,7 @@ describe("context budget", () => {
 
   it("reserves a default output budget when the model has no maxTokens", () => {
     expect(resolveContextBudget({ provider: "openai", model: "gpt-6-luna", contextWindow: 272_000 })).toMatchObject({
-      kind: "enabled", reservedOutputTokens: 32_768, thresholdTokens: Math.floor(272_000 * 0.8),
+      kind: "enabled", reservedOutputTokens: 32_768, thresholdTokens: 272_000 - 32_768 - 16_384,
     });
   });
 
@@ -44,7 +44,7 @@ describe("context budget", () => {
     const budget = resolveContextBudget({ ...model, maxTokens: 8_192, contextWindow: 262_144, autoCompactLimit: 20_000 });
     expect(budget).toMatchObject({ kind: "enabled", thresholdTokens: 20_000, retainTokens: 4_000 });
     expect(resolveContextBudget({ ...model, maxTokens: 8_192, contextWindow: 200_000, autoCompactLimit: 500_000 }))
-      .toMatchObject({ thresholdTokens: 160_000 });
+      .toMatchObject({ thresholdTokens: 200_000 - 8_192 - 16_384 });
   });
 
   it("enables pressure from the compaction limit alone when the window is unknown", () => {
