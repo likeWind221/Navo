@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createMessageId, createSessionId, createStepId, createTurnId } from "../../src/brand/ids.js";
 import { createRuntime, disposeRuntimes, modelError, modelResponse, turnInput } from "../helpers/runtime.js";
 import { SessionStore } from "../../src/session/store.js";
+import { summarize } from "../../src/context/compaction/summarizer.js";
 
 afterEach(async () => {
   await disposeRuntimes();
@@ -62,6 +63,21 @@ describe("pressure-triggered context compaction", () => {
     expect(kit.ctx.sessions.deriveMessages(sessionId).some(message => message.content.some(
       block => block.type === "text" && block.text.includes("answer after compaction"),
     ))).toBe(true);
+  });
+
+  it("omits unsupported output token limits from OpenAI summary requests", async () => {
+    const kit = await createRuntime([
+      modelResponse([{ type: "text", text: "## Goal and User Constraints\n- Continue the task." }]),
+    ]);
+    kit.ctx.llm.registerAdapter("openai", kit.adapter);
+    await summarize(kit.ctx, "openai", "gpt-6-luna", [{
+      id: createMessageId("openai-summary-source"),
+      role: "user",
+      content: [{ type: "text", text: "Earlier context." }],
+    }], 512, new AbortController().signal, 0);
+
+    expect(kit.adapter.requests).toHaveLength(1);
+    expect(kit.adapter.requests[0]).not.toHaveProperty("maxTokens");
   });
 
   it("recovers from provider overflow without configured context capacity", async () => {
