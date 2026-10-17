@@ -22,6 +22,6 @@
 
 ## 验证与边界
 
-- 已添加静态测试覆盖选区、工具配对、检查点投影、stale selection、压力触发、连续两次压缩与摘要失败回退。
+- 已添加静态测试覆盖选区、工具配对、检查点投影、stale selection、压力触发、连续两次压缩、重复检查点回放与摘要失败回退。
 - 当前环境未提供本机文件系统与命令执行环境；尚未运行 pnpm typecheck 或完整 pnpm test。PR CI 结果以当前 head 检查为准。
 - F12.4 仍需处理重启时未闭合 compaction-started、标记 interrupted 及 provider 确认超窗后的恢复。

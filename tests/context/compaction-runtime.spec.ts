@@ -1,7 +1,9 @@
+import { Context } from "cordis";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createMessageId, createSessionId, createStepId, createTurnId } from "../../src/brand/ids.js";
 import { createRuntime, disposeRuntimes, modelError, modelResponse, turnInput } from "../helpers/runtime.js";
+import { SessionStore } from "../../src/session/store.js";
 
 afterEach(async () => {
   await disposeRuntimes();
@@ -109,6 +111,12 @@ describe("pressure-triggered context compaction", () => {
     expect(events.filter(event => event.type === "compaction-started")).toHaveLength(2);
     expect(events.filter(event => event.type === "compaction-checkpoint")).toHaveLength(2);
     expect(events.filter(event => event.type === "compaction-ended" && event.data.status === "completed")).toHaveLength(2);
+    const recovery = new Context();
+    await recovery.plugin(SessionStore);
+    recovery.sessions.restore(sessionId, events);
+    expect(recovery.sessions.deriveMessages(sessionId).map(message => message.id))
+      .toEqual(kit.ctx.sessions.deriveMessages(sessionId).map(message => message.id));
+    await recovery.fiber.dispose();
   });
 
   it("keeps the original surface when summary generation fails", async () => {
