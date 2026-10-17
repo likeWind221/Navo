@@ -46,6 +46,24 @@ describe("OpenAI subscription adapter", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it("normalizes context overflow without misclassifying ordinary bad requests", async () => {
+    const overflow = new OpenAIAdapter({ auth, fetch: async () => Response.json({
+      error: { code: "context_length_exceeded", message: "Input exceeds the model context window." },
+    }, { status: 400 }) });
+    await expect(collectStream(overflow.stream(request))).rejects.toMatchObject({
+      code: "CONTEXT_WINDOW_EXCEEDED",
+      status: 400,
+    });
+
+    const invalid = new OpenAIAdapter({ auth, fetch: async () => Response.json({
+      error: { code: "invalid_request_error", message: "Unknown request parameter." },
+    }, { status: 400 }) });
+    await expect(collectStream(invalid.stream(request))).rejects.toMatchObject({
+      code: "invalid_request_error",
+      status: 400,
+    });
+  });
+
   it("releases an unfinished response and aborts its HTTP lifecycle on consumer return", async () => {
     const cancel = vi.fn();
     let signal: AbortSignal | undefined;
