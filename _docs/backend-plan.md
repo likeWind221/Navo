@@ -308,7 +308,7 @@ Host restart -> replay surface -> unmatched compaction marked interrupted -> res
 | ✅ | F12.1 Context Meter 与模型容量 | Agent 请求前检查与模型配置 | 每个模型声明上下文容量与可选压缩上限；每次请求前能算出 Session 当前上下文压力并判断是否越过压缩阈值；容量缺失或配置矛盾时明确禁用自动压缩 | 离线测试覆盖 usage 锚点、估算、阈值与保留预算计算和配置校验；现有回合行为不变；见 [110](110-devlog-f12-1-context-meter.md) |
 | 🔄 | F12.2 上下文压力检测与执行接入 | Agent 请求构建与执行入口 | 在模型请求前接入 Context Meter，依据预算判定当前压力，并为压缩动作提供明确触发点；阈值以下保持现有行为 | 压力测量、阈值边界、容量缺失与预算禁用均有执行链路测试；未越线时请求和历史行为不变；越线时发布内部触发事件；见 [111](111-devlog-f12-2-pressure-integration.md) |
 | 🔄 | F12.3 摘要压缩与 Session 检查点 | 上下文压缩与 Session 日志 | 越过阈值后选择可压缩历史并生成摘要检查点，保留近期尾部且不拆开工具调用与结果；压缩失败保留历史，只有重新测量仍在可接受预算内才继续请求 | 离线多回合 Session 触发压缩后继续完成任务；日志可回放出相同 surface；失败、不收缩、无有效选区及历史配对均有测试 |
-| 🔄 | F12.4 超窗恢复与重启对账 | 模型错误归一、Agent 执行与重启恢复 | 模型确认超窗后压缩一次再重试；压不动时回合以明确原因失败并让 AutoRun 暂停；重启后未完成的压缩记为中断，从已落盘内容续接 | 开发记录 [113](113-devlog-f12-4-overflow-recovery.md)；当前 PR head 的 CI 通过，本机完整验证待完成 |
+| ✅ | F12.4 超窗恢复与重启对账 | 模型错误归一、Agent 执行与重启恢复 | 模型确认超窗后压缩一次再重试；压不动时回合以明确原因失败并让 AutoRun 暂停；重启后未完成的压缩记为中断，从已落盘内容续接 | 本机 typecheck 与完整测试、当前 PR head CI 均通过；见 [113](113-devlog-f12-4-overflow-recovery.md) 与 [PR #76](https://github.com/likeWind221/Navo/pull/76) |
 | ⬜ | F12.5 压缩与上下文压力公共契约 | Host / RPC 共享契约 | 让桌面调用方读到每个 Session 的上下文用量、压缩发生与结果，并在历史中区分摘要检查点 | 契约含版本、运行时校验与错误语义；Electron bridge 可实际读取；前端展示交由前端计划 |
 | ⬜ | F12.6 长程压缩验收 | 后端集成测试与阶段记录 | 证明 AutoRun 驱动的 Project 能跨越多次压缩、超窗恢复和重启后完成 | 离线长程场景与真实模型小窗口配置均通过；记录压缩次数、释放量与失败现场 |
 
@@ -324,7 +324,7 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不恢复�
 
 ## 12. 当前下一步
 
-**Phase 10、M1 与 Phase 11（F11.0–F11.4）已完成。F11.3 的桌面独立检查与 Electron bridge 验收见 [108](108-devlog-f11-3-desktop-acceptance.md) 与 [PR #71](https://github.com/likeWind221/Navo/pull/71)，F11.4 的离线和真实模型证据见 [105](105-devlog-f11-4-autorun-acceptance.md) 与 [PR #70](https://github.com/likeWind221/Navo/pull/70)。Phase 12 的 F12.0–F12.3 代码已依次落地，记录见 [109](109-devlog-f12-0-design.md)、[110](110-devlog-f12-1-context-meter.md)、[111](111-devlog-f12-2-pressure-integration.md)、[112](112-devlog-f12-3-compaction.md)；F12.3 的本机完整验证仍待补齐。当前 F12.4 超窗恢复与重启对账正在独立分支开发，记录见 [113](113-devlog-f12-4-overflow-recovery.md)。正式页面 AutoRun 控件和前端 F5.4–F5.8 不因此视为完成。**
+**Phase 10、M1 与 Phase 11（F11.0–F11.4）已完成。F11.3 的桌面独立检查与 Electron bridge 验收见 [108](108-devlog-f11-3-desktop-acceptance.md) 与 [PR #71](https://github.com/likeWind221/Navo/pull/71)，F11.4 的离线和真实模型证据见 [105](105-devlog-f11-4-autorun-acceptance.md) 与 [PR #70](https://github.com/likeWind221/Navo/pull/70)。Phase 12 的 F12.0–F12.4 代码已依次落地，记录见 [109](109-devlog-f12-0-design.md)、[110](110-devlog-f12-1-context-meter.md)、[111](111-devlog-f12-2-pressure-integration.md)、[112](112-devlog-f12-3-compaction.md)、[113](113-devlog-f12-4-overflow-recovery.md)；F12.3 的本机完整验证仍待补齐，F12.4 本机与 CI 验证均已通过（[PR #76](https://github.com/likeWind221/Navo/pull/76)）。下一步为 F12.5 压缩与上下文压力公共契约，须经用户确认后开始。正式页面 AutoRun 控件和前端 F5.4–F5.8 不因此视为完成。**
 
 - 免除记录：F10.4b 真实模型五场景验收与 F10.5 第 7–11 回合真实验收均经用户决定免除，相应能力只由离线测试覆盖，见第 7 节。
 - 未关闭 Bug（以 [Bug 跟踪表](bug-plan.md) 为准）：BUG-002 保持未关闭、等待复现；BUG-007 经用户决定搁置；BUG-010 修复已合入，Qwen 与 Electron 复验待本机完成。

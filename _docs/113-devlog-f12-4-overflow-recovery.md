@@ -1,7 +1,7 @@
 # F12.4 超窗恢复与重启对账
 
 > 日期：2026-10-17  
-> 状态：🔄 实现已提交至 PR，当前 head 的 CI（typecheck + 完整测试）通过，本机完整验证待完成
+> 状态：✅ 本机完整验证与当前 PR head CI 均通过
 
 ## 做了什么
 
@@ -23,10 +23,9 @@
 
 - Qwen 适配器此前在解析 HTTP 错误体之前就取消响应，无法根据错误正文区分上下文超限与普通请求错误。
 - F12.3 的压缩事务校验原先只允许 trigger: pressure，需要同步扩展事件类型与历史运行时校验，否则 overflow 事务不能安全落盘和回放。
-- 当前 PR head 的 GitHub Actions 已通过 pnpm typecheck 与完整 pnpm test。当前执行环境不能在仓库工作区运行本机命令，本机验证仍待完成。
+- 在没有把 `C:\Windows\System32` 放在 PATH 最前时，`tests/llm/auth/permissions.spec.ts` 与 `tests/llm/auth/session.spec.ts` 共 12 项失败：Git Bash 的 `/usr/bin/whoami.exe` 遮蔽了 Windows 自带 `whoami.exe`，权限探针拿不到 SID。在 master 上复跑同样失败，属于本机 shell 环境问题，与 F12.4 无关；调整 PATH 后 12 项全部通过。
+- 本机验证结果：`pnpm typecheck` 通过；`pnpm test` 在 Git Bash 中先执行 `export PATH="/c/Windows/System32:$PATH"` 后 117 个测试文件、731 项测试全部通过。GitHub Actions 的 `verify` 检查在同一分支 head 通过。
 
 ## 下一步
 
-- 当前 PR head 的 typecheck 与完整测试已通过。
-- 在具备仓库工作区的环境运行本机完整验证，并复核 diff、恢复顺序与取消边界。
-- 本机与 CI 全部通过后才合并；随后更新计划状态并交付 F12.4。
+- 合并 F12.4 后，Phase 12 的下一步为 F12.5 压缩与上下文压力公共契约，须等用户确认后再开始。
