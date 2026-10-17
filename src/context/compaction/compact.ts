@@ -39,7 +39,7 @@ export async function compactSession(ctx: Context, input: CompactSessionInput): 
   const summaryMaxTokens = Math.min(
     input.model.maxTokens ?? 8192,
     8192,
-    Math.max(256, Math.floor((budget.contextWindow ?? input.thresholdTokens) / 8)),
+    Math.max(256, Math.floor(((budget.kind === "enabled" ? budget.contextWindow : undefined) ?? input.thresholdTokens) / 8)),
   );
   const maxInputTokens = budget.kind === "enabled" && budget.contextWindow !== undefined
     ? budget.contextWindow - summaryMaxTokens - HEADROOM_TOKENS
