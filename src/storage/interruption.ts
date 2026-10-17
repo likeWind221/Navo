@@ -2,6 +2,7 @@ import { createEventId, createNodeId, createSessionId } from "../brand/ids.js";
 import type { NodeEvent } from "../node/events.js";
 import { immutable, projectNode } from "../node/projector.js";
 import { interruptedTurnClosers } from "../session/repair.js";
+import { parseSessionEvent } from "../session/history.js";
 import type { SessionEvent } from "../session/types.js";
 import type { StorageTransaction, StoredHistory } from "./database.js";
 import type { RecoveryPlan } from "./recovery.js";
@@ -10,17 +11,52 @@ export interface InterruptionRepair {
   commit(tx: StorageTransaction): RecoveryPlan;
 }
 
+function interruptedCompactionClosers(
+  sessionId: ReturnType<typeof createSessionId>,
+  events: readonly SessionEvent[],
+): readonly SessionEvent[] {
+  const started = new Map<string, Extract<SessionEvent, { readonly type: "compaction-started" }>>();
+  const ended = new Set<string>();
+  for (const event of events) {
+    if (event.type === "compaction-started") started.set(event.data.compactionId, event);
+    if (event.type === "compaction-ended") ended.add(event.data.compactionId);
+  }
+  const closers: SessionEvent[] = [];
+  for (const [compactionId, event] of started) {
+    if (ended.has(compactionId)) continue;
+    const sequence = events.length + closers.length + 1;
+    closers.push(parseSessionEvent(sessionId, {
+      id: createEventId(`recovery:compaction:${sessionId}:${compactionId}`),
+      sessionId,
+      sequence,
+      timestamp: event.timestamp,
+      type: "compaction-ended",
+      data: {
+        turnId: event.data.turnId,
+        compactionId,
+        status: "interrupted",
+        failure: {
+          code: "context-compaction-interrupted",
+          message: "Compaction was interrupted because the Host stopped before it recorded completion.",
+        },
+      },
+    }, sequence));
+  }
+  return Object.freeze(closers);
+}
+
 export function planInterruptionRepair(plan: RecoveryPlan): InterruptionRepair | undefined {
   const sessionChanges = new Map<string, StoredHistory<string | null>>();
   for (const [sessionId, history] of plan.sessions) {
-    const closers = interruptedTurnClosers(
-      createSessionId(sessionId),
-      history.events as readonly SessionEvent[],
-    );
+    const sessionKey = createSessionId(sessionId);
+    const existing = history.events as readonly SessionEvent[];
+    const compactionClosers = interruptedCompactionClosers(sessionKey, existing);
+    const turnClosers = interruptedTurnClosers(sessionKey, [...existing, ...compactionClosers]);
+    const closers = [...compactionClosers, ...turnClosers];
     if (closers.length > 0) {
       sessionChanges.set(sessionId, {
         projectId: history.projectId,
-        events: Object.freeze([...history.events, ...closers]),
+        events: Object.freeze([...existing, ...closers]),
       });
     }
   }
