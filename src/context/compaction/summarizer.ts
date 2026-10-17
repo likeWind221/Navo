@@ -71,7 +71,7 @@ export async function summarize(
       provider,
       model,
       messages: requestMessages,
-      maxTokens,
+      ...(provider === "openai" ? {} : { maxTokens }),
       signal,
     }));
     if (signal.aborted || collected.finishReason?.kind === "cancelled") return { kind: "cancelled" };
