@@ -1,7 +1,7 @@
 # F12.0 上下文压缩设计收口
 
 > 日期：2026-10-16  
-> 状态：✅ 设计已收口；F12.1 已完成，后续 Step 已按职责拆分  
+> 状态：✅ 基础设计已收口；F12.1–F12.4 已落地，F12.5 新增 Human 主动压缩命令  
 > 范围：只收口 Phase 12 的上下文测量、Session 压缩、摘要检查点与恢复语义；不修改生产代码。跨 Session 检索与可召回压缩归入 Phase 13。
 
 ## 1. 做了什么
@@ -34,7 +34,7 @@ F11 让 Main / Node Session 可以连续推进几十个 Turn，而 Navo 目前�
 | `token-meter` | 以最近 provider usage 为锚点，加 surface 变化的有符号重定价；按路由给图片定价 | 只采用“usage 锚点 + 新增节点启发式估算”；不做路由定价、图片定价和 shadow-price 事件 |
 | `agent/request-error` 溢出恢复、`maxOverflowRetries` | provider 确认超窗后绕过阈值做一次最大平衡缩减，只有 surface generation 前进才重试 | 采用；由 adapter 把超窗归一为 `CONTEXT_WINDOW_EXCEEDED` |
 | `toolPairingBalancedBefore/After` | 选区边界不得拆开 tool call 与 result | 采用为切分规则 |
-| `compaction-tool-result-pruner`、`compaction-image-offload`、`command-compact`、`recallable-compaction` 提案 | 工具结果剪枝、图片省略、手动 `/compact`、可召回压缩 | 本阶段不采用，原因见第 6 节 |
+| `compaction-tool-result-pruner`、`compaction-image-offload`、`command-compact`、`recallable-compaction` 提案 | 工具结果剪枝、图片省略、手动 `/compact`、可召回压缩 | F12.5 采用手动 `/compact`；工具结果剪枝与图片省略暂不采用；可召回压缩归 Phase 13 |
 
 ## 4. 关键决策
 
@@ -80,7 +80,7 @@ Compaction(trigger = overflow, 忽略阈值, 最大平衡缩减)
 
 - 压力触发：每个 Step 在构建请求前检查；一轮压缩后重新测量，仍越线则再压，默认 `compactionRetries = 1`（即最多两轮）。
 - 超窗恢复：adapter 把 provider 的超窗错误归一为 `CONTEXT_WINDOW_EXCEEDED`（OpenAI 的 `context_length_exceeded`；Qwen 需读取 400 响应体判断）。默认 `maxOverflowRetries = 1`，不消耗既有模型重试预算。
-- 不提供手动压缩入口。
+- Human 可通过 `/compact` 主动压缩；该入口安排在 F12.5，命令不要求压力超过阈值，仍必须遵守安全选区、近期尾部保留与压缩收益检查。
 
 ### 4.4 选区规则
 
@@ -97,13 +97,14 @@ Compaction(trigger = overflow, 忽略阈值, 最大平衡缩减)
 
 | 事件 | 数据 | 作用 |
 |---|---|---|
-| `compaction-started` | `{ compactionId, turnId, trigger: "pressure" \| "overflow" }` | 事务锁，必须先于摘要请求写入 |
-| `user-message`（`surfaceOp: replace`） | `{ message, compactionId }` | 唯一的 surface 变更：用摘要检查点替换选区 |
+| `compaction-started` | `{ compactionId, turnId?, trigger: "pressure" \| "overflow" \| "manual" }` | 事务锁，必须先于摘要请求写入；pressure / overflow 需要 turnId，manual 不属于 Turn |
+| `compaction-checkpoint`（`surfaceOp: replace`） | `{ message, compactionId, turnId? }` | 唯一的 surface 变更：用摘要检查点替换选区；manual 检查点不伪造 turnId |
 | `compaction-ended` | `{ compactionId, status: "completed" \| "failed" \| "cancelled" \| "interrupted", shadowedSequences?, shadowedTokens?, summaryTokens?, provider?, model?, usage?, failure? }` | 释放锁，并记录统计与失败原因 |
 
 - 写入顺序固定为 started → replace（仅成功时）→ ended。崩溃留下未闭合 started 可被检测；不把摘要元数据单独成事件，统计信息并入 ended。
 - 摘要请求不写 `llm-requested`，避免污染 Turn / Step 请求快照与 Meter 锚点；provider / model / usage 记录在 ended 中。
 - 检查点消息文本 = 续接前言 + `<compacted-summary>` + 摘要 + `</compacted-summary>`。`compactionId` 让历史投影和前端无需扫描相邻事件即可识别检查点。
+- F12.5 增加 `trigger: manual`。`compaction-started` / checkpoint / `compaction-ended` 的 `turnId` 对独立 manual 操作可选；旧 pressure / overflow 事件继续要求 Turn 身份。历史校验与启动恢复必须兼容两类事件。
 
 ### 4.6 摘要请求
 
@@ -127,7 +128,7 @@ replace 已落盘但 ended 未写时，重启后仍补写 `interrupted`；surfac
 
 ### 4.8 公共契约方向
 
-F12.5 才定义：每个 Session 的上下文用量（已用 / 容量 / 阈值）查询、压缩开始与结束的实时事件，以及历史查询中把检查点标记为摘要而非普通用户消息。前端展示交由 [frontend-plan.md](frontend-plan.md) 的后续步骤，不在 F12 后端范围内。
+F12.6 定义：每个 Session 的上下文用量（已用 / 容量 / 阈值）查询、压缩开始与结束的实时事件，以及历史查询中把检查点标记为摘要而非普通用户消息。F12.5 先补齐主动压缩命令。前端展示交由 [frontend-plan.md](frontend-plan.md) 的后续步骤，不在 F12 后端范围内。
 
 ## 5. 子 Step 拆分
 
@@ -137,14 +138,15 @@ F12.5 才定义：每个 Session 的上下文用量（已用 / 容量 / 阈值�
 | F12.2 | 在模型请求前接入 Context Meter，判断上下文压力并提供明确的压缩触发点；阈值以下保持现有执行行为 |
 | F12.3 | 越过阈值时把可压缩历史替换为摘要检查点，保留近期尾部和完整工具配对，后续回合从摘要续接；压缩失败不中断原请求 |
 | F12.4 | provider 确认超窗后压缩一次再重试；压不动时回合以明确原因失败、AutoRun 暂停；重启后未闭合的压缩记为中断 |
-| F12.5 | 桌面能读到 Session 上下文用量、压缩发生记录，并在历史中区分摘要检查点 |
-| F12.6 | 用离线长程多回合和真实模型小窗口配置证明 AutoRun 能跨越多次压缩完成 Project |
+| F12.5 | 提供 Human 主动 `/compact` 命令；复用现有压缩核心，支持独立 Session 事务、上下文解析、串行执行与重启恢复 |
+| F12.6 | 桌面能读到 Session 上下文用量、压缩发生记录，并在历史中区分摘要检查点 |
+| F12.7 | 用离线长程多回合和真实模型小窗口配置证明 AutoRun 能跨越多次压缩完成 Project |
 
 ## 6. 明确不采用
 
 - 工具结果剪枝：Navo 的 fetch / file / shell 工具已在输出端截断，先观察 F12.5 实测是否仍有单个超大结果，再决定是否新增；
 - 图片省略：Navo 当前不发送图片输入；
-- 手动 `/compact` 与独立摘要模型配置：当前没有对应 UI 需求，摘要沿用 Turn 模型；
+- 独立摘要模型配置：摘要沿用当前 Session 对应的模型；手动 `/compact` 已纳入 F12.5，不再视为明确不采用项；
 - 可召回压缩、跨 Session 检索：归入 Phase 13；
 - 按路由的 token 定价与 shadow-price 事件：Navo 只有文本输入，启发式 + usage 锚点已经够触发与选区使用。
 
@@ -156,4 +158,4 @@ F12.5 才定义：每个 Session 的上下文用量（已用 / 容量 / 阈值�
 
 ## 8. 下一步
 
-F12.1 已完成；下一步为 F12.2 上下文压力检测与执行接入，摘要压缩与检查点单独安排在 F12.3。
+F12.1–F12.4 已有对应实现与记录；F12.3 的本机完整验证仍需按 backend-plan 跟踪。下一步经用户确认进入 F12.5 主动 `/compact` 命令。
