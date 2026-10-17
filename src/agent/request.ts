@@ -6,6 +6,7 @@ import type { FinishReason, GenerateRequest, LlmFailure } from "../llm/types.js"
 import { createDeadline } from "./limits.js";
 import type { RetryableAttempt } from "./limits.js";
 import type { ModelCompletion, TurnScope } from "./types.js";
+import { inspectContextPressure, publishContextPressure } from "../context/pressure.js";
 
 export async function requestModel(
   ctx: Context,
@@ -18,6 +19,13 @@ export async function requestModel(
   const deadline = createDeadline(signal, timeoutMs);
   try {
     const request = buildRequest(ctx, input, deadline.signal);
+    const pressure = inspectContextPressure(
+      input.sessionId,
+      ctx.sessions.getEvents(input.sessionId),
+      request,
+      input.model,
+    );
+    publishContextPressure(ctx, pressure);
     appendRequest(ctx, input.sessionId, turnId, stepId, request);
     turn.output.beginAttempt();
     let publishedContent = false;
