@@ -64,8 +64,8 @@ describe("pressure-triggered context compaction", () => {
 
   it("folds an earlier checkpoint into a later summary across repeated compactions", async () => {
     const kit = await createRuntime([
-      modelResponse([{ type: "text", text: "## Goal and User Constraints\\n- First cumulative checkpoint." }]),
-      modelResponse([{ type: "text", text: "## Goal and User Constraints\\n- Updated cumulative checkpoint." }]),
+      modelResponse([{ type: "text", text: "## Goal and User Constraints\n- First cumulative checkpoint." }]),
+      modelResponse([{ type: "text", text: "## Goal and User Constraints\n- Updated cumulative checkpoint." }]),
       modelResponse([{ type: "text", text: "answer after repeated compaction" }]),
     ]);
     const sessionId = createSessionId("repeated-compaction-session");
@@ -100,7 +100,7 @@ describe("pressure-triggered context compaction", () => {
       model: { provider: "mock", model: "test", contextWindow: 20_000, maxTokens: 500 },
     });
 
-    expect(result.status).toBe("completed");
+    expect(result).toMatchObject({ status: "completed" });
     expect(kit.adapter.requests).toHaveLength(3);
     expect(kit.adapter.requests[1]?.messages.some(message => message.content.some(
       block => block.type === "text" && block.text.includes("<compacted-summary>"),
