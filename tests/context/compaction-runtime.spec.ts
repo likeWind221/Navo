@@ -2,7 +2,7 @@ import { Context } from "cordis";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createMessageId, createSessionId, createStepId, createTurnId } from "../../src/brand/ids.js";
-import { createRuntime, disposeRuntimes, modelError, modelResponse, turnInput } from "../helpers/runtime.js";
+import { createRuntime, disposeRuntimes, eventTypes, modelError, modelResponse, turnInput } from "../helpers/runtime.js";
 import { SessionStore } from "../../src/session/store.js";
 import { summarize } from "../../src/context/compaction/summarizer.js";
 
