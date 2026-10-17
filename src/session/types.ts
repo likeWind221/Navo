@@ -24,7 +24,8 @@ export type SessionEvent = MessageEvent | LogOnlyEvent;
 export type MessageEvent =
   | UserMessageEvent
   | AssistantMessageEvent
-  | ToolCallResultEvent;
+  | ToolCallResultEvent
+  | CompactionCheckpointEvent;
 
 /** Events retained for lifecycle, audit, and replay but not model messages. */
 export type LogOnlyEvent =
@@ -35,7 +36,9 @@ export type LogOnlyEvent =
   | LlmRequestedEvent
   | ToolCallRequestedEvent
   | ErrorEvent
-  | ContextObservedEvent;
+  | ContextObservedEvent
+  | CompactionStartedEvent
+  | CompactionEndedEvent;
 
 /** A committed, ordered fact in a session log. */
 export interface EventRecord<TType extends string, TData> {
@@ -100,6 +103,45 @@ export interface ContextFact {
   readonly label: string;
   readonly state?: string;
 }
+
+export interface CompactionStartedEvent extends EventRecord<
+  "compaction-started",
+  {
+    readonly turnId: TurnId;
+    readonly compactionId: string;
+    readonly trigger: "pressure";
+    readonly coveredStart: number;
+    readonly coveredEnd: number;
+  }
+> {}
+
+export interface CompactionCheckpointEvent extends EventRecord<
+  "compaction-checkpoint",
+  {
+    readonly turnId: TurnId;
+    readonly compactionId: string;
+    readonly message: UserMessage;
+    readonly coveredStart: number;
+    readonly coveredEnd: number;
+    readonly summaryVersion: 1;
+  }
+> {}
+
+export interface CompactionEndedEvent extends EventRecord<
+  "compaction-ended",
+  {
+    readonly turnId: TurnId;
+    readonly compactionId: string;
+    readonly status: "completed" | "failed" | "cancelled" | "interrupted";
+    readonly beforeTokens?: number;
+    readonly afterTokens?: number;
+    readonly summaryTokens?: number;
+    readonly provider?: string;
+    readonly model?: string;
+    readonly usage?: TokenUsage;
+    readonly failure?: { readonly code: string; readonly message: string };
+  }
+> {}
 
 export type UserMessageEvent = EventRecord<
   "user-message",

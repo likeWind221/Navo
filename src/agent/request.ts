@@ -7,6 +7,7 @@ import { createDeadline } from "./limits.js";
 import type { RetryableAttempt } from "./limits.js";
 import type { ModelCompletion, TurnScope } from "./types.js";
 import { inspectContextPressure, publishContextPressure } from "../context/pressure.js";
+import { compactSession } from "../context/compaction/compact.js";
 
 export async function requestModel(
   ctx: Context,
@@ -18,14 +19,54 @@ export async function requestModel(
   const timeoutMs = limits.modelTimeoutMs;
   const deadline = createDeadline(signal, timeoutMs);
   try {
-    const request = buildRequest(ctx, input, deadline.signal);
-    const pressure = inspectContextPressure(
+    let request = buildRequest(ctx, input, deadline.signal);
+    let pressure = inspectContextPressure(
       input.sessionId,
       ctx.sessions.getEvents(input.sessionId),
       request,
       input.model,
     );
     publishContextPressure(ctx, pressure);
+    if (pressure.kind === "exceeded") {
+      for (let attempt = 0; attempt < 2 && pressure.kind === "exceeded"; attempt += 1) {
+        const compacted = await compactSession(ctx, {
+          sessionId: input.sessionId,
+          turnId,
+          stepId,
+          model: input.model,
+          request,
+          thresholdTokens: pressure.pressure.thresholdTokens,
+          retainTokens: pressure.event.retainTokens,
+          signal: deadline.signal,
+          cancelSignal: signal,
+          maxRetries: limits.maxModelRetries,
+        });
+        if (compacted.kind === "cancelled") {
+          if (deadline.timedOut) return { kind: "failed", failure: { code: "context-compaction-timeout", message: "Context compaction timed out." } };
+          return { kind: "cancelled" };
+        }
+        if (compacted.kind === "failed" || compacted.kind === "no-progress") {
+          if (deadline.timedOut) return { kind: "failed", failure: { code: "context-compaction-timeout", message: "Context compaction timed out." } };
+          return { kind: "failed", failure: {
+            code: compacted.kind === "failed" ? compacted.code : "context-compaction-no-progress",
+            message: compacted.kind === "failed" ? compacted.message : "No safe, useful history prefix can be compacted.",
+          } };
+        }
+        request = buildRequest(ctx, input, deadline.signal);
+        pressure = inspectContextPressure(
+          input.sessionId,
+          ctx.sessions.getEvents(input.sessionId),
+          request,
+          input.model,
+        );
+      }
+      if (pressure.kind === "exceeded") {
+        return { kind: "failed", failure: {
+          code: "context-compaction-no-progress",
+          message: "Context pressure remains above the configured threshold after two compaction attempts.",
+        } };
+      }
+    }
     appendRequest(ctx, input.sessionId, turnId, stepId, request);
     turn.output.beginAttempt();
     let publishedContent = false;

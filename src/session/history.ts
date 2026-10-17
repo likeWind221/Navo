@@ -27,7 +27,7 @@ export function parseSessionEvent(sessionId: SessionId, raw: unknown, sequence: 
       || !record(raw.data) || !payload(raw.type, raw.data) || !surfaceOp(raw.surfaceOp)) {
     throw invalid(sequence, "invalid event envelope or data");
   }
-  if (raw.surfaceOp !== undefined && !oneOf(raw.type, ["user-message", "assistant-message", "tool-call-result"])) {
+  if (raw.surfaceOp !== undefined && !oneOf(raw.type, ["user-message", "assistant-message", "tool-call-result", "compaction-checkpoint"])) {
     throw invalid(sequence, "log-only event has a surface operation");
   }
   return deepFreeze(structuredClone(raw)) as unknown as SessionEvent;
@@ -39,6 +39,25 @@ function payload(type: unknown, data: Record<string, unknown>): boolean {
     return Array.isArray(data.facts) && data.facts.every(fact => record(fact)
       && text(fact.kind) && text(fact.id) && typeof fact.label === "string"
       && optional(fact.state, value => typeof value === "string"));
+  }
+  if (type === "compaction-started") {
+    return text(data.turnId) && text(data.compactionId) && data.trigger === "pressure"
+      && integer(data.coveredStart) && integer(data.coveredEnd)
+      && (data.coveredStart as number) > 0 && (data.coveredEnd as number) > 0;
+  }
+  if (type === "compaction-checkpoint") {
+    return text(data.turnId) && text(data.compactionId) && message(data.message, "user")
+      && integer(data.coveredStart) && integer(data.coveredEnd)
+      && (data.coveredStart as number) > 0 && (data.coveredEnd as number) > 0
+      && data.summaryVersion === 1;
+  }
+  if (type === "compaction-ended") {
+    return text(data.turnId) && text(data.compactionId)
+      && oneOf(data.status, ["completed", "failed", "cancelled", "interrupted"])
+      && optional(data.beforeTokens, integer) && optional(data.afterTokens, integer)
+      && optional(data.summaryTokens, integer) && optional(data.provider, text)
+      && optional(data.model, text) && optional(data.usage, usage)
+      && optional(data.failure, value => record(value) && text(value.code) && typeof value.message === "string");
   }
   if (!text(data.turnId)) return false;
   if (type === "turn-started") return true;
@@ -115,7 +134,7 @@ function usage(value: unknown): boolean {
 
 function surfaceOp(value: unknown): boolean {
   return value === undefined || value === "append" || (record(value) && value.op === "replace"
-    && integer(value.start) && integer(value.end) && (value.start as number) > 0 && (value.end as number) >= (value.start as number));
+    && integer(value.start) && integer(value.end) && (value.start as number) > 0 && (value.end as number) > 0);
 }
 
 function status(value: unknown, step: boolean): boolean {
