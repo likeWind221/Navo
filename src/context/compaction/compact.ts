@@ -152,8 +152,9 @@ export async function compactSession(ctx: Context, input: CompactSessionInput): 
       summaryTokens: summary.estimatedTokens,
     };
   } catch (error: unknown) {
-    const code = error instanceof Error && "code" in error && typeof error.code === "string"
+    const sourceCode = error instanceof Error && "code" in error && typeof error.code === "string"
       ? error.code : "context-compaction-failed";
+    const code = sourceCode.startsWith("context-compaction") ? sourceCode : "context-compaction-failed";
     const message = error instanceof Error ? error.message : "Compaction failed.";
     if (input.cancelSignal.aborted) {
       if (started) appendEnded(ctx, input, compactionId, "cancelled", code, message);
