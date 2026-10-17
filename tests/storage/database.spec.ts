@@ -7,6 +7,7 @@ import { Context } from "cordis";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { StorageService } from "../../src/storage/database.js";
+import { createEventId, createSessionId, createTurnId } from "../../src/brand/ids.js";
 import { STORAGE_APPLICATION_ID } from "../../src/storage/schema.js";
 
 const contexts: Context[] = [];
@@ -94,6 +95,45 @@ describe("StorageService", () => {
     const second = await open(path);
     expect([...second.storage.loadEvents("project")]).toEqual([["p1", { projectId: "p1", events: [{ n: 1 }, { n: 2 }] }]]);
     expect(second.storage.loadWorkspaceBindings()).toEqual([{ projectId: "p1", root: "/work/p1" }]);
+  });
+
+  it("closes an interrupted compaction before closing its Turn on restart", async () => {
+    const path = await databasePath();
+    const first = await open(path);
+    const sessionId = createSessionId("orphan-compaction");
+    const turnId = createTurnId("interrupted-turn");
+    const timestamp = "2026-10-17T10:00:00.000Z";
+    first.storage.write(tx => tx.appendEvents({
+      domain: "session",
+      ownerId: sessionId,
+      projectId: null,
+      firstSeq: 1,
+      events: [
+        { id: createEventId("event-1"), sessionId, sequence: 1, timestamp,
+          type: "turn-started", data: { turnId } },
+        { id: createEventId("event-2"), sessionId, sequence: 2, timestamp,
+          type: "compaction-started", data: {
+            turnId, compactionId: "compaction-1", trigger: "overflow",
+            coveredStart: 1, coveredEnd: 1,
+          } },
+      ],
+    }), () => {});
+    await close(first);
+
+    const recovered = await open(path);
+    const events = recovered.storage.loadEvents("session").get(sessionId)?.events as
+      readonly { readonly type: string; readonly data?: { readonly status?: string } }[] | undefined;
+    expect(events?.map(event => event.type)).toEqual([
+      "turn-started",
+      "compaction-started",
+      "compaction-ended",
+      "error",
+      "turn-ended",
+    ]);
+    expect(events?.[2]).toMatchObject({
+      type: "compaction-ended",
+      data: { compactionId: "compaction-1", status: "interrupted" },
+    });
   });
 
   it("refuses unknown schema versions, foreign databases and unreadable files", async () => {
