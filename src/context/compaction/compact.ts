@@ -86,7 +86,7 @@ export async function compactSession(ctx: Context, input: CompactSessionInput): 
     const checkpointMessage: UserMessage = Object.freeze({
       id: createMessageId(randomUUID()),
       role: "user",
-      content: [{ type: "text", text: createCheckpointText(summary.text) }],
+      content: [{ type: "text" as const, text: createCheckpointText(summary.text) }],
     });
     const checkpointTokens = estimateMessage(checkpointMessage);
     const savedTokens = selection.estimatedTokens - checkpointTokens;

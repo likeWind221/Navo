@@ -118,6 +118,6 @@ function toTextMessage(message: Message): Message {
   return Object.freeze({
     id: message.id,
     role: message.role,
-    content: [{ type: "text", text }],
+    content: [{ type: "text" as const, text }],
   });
 }
