@@ -29,6 +29,8 @@ Inspect budget + Session history
 
 ## 2. 改动
 
+- 默认比例阈值已从 80% 调整为 90%，与 Codex 当前公开实现的默认自动压缩比例一致；仍由 `W - O - H` 与显式 `L` 进一步限制。此改动不改变固定安全余量、输出预留或保留尾部比例。
+
 - `src/context/pressure.ts`：新增纯压力判定入口，区分预算禁用、阈值内和超阈值三种结果；超阈值时构造包含 Session、模型路由、用量、阈值、保留预算与估算依据的内部事件。
 - `src/agent/request.ts`：在记录并发送请求前，使用同一请求 envelope 与 Session 事件完成测量；超阈值时发布 `context/pressure`。
 - `tests/context/pressure.spec.ts`：覆盖阈值内、超阈值、容量缺失与触发事件发布。
