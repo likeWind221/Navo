@@ -1,5 +1,5 @@
 import { ChatGPTAuthError } from "../auth/chatgpt.js";
-import { LLMProviderError } from "../errors.js";
+import { isContextWindowExceeded, LLMProviderError } from "../errors.js";
 import type { LLMAdapter } from "../adapter.js";
 import { serializeResponsesRequest } from "../protocols/responses/request.js";
 import { translateResponsesSse } from "../protocols/responses/stream.js";
@@ -82,8 +82,9 @@ async function httpFailure(response: Response): Promise<LLMProviderError> {
   }
   const usage = code === "subscription_sharing_usage_limit_exceeded"
     || code === "subscription_sharing_usage_unavailable";
-  return new LLMProviderError(code,
-    `OpenAI rejected the request with HTTP ${response.status} (${code}).${diagnostic ? ` ${diagnostic}` : ""}${usage
+  const normalizedCode = isContextWindowExceeded(code, diagnostic) ? "CONTEXT_WINDOW_EXCEEDED" : code;
+  return new LLMProviderError(normalizedCode,
+    `OpenAI rejected the request with HTTP ${response.status} (${normalizedCode}).${diagnostic ? ` ${diagnostic}` : ""}${usage
       ? " Check ChatGPT Settings > Usage; no billing route was switched." : ""}`,
     { status: response.status });
 }

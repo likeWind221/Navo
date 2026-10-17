@@ -139,6 +139,7 @@
 - [F12.1 Context Meter 与模型容量](110-devlog-f12-1-context-meter.md)：模型容量配置、Token 预算与请求前压力测量。
 - [F12.2 上下文压力检测与执行接入](111-devlog-f12-2-pressure-integration.md)：在真实模型请求路径接入 Context Meter 并发布内部压力触发事件。
 - [F12.3 摘要压缩与 Session 检查点](112-devlog-f12-3-compaction.md)：结构化累积摘要、安全前缀选区、检查点写入与请求重测量。
+- [F12.4 超窗恢复与重启对账](113-devlog-f12-4-overflow-recovery.md)：统一识别 provider 超窗错误、强制压缩后单次重试，以及启动时未闭合压缩事务的中断对账。
 
 ## 工程治理与迁移
 

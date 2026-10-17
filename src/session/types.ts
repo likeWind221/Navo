@@ -109,7 +109,7 @@ export interface CompactionStartedEvent extends EventRecord<
   {
     readonly turnId: TurnId;
     readonly compactionId: string;
-    readonly trigger: "pressure";
+    readonly trigger: "pressure" | "overflow";
     readonly coveredStart: number;
     readonly coveredEnd: number;
   }

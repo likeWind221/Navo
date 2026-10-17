@@ -41,7 +41,8 @@ function payload(type: unknown, data: Record<string, unknown>): boolean {
       && optional(fact.state, value => typeof value === "string"));
   }
   if (type === "compaction-started") {
-    return text(data.turnId) && text(data.compactionId) && data.trigger === "pressure"
+    return text(data.turnId) && text(data.compactionId)
+      && oneOf(data.trigger, ["pressure", "overflow"])
       && integer(data.coveredStart) && integer(data.coveredEnd)
       && (data.coveredStart as number) > 0 && (data.coveredEnd as number) > 0;
   }

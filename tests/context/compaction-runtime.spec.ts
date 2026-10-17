@@ -2,8 +2,9 @@ import { Context } from "cordis";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createMessageId, createSessionId, createStepId, createTurnId } from "../../src/brand/ids.js";
-import { createRuntime, disposeRuntimes, modelError, modelResponse, turnInput } from "../helpers/runtime.js";
+import { createRuntime, disposeRuntimes, eventTypes, modelError, modelResponse, turnInput } from "../helpers/runtime.js";
 import { SessionStore } from "../../src/session/store.js";
+import { summarize } from "../../src/context/compaction/summarizer.js";
 
 afterEach(async () => {
   await disposeRuntimes();
@@ -62,6 +63,82 @@ describe("pressure-triggered context compaction", () => {
     expect(kit.ctx.sessions.deriveMessages(sessionId).some(message => message.content.some(
       block => block.type === "text" && block.text.includes("answer after compaction"),
     ))).toBe(true);
+  });
+
+  it("omits unsupported output token limits from OpenAI summary requests", async () => {
+    const kit = await createRuntime([
+      modelResponse([{ type: "text", text: "## Goal and User Constraints\n- Continue the task." }]),
+    ]);
+    kit.ctx.llm.registerAdapter("openai", kit.adapter);
+    await summarize(kit.ctx, "openai", "gpt-6-luna", [{
+      id: createMessageId("openai-summary-source"),
+      role: "user",
+      content: [{ type: "text", text: "Earlier context." }],
+    }], 512, new AbortController().signal, 0);
+
+    expect(kit.adapter.requests).toHaveLength(1);
+    expect(kit.adapter.requests[0]).not.toHaveProperty("maxTokens");
+  });
+
+  it("recovers from provider overflow without configured context capacity", async () => {
+    const kit = await createRuntime([
+      modelError("CONTEXT_WINDOW_EXCEEDED"),
+      modelResponse([{ type: "text", text: "## Goal and User Constraints\n- Preserve the task and key decisions." }]),
+      modelResponse([{ type: "text", text: "recovered after overflow" }]),
+    ]);
+    const sessionId = createSessionId("overflow-compaction-session");
+    const turnId = createTurnId("overflow-seed-turn");
+    const stepId = createStepId("overflow-seed-step");
+
+    for (let index = 0; index < 2; index += 1) {
+      kit.ctx.sessions.append({
+        type: "user-message",
+        sessionId,
+        data: { message: { id: createMessageId("overflow-user-" + index), role: "user",
+          content: [{ type: "text", text: "u".repeat(3_000) }] } },
+      });
+      kit.ctx.sessions.append({
+        type: "assistant-message",
+        sessionId,
+        data: {
+          turnId,
+          stepId,
+          message: { id: createMessageId("overflow-assistant-" + index), role: "assistant",
+            content: [{ type: "text", text: "a".repeat(3_000) }] },
+          finishReason: { kind: "stop" },
+        },
+      });
+    }
+
+    const result = await kit.ctx.agentRuntime.runTurn({
+      ...turnInput("overflow-compaction"),
+      sessionId,
+      model: { provider: "mock", model: "test" },
+    });
+
+    expect(result.status).toBe("completed");
+    expect(kit.adapter.requests).toHaveLength(3);
+    expect(kit.ctx.sessions.getEvents(sessionId).some(event =>
+      event.type === "compaction-started" && event.data.trigger === "overflow",
+    )).toBe(true);
+    expect(kit.ctx.sessions.getEvents(sessionId).some(event =>
+      event.type === "compaction-ended" && event.data.status === "completed",
+    )).toBe(true);
+    expect(kit.ctx.sessions.deriveMessages(sessionId).some(message => message.content.some(
+      block => block.type === "text" && block.text.includes("recovered after overflow"),
+    ))).toBe(true);
+  });
+
+  it("fails closed when overflow cannot compact any safe history", async () => {
+    const kit = await createRuntime([modelError("CONTEXT_WINDOW_EXCEEDED")]);
+    const result = await kit.ctx.agentRuntime.runTurn({
+      ...turnInput("overflow-no-progress"),
+      model: { provider: "mock", model: "test" },
+    });
+
+    expect(result).toMatchObject({ status: "failed", failure: { code: "context-window-exceeded" } });
+    expect(kit.adapter.requests).toHaveLength(1);
+    expect(eventTypes(kit, "overflow-no-progress")).toContain("turn-ended");
   });
 
   it("folds an earlier checkpoint into a later summary across repeated compactions", async () => {

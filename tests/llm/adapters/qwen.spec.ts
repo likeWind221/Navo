@@ -49,6 +49,33 @@ describe("QwenChatCompletionsAdapter", () => {
     ]);
   });
 
+  it("recognizes context overflow from a bounded HTTP 400 body only", async () => {
+    const overflow = new QwenChatCompletionsAdapter({
+      baseUrl: "https://model.test/v1",
+      fetch: async () => Response.json({
+        error: {
+          code: "invalid_request_error",
+          message: "This model's maximum context length is 32768 tokens. The request is too long.",
+        },
+      }, { status: 400 }),
+    });
+    await expect(collect(overflow.stream(request()))).rejects.toMatchObject({
+      code: "CONTEXT_WINDOW_EXCEEDED",
+      status: 400,
+    });
+
+    const invalid = new QwenChatCompletionsAdapter({
+      baseUrl: "https://model.test/v1",
+      fetch: async () => Response.json({
+        error: { code: "invalid_request_error", message: "Unknown parameter foo." },
+      }, { status: 400 }),
+    });
+    await expect(collect(invalid.stream(request()))).rejects.toMatchObject({
+      code: "INVALID_REQUEST",
+      status: 400,
+    });
+  });
+
   it("maps HTTP failures without copying provider response text", async () => {
     const adapter = new QwenChatCompletionsAdapter({
       baseUrl: "https://model.test/v1",
