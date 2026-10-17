@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Context } from "cordis";
 
 import { createMessageId } from "../../brand/ids.js";
-import type { SessionId, StepId, TurnId } from "../../brand/ids.js";
+import type { SessionId, TurnId } from "../../brand/ids.js";
 import type { GenerateRequest, UserMessage } from "../../llm/types.js";
 import type { TurnModelConfig } from "../../agent/types.js";
 import { resolveContextBudget, HEADROOM_TOKENS } from "../budget.js";
@@ -10,16 +10,19 @@ import { estimateMessage, measureContext } from "../meter.js";
 import { selectCompactablePrefix } from "./selector.js";
 import { createCheckpointText, summarize, summaryFixedTokens } from "./summarizer.js";
 
+export type CompactionTrigger = "pressure" | "overflow" | "manual";
+
+export type CompactionNoProgressReason = "budget-disabled" | "no-safe-selection";
+
 export type CompactionOutcome =
   | { readonly kind: "compacted"; readonly beforeTokens: number; readonly afterTokens: number; readonly summaryTokens: number }
-  | { readonly kind: "no-progress" }
+  | { readonly kind: "no-progress"; readonly reason: CompactionNoProgressReason }
   | { readonly kind: "failed"; readonly code: string; readonly message: string }
   | { readonly kind: "cancelled" };
 
 export interface CompactSessionInput {
   readonly sessionId: SessionId;
-  readonly turnId: TurnId;
-  readonly stepId: StepId;
+  readonly turnId?: TurnId;
   readonly model: TurnModelConfig;
   readonly request: GenerateRequest;
   readonly thresholdTokens: number;
@@ -27,13 +30,15 @@ export interface CompactSessionInput {
   readonly signal: AbortSignal;
   readonly cancelSignal: AbortSignal;
   readonly maxRetries: number;
-  readonly trigger?: "pressure" | "overflow";
+  readonly trigger?: CompactionTrigger;
 }
 
 export async function compactSession(ctx: Context, input: CompactSessionInput): Promise<CompactionOutcome> {
   const trigger = input.trigger ?? "pressure";
   const budget = resolveContextBudget(input.model);
-  if (budget.kind === "disabled" && trigger !== "overflow") return { kind: "no-progress" };
+  if (budget.kind === "disabled" && trigger !== "overflow") {
+    return { kind: "no-progress", reason: "budget-disabled" };
+  }
   const snapshot = ctx.sessions.getSurfaceSnapshot(input.sessionId);
   const systemMessages = input.request.messages.filter(message => message.role === "system");
   const summaryMaxTokens = Math.min(
@@ -51,7 +56,7 @@ export async function compactSession(ctx: Context, input: CompactSessionInput): 
     maxInputTokens - fixedTokens,
     Math.ceil(input.thresholdTokens * 0.1),
   );
-  if (!selection) return { kind: "no-progress" };
+  if (!selection) return { kind: "no-progress", reason: "no-safe-selection" };
 
   const compactionId = randomUUID();
   let started = false;
@@ -60,7 +65,7 @@ export async function compactSession(ctx: Context, input: CompactSessionInput): 
       type: "compaction-started",
       sessionId: input.sessionId,
       data: {
-        turnId: input.turnId,
+        ...(input.turnId === undefined ? {} : { turnId: input.turnId }),
         compactionId,
         trigger,
         coveredStart: selection.coveredStart,
@@ -115,7 +120,7 @@ export async function compactSession(ctx: Context, input: CompactSessionInput): 
       type: "compaction-checkpoint",
       sessionId: input.sessionId,
       data: {
-        turnId: input.turnId,
+        ...(input.turnId === undefined ? {} : { turnId: input.turnId }),
         compactionId,
         message: checkpointMessage,
         coveredStart: selection.coveredStart,
@@ -136,7 +141,7 @@ export async function compactSession(ctx: Context, input: CompactSessionInput): 
       type: "compaction-ended",
       sessionId: input.sessionId,
       data: {
-        turnId: input.turnId,
+        ...(input.turnId === undefined ? {} : { turnId: input.turnId }),
         compactionId,
         status: "completed",
         beforeTokens: beforeMeasurement.usedTokens,
@@ -191,7 +196,7 @@ function appendEnded(
     type: "compaction-ended",
     sessionId: input.sessionId,
     data: {
-      turnId: input.turnId,
+      ...(input.turnId === undefined ? {} : { turnId: input.turnId }),
       compactionId,
       status,
       provider: input.model.provider,

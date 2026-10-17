@@ -26,6 +26,13 @@ export type ResolvedRunTurnInput = Omit<RunTurnInput, "toolNames"> & {
   readonly toolNames: readonly string[];
 };
 
+/** The authoritative execution context a Session Turn would use right now. */
+export interface SessionAgentContext {
+  readonly model: TurnModelConfig;
+  readonly systemPrompt: string;
+  readonly toolNames: readonly string[];
+}
+
 
 export type TurnResult =
   | CompletedTurnResult

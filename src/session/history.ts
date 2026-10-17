@@ -41,19 +41,20 @@ function payload(type: unknown, data: Record<string, unknown>): boolean {
       && optional(fact.state, value => typeof value === "string"));
   }
   if (type === "compaction-started") {
-    return text(data.turnId) && text(data.compactionId)
-      && oneOf(data.trigger, ["pressure", "overflow"])
+    return text(data.compactionId)
+      && oneOf(data.trigger, ["pressure", "overflow", "manual"])
+      && (data.trigger === "manual" ? data.turnId === undefined : text(data.turnId))
       && integer(data.coveredStart) && integer(data.coveredEnd)
       && (data.coveredStart as number) > 0 && (data.coveredEnd as number) > 0;
   }
   if (type === "compaction-checkpoint") {
-    return text(data.turnId) && text(data.compactionId) && message(data.message, "user")
+    return optional(data.turnId, text) && text(data.compactionId) && message(data.message, "user")
       && integer(data.coveredStart) && integer(data.coveredEnd)
       && (data.coveredStart as number) > 0 && (data.coveredEnd as number) > 0
       && data.summaryVersion === 1;
   }
   if (type === "compaction-ended") {
-    return text(data.turnId) && text(data.compactionId)
+    return optional(data.turnId, text) && text(data.compactionId)
       && oneOf(data.status, ["completed", "failed", "cancelled", "interrupted"])
       && optional(data.beforeTokens, integer) && optional(data.afterTokens, integer)
       && optional(data.summaryTokens, integer) && optional(data.provider, text)

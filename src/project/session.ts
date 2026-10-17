@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { Service } from "cordis";
 import type { Context } from "cordis";
 
-import type { RunTurnInput, TurnModelConfig, TurnResult } from "../agent/types.js";
+import type { RunTurnInput, SessionAgentContext, TurnModelConfig, TurnResult } from "../agent/types.js";
 import { createMessageId } from "../brand/ids.js";
 import type { NodeId, ProjectId, SessionId } from "../brand/ids.js";
 import { changedFacts, lastObservedFacts } from "../session/reminder.js";
@@ -79,6 +79,17 @@ export class MainSessionService extends Service {
       projectId: binding.projectId,
       sessionId: binding.sessionId,
       turn,
+    });
+  }
+
+  resolveContext(sessionId: SessionId): SessionAgentContext {
+    const binding = requireMainBinding(this.ctx, sessionId);
+    const project = this.requireProject(binding.projectId);
+    const profile = createMainAgentProfile(project, false);
+    return Object.freeze({
+      model: this.model,
+      systemPrompt: profile.systemPrompt,
+      toolNames: profile.toolNames,
     });
   }
 
