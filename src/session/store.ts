@@ -10,11 +10,22 @@ import { SessionError } from "./errors.js";
 import { parseSessionEvent, parseSessionHistory } from "./history.js";
 import { applySurface, createSurface, eventMessage, withSystemPrompt } from "./surface.js";
 import type { SurfaceState } from "./surface.js";
-import type { SessionEvent, SurfaceOp } from "./types.js";
+import type { CompactionCheckpointEvent, SessionEvent, SurfaceOp } from "./types.js";
 
 export interface SessionStoreConfig {
   readonly persistence: boolean;
   readonly resolveProjectId?: (sessionId: SessionId) => string | null;
+}
+
+export interface SurfaceSnapshotEntry {
+  readonly sequence: number;
+  readonly message?: Message;
+}
+
+export interface SurfaceSnapshot {
+  readonly generation: number;
+  readonly sequences: readonly number[];
+  readonly entries: readonly SurfaceSnapshotEntry[];
 }
 
 /** An event before the log assigns its identity, order, and commit time. */
@@ -98,6 +109,39 @@ export class SessionStore extends Service {
 
   getEvents(sessionId: SessionId): readonly SessionEvent[] {
     return Object.freeze([...(this.events.get(sessionId) ?? [])]);
+  }
+
+  getSurfaceSnapshot(sessionId: SessionId): SurfaceSnapshot {
+    const events = this.events.get(sessionId) ?? [];
+    const surface = this.surfaces.get(sessionId) ?? createSurface();
+    const sequences = Object.freeze([...surface.nodes]);
+    const entries = Object.freeze(sequences.map(sequence => {
+      const event = events[sequence - 1];
+      if (!event) throw new Error("Surface references missing event " + sequence + ".");
+      const message = eventMessage(event);
+      return Object.freeze({ sequence, ...(message === undefined ? {} : { message }) });
+    }));
+    return Object.freeze({ generation: surface.generation, sequences, entries });
+  }
+
+  appendCompactionCheckpoint(
+    draft: SessionEventDraft<CompactionCheckpointEvent>,
+    expected: SurfaceSnapshot,
+    start: number,
+    end: number,
+  ): CompactionCheckpointEvent {
+    const surface = this.surfaces.get(draft.sessionId) ?? createSurface();
+    if (surface.generation !== expected.generation
+      || surface.nodes.length !== expected.sequences.length
+      || surface.nodes.some((sequence, index) => sequence !== expected.sequences[index])) {
+      throw new Error("context-compaction-stale-selection");
+    }
+    const startIndex = surface.nodes.indexOf(start);
+    const endIndex = surface.nodes.indexOf(end);
+    if (startIndex !== 0 || endIndex < startIndex) {
+      throw new Error("context-compaction-invalid-selection");
+    }
+    return this.append(draft, { op: "replace", start, end }) as CompactionCheckpointEvent;
   }
 
   /** Returns the current model-visible history through Session's cached surface. */

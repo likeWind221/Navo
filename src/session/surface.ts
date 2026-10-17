@@ -16,7 +16,7 @@ export function createSurface(): SurfaceState {
 }
 
 export function applySurface(surface: SurfaceState, event: SessionEvent): void {
-  if (event.type !== "user-message" && event.type !== "assistant-message" && event.type !== "tool-call-result") {
+  if (event.type !== "user-message" && event.type !== "assistant-message" && event.type !== "tool-call-result" && event.type !== "compaction-checkpoint") {
     if (event.surfaceOp !== undefined) throw new TypeError("Log-only events cannot alter the model surface.");
     return;
   }
@@ -36,6 +36,7 @@ export function eventMessage(event: SessionEvent): Message | undefined {
   switch (event.type) {
     case "user-message":
     case "tool-call-result":
+    case "compaction-checkpoint":
       return event.data.message;
     case "assistant-message":
       return event.data.message.content.length === 0 && event.data.message.replay === undefined

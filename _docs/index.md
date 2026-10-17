@@ -133,6 +133,13 @@
 - [F5.3–F5.8 Project 前端闭环规划](88-devlog-f5-project-plan.md)：当前运行期间的项目执行闭环与逐步接入边界。
 - [F5.3 Project 工作区布局与交互设计](90-devlog-f5-3-workspace.md)：Roadmap 主画布与覆盖式 Main/Node 面板，原型用户验收、正式 Electron 布局接入及本地/代码 CI 已通过，PR #53 已 squash 合入 master（e271d5b）。
 
+## 后端 Phase 12
+
+- [F12.0 上下文压缩设计收口](109-devlog-f12-0-design.md)：上下文测量、压力触发、选区、摘要检查点、失败/取消/中断与 DeepSeek Harness 对照。
+- [F12.1 Context Meter 与模型容量](110-devlog-f12-1-context-meter.md)：模型容量配置、Token 预算与请求前压力测量。
+- [F12.2 上下文压力检测与执行接入](111-devlog-f12-2-pressure-integration.md)：在真实模型请求路径接入 Context Meter 并发布内部压力触发事件。
+- [F12.3 摘要压缩与 Session 检查点](112-devlog-f12-3-compaction.md)：结构化累积摘要、安全前缀选区、检查点写入与请求重测量。
+
 ## 工程治理与迁移
 
 - [模块分文件架构审核](16-module-file-architecture-review.md)：历史快照，当时各包文件粒度、保留项与收敛建议。
