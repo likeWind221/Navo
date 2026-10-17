@@ -37,20 +37,6 @@ export function isContextWindowExceeded(code: unknown, message: unknown): boolea
   return /maximum context length|context(?: window| length)?.{0,100}(?:too long|exceed|limit|too many tokens)|(?:prompt|input).{0,100}(?:too long|exceed(?:s|ed)? the (?:model )?(?:context|token)|token limit)/i.test(normalizedMessage);
 }
 
-export function isContextWindowExceeded(code: unknown, message: unknown): boolean {
-  const normalizedCode = typeof code === "string" ? code.toLowerCase().replace(/[^a-z0-9]/g, "") : "";
-  const normalizedMessage = typeof message === "string" ? message.toLowerCase() : "";
-  if ([
-    "contextlengthexceeded",
-    "maxcontextlengthexceeded",
-    "maximumcontextlengthexceeded",
-    "prompttoolong",
-    "inputtoolong",
-    "inputtokenlimitexceeded",
-  ].includes(normalizedCode)) return true;
-  return /maximum context length|context(?: window| length)?.{0,100}(?:too long|exceed|limit|too many tokens)|(?:prompt|input).{0,100}(?:too long|exceed(?:s|ed)? the (?:model )?(?:context|token)|token limit)/i.test(normalizedMessage);
-}
-
 /** Stable provider failure facts that adapters may expose across the LLM seam. */
 export class LLMProviderError extends Error {
   readonly code: string;
