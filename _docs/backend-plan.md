@@ -280,27 +280,29 @@ Human switch / resume
 
 ## 10. Phase 12（F12）：长程上下文压缩
 
-**阶段目标：** 让长期运行的 Main / Node Session 在接近模型上下文上限时仍能继续工作：系统在每次请求前知道当前上下文压力，越线时把最早的历史替换为摘要检查点并保留近期原文，模型确认超窗时压缩后重试，重启后从已落盘的检查点续接。压缩是 Session 级通用能力，不感知 Project / Roadmap；Project 权威状态继续由每回合重建的系统提示提供。跨 Session 检索与可召回压缩归入 Phase 13。
+**阶段目标：** 让长期运行的 Main / Node Session 在接近模型上下文上限时仍能继续工作：系统在每次请求前知道当前上下文压力，越线时把最早的历史替换为摘要检查点并保留近期原文；Human 可通过 `/compact` 提前压缩；模型确认超窗时压缩后重试；重启后从已落盘的检查点续接。压缩是 Session 级通用能力，不感知 Project / Roadmap；Project 权威状态继续由每回合重建的系统提示提供。跨 Session 检索与可召回压缩归入 Phase 13。
 
 ~~~text
-Step start
-   |
-   v
-Context Meter --(below threshold)--------------------+
-   |                                                 |
-   | at or above threshold                           |
-   v                                                 |
-Compaction: started -> summary -> replace -> ended   |
-Human /compact -----> Compaction(trigger=manual) -----+
-   |  (failure recorded, request continues)          |
-   v                                                 v
-Model request -------------------------------------> response
-   |
-   | context window exceeded
-   v
-Compaction once, retry --(no progress)--> Turn failed -> AutoRun paused
+                         Human /compact
+                               |
+                               v
+                         trigger=manual
+                               |
+Step start -> Context Meter -> trigger=pressure
+                               |
+Provider context overflow ----+--> shared Compaction core
+                                    |
+                                    v
+                         started -> summary -> checkpoint -> ended
+                                    |
+                         +----------+-----------+
+                         |                      |
+                    no progress              success
+                         |                      |
+                   no history change       next request uses
+                                           checkpoint surface
 
-Host restart -> replay surface -> unmatched compaction marked interrupted -> resume from checkpoint
+Host restart -> unmatched compaction marked interrupted -> replay committed checkpoint
 ~~~
 
 | 状态 | Step | 职责范围 | 工作内容（功能目标） | 完成标准 |
