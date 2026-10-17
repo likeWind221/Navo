@@ -201,7 +201,7 @@ compaction-started (trigger=manual, no turnId)
 ### 测试结果
 
 - `pnpm typecheck` 通过。
-- `pnpm test` 在 Git Bash 中前置 `/c/Windows/System32` 后：118 个测试文件、747 项测试全部通过。
+- `pnpm test` 在 Git Bash 中前置 `/c/Windows/System32` 后：118 个测试文件、748 项测试全部通过。
 - 新增 `tests/command/compact.spec.ts`（12 项）：阈值以下成功并验证下一次 Turn 使用 checkpoint、保留近期尾部、无安全选区、容量不可用、收益不足、摘要失败、取消、同 Session Turn 排队、参数拒绝、无上下文失败、Main / Node 上下文解析、Host 命令入口成功与 no-op。
 - `tests/session/history.spec.ts` 新增 manual 事务校验、Turn 标识约束与旧 pressure / overflow 兼容。
 - `tests/storage/database.spec.ts` 新增 manual 未闭合事务与“checkpoint 已提交但 ended 缺失”的重启对账。

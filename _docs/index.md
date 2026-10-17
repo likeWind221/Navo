@@ -76,7 +76,7 @@
 - [F12.2 上下文压力检测与执行接入](111-devlog-f12-2-pressure-integration.md)：请求前压力检查、内部触发事件与执行链路。
 - [F12.3 摘要压缩与 Session 检查点](112-devlog-f12-3-compaction.md)：安全选区、摘要生成、检查点安装、历史投影与失败语义。
 - [F12.4 超窗恢复与重启对账](113-devlog-f12-4-overflow-recovery.md)：provider 超窗归一、压缩后重试及未闭合事务恢复。
-- [F12.5 主动压缩命令 `/compact`](114-devlog-f12-5-manual-compact.md)：复用现有命令与压缩核心，补齐 Main / Node / 普通 Session 上下文解析、manual 独立事务身份、queued 串行执行和重启恢复；本机 747 项完整测试通过，见 PR #77。
+- [F12.5 主动压缩命令 `/compact`](114-devlog-f12-5-manual-compact.md)：复用现有命令与压缩核心，补齐 Main / Node / 普通 Session 上下文解析、manual 独立事务身份、queued 串行执行和重启恢复；本机 748 项完整测试通过，见 PR #77。
 - Phase 13：RAG——Workspace / Resource / Session 检索、权限感知 Retrieval 与 RAG Pipeline。
 
 ## 模型接入 M1
