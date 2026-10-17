@@ -7,7 +7,8 @@ import { Context } from "cordis";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { StorageService } from "../../src/storage/database.js";
-import { createEventId, createSessionId, createTurnId } from "../../src/brand/ids.js";
+import { createEventId, createMessageId, createSessionId, createStepId, createTurnId } from "../../src/brand/ids.js";
+import { SessionStore } from "../../src/session/store.js";
 import { STORAGE_APPLICATION_ID } from "../../src/storage/schema.js";
 
 const contexts: Context[] = [];
@@ -134,6 +135,63 @@ describe("StorageService", () => {
       type: "compaction-ended",
       data: { compactionId: "compaction-1", status: "interrupted" },
     });
+  });
+
+  it("preserves an installed checkpoint while reconciling its interrupted transaction", async () => {
+    const path = await databasePath();
+    const first = await open(path);
+    const sessionId = createSessionId("checkpoint-recovery");
+    const turnId = createTurnId("checkpoint-turn");
+    const stepId = createStepId("checkpoint-step");
+    const checkpointId = createMessageId("recovered-checkpoint");
+    const timestamp = "2026-10-17T10:00:00.000Z";
+    first.storage.write(tx => tx.appendEvents({
+      domain: "session",
+      ownerId: sessionId,
+      projectId: null,
+      firstSeq: 1,
+      events: [
+        { id: createEventId("checkpoint-event-1"), sessionId, sequence: 1, timestamp,
+          type: "turn-started", data: { turnId } },
+        { id: createEventId("checkpoint-event-2"), sessionId, sequence: 2, timestamp,
+          type: "user-message", data: { message: {
+            id: createMessageId("old-user"), role: "user",
+            content: [{ type: "text", text: "old context" }],
+          } } },
+        { id: createEventId("checkpoint-event-3"), sessionId, sequence: 3, timestamp,
+          type: "assistant-message", data: {
+            turnId, stepId, message: { id: createMessageId("old-assistant"), role: "assistant",
+              content: [{ type: "text", text: "old answer" }] },
+            finishReason: { kind: "stop" },
+          } },
+        { id: createEventId("checkpoint-event-4"), sessionId, sequence: 4, timestamp,
+          type: "compaction-started", data: {
+            turnId, compactionId: "compaction-committed", trigger: "overflow",
+            coveredStart: 2, coveredEnd: 3,
+          } },
+        { id: createEventId("checkpoint-event-5"), sessionId, sequence: 5, timestamp,
+          type: "compaction-checkpoint", surfaceOp: { op: "replace", start: 2, end: 3 },
+          data: {
+            turnId, compactionId: "compaction-committed",
+            message: { id: checkpointId, role: "user",
+              content: [{ type: "text", text: "<compacted-summary>saved checkpoint</compacted-summary>" }] },
+            coveredStart: 2, coveredEnd: 3, summaryVersion: 1,
+          } },
+      ],
+    }), () => {});
+    await close(first);
+
+    const recovered = await open(path);
+    await recovered.plugin(SessionStore, { persistence: true });
+    expect(recovered.sessions.deriveMessages(sessionId).map(message => message.id)).toEqual([checkpointId]);
+    const events = recovered.storage.loadEvents("session").get(sessionId)?.events as
+      readonly { readonly type: string; readonly data?: { readonly compactionId?: string; readonly status?: string } }[] | undefined;
+    expect(events?.filter(event => event.type === "compaction-ended")).toHaveLength(1);
+    expect(events?.find(event => event.type === "compaction-ended")).toMatchObject({
+      data: { compactionId: "compaction-committed", status: "interrupted" },
+    });
+    expect(events?.findIndex(event => event.type === "compaction-ended"))
+      .toBeLessThan(events?.findIndex(event => event.type === "turn-ended") ?? -1);
   });
 
   it("refuses unknown schema versions, foreign databases and unreadable files", async () => {
