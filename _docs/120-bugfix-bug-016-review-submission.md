@@ -90,3 +90,9 @@ Node 理论上可以调整 JSON 键顺序，使部分目标字段落进日志前
 新增回归修订前为 2 失败 / 2 通过，修订后 4 项通过。定向审查、返工与压缩检查通过。恢复原测试后，Windows / bundled Node 24.19.0 / System32 与 Node bin 前置 PATH，`node node_modules/typescript/bin/tsc --noEmit` 通过，`node node_modules/vitest/vitest.mjs run --maxWorkers=4` 共 128 文件 / 789 项通过（45.41s）。当前 PR head CI 单独核对，不用旧 head 结果代替。
 
 真实 gpt-6-luna 复验本轮未运行；BUG-016 与 F12.7 保持未关闭。下一步在离线与当前 head CI 通过后，单独授权一次真实复验，验证 Main 能独立审查并使两 Node 完整完成；不能仅以字段或提示断言通过宣称模型问题已经解决。代码导读随本轮最终回复交付。
+
+### CI 超时修订
+
+代码提交 `092fda4` 的 [CI run 39114145817](https://github.com/likeWind221/Navo/actions/runs/39114145817) 类型检查通过，测试为 788 通过 / 1 失败；失败是既有 `tests/integration/compaction/overflow.spec.ts` 的正常超窗恢复用例实际耗时 8115ms，超过默认 5000ms，并非新增审查断言失败。仅该用例增加 15000ms 上限，与此前两个压缩集成用例一致；未增加重试、全局超时或删除任何断言。后续完整本机与新 head CI 仍须通过，不复用旧结果。
+
+超时修订后，同一 Windows / Node 环境的类型检查再次通过，完整 128 文件 / 789 项通过（46.39s）；提交后继续核对当前 PR head CI。

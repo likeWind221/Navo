@@ -52,7 +52,7 @@ describe("F12.7 overflow recovery acceptance", () => {
     const retry = world.taskRequests()[2]!;
     expect(messageText(retry.request)).toContain("<compacted-summary>");
     expect(messageText(retry.request)).not.toContain("overflow-seed");
-  });
+  }, 15_000);
 
   it("fails the Turn and pauses AutoRun when overflow has no safe history", async () => {
     const world = await createWorld({ model: UNBOUNDED, tasks: [overflowReply()] });
