@@ -6,7 +6,7 @@
 
 - [ ] BUG-018：验收脚本把被审查 Node 的 Turn ID 当作 Main 审查 Turn ID，定向回归已复现；修复关联，本机完整 793 项通过，代码 head CI 通过，待阶段合入。见 [122](122-bugfix-bug-018-review-turn.md)。
 
-- [ ] BUG-017：修复后真实 Main 按目录与批次原始片段一次通过 A；B 执行中第 24 次请求遇 TRANSPORT，未进入 B 审查，完整复验未完成。本机 793 项与代码 CI 通过，保持未关闭。见 [121](121-bugfix-bug-017-review-evidence.md)。
+- [ ] BUG-017：前轮真实 Main 按精简证据通过 A；最新授权重跑在 A 的第 11 次请求再次遇 TRANSPORT。两轮均未覆盖 B 审查，完整验收未完成。本机 793 项与代码 CI 通过，保持未关闭。见 [121](121-bugfix-bug-017-review-evidence.md)。
 
 - [ ] BUG-016：目标误判真实复验未复发，Main 一次通过 Node A、接受 Node B 自检结构；完整完成尚未满足；最新 B 执行遇 TRANSPORT，未覆盖其审查。见 [120](120-bugfix-bug-016-review-submission.md)。
 

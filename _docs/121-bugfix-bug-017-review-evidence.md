@@ -1,7 +1,7 @@
 # BUG-017：Node B 审查缺少可直接读取的原始材料证据
 
 > 日期：2026-10-18
-> 状态：已实施修复，本机 793 项与代码 CI 通过；最新真实复验 Main 按精简证据一次通过 A，B 执行中遇 TRANSPORT，未进入 B 审查，完整验收未通过
+> 状态：已实施修复，本机 793 项与代码 CI 通过；前轮 Main 按精简证据通过 A、B 遇 TRANSPORT；最新授权重跑在 A 的第 11 次请求再次遇 TRANSPORT，B 审查仍未覆盖，完整验收未通过
 > 跟踪：[bug-plan.md](bug-plan.md)；阶段：[117](117-devlog-f12-7-acceptance.md)；前置修订：[120](120-bugfix-bug-016-review-submission.md)
 
 ## 现象与复现
@@ -175,3 +175,19 @@ Node B 成功读取 out/summary.json、data/batch-01.txt、data/batch-05.txt 后
 本轮 BUG-017 只有 A 审查路径取得真实正向证据，原 B 审查缺口的完整复验仍未完成；BUG-014 / 015 / 016 / 017 保持未勾选，BUG-018 的最终成功检查亦未走到。F12.7 仍为进行中，PR #79 保持草稿、不合并。诊断仅用只读 SQLite，未重开 App、未修复或继续运行现场，未增加模型请求。
 
 后续若排查请求链路或重新运行，需按用户新的授权执行；本轮不自动重试。此次仅补充真实证据与状态文档，未修改代码，不重复运行已经通过的本机完整测试。
+
+## 2026-10-18 18:07 授权重跑：A 执行中再次 TRANSPORT
+
+用户判断可能为网络波动，并明确授权再重跑一次。沿用原模型、阈值、20 分钟 / 48 请求及零模型重试协议，以 head ecadc6e 启动全新 Workspace / 数据库；前一现场未恢复或覆盖。
+
+- 约 18:07:24–18:08:48，84225ms；11 次请求（9 任务 / 2 摘要）。第 11 次任务请求失败，runner exitCode=1；未耗尽上限，无自动重跑。
+- A 顺序成功读取批次 1–8，两次 pressure 压缩完成：37070→17579、37787→17664；之后模型任务请求报 source=llm、code=TRANSPORT、message="OpenAI Responses request could not be reached."。
+- A 未提交，未进入审查前暂停 / JSON 交接 / 重启。Main Session 事件数为 0，B 未解锁；本轮未增加 BUG-017 审查路径的验收证据，也不能据此判定修复复发。
+- Host 正常 dispose；诊断仅以只读 SQLite 核对批次与错误，零新增模型请求。原始现场、failure.json、runner-exit.json 与 transport-diagnostic.json 已保留。
+- 证据目录 C:/Users/likeW/AppData/Local/Temp/navo-f127-luna-20261018-180723/；日志为该路径后缀 -run.log。
+- 数据库 C:/Users/likeW/AppData/Local/Temp/navo-f127-storage-aWNxi7/navo.db；Workspace C:/Users/likeW/AppData/Local/Temp/navo-f127-workspace-fFLQSU。
+- A Session 4ae81d10-135e-4e07-ac86-a6a7aa2e9590；Main Session 561de2d3-e00b-4197-a780-e759e2b18909。
+
+连续两轮复验在不同执行位置遇同类传输错误。现有记录只证明请求链路失败，仍不足以定位本机网络、代理或上游；不将“网络波动”写成已确认根因，不擅自增加重试、修改网络配置或继续付费尝试。建议下一步先在新的授权范围内排查请求链路，再考虑完整复验。
+
+前轮 A 的精简证据审查成功仍保留；B 审查与完整两 Node / Main 验收均未完成，BUG-017 及 F12.7 保持进行中，PR #79 不合并。本轮仅更新结果文档，不改代码、不重复本机完整测试。
