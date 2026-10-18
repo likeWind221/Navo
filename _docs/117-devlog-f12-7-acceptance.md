@@ -1,7 +1,7 @@
 # F12.7 长程压缩验收
 
 > 日期：2026-10-18
-> 状态：🔄 BUG-014 协议与 BUG-015 暂停观察器已修复，完整 785 项通过；授权 Luna 复验进程中断，完整真实结果缺失
+> 状态：🔄 完整 785 项与代码 head CI 通过；最新 Luna 的暂停、JSON 交接和重启通过，但 Main 审查被 BUG-016 阻断
 
 ## 做了什么
 
@@ -55,7 +55,7 @@
 
 ## 下一步
 
-2026-10-18 用户已确认 BUG-014 JSON 协议修订与 gpt-6-luna。首轮 Luna 正确提交，但因 [BUG-015](119-bugfix-bug-015-compaction-pause.md) 观察器漏掉 submitted 而失败。观察器已修复，本机完整验证通过；用户随后明确授权再复验一次，仍限 20 分钟 / 48 请求。通过真实验收和 PR head CI 后才完成 F12.7，不开始 Phase 13。原 sol 与首轮 Luna 失败记录保持有效。
+最新一次授权 Luna 复验已取得完整失败报告：暂停、交接及重启实际通过，但 Main 未正确使用已校验的提交结构信息，两次返工后因截断日志无法核验原始 criteria 而升级。下一步先确认并处理 [BUG-016](120-bugfix-bug-016-review-submission.md) 的审查契约，不盲目重跑；完整真实完成尚未通过，PR #79 保持草稿，不开始 Phase 13。历史失败与中断记录继续保留。
 
 ## BUG-014 修订后本机验证
 
@@ -64,3 +64,12 @@ Node 改为通过 completion.summary 提交真实 JSON，由验收脚本校验�
 ## BUG-015 修订后验证
 
 观察器新增目标 node/event 订阅，与原 session/event 共同扫描已提交事实；两次 pressure 压缩且 Node A submitted 后才请求暂停，释放时取消两个订阅。无轮询、延时或生产生命周期修改。真实 App 回归在旧代码上失败、新代码上通过，并验证交接后重启零请求与显式启动审查。专项 5 文件 / 14 项、类型检查与完整 127 文件 / 785 项测试通过（52.03 秒）。用户已授权的新一次 gpt-6-luna 复验日志停在第 10 次请求 started，核对时进程已不存在，没有 final / failure 报告，退出原因未知；不能据此判定模型或修复失败，也不能通过验收。证据独立保存在 `C:/Users/likeW/AppData/Local/Temp/navo-f127-luna-20261018-rerun-1555/`；现场只读保留，未自动重跑，尚未关闭 BUG-014 / BUG-015。
+
+## 独立启动器复验（2026-10-18 16:23）
+
+- 用户授权“复验”，并明确“不用 claude-worker”；本轮由 Codex 直接完成，无 worker 调用。独立 PowerShell 启动器记录 PID / 退出码，不使用 Claude background task。
+- gpt-6-luna、原始数据与阈值、20 分钟 / 48 请求不变；实际 228077ms、25 请求（22 任务 + 3 摘要），exitCode=1，stage2 的 AutoRun 暂停。
+- Node A 首次原始 JSON 的全部数值与异常 ID 正确；已在 Main Review 前暂停，脚本原样交接并发布 Main-owned public Resource。重启严格状态比较通过，请求数 13→13，显式 start 才继续。
+- 三次 pressure 压缩成功：36767→17192、38933→18274、34093→12430；第三次发生于返工后。Node A 三次合法提交均含索引 1 / 2 且 satisfied=true，但 Main 两次 rework 后仍因工具日志 300 字符截断而无法核验原始 criteria，最终 escalate；Node B 未启动，完整完成失败。
+- 现有清单实际上已暴露归一化自检信息，不能声称所有字段缺失，也不能把本轮归因为压缩遗忘。证据、只读诊断与待审修订方向见 [120](120-bugfix-bug-016-review-submission.md)。未改生产代码或验收条件，未追加运行；BUG-014 / BUG-015 保留完整完成门禁，新增 BUG-016。
+- CI 超时修订只将两项长集成测试上限调至 15 秒；最终代码 head a478b76：专项 14 项、类型检查、完整 785 项（49.04 秒）及 [CI run 39110793453](https://github.com/likeWind221/Navo/actions/runs/39110793453) 均通过。此后本轮仅更新文档，收口文档 head CI 按原流程核对。

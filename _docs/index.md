@@ -1,7 +1,8 @@
 # 文档索引
 
-- [BUG-015：压缩验收观察器漏掉提交后的暂停](119-bugfix-bug-015-compaction-pause.md)：已修复，旧代码失败、新代码通过的真实 App 回归及完整 785 项通过；授权 Luna 复验进程中断，完整真实结果缺失，未关闭。
-- [BUG-014：压缩验收要求未开放的 write](118-bugfix-bug-014-compaction-acceptance.md)：已修订为模型原始 JSON 提交与验收脚本交接；首轮 Luna 正确提交，但被 BUG-015 阻断，完整真实验收待通过。
+- [BUG-016：Main 误读合法提交的自检结构](120-bugfix-bug-016-review-submission.md)：最新 Luna 两次返工后升级；原始自检合法且清单含归一化信息，仅排查、未修复。
+- [BUG-015：压缩验收观察器漏掉提交后的暂停](119-bugfix-bug-015-compaction-pause.md)：已修复，完整 785 项与代码 head CI 通过，最新真实审查前暂停及重启通过；完整完成被 BUG-016 阻断。
+- [BUG-014：压缩验收要求未开放的 write](118-bugfix-bug-014-compaction-acceptance.md)：JSON 协议已修订，最新真实原样交接通过；完整完成被 BUG-016 阻断。
 
 - [F12.0–F12.6 验证与状态收口](116-devlog-f12-verification.md)：2026-10-18 补齐 F12.2 / F12.3 的本机完整验证（122 文件、771 项通过）及历史 PR 最终 head CI 核对；F12.0–F12.6 全部完成，F12.7 待步骤确认。
 
@@ -83,7 +84,7 @@
 - [F12.4 超窗恢复与重启对账](113-devlog-f12-4-overflow-recovery.md)：provider 超窗归一、压缩后重试及未闭合事务恢复。
 - [F12.5 主动压缩命令 /compact](114-devlog-f12-5-manual-compact.md)：复用现有命令与压缩核心，补齐 Main / Node / 普通 Session 上下文解析、manual 独立事务身份、queued 串行执行和重启恢复；本机 748 项完整测试通过，PR #77 已合入 master（3c464f5）。
 - [F12.6 压缩与上下文压力公共契约](115-devlog-f12-6-public-context-contract.md)：三个版本化 Session API、上下文快照与订阅、有效历史分页及摘要检查点标识；生产实现与本机验证完成，Electron Bridge 实际调用通过；[PR #78](https://github.com/likeWind221/Navo/pull/78) head CI 通过并已合入 master（3bf5e10）。
-- [F12.7 长程压缩验收](117-devlog-f12-7-acceptance.md)：离线 14 项与完整 785 项通过；协议与观察器已修复，授权 Luna 复验进程中断、完整真实结果缺失；不宣称服务端真实超窗。
+- [F12.7 长程压缩验收](117-devlog-f12-7-acceptance.md)：离线 14 项、完整 785 项与代码 head CI 通过；最新真实交接 / 暂停 / 重启通过，完整完成被 BUG-016 审查阻断；不宣称服务端真实超窗。
 - Phase 13：RAG——Workspace / Resource / Session 检索、权限感知 Retrieval 与 RAG Pipeline。
 
 ## 模型接入 M1
@@ -153,7 +154,7 @@
 - [F12.4 超窗恢复与重启对账](113-devlog-f12-4-overflow-recovery.md)：provider 超窗归一、压缩后重试及未闭合事务恢复。
 - [F12.5 主动压缩命令 /compact](114-devlog-f12-5-manual-compact.md)：复用现有命令与压缩核心，补齐当前 Session 上下文解析、独立事务身份、串行执行和重启恢复；本机完整验证通过，PR #77 已合入 master（3c464f5）。
 - [F12.6 压缩与上下文压力公共契约](115-devlog-f12-6-public-context-contract.md)：三个版本化 Session API、上下文快照与订阅、有效历史分页及摘要检查点标识；生产实现与本机验证完成，Electron Bridge 实际调用通过；[PR #78](https://github.com/likeWind221/Navo/pull/78) head CI 通过并已合入 master（3bf5e10）。
-- [F12.7 长程压缩验收](117-devlog-f12-7-acceptance.md)：离线 14 项与完整 785 项通过；协议与观察器已修复，授权 Luna 复验进程中断、完整真实结果缺失；不宣称服务端真实超窗。
+- [F12.7 长程压缩验收](117-devlog-f12-7-acceptance.md)：离线 14 项、完整 785 项与代码 head CI 通过；最新真实交接 / 暂停 / 重启通过，完整完成被 BUG-016 审查阻断；不宣称服务端真实超窗。
 - [F12.4 超窗恢复与重启对账](113-devlog-f12-4-overflow-recovery.md)：统一识别 provider 超窗错误、强制压缩后单次重试，以及启动时未闭合压缩事务的中断对账。
 
 ## 工程治理与迁移
