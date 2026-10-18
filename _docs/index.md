@@ -1,6 +1,6 @@
 # 文档索引
 
-- [BUG-016：Main 误读合法提交的自检结构](120-bugfix-bug-016-review-submission.md)：最新 Luna 两次返工后升级；原始自检合法且清单含归一化信息，仅排查、未修复。
+- [BUG-016：Main 误读合法提交的自检结构](120-bugfix-bug-016-review-submission.md)：实际请求均含自检且 Main 未压缩；定位审查来源语义与提交协议验收条件的交互，仅排查、未修复。
 - [BUG-015：压缩验收观察器漏掉提交后的暂停](119-bugfix-bug-015-compaction-pause.md)：已修复，完整 785 项与代码 head CI 通过，最新真实审查前暂停及重启通过；完整完成被 BUG-016 阻断。
 - [BUG-014：压缩验收要求未开放的 write](118-bugfix-bug-014-compaction-acceptance.md)：JSON 协议已修订，最新真实原样交接通过；完整完成被 BUG-016 阻断。
 
