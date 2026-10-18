@@ -372,5 +372,5 @@ interface SessionHistoryV1 {
 ### 剩余问题
 
 - 本 Step 只提供 API，不开发上下文用量面板、压缩动画或其他 UI；前端正式页面仍未消费 `window.desktop.session`。
-- F12.7 长程 AutoRun 验收未执行。2026-10-18 已补齐 F12.2 / F12.3 本机完整验证与历史 PR CI 核对，跟踪项已收口，见 [116](116-devlog-f12-verification.md)；前文实施过程中的跟踪说明保留为历史记录。
+- F12.7 后续已执行：离线通过、真实完成链路因 BUG-014 失败，见 [117](117-devlog-f12-7-acceptance.md)。2026-10-18 已补齐 F12.2 / F12.3 本机完整验证与历史 PR CI 核对，跟踪项已收口，见 [116](116-devlog-f12-verification.md)；前文实施过程中的跟踪说明保留为历史记录。
 - 公共历史消息暂不暴露 replay；如果未来 Renderer 需要重放 provider 原生载荷，需要单独设计安全投影，不在本 Step 擅自扩展。

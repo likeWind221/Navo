@@ -1,0 +1,57 @@
+# F12.7 长程压缩验收
+
+> 日期：2026-10-18
+> 状态：🔄 离线实现与本机检查通过，真实验收失败；BUG-014 待修复
+
+## 做了什么
+
+- Codex 负责验收设计、结果审核、共享文档与 PR 收口；两次独立 Claude Code CLI 会话分别实现离线集成测试和真实模型验收脚本，写入范围互斥。
+- 不修改生产逻辑、桌面 UI、公共 RPC 或依赖；若发现生产缺陷，另按 Bug 流程处理，不弱化断言。
+- Claude Code 已交付离线场景与真实脚本，经 Codex 审核修正请求分类、事务现场、重启比较与证据计数；真实验收未通过，不标记阶段完成。
+
+## 关键决策
+
+- 离线使用真实 App / SQLite / AutoRun / Main / Node，只控制模型响应。覆盖同一 Session 多次压缩、Main 压缩后审查、超窗恢复、不可恢复失败暂停、检查点后的暂停与重启，以及两类未闭合压缩事务的恢复。
+- 中断事务使用持久日志前缀现场，不给生产代码增加故障钩子，也不宣称真实硬崩溃验收。
+- 真实模型使用 `gpt-6-sol`，虚构批次材料与独立计算的标准答案，两个依赖 Node 及 Main Review；要求同一 Node Session 至少两次成功 pressure 压缩。第二次压缩后请求暂停，等待回合结束再重开同一数据库，验证不自动运行，显式 start 后最终完成。
+- `autoCompactLimit=32768`，不填写虚构的 provider contextWindow；本地低压缩阈值不等于服务端真实小窗口。真实任务不注入超窗；超窗恢复由离线测试证明。
+- 真实运行上限 20 分钟、48 次模型请求（包括摘要）、每 Turn 16 Step、模型重试 0；失败或未达到两次压缩均不通过，不运行中调参或追加材料凑结果。
+- 预计实现与离线验证 1–2 小时、真实运行 10–20 分钟，不占本地 GPU，消耗订阅额度；用户已授权按此实施。
+
+### Harness 对照
+
+方案前只读核对 commit `d743267388641bc76f17c45ce8b4c231aed1d32c` 的 `packages/compaction/compaction-basic/src/region.ts` 与 `index.ts`。验收采用工具配对安全边界、started / checkpoint / ended 事务顺序、未闭合事务可检测，以及有 surface 替换进展才恢复超窗请求的原则。Navo 保持已确认的差异：压力压缩失败明确终止，超窗单次恢复，SQLite 启动流程补齐中断；不采用 Harness 可选剪枝、插件装配和多摘要模型策略。
+
+## 验证结果与边界
+
+- Windows / bundled Node 24.19.0，System32 前置 PATH；执行 package scripts 对应本地入口，不使用默认 Node 22。
+- 离线专项：`node node_modules/vitest/vitest.mjs run tests/integration/compaction --maxWorkers=4`，3 文件、8 项通过（3.41 秒）。
+- 完整类型检查：`node node_modules/typescript/bin/tsc --noEmit` 通过。
+- 完整后端测试：`node node_modules/vitest/vitest.mjs run --maxWorkers=4`，125 文件、779 项全部通过（48.37 秒）。
+- 首次完成的本地无模型预检查：10 文件、62,905 估算 Token，Node 固定开销 2,980、Main 固定开销 5,403，单文件读取成本最大 26,630 字符，小于 29,725 的检查预算；压缩阈值 32,768、尾部预算 6,553，不声明服务端容量。后续目标提示细化后复查预检查。
+- 最终本地预检查零模型请求通过：Node 固定开销 3059、Main 5403；证据 `C:/Users/likeW/AppData/Local/Temp/navo-f127-final-preflight-20261018/preflight.json`。
+- 真实 `gpt-6-sol` 单次运行失败：358262ms、48 次实际模型调用（含 3 次摘要），请求上限拒绝下一次调用后暂停，脚本非零退出。Node 无 write 权限，无法创建验收协议要求的产物；见 [BUG-014](118-bugfix-bug-014-compaction-acceptance.md)。
+- 已验证的真实部分：同一 Node Session 三次成功 pressure 压缩，39242→18301、39964→18401、32837→11249；所有检查点均有后续任务请求。重启前后请求数均为 14，Project / Workspace / 领域状态 / Session 事件和有效历史在内存中严格比较一致；旧 AutoRun 未恢复，显式 start 才继续。
+- 未通过的部分：Node A 产物、Main Review、下游 Node B 和最终 Project 完成。不能把上述压缩与恢复成功等同于完整验收成功。
+- 真实证据与失败现场见 BUG-014 笔记；未重跑、未扩权、未修改生产代码。PR 与当前 head CI 待填写；草稿 PR 即使 CI 通过，也不能越过真实验收失败的门禁合并。
+
+## 坑与发现
+
+- Claude Code 不在当前 PATH，但可通过 `C:/Users/likeW/.local/bin/claude.exe` 调用，已确认版本 2.1.302；未修改 Agent 配置。
+- F11.4 的固定响应序列不能直接假定每次请求都是任务请求；摘要会插入辅助请求，本阶段脚本须断言请求用途与顺序。
+- 审核将中断现场从独立 manual 事务改为 working Node 内的 pressure 事务；重开后断言 compaction interrupted 先于 failed Turn、Node 回 idle、二次重开不重复修复、显式 start 才继续。
+- 早期脚本材料仅 58,774 估算 Token，未达到预检查目标；在零模型请求阶段增至 62,905，不修改固定压缩阈值。前期本地预检查失败现场与后续通过报告分别保留，不混成真实运行结果。
+- 新增 `tsconfig.json` 两条 include，使脚本与其子实现被仓库完整类型检查覆盖；不改依赖或生产行为。
+- 真实运行暴露出方案遗漏：Node Profile 当前只增加 read，不提供 write。全局文件工具注册、类型检查和离线场景通过都不能证明 Node 已有写入授权。新问题登记为 [BUG-014](118-bugfix-bug-014-compaction-acceptance.md)，保持未关闭。
+
+### 模块与文件边界复核
+
+- `scripts/compaction.ts` 编排阶段与退出；`config.ts` 由请求、预检查和场景共用固定预算；`data.ts` 生成虚构材料与独立答案；`protocol.ts` 定义任务和严格 JSON 校验；`setup.ts` 装配 App 与 Project。
+- `request.ts` 拥有跨重启请求计数与期限；`watch.ts` 拥有 Session 事件订阅，按已提交日志和 compactionId 去重，回合边界才暂停；`lifecycle.ts` 负责超时取消、收尾和释放，失败保留现场。
+- `events.ts` 提取压缩与 Session 证据；`state.ts` 比较 Project / Workspace / 领域状态；`turns.ts` 复用现有 captureTurn 提取实际调用；`checks.ts` 汇总压缩、产物和完成断言。
+- 离线按 pressure / overflow / restart 三组测试组织；helpers 拥有 App 和临时文件生命周期，script 提供模型响应，fixture 构造持久前缀，verify 检查事务、配对和恢复，models 为多组测试共用配置。
+- 所有手写文件低于 300 行；主脚本 282、测试 helpers 246 行，各自保留同一阶段编排 / 测试资源生命周期。短 config / models 文件被多个消费者共用，不混入生产默认组合。
+
+## 下一步
+
+先确认并修复 BUG-014 的验收协议，再另行授权一次真实运行。F12.7 保持进行中，当前草稿 PR 不合并，不开始 Phase 13。
