@@ -1,7 +1,7 @@
 # F12.6 压缩与上下文压力公共契约
 
 > 日期：2026-10-17  
-> 状态：🔄 生产实现完成，本机五条验证与 Electron Bridge 实际调用验收通过；PR [#78](https://github.com/likeWind221/Navo/pull/78) CI 运行中，通过后 squash 合并。  
+> 状态：🔄 生产实现完成，本机五条验证与 Electron Bridge 实际调用验收通过；PR [#78](https://github.com/likeWind221/Navo/pull/78) CI 已通过，等待 squash 合并。  
 > 基线：master 3c464f5c54abb80829f2f34b41e35dbcf084b09d（F12.5 已合入）。  
 > 范围：Host / RPC / Electron Bridge 的稳定公共接口；不开发上下文 UI，不修改压缩算法。
 
@@ -359,7 +359,7 @@ interface SessionHistoryV1 {
   - 取消订阅后继续产生 Turn，订阅事件数保持 7 → 7，不再投递；
   - 环境：Electron 44.2.0、Node 24.20.0。
 - 实现提交：`a2481ccd369565e41ff6f5b72ddc7afd673cfe4d`（`F12.6: add public Session context contract`）。
-- PR：[#78](https://github.com/likeWind221/Navo/pull/78)；当前 PR head CI：运行中。
+- PR：[#78](https://github.com/likeWind221/Navo/pull/78)；当前 PR head `feabc21` CI 通过（run 39089633314，`pnpm typecheck` 与 `pnpm test` 均成功）。
 
 ### 坑与发现
 
