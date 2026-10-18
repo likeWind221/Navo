@@ -1,7 +1,7 @@
 # BUG-015：压缩验收观察器漏掉 Node 提交后的暂停时机
 
 > 日期：2026-10-18
-> 状态：观察器已修复，真实暂停与重启已通过；完整完成被 BUG-016 审查阻断，未关闭
+> 状态：观察器已修复，真实暂停与重启已通过；最新 Main 已通过 Node A，完整完成现被 BUG-017 阻断，未关闭
 > 跟踪：[bug-plan.md](bug-plan.md)；阶段：[117](117-devlog-f12-7-acceptance.md)；前置修订：[118](118-bugfix-bug-014-compaction-acceptance.md)
 
 ## 现象与复现
@@ -50,3 +50,7 @@
 ## CI 超时修订
 
 提交 b7820a5 的 [CI run 39110497143](https://github.com/likeWind221/Navo/actions/runs/39110497143) 类型检查通过，测试 783 / 785 通过；pressure.spec.ts 的 Main 压缩审查场景和 watch.spec.ts 因默认 5000ms 超时失败，watch 实际耗时 8625ms。只将这两项长集成测试的独立等待上限改为 15000ms，不改全局配置、业务预算、断言或模型请求。修订后专项 5 文件 / 14 项通过（4.07 秒）、类型检查通过、完整 127 文件 / 785 项通过（49.04 秒）；未发真实模型请求。代码 head a478b76 的 [CI run 39110793453](https://github.com/likeWind221/Navo/actions/runs/39110793453) 已通过；当前收口文档 head 继续按 PR 检查核对。
+
+## 2026-10-18 17:15 复验
+
+gpt-6-luna、代码 head 85d8fd6，177685ms / 24 请求（含 2 摘要），两次压缩、JSON 交接、审查前暂停、重启严格比较与 13→13 零自动请求均通过。Main 一次通过 Node A，Node B 正确执行并提交；随后因缺少可直接读取的原始审查证据 escalate，完整失败。原始材料 Resource 交接与 Main 注册证据的验收禁令冲突已登记 BUG-017；详见 [121](121-bugfix-bug-017-review-evidence.md)。本项自身目标行为通过，保留原完整完成关闭条件，未勾选。现场保留，未重跑。
