@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { Context } from "cordis";
@@ -24,12 +24,21 @@ import type { TurnSummary } from "./turns.js";
 export interface ArtifactReport {
   readonly summary: Validation;
   readonly final: Validation;
-  readonly summaryResourceId: string;
-  readonly finalResourceId: string;
-  readonly summaryPublishedMatches: boolean;
-  readonly finalPublishedMatches: boolean;
+  readonly summaryText: string;
+  readonly finalText: string;
   readonly summaryBytes: number;
   readonly finalBytes: number;
+  readonly summaryResourceId: string;
+  readonly summaryResourceOwner: unknown;
+  readonly summaryResourceAccess: unknown;
+  readonly summaryFileMatchesOriginal: boolean;
+  readonly summaryPublishedMatches: boolean;
+  readonly finalArtifact: {
+    readonly path: string;
+    readonly writer: "acceptance-harness";
+    readonly bytes: number;
+    readonly matchesOriginal: true;
+  };
 }
 
 export function assertCompactions(records: readonly CompactionRecord[], label: string): readonly CompactionRecord[] {
@@ -64,43 +73,50 @@ export async function assertArtifacts(
   nodeBId: NodeId,
   dataset: Dataset,
 ): Promise<ArtifactReport> {
-  const summaryText = await readFile(join(workspace, SUMMARY_PATH), "utf8");
-  const finalText = await readFile(join(workspace, FINAL_PATH), "utf8");
-  const summary = validateSummary(summaryText, dataset.expected);
-  const final = validateFinal(finalText, dataset.expected);
-  assert(summary.ok, `${SUMMARY_PATH} failed validation: ${summary.errors.join("; ")}`);
-  assert(final.ok, `${FINAL_PATH} failed validation: ${final.errors.join("; ")}`);
-  const summaryResource = findResource(app, projectId, nodeAId, "summary.json");
-  const finalResource = findResource(app, projectId, nodeBId, "final.json");
-  assert(summaryResource !== undefined, "Node A did not publish summary.json as a Resource.");
-  assert(finalResource !== undefined, "Node B did not publish final.json as a Resource.");
-  const summaryTarget = await app.resources.resolveEntry(projectId, summaryResource.id);
-  const finalTarget = await app.resources.resolveEntry(projectId, finalResource.id);
-  const summaryPublished = await readFile(summaryTarget.path, "utf8");
-  const finalPublished = await readFile(finalTarget.path, "utf8");
-  assert.equal(summaryPublished, summaryText, "Published summary Resource content differs from out/summary.json.");
-  assert.equal(finalPublished, finalText, "Published final Resource content differs from out/final.json.");
   const nodeA = app.nodes.get(nodeAId);
   const nodeB = app.nodes.get(nodeBId);
   assert(nodeA?.submission !== undefined, "Node A has no submission.");
   assert(nodeB?.submission !== undefined, "Node B has no submission.");
-  assert(
-    nodeA.submission.resourceIds.map(String).includes(String(summaryResource.id)),
-    "Node A submission does not cite the published summary Resource.",
-  );
-  assert(
-    nodeB.submission.resourceIds.map(String).includes(String(finalResource.id)),
-    "Node B submission does not cite the published final Resource.",
-  );
+  assert.equal(nodeA.submission.resourceIds.length, 0, "Node A submission cited Resources.");
+  assert.equal(nodeB.submission.resourceIds.length, 0, "Node B submission cited Resources.");
+  const summaryText = nodeA.submission.summary;
+  const finalText = nodeB.submission.summary;
+  const summary = validateSummary(summaryText, dataset.expected);
+  const final = validateFinal(finalText, dataset.expected);
+  assert(summary.ok, `Node A completion summary failed validation: ${summary.errors.join("; ")}`);
+  assert(final.ok, `Node B completion summary failed validation: ${final.errors.join("; ")}`);
+  const summaryFile = await readFile(join(workspace, SUMMARY_PATH), "utf8");
+  assert.equal(summaryFile, summaryText, `${SUMMARY_PATH} differs from the original Node A submission.`);
+  const resource = app.resources.listByProject(projectId).find(candidate => (
+    candidate.owner.kind === "main" && candidate.entryRef === "summary.json"
+  ));
+  assert(resource !== undefined, "The acceptance harness summary Resource is missing.");
+  assert.equal(resource.access.kind, "public", "The acceptance harness summary Resource is not public.");
+  const entry = await app.resources.resolveEntry(projectId, resource.id);
+  const published = await readFile(entry.path, "utf8");
+  assert.equal(published, summaryText, "Published summary Resource content differs from the Node A submission.");
+  const finalPath = join(workspace, FINAL_PATH);
+  await writeFile(finalPath, finalText, "utf8");
+  const finalFile = await readFile(finalPath, "utf8");
+  assert.equal(finalFile, finalText, `${FINAL_PATH} differs from the original Node B submission.`);
   return Object.freeze({
     summary,
     final,
-    summaryResourceId: String(summaryResource.id),
-    finalResourceId: String(finalResource.id),
-    summaryPublishedMatches: true,
-    finalPublishedMatches: true,
+    summaryText,
+    finalText,
     summaryBytes: Buffer.byteLength(summaryText, "utf8"),
     finalBytes: Buffer.byteLength(finalText, "utf8"),
+    summaryResourceId: String(resource.id),
+    summaryResourceOwner: resource.owner,
+    summaryResourceAccess: resource.access,
+    summaryFileMatchesOriginal: true,
+    summaryPublishedMatches: true,
+    finalArtifact: Object.freeze({
+      path: FINAL_PATH,
+      writer: "acceptance-harness",
+      bytes: Buffer.byteLength(finalText, "utf8"),
+      matchesOriginal: true,
+    }),
   });
 }
 
@@ -111,7 +127,6 @@ export function assertCompletion(
   nodeBId: NodeId,
   turns: readonly TurnSummary[],
   dataset: Dataset,
-  artifacts: ArtifactReport,
 ): void {
   const project = app.projects.get(projectId);
   assert(project !== undefined, "Project is missing at completion.");
@@ -122,6 +137,7 @@ export function assertCompletion(
     assert.equal(node.status, "completing", `Node ${nodeId} is ${node.status}, not completing.`);
     assert.equal(node.lastReview?.decision, "complete", `Node ${nodeId} was not reviewed complete.`);
     assert(node.submission !== undefined, `Node ${nodeId} has no submission.`);
+    assert.equal(node.submission.resourceIds.length, 0, `Node ${nodeId} submission cited Resources.`);
     assert(node.submission.criteria.every(check => check.satisfied), `Node ${nodeId} has an unsatisfied criterion.`);
     assert.equal(node.submission.remaining.length, 0, `Node ${nodeId} reported remaining work.`);
     assert(node.lastReview?.turnId !== undefined, `Node ${nodeId} review has no turn.`);
@@ -144,16 +160,11 @@ export function assertCompletion(
     dataset.files.map(file => file.path),
     "Node A did not read the ten batch files exactly once in order.",
   );
-  assert.equal(
-    maxParallelReadCalls(app, nodeA.sessionId),
-    1,
-    "Node A issued parallel read calls.",
-  );
-  const bReads = bTurns.flatMap(turn => turn.readPaths);
+  assert.equal(maxParallelReadCalls(app, nodeA.sessionId), 1, "Node A issued parallel read calls.");
   assert.deepEqual(
-    bReads,
+    bTurns.flatMap(turn => turn.readPaths),
     [SUMMARY_PATH, ...SPOT_CHECK_BATCHES.map(batch => `data/batch-${String(batch).padStart(2, "0")}.txt`)],
-    "Node B did not read the summary and the three spot-check batches in order.",
+    "Node B did not read the shared summary and the three spot-check batches in order.",
   );
   const aReadCalls = aTurns.flatMap(turn => turn.toolCalls).filter(call => call.name === "read");
   assert.equal(aReadCalls.length, dataset.files.length, "Node A made extra read calls.");
@@ -162,18 +173,26 @@ export function assertCompletion(
   assert.equal(bReadCalls.length, 1 + SPOT_CHECK_BATCHES.length, "Node B made extra read calls.");
   assert(bReadCalls.every(call => call.isError === false), "Node B had a failed read call.");
   assert.equal(maxParallelReadCalls(app, nodeB.sessionId), 1, "Node B issued parallel read calls.");
+  for (const turn of [...aTurns, ...bTurns]) {
+    assert(
+      turn.calls.every(name => name === "read" || name === "submit_completion"),
+      `Node Turn ${turn.turnId} used a tool outside read and submit_completion: ${turn.calls.join(", ")}.`,
+    );
+  }
   const completionA = aTurns.flatMap(turn => turn.submitCompletion === null ? [] : [turn.submitCompletion]).at(-1);
   const completionB = bTurns.flatMap(turn => turn.submitCompletion === null ? [] : [turn.submitCompletion]).at(-1);
   assert(completionA !== undefined && completionB !== undefined, "A Node did not submit completion.");
   assert(completionA.satisfied === completionA.total && completionA.remaining === 0, "Node A submission is incomplete.");
   assert(completionB.satisfied === completionB.total && completionB.remaining === 0, "Node B submission is incomplete.");
-  assert(completionA.resourceIds.includes(artifacts.summaryResourceId), "Node A did not cite its summary Resource.");
-  assert(completionB.resourceIds.includes(artifacts.finalResourceId), "Node B did not cite its final Resource.");
+  assert(completionA.resourceIds.length === 0, "Node A completion cited Resources.");
+  assert(completionB.resourceIds.length === 0, "Node B completion cited Resources.");
   for (const turn of turns) {
     assert.equal(turn.unrecovered, 0, `Turn ${turn.turnId} has an unrecovered error: ${turn.errorCodes.join(", ")}.`);
     assert(!turn.calls.includes("web_search"), `Turn ${turn.turnId} used web_search.`);
     assert(!turn.calls.includes("web_fetch"), `Turn ${turn.turnId} used web_fetch.`);
     assert(!turn.calls.includes("shell"), `Turn ${turn.turnId} used shell.`);
+    assert(!turn.calls.includes("write"), `Turn ${turn.turnId} used write.`);
+    assert(!turn.calls.includes("register_resource"), `Turn ${turn.turnId} used register_resource.`);
   }
   const roadmap = app.roadmaps.get(projectId);
   assert(roadmap !== undefined, "Roadmap is missing at completion.");
@@ -182,15 +201,4 @@ export function assertCompletion(
     [nodeAId, nodeBId].sort(),
     "Roadmap does not contain exactly the two acceptance Nodes.",
   );
-}
-
-function findResource(
-  app: Context,
-  projectId: ProjectId,
-  nodeId: NodeId,
-  entryRef: string,
-) {
-  return app.resources.listByProject(projectId).find(resource => (
-    resource.owner.kind === "node" && resource.owner.nodeId === nodeId && resource.entryRef === entryRef
-  ));
 }

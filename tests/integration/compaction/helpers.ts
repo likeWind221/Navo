@@ -96,6 +96,7 @@ export interface WorldOptions {
   readonly model: TurnModelConfig;
   readonly tasks: MockLLMEntry[];
   readonly summary?: () => MockLLMEntry;
+  readonly fileTools?: boolean;
 }
 
 export async function createWorld(options: WorldOptions) {
@@ -112,6 +113,17 @@ export async function createWorld(options: WorldOptions) {
       storage: { path },
       runtime: { maxModelRetries: 0 },
       node: { session: { model: options.model } },
+      ...(options.fileTools === true
+        ? {
+            tools: {
+              file: {
+                resolveFileEnvironment: async () => {
+                  throw new Error("File access requires a Project-bound Session.");
+                },
+              },
+            },
+          }
+        : {}),
     });
     adapter = new ScriptedAdapter(options.tasks, options.summary ?? (() => {
       throw new Error("No summary response was scripted.");

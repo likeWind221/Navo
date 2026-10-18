@@ -29,6 +29,19 @@ export interface FilePreflight {
   readonly readBudget: number;
 }
 
+export interface CapabilityCheck {
+  readonly required: readonly string[];
+  readonly declared: readonly string[];
+  readonly available: readonly string[];
+  readonly missing: readonly string[];
+}
+
+export interface CapabilityReport {
+  readonly nodeA: CapabilityCheck;
+  readonly nodeB: CapabilityCheck;
+  readonly mainReview: CapabilityCheck;
+}
+
 export interface PreflightReport {
   readonly projectId: string;
   readonly mainSessionId: string;
@@ -44,36 +57,58 @@ export interface PreflightReport {
   readonly dataTokens: number;
   readonly dataTokenRange: readonly [number, number];
   readonly files: readonly FilePreflight[];
+  readonly capabilities: CapabilityReport;
   readonly overflowInjected: false;
   readonly serverCapacityValidated: false;
 }
+
+const NODE_REQUIRED = ["read", "submit_completion"] as const;
+const MAIN_REVIEW_REQUIRED = ["read_node_turn", "submit_review", "fetch_resource"] as const;
 
 export function runPreflight(
   app: Context,
   projectId: ProjectId,
   nodeAId: NodeId,
+  nodeBId: NodeId,
   dataset: Dataset,
 ): PreflightReport {
-  const node = app.nodes.get(nodeAId);
-  assert(node !== undefined, "Node A is missing during preflight.");
-  const nodeProfile = createNodeAgentProfile(new NodeTurnContextBuilder(app).build(node), { allowFileRead: true });
+  const nodeA = app.nodes.get(nodeAId);
+  assert(nodeA !== undefined, "Node A is missing during preflight.");
+  const nodeB = app.nodes.get(nodeBId);
+  assert(nodeB !== undefined, "Node B is missing during preflight.");
+  const nodeAProfile = createNodeAgentProfile(new NodeTurnContextBuilder(app).build(nodeA), { allowFileRead: true });
+  const nodeBProfile = createNodeAgentProfile(new NodeTurnContextBuilder(app).build(nodeB), { allowFileRead: true });
+  const allSchemas = app.tools.schemas();
+  const nodeASchemas = allSchemas.filter(schema => nodeAProfile.toolNames.includes(schema.name));
+  const nodeBSchemas = allSchemas.filter(schema => nodeBProfile.toolNames.includes(schema.name));
+  const nodeACapabilities = capabilityCheck(NODE_REQUIRED, nodeAProfile.toolNames, nodeASchemas);
+  const nodeBCapabilities = capabilityCheck(NODE_REQUIRED, nodeBProfile.toolNames, nodeBSchemas);
   const nodeBaseline = estimateRequest({
     messages: [
-      message("system", nodeProfile.systemPrompt),
+      message("system", nodeAProfile.systemPrompt),
       message("user", "Start working on this Node objective and its acceptance criteria."),
     ],
-    tools: app.tools.schemas(nodeProfile.toolNames),
+    tools: nodeASchemas,
   });
   const project = app.projects.get(projectId);
   assert(project !== undefined, "Project is missing during preflight.");
   const mainProfile = createMainAgentProfile(project, true);
+  const mainSchemas = allSchemas.filter(schema => mainProfile.toolNames.includes(schema.name));
+  const mainCapabilities = capabilityCheck(
+    MAIN_REVIEW_REQUIRED,
+    mainProfile.toolNames,
+    mainSchemas,
+  );
   const mainBaseline = estimateRequest({
     messages: [
       message("system", mainProfile.systemPrompt),
       message("user", "Automatically review this Node submission against its acceptance criteria."),
     ],
-    tools: app.tools.schemas(mainProfile.toolNames),
+    tools: mainSchemas,
   });
+  assertCapabilities("Node A", nodeACapabilities);
+  assertCapabilities("Node B", nodeBCapabilities);
+  assertCapabilities("Main review", mainCapabilities);
   const budget = resolveContextBudget(acceptanceModel());
   assert(budget.kind === "enabled", "The fixed compaction budget must be enabled.");
   assert.equal(budget.contextWindow, undefined, "Acceptance must not invent a provider context window.");
@@ -110,9 +145,36 @@ export function runPreflight(
       readCost: file.readCost,
       readBudget: file.readBudget,
     }))),
+    capabilities: Object.freeze({
+      nodeA: nodeACapabilities,
+      nodeB: nodeBCapabilities,
+      mainReview: mainCapabilities,
+    }),
     overflowInjected: false,
     serverCapacityValidated: false,
   });
+}
+
+function capabilityCheck(
+  required: readonly string[],
+  declared: readonly string[],
+  schemas: readonly { readonly name: string }[],
+): CapabilityCheck {
+  const available = schemas.map(schema => schema.name);
+  const missing = required.filter(name => !declared.includes(name) || !available.includes(name));
+  return Object.freeze({
+    required: Object.freeze([...required]),
+    declared: Object.freeze([...declared]),
+    available: Object.freeze(available),
+    missing: Object.freeze([...missing]),
+  });
+}
+
+function assertCapabilities(label: string, check: CapabilityCheck): void {
+  assert(
+    check.missing.length === 0,
+    `${label} is missing required capabilities: ${check.missing.join(", ")}. Declared: ${check.declared.join(", ")}. Available: ${check.available.join(", ")}.`,
+  );
 }
 
 function message(role: "system" | "user", text: string): Message {

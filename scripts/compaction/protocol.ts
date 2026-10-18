@@ -37,17 +37,16 @@ export function nodeAObjective(): NodeObjective {
       "Process all ten synthetic ledger files in data.",
       "For each batch from 1 through 10, call read once with maxLines set to 1000 and path data/batch-01.txt through data/batch-10.txt in ascending order.",
       "Wait for each read result before issuing the next read; never issue two read calls in one step and never read a file twice.",
-      "After each read result, before moving on, state in one short visible line that batch's record count, sum, anomaly count and anomaly IDs as you computed them from that file. Put that progress line in the same response as the next read tool call; never send a text-only response and never add a separate planning step.",
+      "After each read result, before moving on, state in one short visible line that batch's record count, sum, anomaly count and anomaly IDs as you computed them from that file. Put that progress line in the same response as the next tool call: the next read for batches 1 through 9, and submit_completion after batch 10. Never send a text-only response and never add a separate planning step.",
       "In each file count only lines that begin with RECORD, sum the integer in their value= field, and count lines whose status= field is anomaly. Ignore every other line.",
-      `After all ten reads, write ${SUMMARY_PATH} as UTF-8 JSON with exactly the keys shown in this template: ${shape}`,
-      "Keep one batches entry per batch in ascending order. Use JSON numbers rather than strings, list each anomaly as NN-MM in ascending order, and do not add other keys.",
-      `Then call register_resource for ${SUMMARY_PATH} with name "Ledger summary", description "Synthetic batch counts, sums and anomalies", and type "application/json".`,
-      "Finally call submit_completion with every acceptance criterion marked satisfied, an empty remaining list, and the Resource ID returned by register_resource.",
-      "Do not use shell, web_search, web_fetch or any tool other than read, write, register_resource and submit_completion.",
+      `After all ten reads, call submit_completion exactly once. Put the complete result JSON itself in the summary field as one string, with no Markdown fences and no prose before or after it. Keep the JSON compact on one line with no indentation or extra whitespace. The JSON must have exactly this shape: ${shape}`,
+      "Use the computed values, JSON numbers rather than strings, one batches entry per batch in ascending order, anomalyRecords as NN-MM in ascending order, and no other keys.",
+      "In the same submit_completion call set resource_ids to an empty array, set remaining to an empty array, and include exactly one criteria entry for each acceptance criterion with the matching criterion_index, satisfied true and a short note.",
+      "Do not use write, register_resource, shell, web_search, web_fetch or any tool other than read and submit_completion. Do not create files or Resources.",
     ].join(" "),
     acceptanceCriteria: [
-      `The published Resource for ${SUMMARY_PATH} contains one batches entry for each of the ten batches with integer records, sum and anomalies values, plus totalRecords, totalSum, totalAnomalies and anomalyRecords, and the Node work log shows one read of each batch file in order.`,
-      "The completion signal marks every acceptance criterion satisfied and cites the published summary Resource.",
+      "The completion summary field contains exactly one JSON object with the required summary keys and one batch entry for each of the ten files, and the Node work log shows one read of each batch file in order.",
+      "The completion signal marks every acceptance criterion satisfied, sets resource_ids and remaining to empty arrays, and carries the result JSON in its summary.",
     ],
   };
 }
@@ -64,19 +63,18 @@ export function nodeBObjective(): NodeObjective {
   return {
     title: NODE_B_TITLE,
     description: [
-      `Read ${SUMMARY_PATH} from the shared Project Workspace. The upstream Node keeps its Resource private, so do not try to fetch it as a Resource; use the workspace file.`,
+      `Read ${SUMMARY_PATH} from the shared Project Workspace. The acceptance harness created that file from Node A's original completion summary and also published it as a public Main-owned Resource; use read on the workspace file and do not expect a private upstream Node Resource.`,
       "Then call read once for each of data/batch-01.txt, data/batch-05.txt and data/batch-10.txt with maxLines set to 1000, one file at a time in that order.",
-      "For each spot-check batch, recompute the RECORD count, the sum of value= integers and the anomaly count from the raw file.",
-      `Write ${FINAL_PATH} as UTF-8 JSON with exactly the keys shown in this template: ${shape}`,
+      "For each spot-check batch, recompute the RECORD count, the sum of value= integers and the anomaly count from the raw file, and compare them with the summary.",
+      `After the four reads, call submit_completion exactly once. Put the complete final JSON itself in the summary field as one string, with no Markdown fences and no prose before or after it. Keep the JSON compact on one line with no indentation or extra whitespace. The JSON must have exactly this shape: ${shape}`,
       "Set verified to true only when the three spot checks match the summary and the summary totals equal the sum of its per-batch entries.",
-      "Keep spotChecks in the order 1, 5, 10. Use JSON numbers rather than strings, leave discrepancies as an empty array, and do not add other keys.",
-      `Then call register_resource for ${FINAL_PATH} with name "Final verified ledger", description "Synthetic ledger result verified against source batches", and type "application/json".`,
-      "Finally call submit_completion with every acceptance criterion marked satisfied, an empty remaining list, and the Resource ID returned by register_resource.",
-      "Do not use shell, web_search, web_fetch or any tool other than read, write, register_resource and submit_completion.",
+      "Keep spotChecks in the order 1, 5, 10, use JSON numbers rather than strings, leave discrepancies as an empty array, and do not add other keys.",
+      "In the same submit_completion call set resource_ids to an empty array, set remaining to an empty array, and include exactly one criteria entry for each acceptance criterion with the matching criterion_index, satisfied true and a short note.",
+      "Do not use write, register_resource, shell, web_search, web_fetch or any tool other than read and submit_completion. Do not create files or Resources.",
     ].join(" "),
     acceptanceCriteria: [
-      `The published Resource for ${FINAL_PATH} contains verified=true, totalRecords, totalSum, totalAnomalies, spot checks for batches 1, 5 and 10, and an empty discrepancies list, and the Node work log shows reads of ${SUMMARY_PATH} and those three batch files.`,
-      "The completion signal marks every acceptance criterion satisfied and cites the published final Resource.",
+      `The completion summary field contains exactly one JSON object with the required final keys, verified=true, the totals, spot checks for batches 1, 5 and 10, and an empty discrepancies array, and the Node work log shows reads of ${SUMMARY_PATH} and those three batch files in order.`,
+      "The completion signal marks every acceptance criterion satisfied, sets resource_ids and remaining to empty arrays, and carries the result JSON in its summary.",
     ],
   };
 }

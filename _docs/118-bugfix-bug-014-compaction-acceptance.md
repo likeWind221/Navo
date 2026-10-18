@@ -1,7 +1,7 @@
 # BUG-014：长程压缩验收要求 Node 使用未开放的 write
 
 > 日期：2026-10-18
-> 状态：仅排查，未修复；真实验收失败，不关闭
+> 状态：修复实施中；用户已确认协议修订及 gpt-6-luna 单次复验，未关闭
 > 跟踪：[bug-plan.md](bug-plan.md)；阶段记录：[117](117-devlog-f12-7-acceptance.md)
 
 ## 现象与复现
@@ -49,3 +49,31 @@ F12.7 真实验收使用 `gpt-6-sol`、本地自动压缩阈值 32768，要求 N
 ## 后续
 
 用户确认输出载体修订与一次新的真实运行预算后再实施；当前只提交排查与原实现供草稿 PR 审查。修复时遵守独立 Bug 分支要求，不能把本次失败改写为成功。
+
+## 2026-10-18 修订授权与实施
+
+- 用户明确要求“真实模型改用 gpt6-luna，做”，按项目路由采用 `gpt-6-luna`，授权上述 JSON 输出 / 验收脚本交接修订，以及一次新的 20 分钟、48 请求（含摘要）真实复验。
+- 从最新 origin/master 建立 `fix/bug-014-compaction-acceptance`，串行接入尚未合并的 F12.7 草稿成果后修复；完成后更新原 PR #79，不混入其他 Step。
+- Claude Code 负责脚本和相关离线验证实现，Codex 负责审核、共享文档、真实运行授权与 PR 门禁；不修改生产工具白名单、RPC、前端或依赖。
+- 新复验使用独立证据目录；原 gpt-6-sol 失败现场不覆盖。未完成复验前不关闭本 Bug，也不将 F12.7 标为完成。
+
+### 已实施修订
+
+- Node A / B 只依赖 read 与 submit_completion，分别在 completion.summary 提交严格、紧凑的原始 JSON；resource_ids 与 remaining 均为空，不要求 Agent 创建文件或 Resource。
+- 新增 `scripts/compaction/handoff.ts`：校验 Node A 原始提交后才落盘，使用 Main 身份发布为 public Resource，证据保存 writer=acceptance-harness、来源 Node / Session / Turn、原始文本和发布结果。Node 的提交本身不被修改；校验失败不写文件、不发布。
+- 暂停观察器只有在同一 Node Session 至少两次成功 pressure 压缩且 Node A 已 submitted 后才请求暂停；回合结束后交接材料，再捕获重启比较基线。
+- 完成检查直接校验 Node B 原始提交，并可将其原样写成验收脚本产物；不虚构 Node 写入或 Node-owned Resource。仍要求两次实际 Main complete 审查、精确读取顺序及最终 roadmap-complete。
+- 预检查对照实际注册 Schema 和各 Profile 工具列表，记录 required / declared / available / missing；能力缺失在调用模型前失败，不做静默补权或 fallback。
+
+### 本机验证
+
+- Windows / bundled Node 24.19.0；System32 与 bundled Node 前置 PATH。
+- `node node_modules/typescript/bin/tsc --noEmit`：通过。
+- `node node_modules/vitest/vitest.mjs run tests/integration/compaction`：4 文件、13 项通过，包含新增 5 项交接 / 错误 JSON / 工具能力场景。
+- `node node_modules/vitest/vitest.mjs run --maxWorkers=4`：126 文件、784 项全部通过，45.99 秒。
+- 零模型预检查通过：gpt-6-luna，阈值 32768、retain 6553，数据 62905 估算 Token；Node / Main 固定开销 3110 / 5403，三个角色能力 missing 均为空。证据：`C:/Users/likeW/AppData/Local/Temp/navo-f127-bug014-preflight-final-20261018/preflight.json`。
+- 已只读查询当前账号模型列表，包含 slug=gpt-6-luna。新的单次真实复验已派发，结果待填写。
+
+### Luna 单次真实结果
+
+本轮 gpt-6-luna 真实运行在 128684ms、16 次请求后失败停止，未重跑。两次 pressure 压缩成功（36767→17267、37475→17267），Node A 已通过 submit_completion 提交全部正确 JSON，独立校验 ok=true。原 write 能力错配已不再阻断模型提交，但观察器遗漏 endWork 后的 submitted，未能先暂停交接，Main 在交接前开始审查并因证据节选不足 escalate。新问题单独登记 [BUG-015](119-bugfix-bug-015-compaction-pause.md)。完整真实验收关闭条件未满足，BUG-014 暂不勾选；保留这次与原 sol 的两份独立现场。

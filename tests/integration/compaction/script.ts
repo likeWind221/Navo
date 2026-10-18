@@ -1,6 +1,7 @@
 import { createToolCallId } from "../../../src/brand/ids.js";
 import { MockLLMAdapter } from "../../../src/llm/adapters/mock.js";
 import type { MockLLMEntry } from "../../../src/llm/adapters/mock.js";
+import { FILE_TOOL_SCHEMAS } from "../../../src/tools/builtins/file/types.js";
 import { SEND_TO_MAIN_TOOL_NAME } from "../../../src/tools/builtins/mailbox/send.js";
 import { SUBMIT_COMPLETION_TOOL_NAME } from "../../../src/tools/builtins/node/submit.js";
 import { SUBMIT_REVIEW_TOOL_NAME } from "../../../src/tools/builtins/project/review.js";
@@ -25,17 +26,26 @@ export function toolReply(label: string, id: string, size = LARGE_TEXT_CHARS): M
   ], "tool-calls");
 }
 
-export function submitReply(id: string): MockLLMEntry {
+export function submitReply(id: string, summary = "Submitted for review"): MockLLMEntry {
   return modelResponse([{
     type: "tool-call",
     id: createToolCallId(id),
     name: SUBMIT_COMPLETION_TOOL_NAME,
     arguments: JSON.stringify({
-      summary: "Submitted for review",
+      summary,
       resource_ids: [],
       criteria: [{ criterion_index: 1, satisfied: true, note: "Checked" }],
       remaining: [],
     }),
+  }], "tool-calls");
+}
+
+export function readReply(id: string, path: string): MockLLMEntry {
+  return modelResponse([{
+    type: "tool-call",
+    id: createToolCallId(id),
+    name: FILE_TOOL_SCHEMAS.read.name,
+    arguments: JSON.stringify({ path, maxLines: 1000 }),
   }], "tool-calls");
 }
 

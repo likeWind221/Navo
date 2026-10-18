@@ -16,6 +16,7 @@ import {
   REQUEST_LIMIT,
 } from "./compaction/config.js";
 import { createDataset, writeDataset } from "./compaction/data.js";
+import { materializeHandoff } from "./compaction/handoff.js";
 import {
   captureFailureState,
   describe,
@@ -93,7 +94,7 @@ async function main(): Promise<void> {
     const nodeB = nodes.nodeBId;
     projectId = project;
     setStage("preflight");
-    const preflight = runPreflight(app, project, nodeA, dataset);
+    const preflight = runPreflight(app, project, nodeA, nodeB, dataset);
     await writeEvidence(evidenceDir, "preflight", preflight);
     if (preflightOnly) {
       passed = true;
@@ -126,7 +127,10 @@ async function main(): Promise<void> {
     }
     const aSession = app.nodes.get(nodeA)?.sessionId;
     assert(aSession !== undefined, "Node A has no Session.");
+    assert.equal(app.nodes.get(nodeA)?.status, "submitted", "Node A did not submit before the pause boundary.");
     sessionA = aSession;
+    const handoff = await materializeHandoff(app, project, workspace, nodeA, dataset);
+    await writeEvidence(evidenceDir, "handoff", handoff);
     const before = captureRestartState(app, project);
     const firstCompactions = assertCompactions(
       before.sessions.find(session => session.evidence.sessionId === String(aSession))!.evidence.compactions,
@@ -138,6 +142,11 @@ async function main(): Promise<void> {
     );
     await writeEvidence(evidenceDir, "before-restart", {
       compactions: firstCompactions.length,
+      handoff: {
+        writer: handoff.writer,
+        resourceId: handoff.resource.id,
+        originalBytes: handoff.original.bytes,
+      },
       state: restartEvidence(before),
     });
     const firstDispose = await disposeWithin(app, DISPOSE_TIMEOUT_MS);
@@ -168,7 +177,7 @@ async function main(): Promise<void> {
     assert.equal(second.reason, "roadmap-complete", `Stage 2 AutoRun ended with ${String(second.reason)}.`);
     const turns = turnSummaries(app, project, dataset.expected.totalSum);
     const artifacts = await assertArtifacts(app, workspace, project, nodeA, nodeB, dataset);
-    assertCompletion(app, project, nodeA, nodeB, turns, dataset, artifacts);
+    assertCompletion(app, project, nodeA, nodeB, turns, dataset);
     const finalState = captureRestartState(app, project);
     const finalSession = finalState.sessions.find(session => session.evidence.sessionId === String(aSession));
     assert(finalSession !== undefined, "Node A Session is missing at completion.");
@@ -191,6 +200,11 @@ async function main(): Promise<void> {
       requests: { used: ledger.used, limit: REQUEST_LIMIT, summaryRequests, entries: ledger.entries },
       compactions: finalSession.evidence.compactions,
       restart: { requestsBeforeRestart, requestsAfterRestart: requestsAfterReopen, autoRunSnapshotAbsent: true },
+      handoff: {
+        writer: handoff.writer,
+        resourceId: handoff.resource.id,
+        originalBytes: handoff.original.bytes,
+      },
       turns,
       artifacts,
       state: restartEvidence(finalState),

@@ -1,7 +1,7 @@
 import type { TurnModelConfig } from "../../src/agent/types.js";
 
 export const PROVIDER = "openai";
-export const MODEL = "gpt-6-sol";
+export const MODEL = "gpt-6-luna";
 export const AUTO_COMPACT_LIMIT = 32_768;
 export const REQUEST_LIMIT = 48;
 export const ACCEPTANCE_TIMEOUT_MS = 20 * 60 * 1_000;

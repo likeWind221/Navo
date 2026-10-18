@@ -29,6 +29,7 @@ export function watchSecondCompaction(app: Context, projectId: ProjectId, nodeAI
       counted.add(event.data.compactionId);
     }
     if (counted.size < MIN_PRESSURE_COMPACTIONS || requested) return;
+    if (app.nodes.get(nodeAId)?.status !== "submitted") return;
     requested = true;
     try {
       app.autoRun.pause(projectId);
