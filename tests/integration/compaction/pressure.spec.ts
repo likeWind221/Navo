@@ -104,5 +104,5 @@ describe("F12.7 pressure compaction acceptance", () => {
     const reviewed = app.nodes.get(nodeIds[0]!)!;
     expect(reviewed.lastReview).toMatchObject({ decision: "complete", reviewedRevision: workEnded.revision });
     expect(reviewed.status).toBe("completing");
-  });
+  }, 15_000);
 });

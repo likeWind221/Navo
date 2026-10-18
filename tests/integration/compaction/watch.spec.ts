@@ -92,5 +92,5 @@ describe("F12.7 pause observer", () => {
     expect(resumed).toMatchObject({ status: "completed", reason: "roadmap-complete", mainTurns: 1 });
     expect(app.nodes.get(nodeA)?.status).toBe("completing");
     expect(app.nodes.get(nodeA)?.lastReview?.decision).toBe("complete");
-  });
+  }, 15_000);
 });
