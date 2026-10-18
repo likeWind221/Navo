@@ -7,6 +7,8 @@ import { resolveAcceptanceHostConfig, createAcceptanceAdapter } from "../accepta
 import { acceptanceModel, MAX_MODEL_RETRIES, MAX_STEPS, PROJECT_GOAL } from "./config.js";
 import { nodeAObjective, nodeBObjective } from "./protocol.js";
 import { createGuardedAdapter, type RequestLedger } from "./request.js";
+import { publishReviewEvidence, reviewInstructions, type ReviewEvidence } from "./evidence.js";
+import type { Dataset } from "./data.js";
 
 export type AcceptanceConfig = ReturnType<typeof resolveAcceptanceHostConfig>;
 
@@ -14,6 +16,7 @@ export interface ProjectNodes {
   readonly projectId: ProjectId;
   readonly nodeAId: NodeId;
   readonly nodeBId: NodeId;
+  readonly reviewEvidence: ReviewEvidence;
 }
 
 export async function openApp(
@@ -43,11 +46,18 @@ export async function openApp(
   return app;
 }
 
-export async function createProject(app: Context, workspace: string): Promise<ProjectNodes> {
+export async function createProject(app: Context, workspace: string, dataset: Dataset): Promise<ProjectNodes> {
   const project = app.projects.create({ name: "F12.7 synthetic ledger acceptance", goal: PROJECT_GOAL });
   await app.projectWorkspaces.create(project.id, workspace);
-  const nodeA = app.nodes.create({ projectId: project.id, objective: nodeAObjective() });
-  const nodeB = app.nodes.create({ projectId: project.id, objective: nodeBObjective() });
+  const reviewEvidence = await publishReviewEvidence(app, project.id, workspace, dataset);
+  const a = nodeAObjective();
+  const b = nodeBObjective();
+  const nodeA = app.nodes.create({ projectId: project.id, objective: {
+    ...a, description: `${a.description} ${reviewInstructions(reviewEvidence, false)}`,
+  } });
+  const nodeB = app.nodes.create({ projectId: project.id, objective: {
+    ...b, description: `${b.description} ${reviewInstructions(reviewEvidence, true)}`,
+  } });
   app.roadmaps.create({
     definition: {
       projectId: project.id,
@@ -56,7 +66,7 @@ export async function createProject(app: Context, workspace: string): Promise<Pr
     },
     reason: "Two dependent synthetic ledger Nodes approved for acceptance.",
   });
-  return Object.freeze({ projectId: project.id, nodeAId: nodeA.node.id, nodeBId: nodeB.node.id });
+  return Object.freeze({ projectId: project.id, nodeAId: nodeA.node.id, nodeBId: nodeB.node.id, reviewEvidence });
 }
 
 export function abortActive(app: Context, projectId: ProjectId): string | null {

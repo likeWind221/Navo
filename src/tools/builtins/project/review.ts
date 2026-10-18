@@ -22,7 +22,7 @@ const schema: JsonObject = {
     },
     reason: {
       type: "string",
-      description: "Why you decided this, naming the evidence you actually checked (Resources opened, work log entries read).",
+      description: "Why you decided this, naming what you actually checked: the submitted answer itself, current state, relevant work log entries or Resource ranges, as the criterion requires. No Resource is required for an answer-only task.",
     },
     feedback: {
       type: "string",

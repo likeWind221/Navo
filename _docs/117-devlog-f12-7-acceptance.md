@@ -77,3 +77,6 @@ Node 改为通过 completion.summary 提交真实 JSON，由验收脚本校验�
 ## 2026-10-18 17:15 复验
 
 gpt-6-luna、代码 head 85d8fd6，177685ms / 24 请求（含 2 摘要），两次压缩、JSON 交接、审查前暂停、重启严格比较与 13→13 零自动请求均通过。Main 一次通过 Node A，Node B 正确执行并提交；随后因缺少可直接读取的原始审查证据 escalate，完整失败。原始材料 Resource 交接与 Main 注册证据的验收禁令冲突已登记 BUG-017；详见 [121](121-bugfix-bug-017-review-evidence.md)。BUG-014 / 015 / 016 的目标行为通过，F12.7 完整完成条件未满足，阶段保持进行中。现场保留，未重跑。
+## BUG-017 修复实施（2026-10-18）
+
+已按用户确认支持无资源成果、按标准选择证据与小范围读取；F12.7 补齐 Main 专用精简 RECORD 材料及原始来源入口，Node 仍执行原始大文件读取。定向及零请求 preflight 通过，完整检查 / CI 结果见 [121](121-bugfix-bug-017-review-evidence.md)。修正同时发现的审查 Turn 关联错误见 [122](122-bugfix-bug-018-review-turn.md)。本轮未启动真实模型，历史 24 请求失败现场保留；F12.7 仍为进行中。

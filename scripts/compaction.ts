@@ -17,6 +17,7 @@ import {
 } from "./compaction/config.js";
 import { createDataset, writeDataset } from "./compaction/data.js";
 import { materializeHandoff } from "./compaction/handoff.js";
+import { assertReviewEvidence } from "./compaction/evidence.js";
 import {
   captureFailureState,
   describe,
@@ -88,13 +89,14 @@ async function main(): Promise<void> {
   try {
     const config = preflightOnly ? undefined : resolveAcceptanceHostConfig(process.env, MODEL);
     app = await openApp(database, config, ledger, onExhausted);
-    const nodes = await createProject(app, workspace);
+    const nodes = await createProject(app, workspace, dataset);
     const project = nodes.projectId;
     const nodeA = nodes.nodeAId;
     const nodeB = nodes.nodeBId;
     projectId = project;
     setStage("preflight");
     const preflight = runPreflight(app, project, nodeA, nodeB, dataset);
+    await writeEvidence(evidenceDir, "review-materials", nodes.reviewEvidence);
     await writeEvidence(evidenceDir, "preflight", preflight);
     if (preflightOnly) {
       passed = true;
@@ -178,6 +180,7 @@ async function main(): Promise<void> {
     const turns = turnSummaries(app, project, dataset.expected.totalSum);
     const artifacts = await assertArtifacts(app, workspace, project, nodeA, nodeB, dataset);
     assertCompletion(app, project, nodeA, nodeB, turns, dataset);
+    const reviewEvidence = assertReviewEvidence(app, project, nodeA, nodeB, nodes.reviewEvidence);
     const finalState = captureRestartState(app, project);
     const finalSession = finalState.sessions.find(session => session.evidence.sessionId === String(aSession));
     assert(finalSession !== undefined, "Node A Session is missing at completion.");
@@ -207,6 +210,7 @@ async function main(): Promise<void> {
       },
       turns,
       artifacts,
+      reviewEvidence,
       state: restartEvidence(finalState),
       claims: {
         overflowInjected: false,

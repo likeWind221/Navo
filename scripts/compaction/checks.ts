@@ -19,7 +19,7 @@ import {
   maxParallelReadCalls,
   type CompactionRecord,
 } from "./events.js";
-import type { TurnSummary } from "./turns.js";
+import { reviewTurnId, type TurnSummary } from "./turns.js";
 
 export interface ArtifactReport {
   readonly summary: Validation;
@@ -142,7 +142,7 @@ export function assertCompletion(
     assert.equal(node.submission.remaining.length, 0, `Node ${nodeId} reported remaining work.`);
     assert(node.lastReview?.turnId !== undefined, `Node ${nodeId} review has no turn.`);
     const review = turns.find(turn => (
-      turn.sessionId === mainSession && turn.turnId === String(node.lastReview!.turnId)
+      turn.sessionId === mainSession && turn.turnId === String(reviewTurnId(app, projectId, nodeId))
     ));
     assert(review !== undefined, `Main review turn for Node ${nodeId} was not captured.`);
     assert(

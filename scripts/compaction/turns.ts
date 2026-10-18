@@ -1,10 +1,33 @@
 import type { Context } from "cordis";
 
-import type { ProjectId, SessionId, TurnId } from "../../src/brand/ids.js";
+import type { NodeId, ProjectId, SessionId, TurnId } from "../../src/brand/ids.js";
 import type { SessionEvent } from "../../src/session/types.js";
 import { SUBMIT_COMPLETION_TOOL_NAME } from "../../src/tools/builtins/node/submit.js";
 import { SUBMIT_REVIEW_TOOL_NAME } from "../../src/tools/builtins/project/review.js";
 import { captureTurn } from "../longterm/evidence.js";
+
+export function reviewTurnId(app: Context, projectId: ProjectId, nodeId: NodeId): TurnId | undefined {
+  const project = app.projects.get(projectId)!;
+  const review = app.nodes.get(nodeId)?.lastReview;
+  const seen = new Set<TurnId>();
+  for (const event of app.sessions.getEvents(project.mainSessionId)) {
+    if (event.type !== "llm-requested" || seen.has(event.data.turnId)) continue;
+    seen.add(event.data.turnId);
+    const message = event.data.messages.at(-1);
+    if (message?.role !== "user") continue;
+    const block = message.content.find(part => part.type === "text"
+      && part.text.includes("review checklist for the Node you are about to check."));
+    if (block?.type !== "text") continue;
+    const start = block.text.indexOf("\n{");
+    const end = block.text.lastIndexOf("\n</system-reminder>");
+    const checklist = JSON.parse(block.text.slice(start + 1, end)) as {
+      node: { id: string; revision: number }; turn: { id: string } | null;
+    };
+    if (checklist.node.id === String(nodeId) && checklist.turn?.id === String(review?.turnId)
+      && checklist.node.revision === review?.reviewedRevision) return event.data.turnId;
+  }
+  return undefined;
+}
 
 interface RecordedCall {
   readonly id: string;
