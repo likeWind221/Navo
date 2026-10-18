@@ -34,6 +34,7 @@
 - 已验证的真实部分：同一 Node Session 三次成功 pressure 压缩，39242→18301、39964→18401、32837→11249；所有检查点均有后续任务请求。重启前后请求数均为 14，Project / Workspace / 领域状态 / Session 事件和有效历史在内存中严格比较一致；旧 AutoRun 未恢复，显式 start 才继续。
 - 未通过的部分：Node A 产物、Main Review、下游 Node B 和最终 Project 完成。不能把上述压缩与恢复成功等同于完整验收成功。
 - 真实证据与失败现场见 BUG-014 笔记；未重跑、未扩权、未修改生产代码。PR 与当前 head CI 待填写；草稿 PR 即使 CI 通过，也不能越过真实验收失败的门禁合并。
+- 交付为草稿 [PR #79](https://github.com/likeWind221/Navo/pull/79)，实现提交 `03e07e2`；该代码 head 的 CI `verify` 已通过（[run 39107985567](https://github.com/likeWind221/Navo/actions/runs/39107985567)，1 分 32 秒，pnpm typecheck / test 均成功）。收口文档提交继续核对当前 head CI；真实验收未通过，保持草稿、不合并。
 
 ## 坑与发现
 
