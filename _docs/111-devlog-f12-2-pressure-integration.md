@@ -1,7 +1,7 @@
 # F12.2 上下文压力检测与执行接入
 
 > 日期：2026-10-17  
-> 状态：🔄 开发中，等待完整验证  
+> 状态：✅ 已完成；2026-10-18 补齐本机完整验证与历史 PR CI 核对
 > 范围：把 F12.1 的预算与测量接入真实 Agent 请求路径，形成独立、可测试的压力触发点；本 Step 不生成摘要、不修改 Session surface。
 
 ## 1. 目标与流程
@@ -43,10 +43,10 @@ Inspect budget + Session history
 
 ## 4. 验收状态
 
-- [ ] 本机 `pnpm typecheck`
-- [ ] 本机完整 `pnpm test`
-- [ ] 当前 PR head 的 GitHub CI
-- [ ] 确认压力检查前后请求内容不变，超阈值只增加内部触发事件
-- [ ] 记录实际测试结果与未覆盖边界
+- [x] 本机类型检查：Node 24.19.0 执行 package script 对应的 `node node_modules/typescript/bin/tsc --noEmit` 通过。
+- [x] 本机完整测试：`node node_modules/vitest/vitest.mjs run --maxWorkers=4`，122 文件、771 项全部通过。
+- [x] PR #74 最终 head `cdbd5fd` 的 GitHub CI `verify` 成功，已合入 master（`e32f4c4`）。
+- [x] 压力判定与发布测试确认阈值内不触发、超阈值发布事件；请求构建复用同一 envelope。当前集成态已由 F12.3 消费事件对应的压力判定，不能再按本 Step 当时的“超阈值仍直接发原请求”验收。
+- [x] 实际结果与边界见 [116](116-devlog-f12-verification.md)；长程 AutoRun 与真实模型小窗口验收留给 F12.7。
 
-目前尚未执行本机完整测试；在完整验证和当前 PR head CI 均通过前，不标记完成、不合并。
+2026-10-18 在 master `4ea4e80` 补齐本机完整验证并只读核对已合并 PR 的最终 head CI，完成本 Step 验证收口；上文主流程保留 F12.2 独立交付时的范围，当前超阈值行为以 F12.3 的压缩与明确失败语义为准。
