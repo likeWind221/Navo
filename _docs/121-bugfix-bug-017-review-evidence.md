@@ -1,7 +1,7 @@
 # BUG-017：Node B 审查缺少可直接读取的原始材料证据
 
 > 日期：2026-10-18
-> 状态：已实施修复、定向回归通过；本机类型检查与 130 文件 / 793 项通过；当前 head CI 待运行，真实复验未启动，F12.7 保持进行中
+> 状态：已实施修复、定向回归通过；本机类型检查与 130 文件 / 793 项通过；代码 head CI 通过，真实复验未启动，F12.7 保持进行中
 > 跟踪：[bug-plan.md](bug-plan.md)；阶段：[117](117-devlog-f12-7-acceptance.md)；前置修订：[120](120-bugfix-bug-016-review-submission.md)
 
 ## 现象与复现
@@ -144,3 +144,7 @@ Node B：对照 summary 的十批条目复核合计；读取精简证据的批�
 命令：node node_modules/typescript/bin/tsc --noEmit；node node_modules/vitest/vitest.mjs run --maxWorkers=4。最终类型检查通过，130 文件 / 793 项通过，49.46s。首次全量 792 通过 / 1 失败，证据为小窗口 Main 第二次审查 context-compaction-no-progress；将新增审查规则和重复的来源说明压缩后，原压力测试恢复，通过完整复跑，未调整阈值、fixture 或取消压缩门禁。最终 preflight Main 基线降至 5714，原始数据仍为 62905，模型请求为 0。
 
 差异检查通过；工作日志截断、严格 JSON、Node 读取次数及全部原阶段断言保留。代码与文档将推送至草稿 PR #79，当前 head CI 结果另行核对。完成交付需附模块导读；真实复验仍待用户另行授权。
+
+### 推送与 CI
+
+修复提交 dd74d0c 已串行快进整合并推送 phase12-f12.7-compaction-acceptance，工作区干净，master 与 origin/master 一致。该代码 head 的 [CI run 39116730431](https://github.com/likeWind221/Navo/actions/runs/39116730431) 成功（typecheck / test）。PR #79 描述已更新，保持草稿、不合并；BUG-017 待授权真实复验，BUG-018 待阶段合入，均保持未勾选。本段是检查已通过代码的记录，后续仅文档收口提交仍核对其自身 CI。

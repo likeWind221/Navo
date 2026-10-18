@@ -1,7 +1,7 @@
 # BUG-018：验收脚本混淆被审查回合与审查回合
 
 > 日期：2026-10-18；跟踪：[bug-plan.md](bug-plan.md)；关联：[121](121-bugfix-bug-017-review-evidence.md)
-> 状态：代码修复，定向回归通过；本机类型检查与 130 文件 / 793 项通过，当前 head CI 待运行，尚未合入
+> 状态：代码修复，定向回归通过；本机类型检查与 130 文件 / 793 项通过，代码 head CI 通过，尚未合入
 
 ## 现象与复现
 
@@ -26,3 +26,5 @@ tests/integration/compaction/evidence.spec.ts 验证两个 Node 的 Main 审查 
 补齐本机完整验证和当前 head CI；阶段完整真实验收通过后随 PR 合入。
 
 本机收口：System32 在 PATH 最前，Node 24.19.0；tsc --noEmit 通过，vitest run --maxWorkers=4 完整 130 文件 / 793 项通过（49.46s）。定向测试同时验证对应实际成功 fetch 返回行和缺行拒绝；当前 head CI 与合入待完成，保持未勾选。
+
+代码提交 dd74d0c 已推送至阶段 [PR #79](https://github.com/likeWind221/Navo/pull/79)，[CI 39116730431](https://github.com/likeWind221/Navo/actions/runs/39116730431) 成功。该项本机和代码 CI 验证通过，阶段尚未合入，保持未勾选；文档收口 head CI 另行核对。
