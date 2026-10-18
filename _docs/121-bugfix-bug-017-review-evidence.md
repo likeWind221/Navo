@@ -1,7 +1,7 @@
 # BUG-017：Node B 审查缺少可直接读取的原始材料证据
 
 > 日期：2026-10-18
-> 状态：已实施修复、定向回归通过；本机类型检查与 130 文件 / 793 项通过；代码 head CI 通过，真实复验未启动，F12.7 保持进行中
+> 状态：已实施修复，本机 793 项与代码 CI 通过；最新真实复验 Main 按精简证据一次通过 A，B 执行中遇 TRANSPORT，未进入 B 审查，完整验收未通过
 > 跟踪：[bug-plan.md](bug-plan.md)；阶段：[117](117-devlog-f12-7-acceptance.md)；前置修订：[120](120-bugfix-bug-016-review-submission.md)
 
 ## 现象与复现
@@ -148,3 +148,30 @@ Node B：对照 summary 的十批条目复核合计；读取精简证据的批�
 ### 推送与 CI
 
 修复提交 dd74d0c 已串行快进整合并推送 phase12-f12.7-compaction-acceptance，工作区干净，master 与 origin/master 一致。该代码 head 的 [CI run 39116730431](https://github.com/likeWind221/Navo/actions/runs/39116730431) 成功（typecheck / test）。PR #79 描述已更新，保持草稿、不合并；BUG-017 待授权真实复验，BUG-018 待阶段合入，均保持未勾选。本段是检查已通过代码的记录，后续仅文档收口提交仍核对其自身 CI。
+
+## 2026-10-18 17:55 授权真实复验：A 按精简证据通过，B 遇传输失败
+
+用户明确授权一次真实复验，Codex 直接启动，无 worker、无自动重跑。head 9f3532f 的 [CI 39117064298](https://github.com/likeWind221/Navo/actions/runs/39117064298) 已通过；沿用 gpt-6-luna、32768 阈值、20 分钟 / 48 请求含摘要、maxModelRetries=0。
+
+- 本地时间约 17:55:40–17:58:43；182862ms，24 次请求（21 任务 / 3 摘要），第 24 次失败，runner exitCode=1。没有达到时间或次数上限。
+- 证据目录：C:/Users/likeW/AppData/Local/Temp/navo-f127-luna-20261018-175539/，含失败记录与只读 review-diagnostic.json；日志为同路径后缀 -run.log。
+- 保留数据库：C:/Users/likeW/AppData/Local/Temp/navo-f127-storage-OYq2aE/navo.db；Workspace：C:/Users/likeW/AppData/Local/Temp/navo-f127-workspace-zbIpCP。
+- Project 39782c4f-5d5a-4416-b924-7506681d7393；Main Session c74ee6cf-229e-4156-9193-c7943fda48fa；A Session bd790b10-1e62-4fc1-a944-0805e88999ea；B Session 02f381db-872d-43e6-855a-5bb519cd50d1。
+
+### 实际通过的部分
+
+Node A 顺序读取十个原文件一次，提交原始严格 JSON，通过独立 validateSummary；80 条、3958 总和、20 异常。三次 pressure 压缩完成并被后续任务复用：37070→17586、39258→18730、33181→11395。审查前暂停、原样 JSON 交接、同库重启完整状态严格比较通过；请求数 14→14，无自动恢复请求。
+
+Main 实际用六次请求完成 A 审查，调用 read_node、fetch_resource 目录（start_line=1/max_lines=12）、fetch_resource 批次 1（13/8）、read_node_turn 第 1 页及 submit_review complete；无 rework、无注册新资源。资源两次读取返回 1041+555=1596 字符；批次八条 RECORD 全部返回，Main 在理由中独立核对 434 与两个异常 ID。日志返回 4604 字符，用于核对十次读取；没有读取原始大文件或完整执行历史。
+
+Main 的六次 assistant-message 均含供应方 usage，累计报告 inputTokens=48481、outputTokens=523；这是多次请求的累计报告，不能当作唯一证据大小、实际账单或与旧版匹配对照的节省比例。精简证据按目的读取已在 A 上真实出现，B 尚未覆盖。
+
+### 停止原因与边界
+
+Node B 成功读取 out/summary.json、data/batch-01.txt、data/batch-05.txt 后，第四次模型请求（全局第 24 次）失败。Session error.source=llm，failure.code=TRANSPORT，message="OpenAI Responses request could not be reached."；未调用读取 batch-10，也未提交 final JSON，更未进入 Main 对 B 的审查。B 回到 idle，A 保持 completing；Host dispose 成功，无错误。
+
+确认是适配器报告的传输失败，现有持久化证据无法进一步区分本机网络、代理或上游链路原因；不归因为 Node 算错、压缩失败或 Main 再次拒绝证据。不因此登记一个未经定位的产品缺陷，也不新增重试绕过协议。
+
+本轮 BUG-017 只有 A 审查路径取得真实正向证据，原 B 审查缺口的完整复验仍未完成；BUG-014 / 015 / 016 / 017 保持未勾选，BUG-018 的最终成功检查亦未走到。F12.7 仍为进行中，PR #79 保持草稿、不合并。诊断仅用只读 SQLite，未重开 App、未修复或继续运行现场，未增加模型请求。
+
+后续若排查请求链路或重新运行，需按用户新的授权执行；本轮不自动重试。此次仅补充真实证据与状态文档，未修改代码，不重复运行已经通过的本机完整测试。

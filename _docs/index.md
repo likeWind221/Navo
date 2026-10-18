@@ -1,7 +1,7 @@
 # 文档索引
 
 - [BUG-018：验收审查回合关联错误](122-bugfix-bug-018-review-turn.md)：已修复 Node / Main Turn ID 混用，本机完整 793 项通过，代码 head CI 通过，待阶段合入。
-- [BUG-017：Node B 原始材料审查证据缺口](121-bugfix-bug-017-review-evidence.md)：已实施按标准取证、无资源成果审查与 Main 专用精简证据；真实复验待单独授权。
+- [BUG-017：Node B 原始材料审查证据缺口](121-bugfix-bug-017-review-evidence.md)：最新真实 Main 按精简证据通过 A，B 执行中遇 TRANSPORT，未覆盖 B 审查，完整验收仍未完成。
 - [BUG-016：Main 误读合法提交的自检结构](120-bugfix-bug-016-review-submission.md)：修订后真实一次通过 Node A，接受两 Node 自检记录；目标误判未复发，完整完成被 BUG-017 阻断。
 - [BUG-015：压缩验收观察器漏掉提交后的暂停](119-bugfix-bug-015-compaction-pause.md)：已修复，真实审查前暂停及重启通过；完整完成现被 BUG-017 阻断。
 - [BUG-014：压缩验收要求未开放的 write](118-bugfix-bug-014-compaction-acceptance.md)：JSON 协议已修订，真实原样交接通过；完整完成现被 BUG-017 阻断。
@@ -86,7 +86,7 @@
 - [F12.4 超窗恢复与重启对账](113-devlog-f12-4-overflow-recovery.md)：provider 超窗归一、压缩后重试及未闭合事务恢复。
 - [F12.5 主动压缩命令 /compact](114-devlog-f12-5-manual-compact.md)：复用现有命令与压缩核心，补齐 Main / Node / 普通 Session 上下文解析、manual 独立事务身份、queued 串行执行和重启恢复；本机 748 项完整测试通过，PR #77 已合入 master（3c464f5）。
 - [F12.6 压缩与上下文压力公共契约](115-devlog-f12-6-public-context-contract.md)：三个版本化 Session API、上下文快照与订阅、有效历史分页及摘要检查点标识；生产实现与本机验证完成，Electron Bridge 实际调用通过；[PR #78](https://github.com/likeWind221/Navo/pull/78) head CI 通过并已合入 master（3bf5e10）。
-- [F12.7 长程压缩验收](117-devlog-f12-7-acceptance.md)：修复后完整 793 项与代码 head CI 通过，BUG-017 待真实复验；此前两次压缩 / 交接 / 暂停 / 重启通过，Node A 经 Main 完成、Node B 正确提交，完整完成被 BUG-017 审查证据缺口阻断；不宣称服务端真实超窗。
+- [F12.7 长程压缩验收](117-devlog-f12-7-acceptance.md)：修复后完整 793 项与代码 CI 通过；最新三次压缩 / 交接 / 暂停 / 重启通过，Main 按精简证据完成 A；B 执行遇 TRANSPORT，未提交及审查，完整验收未通过；不宣称服务端真实超窗。
 - Phase 13：RAG——Workspace / Resource / Session 检索、权限感知 Retrieval 与 RAG Pipeline。
 
 ## 模型接入 M1
@@ -156,7 +156,7 @@
 - [F12.4 超窗恢复与重启对账](113-devlog-f12-4-overflow-recovery.md)：provider 超窗归一、压缩后重试及未闭合事务恢复。
 - [F12.5 主动压缩命令 /compact](114-devlog-f12-5-manual-compact.md)：复用现有命令与压缩核心，补齐当前 Session 上下文解析、独立事务身份、串行执行和重启恢复；本机完整验证通过，PR #77 已合入 master（3c464f5）。
 - [F12.6 压缩与上下文压力公共契约](115-devlog-f12-6-public-context-contract.md)：三个版本化 Session API、上下文快照与订阅、有效历史分页及摘要检查点标识；生产实现与本机验证完成，Electron Bridge 实际调用通过；[PR #78](https://github.com/likeWind221/Navo/pull/78) head CI 通过并已合入 master（3bf5e10）。
-- [F12.7 长程压缩验收](117-devlog-f12-7-acceptance.md)：修复后完整 793 项与代码 head CI 通过，BUG-017 待真实复验；此前两次压缩 / 交接 / 暂停 / 重启通过，Node A 经 Main 完成、Node B 正确提交，完整完成被 BUG-017 审查证据缺口阻断；不宣称服务端真实超窗。
+- [F12.7 长程压缩验收](117-devlog-f12-7-acceptance.md)：修复后完整 793 项与代码 CI 通过；最新三次压缩 / 交接 / 暂停 / 重启通过，Main 按精简证据完成 A；B 执行遇 TRANSPORT，未提交及审查，完整验收未通过；不宣称服务端真实超窗。
 - [F12.4 超窗恢复与重启对账](113-devlog-f12-4-overflow-recovery.md)：统一识别 provider 超窗错误、强制压缩后单次重试，以及启动时未闭合压缩事务的中断对账。
 
 ## 工程治理与迁移

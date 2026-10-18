@@ -6,19 +6,19 @@
 
 - [ ] BUG-018：验收脚本把被审查 Node 的 Turn ID 当作 Main 审查 Turn ID，定向回归已复现；修复关联，本机完整 793 项通过，代码 head CI 通过，待阶段合入。见 [122](122-bugfix-bug-018-review-turn.md)。
 
-- [ ] BUG-017：已实现按标准取证、无资源成果审查及 Main 专用精简原始材料；定向回归与零请求 preflight 通过，本机完整 793 项通过，代码 head CI 通过，真实复验未启动，保持未关闭。见 [121](121-bugfix-bug-017-review-evidence.md)。
+- [ ] BUG-017：修复后真实 Main 按目录与批次原始片段一次通过 A；B 执行中第 24 次请求遇 TRANSPORT，未进入 B 审查，完整复验未完成。本机 793 项与代码 CI 通过，保持未关闭。见 [121](121-bugfix-bug-017-review-evidence.md)。
 
-- [ ] BUG-016：目标误判真实复验未复发，Main 一次通过 Node A、接受 Node B 自检结构；完整完成被 BUG-017 阻断，原关闭条件未全部满足。见 [120](120-bugfix-bug-016-review-submission.md)。
+- [ ] BUG-016：目标误判真实复验未复发，Main 一次通过 Node A、接受 Node B 自检结构；完整完成尚未满足；最新 B 执行遇 TRANSPORT，未覆盖其审查。见 [120](120-bugfix-bug-016-review-submission.md)。
 
-- [ ] BUG-015：双事件观察器已修复，真实审查前暂停、交接后重启通过；完整完成现被 BUG-017 阻断，原关闭条件仍未全部满足。见 [119](119-bugfix-bug-015-compaction-pause.md)。
+- [ ] BUG-015：双事件观察器已修复，真实审查前暂停、交接后重启通过；最新三次压缩后的暂停 / 重启通过；B 执行遇 TRANSPORT，完整关闭条件仍未满足。见 [119](119-bugfix-bug-015-compaction-pause.md)。
 
-- [ ] BUG-014：原未开放 write 错配已修订，真实 JSON 交接与重启通过；完整完成现被 BUG-017 阻断，保持未勾选。见 [118](118-bugfix-bug-014-compaction-acceptance.md)。
+- [ ] BUG-014：原未开放 write 错配已修订，真实 JSON 交接与重启通过；最新 JSON 交接仍通过；B 执行遇 TRANSPORT，完整完成未满足，保持未勾选。见 [118](118-bugfix-bug-014-compaction-acceptance.md)。
 
 - [x] BUG-013：补齐 F11.3 四个错误提示并修正测试命名；前端完整检查、139 测试、Electron bridge 实际调用、根目录 695 测试与代码 head CI 通过（PR #71，收口提交仍执行当前 head CI 门禁）。见 [107](107-bugfix-bug-013-autorun-desktop.md)。
 
 - [x] BUG-012：F11.4 真实验收脚本未调用入口且未提供下游所需材料；已修正，本机完整检查、gpt-6-sol 双节点真实完成及代码 head CI 通过（PR #70，收口提交仍遵循当前 head CI 门禁）。笔记：[106](106-bugfix-bug-012-autorun-acceptance.md)。
 
-未关闭：BUG-002、BUG-007、BUG-010、BUG-014、BUG-015、BUG-016、BUG-017、BUG-018。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待本机 Qwen / Electron 验收；BUG-014 / 015 / 016 各自目标行为已真实通过，但完整两 Node / Main 完成被 BUG-017 原始审查证据交接缺口阻断，原关闭条件未全部满足。
+未关闭：BUG-002、BUG-007、BUG-010、BUG-014、BUG-015、BUG-016、BUG-017、BUG-018。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待本机 Qwen / Electron 验收；BUG-014 / 015 / 016 各自目标行为已真实通过，最新修复后 A 的精简证据审查通过，B 执行因 TRANSPORT 中断，完整两 Node / Main 关闭条件仍未全部满足。
 
 - [x] BUG-001：Node 续接时未读取已共享的新验证资源（已修复：续接资源变化通知 + Resource ID 语义）
 - [ ] BUG-002：验证节点发布文件时出现来源不可用错误（诊断已补齐，未复现；2026-10-07 用户决定保持未关闭，等待复现后依证据定性）
@@ -39,7 +39,7 @@
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
 | BUG-018 | P1 / 后端验收 | Node 完成后，脚本仍可能找不到 Main 审查 Turn 而误判失败 | review.lastReview.turnId 属于被审查 Node；定向 App 回归复现，已改为按 Main 请求中的系统 checklist 关联 Node ID、Node Turn 与被审查版本 | 两 Node 审查对应不同 Main Turn 的回归、本机完整检查与当前 head CI 通过；随当前阶段 PR 合入 | [122：修复笔记](122-bugfix-bug-018-review-turn.md) |
-| BUG-017 | P1 / 后端验收 | Node B 正确提交，但 Main 只能看到截断原始读结果，无法独立核验数值而升级 | 唯一 Resource 是 summary；原始批次未交接。Main 有 register / fetch 能力但未使用，且最终断言禁止全部 Turn 注册证据；确认验收证据入口与限制错配；已补精简证据与无资源审查规则，定向通过，真实复验待授权 | 保留独立核验，明确允许的证据读取流程；定向回归、本机完整检查、真实两 Node / Main 完成与当前 head CI 通过 | [121：排查笔记](121-bugfix-bug-017-review-evidence.md) |
+| BUG-017 | P1 / 后端验收 | Node B 正确提交，但 Main 只能看到截断原始读结果，无法独立核验数值而升级 | 唯一 Resource 是 summary；原始批次未交接。Main 有 register / fetch 能力但未使用，且最终断言禁止全部 Turn 注册证据；确认验收证据入口与限制错配；已补精简证据与无资源审查规则，真实 A 审查通过；B 执行遇 TRANSPORT，B 审查未覆盖 | 保留独立核验，明确允许的证据读取流程；定向回归、本机完整检查、真实两 Node / Main 完成与当前 head CI 通过 | [121：排查笔记](121-bugfix-bug-017-review-evidence.md) |
 | BUG-016 | P1 / 后端审查 | 合法提交已含自检索引与布尔值，Main 仍因截断日志不可核验而两次返工后升级，阻断 F12.7 | 三次原始 criteria 正确，9 次实际请求均含自检且 Main 未压缩；已将自检放回带来源的 completionSignal，系统规则区分结构事实与业务声明。定向与真实目标行为通过，完整完成被 BUG-017 阻断 | 明确结构事实与任务证据边界，定向回归保留内容独立核验，不强制 complete；本机完整检查、真实两 Node / Main 完成及当前 head CI 通过 | [120：排查与修订](120-bugfix-bug-016-review-submission.md) |
 | BUG-015 | P1 / 后端验收 | Node 已提交，但验收观察器未在 Main Review 前请求暂停，无法按协议交接与重启 | Node.endWork 在 Session turn-ended 后发生；只监听 session/event 无法观察最终 submitted；Luna 正确 JSON、两次压缩与提前 Main escalate 现场已保存 | 旧代码失败的真实 App 回归通过；监听 Node 提交后正确暂停、释放订阅；本机完整检查与当前 PR head CI 通过，真实交接/重启/完成复验通过 | [119：排查修复笔记](119-bugfix-bug-015-compaction-pause.md) |
 | BUG-014 | P1 / 后端验收 | F12.7 要求 Node 写出 JSON，但 Node 未获 write，无法注册产物及完成 Project | 实际任务请求工具列表及 Node Profile 均无 write；三次 register_resource 因源文件 ENOENT 失败。已确认验收协议错配，不归因为压缩失败；现已改为原始 JSON 提交与脚本交接，完整真实验收未通过 | 验收所需能力与实际公开工具一致，预检查可拦截错配；修订协议后本机完整验证、真实多次压缩 / 重启 / 两 Node 完成与 PR head CI 通过 | [118：排查笔记](118-bugfix-bug-014-compaction-acceptance.md) |
