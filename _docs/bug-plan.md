@@ -6,21 +6,21 @@
 
 - [ ] BUG-019：TRANSPORT 失败只有通用消息，底层 cause 未持久化；17:58 一轮已从 Mihomo 日志定位到代理服务器 TCP 超时，18:08 一轮底层原因仍缺证据。仅排查，未修改网络或代码。见 [123](123-bugfix-bug-019-transport-diagnostics.md)。
 
-- [ ] BUG-018：验收脚本把被审查 Node 的 Turn ID 当作 Main 审查 Turn ID，定向回归已复现；修复关联，本机完整 793 项通过，代码 head CI 通过，待阶段合入。见 [122](122-bugfix-bug-018-review-turn.md)。
+- [ ] BUG-018：实际 Main / Node Turn 正确关联，真实最终断言通过；本机与代码 CI 通过，待阶段合入后关闭。见 [122](122-bugfix-bug-018-review-turn.md)。
 
-- [ ] BUG-017：前轮真实 Main 按精简证据通过 A；最新授权重跑在 A 的第 11 次请求再次遇 TRANSPORT。两轮均未覆盖 B 审查，完整验收未完成。本机 793 项与代码 CI 通过，保持未关闭。见 [121](121-bugfix-bug-017-review-evidence.md)。
+- [x] BUG-017：真实 Main 按目的读取精简原始记录及汇总，A / B 分别返回 1596 / 2507 字符，完整验收通过，关闭。见 [121](121-bugfix-bug-017-review-evidence.md)。
 
-- [ ] BUG-016：目标误判真实复验未复发，Main 一次通过 Node A、接受 Node B 自检结构；完整完成尚未满足；最新 B 执行遇 TRANSPORT，未覆盖其审查。见 [120](120-bugfix-bug-016-review-submission.md)。
+- [x] BUG-016：真实两 Node 提交结构被 Main 正确使用，均一次 complete、零返工，完整验收通过，关闭。见 [120](120-bugfix-bug-016-review-submission.md)。
 
-- [ ] BUG-015：双事件观察器已修复，真实审查前暂停、交接后重启通过；最新三次压缩后的暂停 / 重启通过；B 执行遇 TRANSPORT，完整关闭条件仍未满足。见 [119](119-bugfix-bug-015-compaction-pause.md)。
+- [x] BUG-015：双事件观察器回归与最新真实审查前暂停、重启、完整完成通过，关闭。见 [119](119-bugfix-bug-015-compaction-pause.md)。
 
-- [ ] BUG-014：原未开放 write 错配已修订，真实 JSON 交接与重启通过；最新 JSON 交接仍通过；B 执行遇 TRANSPORT，完整完成未满足，保持未勾选。见 [118](118-bugfix-bug-014-compaction-acceptance.md)。
+- [x] BUG-014：原工具错配已修订，最新真实 JSON 交接、暂停 / 重启及两 Node / Main 完整完成通过，关闭。见 [118](118-bugfix-bug-014-compaction-acceptance.md)。
 
 - [x] BUG-013：补齐 F11.3 四个错误提示并修正测试命名；前端完整检查、139 测试、Electron bridge 实际调用、根目录 695 测试与代码 head CI 通过（PR #71，收口提交仍执行当前 head CI 门禁）。见 [107](107-bugfix-bug-013-autorun-desktop.md)。
 
 - [x] BUG-012：F11.4 真实验收脚本未调用入口且未提供下游所需材料；已修正，本机完整检查、gpt-6-sol 双节点真实完成及代码 head CI 通过（PR #70，收口提交仍遵循当前 head CI 门禁）。笔记：[106](106-bugfix-bug-012-autorun-acceptance.md)。
 
-未关闭：BUG-002、BUG-007、BUG-010、BUG-014、BUG-015、BUG-016、BUG-017、BUG-018、BUG-019。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待本机 Qwen / Electron 验收；BUG-014 / 015 / 016 各自目标行为已真实通过，最新修复后 A 的精简证据审查通过，B 执行因 TRANSPORT 中断，完整两 Node / Main 关闭条件仍未全部满足。
+未关闭：BUG-002、BUG-007、BUG-010、BUG-018、BUG-019。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收；BUG-018 待阶段合入，BUG-019 仅排查、未修复。BUG-014 / 015 / 016 / 017 已通过 18:24 完整真实验收关闭。
 
 - [x] BUG-001：Node 续接时未读取已共享的新验证资源（已修复：续接资源变化通知 + Resource ID 语义）
 - [ ] BUG-002：验证节点发布文件时出现来源不可用错误（诊断已补齐，未复现；2026-10-07 用户决定保持未关闭，等待复现后依证据定性）
@@ -42,8 +42,8 @@
 |---|---|---|---|---|---|
 | BUG-019 | P2 / 后端诊断 | 模型连接失败现场只有通用 TRANSPORT，不能区分底层超时、重置或 TLS | OpenAIAdapter 保留 cause，normalizeFailure 与验收账本未持久化；根因已确认。外部链路方面仅第一轮对应代理服务器 TCP 超时，第二轮未定位 | 在不暴露凭据或完整请求的前提下保留必要连接失败分类，定向回归与本机 / 当前 head CI 通过；不以自动重试代替诊断 | [123：排查笔记](123-bugfix-bug-019-transport-diagnostics.md) |
 | BUG-018 | P1 / 后端验收 | Node 完成后，脚本仍可能找不到 Main 审查 Turn 而误判失败 | review.lastReview.turnId 属于被审查 Node；定向 App 回归复现，已改为按 Main 请求中的系统 checklist 关联 Node ID、Node Turn 与被审查版本 | 两 Node 审查对应不同 Main Turn 的回归、本机完整检查与当前 head CI 通过；随当前阶段 PR 合入 | [122：修复笔记](122-bugfix-bug-018-review-turn.md) |
-| BUG-017 | P1 / 后端验收 | Node B 正确提交，但 Main 只能看到截断原始读结果，无法独立核验数值而升级 | 唯一 Resource 是 summary；原始批次未交接。Main 有 register / fetch 能力但未使用，且最终断言禁止全部 Turn 注册证据；确认验收证据入口与限制错配；已补精简证据与无资源审查规则，真实 A 审查通过；B 执行遇 TRANSPORT，B 审查未覆盖 | 保留独立核验，明确允许的证据读取流程；定向回归、本机完整检查、真实两 Node / Main 完成与当前 head CI 通过 | [121：排查笔记](121-bugfix-bug-017-review-evidence.md) |
-| BUG-016 | P1 / 后端审查 | 合法提交已含自检索引与布尔值，Main 仍因截断日志不可核验而两次返工后升级，阻断 F12.7 | 三次原始 criteria 正确，9 次实际请求均含自检且 Main 未压缩；已将自检放回带来源的 completionSignal，系统规则区分结构事实与业务声明。定向与真实目标行为通过，完整完成被 BUG-017 阻断 | 明确结构事实与任务证据边界，定向回归保留内容独立核验，不强制 complete；本机完整检查、真实两 Node / Main 完成及当前 head CI 通过 | [120：排查与修订](120-bugfix-bug-016-review-submission.md) |
+| BUG-017 | P1 / 后端验收 | Node B 正确提交，但 Main 只能看到截断原始读结果，无法独立核验数值而升级 | 唯一 Resource 是 summary；原始批次未交接。Main 有 register / fetch 能力但未使用，且最终断言禁止全部 Turn 注册证据；确认验收证据入口与限制错配；已补精简证据与无资源审查规则，最新完整真实 A / B 审查均通过，零返工 | 保留独立核验，明确允许的证据读取流程；定向回归、本机完整检查、真实两 Node / Main 完成与当前 head CI 通过 | [121：排查笔记](121-bugfix-bug-017-review-evidence.md) |
+| BUG-016 | P1 / 后端审查 | 合法提交已含自检索引与布尔值，Main 仍因截断日志不可核验而两次返工后升级，阻断 F12.7 | 三次原始 criteria 正确，9 次实际请求均含自检且 Main 未压缩；已将自检放回带来源的 completionSignal，系统规则区分结构事实与业务声明。定向、本机完整与最新真实两 Node / Main 完成均通过 | 明确结构事实与任务证据边界，定向回归保留内容独立核验，不强制 complete；本机完整检查、真实两 Node / Main 完成及当前 head CI 通过 | [120：排查与修订](120-bugfix-bug-016-review-submission.md) |
 | BUG-015 | P1 / 后端验收 | Node 已提交，但验收观察器未在 Main Review 前请求暂停，无法按协议交接与重启 | Node.endWork 在 Session turn-ended 后发生；只监听 session/event 无法观察最终 submitted；Luna 正确 JSON、两次压缩与提前 Main escalate 现场已保存 | 旧代码失败的真实 App 回归通过；监听 Node 提交后正确暂停、释放订阅；本机完整检查与当前 PR head CI 通过，真实交接/重启/完成复验通过 | [119：排查修复笔记](119-bugfix-bug-015-compaction-pause.md) |
 | BUG-014 | P1 / 后端验收 | F12.7 要求 Node 写出 JSON，但 Node 未获 write，无法注册产物及完成 Project | 实际任务请求工具列表及 Node Profile 均无 write；三次 register_resource 因源文件 ENOENT 失败。已确认验收协议错配，不归因为压缩失败；现已改为原始 JSON 提交与脚本交接，完整真实验收未通过 | 验收所需能力与实际公开工具一致，预检查可拦截错配；修订协议后本机完整验证、真实多次压缩 / 重启 / 两 Node 完成与 PR head CI 通过 | [118：排查笔记](118-bugfix-bug-014-compaction-acceptance.md) |
 | BUG-013 | P1 / 前端 | F11.3 前端类型检查失败，默认测试未运行 AutoRun handler 场景 | TS2366 已复现；四个错误码缺少提示分支，`.test.ts` 不匹配 `.spec.ts` 发现规则均已确认 | 前端完整 typecheck/test/build 通过，四项测试被发现，真实 Electron bridge 验证通过；完整本地检查及当前 PR head CI 通过 | [107](107-bugfix-bug-013-autorun-desktop.md) |

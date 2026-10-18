@@ -1,7 +1,7 @@
 # BUG-015：压缩验收观察器漏掉 Node 提交后的暂停时机
 
 > 日期：2026-10-18
-> 状态：观察器已修复，真实暂停与重启已通过；最新 Main 已通过 Node A，完整完成现被 BUG-017 阻断，未关闭
+> 状态：观察器回归、真实审查前暂停 / 重启及两 Node / Main 完整验收通过，关闭
 > 跟踪：[bug-plan.md](bug-plan.md)；阶段：[117](117-devlog-f12-7-acceptance.md)；前置修订：[118](118-bugfix-bug-014-compaction-acceptance.md)
 
 ## 现象与复现
@@ -54,3 +54,8 @@
 ## 2026-10-18 17:15 复验
 
 gpt-6-luna、代码 head 85d8fd6，177685ms / 24 请求（含 2 摘要），两次压缩、JSON 交接、审查前暂停、重启严格比较与 13→13 零自动请求均通过。Main 一次通过 Node A，Node B 正确执行并提交；随后因缺少可直接读取的原始审查证据 escalate，完整失败。原始材料 Resource 交接与 Main 注册证据的验收禁令冲突已登记 BUG-017；详见 [121](121-bugfix-bug-017-review-evidence.md)。本项自身目标行为通过，保留原完整完成关闭条件，未勾选。现场保留，未重跑。
+## 18:24 完整真实验收收口
+
+代码 61bee29，gpt-6-luna，228699ms / 28 请求（25 任务 + 3 摘要），runner exitCode=0。三次 pressure 压缩 37074→17687、39383→18593、33072→11481，均被后续任务复用。审查前暂停、原始 JSON 交接、同库重启严格比较通过，模型请求数 14→14，无自动恢复请求。A / B JSON 独立校验均正确，80 条 / 总和 3958 / 20 异常；两 Node 均经 Main complete、零返工，AutoRun roadmap-complete，最终断言全部通过。
+
+证据：C:/Users/likeW/AppData/Local/Temp/navo-f127-luna-20261018-182432/；按需审查 A 1596 字符、B 2507 字符，均未注册新资源或重读原始大文件。当前记录覆盖原关闭条件，不覆盖通用 TRANSPORT 底层诊断修复。完整范围见 [117](117-devlog-f12-7-acceptance.md) 与 [121](121-bugfix-bug-017-review-evidence.md)。本机 793 项、类型检查及代码 head CI 已通过；最终文档 head CI、PR #79 合并结果在收口记录补记。

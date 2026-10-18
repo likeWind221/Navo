@@ -1,7 +1,7 @@
 # BUG-017：Node B 审查缺少可直接读取的原始材料证据
 
 > 日期：2026-10-18
-> 状态：已实施修复，本机 793 项与代码 CI 通过；前轮 Main 按精简证据通过 A、B 遇 TRANSPORT；最新授权重跑在 A 的第 11 次请求再次遇 TRANSPORT，B 审查仍未覆盖，完整验收未通过
+> 状态：无资源及按需取证规则已实现；真实两 Node / Main 完整验收通过，关闭
 > 跟踪：[bug-plan.md](bug-plan.md)；阶段：[117](117-devlog-f12-7-acceptance.md)；前置修订：[120](120-bugfix-bug-016-review-submission.md)
 
 ## 现象与复现
@@ -195,3 +195,9 @@ Node B 成功读取 out/summary.json、data/batch-01.txt、data/batch-05.txt 后
 ## TRANSPORT 只读排查结果
 
 用户后续授权排查。Mihomo 日志将 17:58:43 的请求失败对应到 AI网站分组 / 美国圣何塞04 的代理服务器 TCP 连接超时；18:08 的同类失败尚无对应底层原因。当前相同 Node / 环境代理路径六次无认证 POST 均返回预期 401，不等于持续稳定。Navo 在错误归一化时未持久化 cause，另记 [BUG-019](123-bugfix-bug-019-transport-diagnostics.md)。未改网络、代码或重试，零新增模型调用，BUG-017 验收状态不变。
+
+## 18:24 完整真实验收收口
+
+代码 61bee29，gpt-6-luna，228699ms / 28 请求（25 任务 + 3 摘要），runner exitCode=0。三次 pressure 压缩 37074→17687、39383→18593、33072→11481，均被后续任务复用。审查前暂停、原始 JSON 交接、同库重启严格比较通过，模型请求数 14→14，无自动恢复请求。A / B JSON 独立校验均正确，80 条 / 总和 3958 / 20 异常；两 Node 均经 Main complete、零返工，AutoRun roadmap-complete，最终断言全部通过。
+
+证据：C:/Users/likeW/AppData/Local/Temp/navo-f127-luna-20261018-182432/；按需审查 A 1596 字符、B 2507 字符，均未注册新资源或重读原始大文件。当前记录覆盖原关闭条件，不覆盖通用 TRANSPORT 底层诊断修复。完整范围见 [117](117-devlog-f12-7-acceptance.md) 与 [121](121-bugfix-bug-017-review-evidence.md)。本机 793 项、类型检查及代码 head CI 已通过；最终文档 head CI、PR #79 合并结果在收口记录补记。

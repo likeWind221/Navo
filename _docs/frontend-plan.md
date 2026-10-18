@@ -240,6 +240,9 @@ Final answer (outside collapse)
 - Main/Node 的每次 Agent 回合均由用户明确触发；节点解锁、消息到达、资源发布与上次回合结束都不会自动运行。当前运行期间的界面状态保留不等于已具备历史查询或重启恢复。
 - F5.3–F5.8 规划已确认；F5.3 原型已获用户确认，正式 Electron 入口已接入，本地与代码 CI 已通过，PR #53 已 squash 合入 master（e271d5b），F5.4–F5.8 尚未开始，不授权连续实施。每个 Step 仍按项目启动、审查和验收规则逐步推进；真实模型验收开始前按会话规则说明预计耗时与影响范围并取得授权。
 
+
+- 2026-10-18：后端 F12.7 长程验收已通过（交由 `backend-plan.md` 实施，见 [117](117-devlog-f12-7-acceptance.md)）：真实多次压缩、暂停交接 / 重启及两 Node / Main 完整完成。此项不新增 Electron 契约、不替代正式页面验收，前端当前下一步仍为 F5.4。
+
 ## 4. 当前下一步
 
 F11.3 后端公共契约的前端独立验收已通过：前端 typecheck/test/build、Electron bridge 实际调用和代码 head CI 均通过（收口提交仍执行当前 head CI 门禁），记录见 [108](108-devlog-f11-3-desktop-acceptance.md)，[BUG-013](107-bugfix-bug-013-autorun-desktop.md) 已关闭。此次只验收 Electron bridge 的启动、查询、暂停、恢复和状态返回，不新增正式页面 AutoRun 控件，也不推进 F5.4–F5.8；阶段状态以 [backend-plan.md](backend-plan.md) 为准。

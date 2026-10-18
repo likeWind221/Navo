@@ -1,7 +1,7 @@
 # BUG-018：验收脚本混淆被审查回合与审查回合
 
 > 日期：2026-10-18；跟踪：[bug-plan.md](bug-plan.md)；关联：[121](121-bugfix-bug-017-review-evidence.md)
-> 状态：代码修复，定向回归通过；本机类型检查与 130 文件 / 793 项通过，代码 head CI 通过，尚未合入
+> 状态：审查 Turn 关联定向与真实最终断言通过，待随 PR #79 合入后关闭
 
 ## 现象与复现
 
@@ -28,3 +28,9 @@ tests/integration/compaction/evidence.spec.ts 验证两个 Node 的 Main 审查 
 本机收口：System32 在 PATH 最前，Node 24.19.0；tsc --noEmit 通过，vitest run --maxWorkers=4 完整 130 文件 / 793 项通过（49.46s）。定向测试同时验证对应实际成功 fetch 返回行和缺行拒绝；当前 head CI 与合入待完成，保持未勾选。
 
 代码提交 dd74d0c 已推送至阶段 [PR #79](https://github.com/likeWind221/Navo/pull/79)，[CI 39116730431](https://github.com/likeWind221/Navo/actions/runs/39116730431) 成功。该项本机和代码 CI 验证通过，阶段尚未合入，保持未勾选；文档收口 head CI 另行核对。
+
+## 18:24 完整真实验收收口
+
+代码 61bee29，gpt-6-luna，228699ms / 28 请求（25 任务 + 3 摘要），runner exitCode=0。三次 pressure 压缩 37074→17687、39383→18593、33072→11481，均被后续任务复用。审查前暂停、原始 JSON 交接、同库重启严格比较通过，模型请求数 14→14，无自动恢复请求。A / B JSON 独立校验均正确，80 条 / 总和 3958 / 20 异常；两 Node 均经 Main complete、零返工，AutoRun roadmap-complete，最终断言全部通过。
+
+证据：C:/Users/likeW/AppData/Local/Temp/navo-f127-luna-20261018-182432/；按需审查 A 1596 字符、B 2507 字符，均未注册新资源或重读原始大文件。当前记录覆盖原关闭条件，不覆盖通用 TRANSPORT 底层诊断修复。完整范围见 [117](117-devlog-f12-7-acceptance.md) 与 [121](121-bugfix-bug-017-review-evidence.md)。本机 793 项、类型检查及代码 head CI 已通过；最终文档 head CI、PR #79 合并结果在收口记录补记。

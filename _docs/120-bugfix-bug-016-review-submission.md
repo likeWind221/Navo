@@ -1,7 +1,7 @@
 # BUG-016：Main 将合法提交的自检结构当作不可核验而反复返工
 
 > 日期：2026-10-18
-> 状态：清单与规则已修订，目标误判真实复验未复发；完整完成被 BUG-017 阻断，原关闭条件未全满足
+> 状态：来源区分与结构自检修复通过完整真实验收；两 Node 零返工获 Main complete，关闭
 > 跟踪：[bug-plan.md](bug-plan.md)；阶段：[117](117-devlog-f12-7-acceptance.md)
 
 ## 现象与复现
@@ -102,3 +102,9 @@ Node 理论上可以调整 JSON 键顺序，使部分目标字段落进日志前
 代码 head `85d8fd6` 的 [CI](https://github.com/likeWind221/Navo/actions/runs/39114369085) 已通过后，用户明确授权一次复验。gpt-6-luna 177685ms / 24 请求（含 2 摘要），Node A 一次 complete，Node B 执行并提交正确 final JSON；Main 两次审查均正确接受已记录自检结构，不再要求从截断参数重建 criteria，零返工。两次压缩、交接、暂停、13→13 重启均通过。
 
 完整验收仍失败：Main 在 Node B 审查中无法从截断工具结果独立核验原始数值，而原始批次尚未作为可直接读取的 Resource 交接；另有 Main 注册证据与最终验收禁令的协议冲突，登记 [BUG-017](121-bugfix-bug-017-review-evidence.md)。本轮不是 BUG-016 原误判复发，但原关闭条件含完整完成，继续保持未勾选。详细证据与边界见 121；未自动重跑。
+
+## 18:24 完整真实验收收口
+
+代码 61bee29，gpt-6-luna，228699ms / 28 请求（25 任务 + 3 摘要），runner exitCode=0。三次 pressure 压缩 37074→17687、39383→18593、33072→11481，均被后续任务复用。审查前暂停、原始 JSON 交接、同库重启严格比较通过，模型请求数 14→14，无自动恢复请求。A / B JSON 独立校验均正确，80 条 / 总和 3958 / 20 异常；两 Node 均经 Main complete、零返工，AutoRun roadmap-complete，最终断言全部通过。
+
+证据：C:/Users/likeW/AppData/Local/Temp/navo-f127-luna-20261018-182432/；按需审查 A 1596 字符、B 2507 字符，均未注册新资源或重读原始大文件。当前记录覆盖原关闭条件，不覆盖通用 TRANSPORT 底层诊断修复。完整范围见 [117](117-devlog-f12-7-acceptance.md) 与 [121](121-bugfix-bug-017-review-evidence.md)。本机 793 项、类型检查及代码 head CI 已通过；最终文档 head CI、PR #79 合并结果在收口记录补记。
