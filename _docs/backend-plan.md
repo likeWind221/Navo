@@ -11,7 +11,7 @@ Phase 0–10 与模型接入补充工作 M1 均已完成。系统现在具备：
 - 持久恢复与完成判断：SQLite 持久保存与重启恢复、会话续接、中断收尾、Node 完成信号与 Main 复盘判定（Phase 10）。
 - 模型接入：公共 Chat Completions / Responses 协议、ChatGPT 订阅授权与 OpenAI 接入（M1）。
 
-Phase 11 自动化流程已收口：F11.0–F11.4 完成，F11.3 已补齐前端独立检查与 Electron bridge 实际调用验收，见 [108](108-devlog-f11-3-desktop-acceptance.md)。正式页面 AutoRun 控件未包含在本次公共契约验收。Phase 12 上下文压缩已完成 F12.0 设计收口与 F12.1 Context Meter（[109](109-devlog-f12-0-design.md)、[110](110-devlog-f12-1-context-meter.md)）。经用户确认，后续拆为 F12.2 压力检测接入、F12.3 摘要与检查点、F12.4 超窗恢复、F12.5 主动 `/compact` 命令；F12.5 已通过 PR #77 合入 master（提交 3c464f5），本机 pnpm typecheck 与 748 项测试通过，桌面点击级验收仍未执行。F12.6 进入压缩与上下文压力公共契约设计，F12.7 保留为长程验收；RAG 留待 Phase 13。
+Phase 11 自动化流程已收口：F11.0–F11.4 完成，F11.3 已补齐前端独立检查与 Electron bridge 实际调用验收，见 [108](108-devlog-f11-3-desktop-acceptance.md)。正式页面 AutoRun 控件未包含在本次公共契约验收。Phase 12 上下文压缩已完成 F12.0 设计收口与 F12.1 Context Meter（[109](109-devlog-f12-0-design.md)、[110](110-devlog-f12-1-context-meter.md)）。经用户确认，后续拆为 F12.2 压力检测接入、F12.3 摘要与检查点、F12.4 超窗恢复、F12.5 主动 `/compact` 命令；F12.5 已通过 PR #77 合入 master（提交 3c464f5），本机 pnpm typecheck 与 748 项测试通过，桌面点击级验收仍未执行。F12.6 压缩与上下文压力公共契约已完成生产实现，本机后端 771 项、前端 153 项测试与 Electron Bridge 实际调用验收通过，PR / CI 待完成；F12.7 保留为长程验收；RAG 留待 Phase 13。
 
 ```text
 Project Goal
@@ -313,7 +313,7 @@ Host restart -> unmatched compaction marked interrupted -> replay committed chec
 | 🔄 | F12.3 摘要压缩与 Session 检查点 | 上下文压缩与 Session 日志 | 越过阈值后选择可压缩历史并生成摘要检查点，保留近期尾部且不拆开工具调用与结果；压缩失败保留历史，只有重新测量仍在可接受预算内才继续请求 | 离线多回合 Session 触发压缩后继续完成任务；日志可回放出相同 surface；失败、不收缩、无有效选区及历史配对均有测试 |
 | ✅ | F12.4 超窗恢复与重启对账 | 模型错误归一、Agent 执行与重启恢复 | 模型确认超窗后压缩一次再重试；压不动时回合以明确原因失败并让 AutoRun 暂停；重启后未完成的压缩记为中断，从已落盘内容续接 | 本机 typecheck 与完整测试、当前 PR head CI 均通过；见 [113](113-devlog-f12-4-overflow-recovery.md) 与 [PR #76](https://github.com/likeWind221/Navo/pull/76) |
 | ✅ | F12.5 主动压缩命令 /compact | CommandService、Session 压缩与恢复 | Human 可在未达到压力阈值时主动压缩；复用现有 selector / summarizer / checkpoint，使用当前 Session 上下文，串行执行且支持独立事务恢复 | session.command.v1 可调用；Main / Node / 普通 Session 上下文解析正确；无虚构 Turn；no-op / failure / cancel / restart 均有测试；本机 typecheck 与 748 项完整测试通过，PR #77 当前 head CI 通过并已合入 master（3c464f5）；Host 命令入口成功 / no-op 已验证，未做 Electron 点击级验收；见 [114](114-devlog-f12-5-manual-compact.md) |
-| ⬜ | F12.6 压缩与上下文压力公共契约 | Host / RPC / Electron 共享契约 | 让桌面调用方查询 Session 当前上下文用量、订阅上下文与压缩状态，并分页读取有效历史且识别摘要检查点 | 三个版本化接口有严格运行时校验和明确错误 / 取消语义；快照与现有请求测量一致；实时订阅无遗漏、重复或乱序且可取消；历史分页在压缩后检测 generation 变化；Electron Bridge 实际调用通过；仅提供 API，不开发 UI；见 [115](115-devlog-f12-6-public-context-contract.md) |
+| 🔄 | F12.6 压缩与上下文压力公共契约 | Host / RPC / Electron 共享契约 | 让桌面调用方查询 Session 当前上下文用量、订阅上下文与压缩状态，并分页读取有效历史且识别摘要检查点 | 三个版本化接口有严格运行时校验和明确错误 / 取消语义；快照与现有请求测量一致；实时订阅无遗漏、重复或乱序且可取消；历史分页在压缩后检测 generation 变化；Electron Bridge 实际调用通过；仅提供 API，不开发 UI。生产实现完成，本机 771 项后端测试、153 项前端测试、typecheck / build 与 Electron Bridge 验收通过；PR / CI 待完成；见 [115](115-devlog-f12-6-public-context-contract.md) |
 | ⬜ | F12.7 长程压缩验收 | 后端集成测试与阶段记录 | 证明 AutoRun 驱动的 Project 能跨越多次压缩、超窗恢复和重启后完成 | 离线长程场景与真实模型小窗口配置均通过；记录压缩次数、释放量与失败现场 |
 
 ## 11. Phase 13：长程检索
@@ -328,7 +328,7 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不恢复�
 
 ## 12. 当前下一步
 
-**Phase 10、M1 与 Phase 11（F11.0–F11.4）已完成。F11.3 的桌面独立检查与 Electron bridge 验收见 [108](108-devlog-f11-3-desktop-acceptance.md) 与 [PR #71](https://github.com/likeWind221/Navo/pull/71)，F11.4 的离线和真实模型证据见 [105](105-devlog-f11-4-autorun-acceptance.md) 与 [PR #70](https://github.com/likeWind221/Navo/pull/70)。Phase 12 的 F12.0–F12.5 代码已依次落地，记录见 [109](109-devlog-f12-0-design.md)、[110](110-devlog-f12-1-context-meter.md)、[111](111-devlog-f12-2-pressure-integration.md)、[112](112-devlog-f12-3-compaction.md)、[113](113-devlog-f12-4-overflow-recovery.md)、[114](114-devlog-f12-5-manual-compact.md)；F12.3 的本机完整验证仍待补齐，F12.4 本机与 CI 验证均已通过（[PR #76](https://github.com/likeWind221/Navo/pull/76)）。F12.5 已通过 [PR #77](https://github.com/likeWind221/Navo/pull/77) 合入 master（提交 3c464f5），本机 typecheck 与 748 项完整测试通过。下一步为 F12.6 公共契约（[115](115-devlog-f12-6-public-context-contract.md)），F12.7 为长程验收；F12.3 本机完整验证仍需跟踪。正式页面 AutoRun 控件和前端 F5.4–F5.8 不因此视为完成。**
+**Phase 10、M1 与 Phase 11（F11.0–F11.4）已完成。F11.3 的桌面独立检查与 Electron bridge 验收见 [108](108-devlog-f11-3-desktop-acceptance.md) 与 [PR #71](https://github.com/likeWind221/Navo/pull/71)，F11.4 的离线和真实模型证据见 [105](105-devlog-f11-4-autorun-acceptance.md) 与 [PR #70](https://github.com/likeWind221/Navo/pull/70)。Phase 12 的 F12.0–F12.5 代码已依次落地，记录见 [109](109-devlog-f12-0-design.md)、[110](110-devlog-f12-1-context-meter.md)、[111](111-devlog-f12-2-pressure-integration.md)、[112](112-devlog-f12-3-compaction.md)、[113](113-devlog-f12-4-overflow-recovery.md)、[114](114-devlog-f12-5-manual-compact.md)；F12.3 的本机完整验证仍待补齐，F12.4 本机与 CI 验证均已通过（[PR #76](https://github.com/likeWind221/Navo/pull/76)）。F12.5 已通过 [PR #77](https://github.com/likeWind221/Navo/pull/77) 合入 master（提交 3c464f5），本机 typecheck 与 748 项完整测试通过。F12.6 公共契约（[115](115-devlog-f12-6-public-context-contract.md)）已完成生产实现与本机 / Electron Bridge 验收，PR / CI 待完成；F12.7 为长程验收；F12.3 本机完整验证仍需跟踪。正式页面 AutoRun 控件和前端 F5.4–F5.8 不因此视为完成。**
 
 - 免除记录：F10.4b 真实模型五场景验收与 F10.5 第 7–11 回合真实验收均经用户决定免除，相应能力只由离线测试覆盖，见第 7 节。
 - 未关闭 Bug（以 [Bug 跟踪表](bug-plan.md) 为准）：BUG-002 保持未关闭、等待复现；BUG-007 经用户决定搁置；BUG-010 修复已合入，Qwen 与 Electron 复验待本机完成。

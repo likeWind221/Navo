@@ -1,7 +1,7 @@
 # F12.6 压缩与上下文压力公共契约
 
 > 日期：2026-10-17  
-> 状态：📝 设计已获用户确认；尚未开始生产代码实现。  
+> 状态：🔄 生产实现完成，本机五条验证与 Electron Bridge 实际调用验收通过；PR / CI 待完成。  
 > 基线：master 3c464f5c54abb80829f2f34b41e35dbcf084b09d（F12.5 已合入）。  
 > 范围：Host / RPC / Electron Bridge 的稳定公共接口；不开发上下文 UI，不修改压缩算法。
 
@@ -293,17 +293,17 @@ interface SessionHistoryV1 {
 
 ## 7. 验收标准
 
-- [ ] session.context.v1 返回真实 Session 当前上下文快照，预算字段与现有预算计算一致。
-- [ ] 查询不会调用 LLM、写 Session 事件、启动 Turn 或触发压缩。
-- [ ] session.context.follow.v1 首帧是快照；上下文更新和压缩生命周期事件按序到达，不重复、不跨 Session 泄露；取消后监听器释放。
-- [ ] session.history.v1 返回当前有效 surface，检查点为独立类型，消息顺序和原始 event sequence 正确。
-- [ ] 追加消息不会使 cursor 无故失效；压缩替换会使旧 generation cursor 返回 history-changed。
-- [ ] 所有 RPC 与 Electron IPC DTO 有严格运行时校验和稳定错误映射。
-- [ ] 前端不导入 src/**，不直接接触 Cordis Context / SessionStore / 原始 IPC。
-- [ ] pnpm typecheck、pnpm test、pnpm --dir frontend typecheck、pnpm --dir frontend test、pnpm --dir frontend build 全部通过。
-- [ ] 完成 Electron Bridge 的真实调用验收；记录调用输入、输出摘要、取消 / 错误路径与环境。
+- [x] session.context.v1 返回真实 Session 当前上下文快照，预算字段与现有预算计算一致。
+- [x] 查询不会调用 LLM、写 Session 事件、启动 Turn 或触发压缩。
+- [x] session.context.follow.v1 首帧是快照；上下文更新和压缩生命周期事件按序到达，不重复、不跨 Session 泄露；取消后监听器释放。
+- [x] session.history.v1 返回当前有效 surface，检查点为独立类型，消息顺序和原始 event sequence 正确。
+- [x] 追加消息不会使 cursor 无故失效；压缩替换会使旧 generation cursor 返回 history-changed。
+- [x] 所有 RPC 与 Electron IPC DTO 有严格运行时校验和稳定错误映射。
+- [x] 前端不导入 src/**，不直接接触 Cordis Context / SessionStore / 原始 IPC。
+- [x] pnpm typecheck、pnpm test、pnpm --dir frontend typecheck、pnpm --dir frontend test、pnpm --dir frontend build 全部通过。
+- [x] 完成 Electron Bridge 的真实调用验收；记录调用输入、输出摘要、取消 / 错误路径与环境。
 - [ ] 更新本记录、backend-plan.md、frontend-plan.md 和 _docs/index.md；本机验证与当前 PR head CI 均通过后再 squash 合并。
-- [ ] F12.6 不实现上下文 UI、不改压缩策略、不做 F12.7 长程 AutoRun 验收，也不引入 RAG。
+- [x] F12.6 不实现上下文 UI、不改压缩策略、不做 F12.7 长程 AutoRun 验收，也不引入 RAG。
 
 ## 8. 本地 Agent 接手要求
 
@@ -317,3 +317,60 @@ interface SessionHistoryV1 {
 ## 9. 设计确认记录
 
 2026-10-17 用户确认采用三个公共接口及上述职责划分。设计记录提交后，等待本地 Agent 按本文件实现；当前文档提交不代表生产代码已实现或验收通过。
+
+## 10. 实现记录（2026-10-18）
+
+### 做了什么
+
+- **RPC 公共契约**（`rpc/session.ts`、`rpc/session/validation.ts`）：新增 `session.context.v1`、`session.context.follow.v1`、`session.history.v1` 三个 `RpcMethod` 与公共 DTO；所有输入 / 输出使用 exact-keys 风格严格校验，包括可选字段、预算联合类型、压缩事件联合类型、分页游标、消息内容块递归结构；`rpc/index.ts` 导出新契约。
+- **Host 快照**（`src/host/session/snapshot.ts`）：复用 `SessionContextResolver`、`createGenerateRequest`、`measureContext`、`resolveContextBudget` 与 `SessionStore.getSurfaceSnapshot()`。查询只构造请求并测量，不调用模型、不写事件、不启动 Turn；预算禁用只影响 `budget`，不影响 `measurement`。
+- **Host 历史**（`src/host/session/history.ts`）：只读取当前 surface 中实际贡献给模型上下文的条目；普通消息映射为 `message`，`compaction-checkpoint` 映射为独立的 `summary-checkpoint` 并附带事务 ID、覆盖范围和摘要版本；分页使用 `surfaceGeneration + offset`，generation 不一致返回 `history-changed`，`details.surfaceGeneration` 携带当前代。
+- **Host 订阅**（`src/host/session/follow.ts`）：先注册 `session/event` 监听，再生成初始快照；首帧固定为 `snapshot`，其 `eventSequence` 是线性化高水位，基线内事件不回放。后续通知不信任投递顺序，而是按 Session 日志序号读取并处理未消费事件，因此天然去重、稳定排序；只处理目标 Session。用户消息、带内容的 Assistant 消息、工具结果与检查点触发 `context-updated`；压缩 started / checkpoint / ended 投影为不含摘要正文的 `compaction-event`；取消、RPC abort、Host 关闭与桥关闭都会移除监听并结束队列。
+- **Host 注册与错误映射**（`src/host/session.ts`、`src/host/session/failure.ts`）：在真实 Host 与 Mock Host 注册三个方法；上下文无法解析映射为 `session-context-unavailable`，历史代变化映射为 `history-changed`，其他意外错误映射为 `internal`，不把内部异常正文透传为公共错误。
+- **Electron 共享契约**（`frontend/shared/session.ts`、`frontend/shared/session/channels.ts`、`frontend/shared/session/validation.ts`）：定义 `desktop.session` 的 getContext / getHistory / startContextFollow / cancelContextFollow / onContextEvent、IPC 通道、成功 / 失败结果、订阅 ID 与事件校验；失败对象可携带 JSON `details`，用于透传 `history-changed` 的当前 generation。
+- **Electron 主进程与控制权**（`frontend/electron/ipc/session-context.ts`）：unary 查询经过输入与输出双重校验；follow 订阅按 WebContents owner 绑定，返回随机订阅 ID，支持单订阅取消、窗口销毁 `cancelOwner` 与 bridge `dispose`；Host 意外结束或帧非法投影为 `context-follow-error`，不向 Renderer 暴露原始 IPC。
+- **Preload**（`frontend/electron/preload/session.ts`、`frontend/electron/preload.ts`）：仅暴露 `window.desktop.session` 的五个方法；所有 Host 返回值与推送事件在 preload 再校验一次，原始 IPC 通道不外泄；`frontend/src/env.d.ts` 同步 Renderer 类型。
+- **验收工具**（`scripts/host/mock.ts`、`frontend/scripts/qa/session.ts`、`frontend/electron.vite.config.ts`、`frontend/package.json`）：Mock Host 新增 `session-context` 模式，提供可压缩的 Mock 模型容量与脚本化响应；新增 `pnpm --dir frontend qa:session-context` Electron 验收入口，真实经过构建后的 preload、IPC 注册与 Mock Kernel Host。
+
+### 关键不变量
+
+- 快照与真实请求共用同一 `createGenerateRequest` / `measureContext` 口径；只读查询不产生任何 Session 事件，也不消耗模型脚本。
+- 历史只投影当前 surface；`sequence` 是原始事件序号，不保证跨检查点单调（检查点事件序号通常大于其后的保留尾部）。
+- `eventSequence` 是完整 Session 事件日志高水位，不是消息条数；`surfaceGeneration` 只在前缀替换（检查点）时递增。
+- follow 基线以内事件不回放；压缩中途订阅可能只收到 checkpoint / ended，调用方不得假设每个 ended 都有本订阅内的 started。
+- 公共历史消息 DTO 不包含 provider replay 数据；它投影模型可见内容块，避免从 `src/llm/**` 暴露私有类型或原始 provider 载荷。
+- `rpc/session/validation.ts` 超过 300 行仍保留为单一边界模块：三个 DTO 共享同一组 shape / 原始类型校验助手，拆分会复制助手或制造无语义转发层；该保留理由按仓库治理要求记录于此。
+
+### 测试与验收结果
+
+- `pnpm typecheck`：通过。
+- `PATH="/c/Windows/System32:$PATH" pnpm test`：122 个测试文件、771 项测试全部通过（F12.5 基数为 118 / 748；新增 4 个文件、23 项）。
+- `pnpm --dir frontend typecheck`：通过。
+- `pnpm --dir frontend test`：25 个测试文件、153 项测试全部通过。
+- `pnpm --dir frontend build`：通过。
+- Electron Bridge 实际调用验收：`NAVO_QA_OUTPUT=frontend/qa-output/f12-6-session-context pnpm --dir frontend qa:session-context` 通过。证据 `result.json` 覆盖：
+  - 8 个真实 v2 Turn 后 `getContext`：`eventSequence=56`、`surfaceGeneration=0`、`usedTokens=3144`、预算 `thresholdTokens=8000`、`retainTokens=1600`、`exceeded=false`；
+  - 空 `sessionId` 返回 `invalid-input`；
+  - `getHistory` 首两页游标为 `{surfaceGeneration:0, offset:3}`，第二页从首页末条之后继续；
+  - follow 首帧 snapshot；另一 Session 只收到自己的 snapshot；目标 Session 的 Turn 只向本订阅发送 `context-updated`；
+  - `/compact` 后按序收到 `started → checkpoint(generation=1) → context-updated → ended(completed)`；
+  - 旧游标返回 `history-changed`，`details.surfaceGeneration=1`；
+  - 新历史首条为 `summary-checkpoint`，压缩后 `usedTokens` 从 3144 降至 2026；
+  - 取消订阅后继续产生 Turn，订阅事件数保持 7 → 7，不再投递；
+  - 环境：Electron 44.2.0、Node 24.20.0。
+- 实现提交：`<pending>`。
+- PR：`<pending>`；当前 PR head CI：`<pending>`。
+
+### 坑与发现
+
+- 现有 RPC 没有通用公共消息 DTO；F12.6 在 `rpc/session.ts` 定义了 `SessionHistoryMessageV1` / `SessionHistoryContentV1`，只投影内容块并有意省略 replay。
+- `session/event` 通过 Cordis `parallel` 异步发布，不能假设监听器按 sequence 顺序被调用；实现选择“通知只作为唤醒信号，按已提交日志消费”，因此乱序或重复通知不会造成乱序或重复帧。
+- 同一次同步批量提交多个消息时，逐事件快照会看到相同最终状态；实现用 `eventSequence + generation + measurement` 去重，只发一个有意义的 `context-updated`。
+- Mock Host 的 `agent.turn.v1` 是纯传输 mock，不写 SessionStore；验收改用 `agent.turn.v2` 走真实运行时。`session-context` 模式只为验收提供容量与脚本响应，不改变生产路径。
+- Electron 退出时 `userData` 内的 SQLite 观察文件仍被进程持有，清理仅删除 Mock Host 的 home，保留临时 `electron/` 目录；验收证据写入仓库 `frontend/qa-output/`。
+
+### 剩余问题
+
+- 本 Step 只提供 API，不开发上下文用量面板、压缩动画或其他 UI；前端正式页面仍未消费 `window.desktop.session`。
+- F12.7 长程 AutoRun 验收未执行；F12.3 记录中的本机完整验证跟踪项保持不变。
+- 公共历史消息暂不暴露 replay；如果未来 Renderer 需要重放 provider 原生载荷，需要单独设计安全投影，不在本 Step 擅自扩展。

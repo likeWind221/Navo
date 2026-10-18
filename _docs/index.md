@@ -77,7 +77,7 @@
 - [F12.3 摘要压缩与 Session 检查点](112-devlog-f12-3-compaction.md)：安全选区、摘要生成、检查点安装、历史投影与失败语义。
 - [F12.4 超窗恢复与重启对账](113-devlog-f12-4-overflow-recovery.md)：provider 超窗归一、压缩后重试及未闭合事务恢复。
 - [F12.5 主动压缩命令 /compact](114-devlog-f12-5-manual-compact.md)：复用现有命令与压缩核心，补齐 Main / Node / 普通 Session 上下文解析、manual 独立事务身份、queued 串行执行和重启恢复；本机 748 项完整测试通过，PR #77 已合入 master（3c464f5）。
-- [F12.6 压缩与上下文压力公共契约](115-devlog-f12-6-public-context-contract.md)：三个版本化 Session API、上下文快照与订阅、有效历史分页及摘要检查点标识；当前为设计记录，尚未实现。
+- [F12.6 压缩与上下文压力公共契约](115-devlog-f12-6-public-context-contract.md)：三个版本化 Session API、上下文快照与订阅、有效历史分页及摘要检查点标识；生产实现与本机验证完成，Electron Bridge 实际调用通过，PR / CI 待完成。
 - F12.7 长程压缩验收：验证多次压缩、超窗恢复与重启后的 AutoRun 闭环。
 - Phase 13：RAG——Workspace / Resource / Session 检索、权限感知 Retrieval 与 RAG Pipeline。
 
@@ -147,7 +147,7 @@
 - [F12.3 摘要压缩与 Session 检查点](112-devlog-f12-3-compaction.md)：结构化累积摘要、安全前缀选区、检查点写入与请求重测量。
 - [F12.4 超窗恢复与重启对账](113-devlog-f12-4-overflow-recovery.md)：provider 超窗归一、压缩后重试及未闭合事务恢复。
 - [F12.5 主动压缩命令 /compact](114-devlog-f12-5-manual-compact.md)：复用现有命令与压缩核心，补齐当前 Session 上下文解析、独立事务身份、串行执行和重启恢复；本机完整验证通过，PR #77 已合入 master（3c464f5）。
-- [F12.6 压缩与上下文压力公共契约](115-devlog-f12-6-public-context-contract.md)：三个版本化 Session API、上下文快照与订阅、有效历史分页及摘要检查点标识；当前为设计记录，尚未实现。
+- [F12.6 压缩与上下文压力公共契约](115-devlog-f12-6-public-context-contract.md)：三个版本化 Session API、上下文快照与订阅、有效历史分页及摘要检查点标识；生产实现与本机验证完成，Electron Bridge 实际调用通过，PR / CI 待完成。
 - F12.7 长程压缩验收：验证多次压缩、超窗恢复与重启后的 AutoRun 闭环。
 - [F12.4 超窗恢复与重启对账](113-devlog-f12-4-overflow-recovery.md)：统一识别 provider 超窗错误、强制压缩后单次重试，以及启动时未闭合压缩事务的中断对账。
 

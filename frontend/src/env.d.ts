@@ -2,6 +2,7 @@
 
 import type { DesktopAgentApi } from "../shared/agent.js";
 import type { DesktopProjectApi } from "../shared/project.js";
+import type { DesktopSessionApi } from "../shared/session.js";
 
 declare global {
   interface Window {
@@ -13,6 +14,7 @@ declare global {
       };
       readonly agent: DesktopAgentApi;
       readonly project: DesktopProjectApi;
+      readonly session: DesktopSessionApi;
     };
   }
 }
