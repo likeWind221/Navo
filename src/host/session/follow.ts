@@ -1,7 +1,6 @@
 import type { Context } from "cordis";
 
 import type {
-  SessionCompactionEventV1,
   SessionContextFollowEventV1,
   SessionContextFollowInputV1,
   SessionContextSnapshotV1,
