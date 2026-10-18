@@ -117,9 +117,13 @@ Research Workspace 后续可包含：
 |---|---|---|
 | Phase 9 | Agent 如何可靠执行长程任务？ | Adaptive Roadmap Runtime |
 | Phase 10 | 项目如何跨重启持续推进，系统如何知道任务真的完成？ | Durable Project（持久化与恢复）+ Main 判断节点完成 |
-| Phase 11 | 项目能否在无人逐个确认时自动推进？ | 人工 / 全自动两种推进模式 + 上下文压缩 |
-| Phase 12 | Research 如何形成可用闭环？ | Research Agent + Claim/Evidence + RAG |
-| Phase 13 | 系统如何与研究者长期共同改进？ | Research Memory + Human-AI Co-evolution |
+| Phase 11 | 项目能否在无人逐个确认时自动推进？ | 人工 / 全自动两种推进模式 |
+| Phase 12 | 长程任务接近上下文上限时如何继续？ | Session 上下文压缩、主动压缩与超窗恢复 |
+| Phase 13 | 用户和 Agent 如何找到并使用项目中的资料？ | 基于 Resource 的项目资料库、权限内内容检索与可核验引用 |
+
+Phase 13 将项目内 Resource 的集合升级为项目资料库，统一组织用户参考资料与 Agent 成果，让 Main / Node 按需查找、阅读和引用相关内容，支持有依据的长程任务执行。RAG 服务于这条任务流程；分类、来源与权限保留明确的产品规则。首版限定项目内，不包含跨项目知识库、Session 历史召回、外部知识库同步、知识图谱或复杂扫描件理解；具体算法和依赖待后续设计确定。
+
+阶段拆分与状态以 [后端计划](backend-plan.md) 为准，桌面消费与正式 UI 验收由 [前端计划](frontend-plan.md) 承接。已确认阶段规划不等于开始或完成任何子步骤，详见 [F13 规划记录](124-devlog-f13-plan.md)。Research Memory、Claim-Evidence Graph 与 Human-AI Co-evolution 保留为后续方向，暂不分配新阶段编号。
 
 Coding 与 Learning 暂作为验证 Core 通用性的后续 Mode Adapter，不在当前阶段同时做成完整产品。
 
