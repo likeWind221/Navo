@@ -37,9 +37,12 @@ export function watchSecondCompaction(app: Context, projectId: ProjectId, nodeAI
       pauseError = error instanceof Error ? error.message : String(error);
     }
   };
-  const dispose = app.on("session/event", (event) => {
+  const disposeSession = app.on("session/event", (event) => {
     const sessionId = app.nodes.get(nodeAId)?.sessionId;
     if (sessionId !== undefined && event.sessionId === sessionId) scan();
+  });
+  const disposeNode = app.on("node/event", (event) => {
+    if (event.nodeId === nodeAId) scan();
   });
   scan();
   return {
@@ -49,6 +52,9 @@ export function watchSecondCompaction(app: Context, projectId: ProjectId, nodeAI
     get pauseError() {
       return pauseError;
     },
-    dispose,
+    dispose() {
+      disposeSession();
+      disposeNode();
+    },
   };
 }

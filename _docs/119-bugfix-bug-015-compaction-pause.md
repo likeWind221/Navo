@@ -1,7 +1,7 @@
 # BUG-015：压缩验收观察器漏掉 Node 提交后的暂停时机
 
 > 日期：2026-10-18
-> 状态：已定位，修复中；真实完成链路未通过
+> 状态：观察器已修复，本机完整验证通过；授权复验进程中断，缺少完整结果，未关闭
 > 跟踪：[bug-plan.md](bug-plan.md)；阶段：[117](117-devlog-f12-7-acceptance.md)；前置修订：[118](118-bugfix-bug-014-compaction-acceptance.md)
 
 ## 现象与复现
@@ -25,15 +25,20 @@
 
 ## 修复内容
 
-拟在原验收观察器同时监听目标 Node 的 node/event 与 Session 事件，两者都只唤醒对已提交事实的扫描；保留 compactionId 去重与“至少两次成功 pressure + submitted”条件，释放时同时取消订阅。不改生产生命周期，不加轮询或延时猜测。
+原验收观察器现已同时监听目标 Node 的 node/event 与 Session 事件，两者都只唤醒对已提交事实的扫描；保留 compactionId 去重与“至少两次成功 pressure + submitted”条件，释放时同时取消订阅。不改生产生命周期，不加轮询或延时猜测。
 
 添加真实 App / AutoRun 的离线回归：先发生两次压力压缩，再由真实 completion 工具提交；断言 AutoRun 在 Main Review 前返回 human-paused、Node 为 submitted、回合已结束，交接材料与重启后显式 start 才继续。回归必须能让旧观察器失败，避免只测试手动 pause。
 
 ## 验证结果与边界
 
 - BUG-014 修订的类型检查、专项 13 项及完整 784 项通过；本轮实际 Node JSON 提交与压缩也有效。
-- 新的观察器回归及修复验证待填写；本次不追加付费请求。完整真实完成仍待重新授权复验。
+- `tests/integration/compaction/watch.spec.ts` 使用真实 App / AutoRun：旧观察器实际返回 roadmap-complete、mainTurns=1，未按期暂停，因此断言失败；修复后返回 human-paused、mainTurns=0，Node 已 submitted，无活跃回合。随后原样交接、重开同一 SQLite，确认零新增请求与完整状态一致；显式 start 后真实离线 Main Review 完成。
+- Windows / bundled Node 24.19.0，System32 与 bundled Node 前置 PATH：类型检查通过；完整测试 127 文件、785 项全部通过，52.03 秒。
+- 用户明确回复“授权再复验一次”，授权修复后再使用 gpt-6-luna 运行一次，仍为最多 20 分钟、48 请求（含摘要）；无自动重跑。新证据目录为 `C:/Users/likeW/AppData/Local/Temp/navo-f127-luna-20261018-rerun-1555/`。
+- 这次执行由 Claude Code background task `b5oebdy3o` 启动，日志停在第 10 次请求 started（含两次摘要请求）；核对时 CLI 与验收 Node 进程均已不存在，证据目录仅有 preflight.json，没有 final / failure / handoff / restart 报告，未获得退出码或可确认的退出原因。不能把 started 请求计成成功响应，不能把缺失报告计为模型或观察器失败，更不能标为通过。
+- 只读保留现场：数据库 `C:/Users/likeW/AppData/Local/Temp/navo-f127-storage-fGYuhZ/navo.db`，Workspace `C:/Users/likeW/AppData/Local/Temp/navo-f127-workspace-foXuAY`，日志为上述证据目录同名 `-run.log`。本轮未重新启动、未运行恢复逻辑写入现场。
+- Claude Code 随后通过 `node:sqlite DatabaseSync({ readOnly: true })` 提取持久事实，Codex 核对原始查询输出并将诊断存为 `interruption-diagnostic.json`（不是验收成功报告）。两次 pressure 均 completed：38342→18345、32806→11090；Node A 仅有 work-started、无 completion-signaled / work-ended，Node B locked，Main 无 Session 事件。目标 Session 最高序号 53 为 llm-requested，Turn 未结束，最后请求无持久响应；10 次 started 包含 8 次任务与 2 次摘要。中断时尚未触及观察器的 submitted 条件，所以本轮不能验证或否定暂停修复。
 
 ## 后续
 
-修复观察器并完成离线专项、本机完整检查，更新原草稿 PR #79；下一次真实复验仍需遵守预算授权，不合并、不关闭本 Bug 或 F12.7 直到满足实际验收。
+更新原草稿 PR #79，保留未完成状态；不合并、不关闭本 Bug 或 F12.7。下一次真实执行须另获授权，并保持执行进程存活直到收集退出结果；不能自动重跑来补足本轮缺失证据。
