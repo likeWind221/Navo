@@ -13,6 +13,7 @@ import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import type { ModelEvent } from "../../src/llm/types.js";
 import { createSessionCommandHandler } from "../../src/host/command.js";
 import { registerProjectMethods } from "../../src/host/project.js";
+import { registerSessionMethods } from "../../src/host/session.js";
 import {
   createMockAgentTurnHandler,
   resolveMockAgentTurnConfig,
@@ -23,9 +24,20 @@ import { StdioRpcServerTransport } from "../../src/host/stdio.js";
 async function main(): Promise<void> {
   const config = resolveMockAgentTurnConfig(process.env, () => process.exit(23));
   const home = process.env.NAVO_HOME?.trim();
+  const mode = process.env.NAVO_MOCK_LLM_MODE ?? "completed";
+  const contextModel = mode === "session-context"
+    ? {
+        provider: "mock",
+        model: "mock",
+        contextWindow: 100_000,
+        maxTokens: 500,
+        autoCompactLimit: 8_000,
+      }
+    : { provider: "mock", model: "mock" };
   const ctx = await createApp({
     storage: { path: home ? join(home, "navo.db") : ":memory:" },
-    node: { session: { model: { provider: "mock", model: "mock" } } },
+    node: { session: { model: contextModel } },
+    ...(mode === "session-context" ? { agent: { model: contextModel, toolNames: [] } } : {}),
   });
   const unregister = ctx.llm.registerAdapter("mock", createMockLlmAdapter(process.env));
   const transport = new StdioRpcServerTransport(process.stdin, process.stdout);
@@ -36,6 +48,7 @@ async function main(): Promise<void> {
   }));
   router.register(sessionCommandMethod, createSessionCommandHandler(ctx));
   registerProjectMethods(router, ctx);
+  registerSessionMethods(router, ctx);
   const server = new StreamRpcServer(transport, router);
   const stop = (): void => { void server.dispose(); };
   process.once("SIGINT", stop);
@@ -65,6 +78,12 @@ function createMockLlmAdapter(env: NodeJS.ProcessEnv): MockLLMAdapter {
       kind: "handler",
       handle: () => completedEvents(),
     }]);
+  }
+  if (mode === "session-context") {
+    return new MockLLMAdapter(Array.from({ length: 16 }, () => ({
+      kind: "handler" as const,
+      handle: () => completedEvents(),
+    })));
   }
   if (mode === "roadmap") {
     return new MockLLMAdapter([

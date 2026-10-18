@@ -1,7 +1,7 @@
 # F12.0 上下文压缩设计收口
 
 > 日期：2026-10-16  
-> 状态：✅ 基础设计已收口；F12.1–F12.4 已落地，F12.5 新增 Human 主动压缩命令  
+> 状态：✅ 基础设计已收口；F12.1–F12.5 已落地，F12.6 公共契约设计已确认  
 > 范围：只收口 Phase 12 的上下文测量、Session 压缩、摘要检查点与恢复语义；不修改生产代码。跨 Session 检索与可召回压缩归入 Phase 13。
 
 ## 1. 做了什么
@@ -128,7 +128,7 @@ replace 已落盘但 ended 未写时，重启后仍补写 `interrupted`；surfac
 
 ### 4.8 公共契约方向
 
-F12.6 定义：每个 Session 的上下文用量（已用 / 容量 / 阈值）查询、压缩开始与结束的实时事件，以及历史查询中把检查点标记为摘要而非普通用户消息。F12.5 先补齐主动压缩命令。前端展示交由 [frontend-plan.md](frontend-plan.md) 的后续步骤，不在 F12 后端范围内。
+F12.6 的具体设计见 [115-devlog-f12-6-public-context-contract.md](115-devlog-f12-6-public-context-contract.md)：session.context.v1 查询上下文快照，session.context.follow.v1 订阅上下文变化与压缩生命周期事件，session.history.v1 分页读取当前有效历史并将摘要检查点标记为独立类型。F12.6 包含 RPC / Host 与 Electron Bridge 的稳定契约、运行时校验、取消和历史分页一致性；不开发 UI，前端页面仍由 [frontend-plan.md](frontend-plan.md) 后续步骤负责。
 
 ## 5. 子 Step 拆分
 
@@ -139,7 +139,7 @@ F12.6 定义：每个 Session 的上下文用量（已用 / 容量 / 阈值）�
 | F12.3 | 越过阈值时把可压缩历史替换为摘要检查点，保留近期尾部和完整工具配对，后续回合从摘要续接；压缩失败不中断原请求 |
 | F12.4 | provider 确认超窗后压缩一次再重试；压不动时回合以明确原因失败、AutoRun 暂停；重启后未闭合的压缩记为中断 |
 | F12.5 | 提供 Human 主动 `/compact` 命令；复用现有压缩核心，支持独立 Session 事务、上下文解析、串行执行与重启恢复 |
-| F12.6 | 桌面能读到 Session 上下文用量、压缩发生记录，并在历史中区分摘要检查点 |
+| F12.6 | 桌面通过 session.context.v1 查询上下文快照、通过 session.context.follow.v1 订阅上下文变化与压缩生命周期、通过 session.history.v1 分页读取有效历史并识别摘要检查点；详细契约见 [115](115-devlog-f12-6-public-context-contract.md) |
 | F12.7 | 用离线长程多回合和真实模型小窗口配置证明 AutoRun 能跨越多次压缩完成 Project |
 
 ## 6. 明确不采用
@@ -158,4 +158,4 @@ F12.6 定义：每个 Session 的上下文用量（已用 / 容量 / 阈值）�
 
 ## 8. 下一步
 
-F12.1–F12.4 已有对应实现与记录；F12.3 的本机完整验证仍需按 backend-plan 跟踪。下一步经用户确认进入 F12.5 主动 `/compact` 命令。
+F12.1–F12.5 已有对应实现与记录；F12.3 的本机完整验证仍需按 backend-plan 跟踪。F12.5 已通过 PR #77 合入 master（3c464f5）。下一步进入 F12.6 公共契约，设计与实现边界见 [115-devlog-f12-6-public-context-contract.md](115-devlog-f12-6-public-context-contract.md)。

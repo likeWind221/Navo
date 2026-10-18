@@ -14,6 +14,7 @@ export default defineConfig({
           markdown: resolve("scripts/qa/markdown.ts"),
           project: resolve("scripts/qa/project.ts"),
           autorun: resolve("scripts/qa/autorun.ts"),
+          session: resolve("scripts/qa/session.ts"),
         },
       },
     },

@@ -1,7 +1,7 @@
 # F12.5 主动压缩命令 `/compact`
 
 > 日期：2026-10-17  
-> 状态：🔄 已实现并通过本机完整验证；PR [#77](https://github.com/likeWind221/Navo/pull/77) 的当前 head CI 待确认。  
+> 状态：✅ 已通过本机完整验证并合入 master；PR [#77](https://github.com/likeWind221/Navo/pull/77) 已 squash 合并，合并提交 3c464f5。Electron 点击级验收未执行，F12.5 不新增 UI。
 > 基线：master a911f4b7b4e5f32e8c672072954f40c39417c2b1（F12.4 已合入）。  
 > 范围：在现有 Session Compaction 基础上增加 Human 主动压缩入口；不重复实现摘要算法，不开发压缩 UI。
 
@@ -167,7 +167,8 @@ compaction-started (trigger=manual, no turnId)
 
 - [x] 对新增/修改文件执行 typecheck、lint（若仓库配置有）及相关测试。
 - [x] `pnpm typecheck`、`pnpm test` 完整通过；Windows Git Bash 如遇 `whoami.exe` PATH 问题，按 F12.4 记录将 `C:\\Windows\\System32` 放在 PATH 前再复测。
-- [ ] 在当前实现分支的最新 head 上检查 CI；本机真实桌面通过现有命令入口执行 `/compact`，验证成功与 no-op 两条路径。
+- [x] PR #77 当前 head CI 通过并已 squash 合入 master（3c464f5）。
+- [x] 通过现有 Host 命令入口验证 /compact 成功与 no-op 两条路径；未启动 Electron 界面做点击级验收，该项不属于本阶段 UI 范围。
 - [x] 更新 F12.5 记录、`backend-plan.md` 与文档索引；记录测试数量、提交 SHA 与剩余问题。
 
 ## 7. 不在本阶段做
@@ -206,7 +207,7 @@ compaction-started (trigger=manual, no turnId)
 - `tests/session/history.spec.ts` 新增 manual 事务校验、Turn 标识约束与旧 pressure / overflow 兼容。
 - `tests/storage/database.spec.ts` 新增 manual 未闭合事务与“checkpoint 已提交但 ended 缺失”的重启对账。
 - 实现提交：`1f8e313`（`F12.5: add manual /compact command`）。
-- PR：[#77](https://github.com/likeWind221/Navo/pull/77)；最新 head CI 以 PR 检查结果为准。
+- PR：[#77](https://github.com/likeWind221/Navo/pull/77) 已 squash 合入 master，合并提交 3c464f5；当前 master head 即为 F12.5 合入后的代码基线。
 
 ### 坑与发现
 
@@ -221,4 +222,4 @@ compaction-started (trigger=manual, no turnId)
 - Electron 点击级命令验收不在本 Step，前端无需新增命令白名单即可复用现有输入链路。
 - F12.3 记录中的本机完整验证跟踪项仍在；本次已用同环境全量测试验证当前分支，但未改写其历史结论。
 
-下一步：等待 PR #77 当前 head CI 通过后按 squash 合并；之后进入 F12.6 公共契约。
+下一步：进入 F12.6 压缩与上下文压力公共契约，设计见 [115](115-devlog-f12-6-public-context-contract.md)。

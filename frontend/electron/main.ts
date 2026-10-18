@@ -6,6 +6,7 @@ import { resolveHostLaunchConfig } from "./host/launch.js";
 import { AgentCommandController } from "./ipc/command/controller.js";
 import { AgentTurnV2Controller } from "./ipc/agent/v2.js";
 import { cancelAgentSessionOwner, registerAgentSessionIpc } from "./ipc/session.js";
+import { registerSessionContextIpc, SessionContextController } from "./ipc/session-context.js";
 import { registerProjectIpc } from "./ipc/project.js";
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
@@ -13,8 +14,10 @@ let quittingAfterCleanup = false;
 let kernelHost: KernelHostProcess | undefined;
 let agentTurns: AgentTurnV2Controller | undefined;
 let agentCommands: AgentCommandController | undefined;
+let sessionContext: SessionContextController | undefined;
 let unregisterAgentSessionIpc: (() => void) | undefined;
 let unregisterProjectIpc: (() => void) | undefined;
+let unregisterSessionContextIpc: (() => void) | undefined;
 
 function createWindow(): void {
   const window = new BrowserWindow({
@@ -44,6 +47,7 @@ function createWindow(): void {
     if (agentTurns !== undefined && agentCommands !== undefined) {
       cancelAgentSessionOwner(agentTurns, agentCommands, ownerId);
     }
+    sessionContext?.cancelOwner(ownerId);
   });
 
   const rendererUrl = process.env.ELECTRON_RENDERER_URL;
@@ -68,8 +72,10 @@ if (!hasSingleInstanceLock) {
     kernelHost = new KernelHostProcess(resolveHostLaunchConfig({ appPath: app.getAppPath() }));
     agentTurns = new AgentTurnV2Controller(kernelHost);
     agentCommands = new AgentCommandController(kernelHost);
+    sessionContext = new SessionContextController(kernelHost);
     unregisterAgentSessionIpc = registerAgentSessionIpc(agentTurns, agentCommands);
     unregisterProjectIpc = registerProjectIpc(kernelHost);
+    unregisterSessionContextIpc = registerSessionContextIpc(sessionContext);
     void kernelHost.start().catch((error: unknown) => {
       const message = error instanceof Error ? error.message : "Unknown Kernel Host startup failure";
       console.error(`[electron-main] ${message}`);
@@ -86,8 +92,10 @@ if (!hasSingleInstanceLock) {
     quittingAfterCleanup = true;
     unregisterAgentSessionIpc?.();
     unregisterProjectIpc?.();
+    unregisterSessionContextIpc?.();
     agentTurns?.dispose();
     agentCommands?.dispose();
+    sessionContext?.dispose();
     void kernelHost.close().finally(() => app.quit());
   });
 

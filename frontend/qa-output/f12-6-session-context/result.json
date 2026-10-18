@@ -1,0 +1,549 @@
+{
+  "invalidInput": {
+    "type": "failed",
+    "failure": {
+      "code": "invalid-input",
+      "message": "The session request is invalid"
+    }
+  },
+  "snapshot": {
+    "sessionId": "qa-session",
+    "eventSequence": 56,
+    "surfaceGeneration": 0,
+    "measuredAt": "2026-10-18T02:16:24.653Z",
+    "measurement": {
+      "usedTokens": 3144,
+      "estimatedRequestTokens": 3144,
+      "basis": "estimate"
+    },
+    "budget": {
+      "kind": "enabled",
+      "contextWindow": 100000,
+      "reservedOutputTokens": 500,
+      "thresholdTokens": 8000,
+      "retainTokens": 1600,
+      "exceeded": false
+    }
+  },
+  "firstPage": {
+    "sessionId": "qa-session",
+    "surfaceGeneration": 0,
+    "entries": [
+      {
+        "kind": "message",
+        "sequence": 2,
+        "timestamp": "2026-10-18T02:16:24.550Z",
+        "message": {
+          "id": "f126-seed-0",
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "seed sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"
+            }
+          ]
+        }
+      },
+      {
+        "kind": "message",
+        "sequence": 5,
+        "timestamp": "2026-10-18T02:16:24.560Z",
+        "message": {
+          "id": "fd4e7bd2-5168-4f0f-a951-7f6e0ab8c509",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "mock"
+            }
+          ]
+        }
+      },
+      {
+        "kind": "message",
+        "sequence": 9,
+        "timestamp": "2026-10-18T02:16:24.570Z",
+        "message": {
+          "id": "f126-seed-1",
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "seed sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"
+            }
+          ]
+        }
+      }
+    ],
+    "nextCursor": {
+      "surfaceGeneration": 0,
+      "offset": 3
+    }
+  },
+  "secondPage": {
+    "sessionId": "qa-session",
+    "surfaceGeneration": 0,
+    "entries": [
+      {
+        "kind": "message",
+        "sequence": 12,
+        "timestamp": "2026-10-18T02:16:24.574Z",
+        "message": {
+          "id": "232eb163-ec7d-4dc0-a248-1e0808419626",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "mock"
+            }
+          ]
+        }
+      },
+      {
+        "kind": "message",
+        "sequence": 16,
+        "timestamp": "2026-10-18T02:16:24.581Z",
+        "message": {
+          "id": "f126-seed-2",
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "seed sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"
+            }
+          ]
+        }
+      },
+      {
+        "kind": "message",
+        "sequence": 19,
+        "timestamp": "2026-10-18T02:16:24.586Z",
+        "message": {
+          "id": "6d9ebdb4-0c10-4bd3-9a86-089eb6950db1",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "mock"
+            }
+          ]
+        }
+      }
+    ],
+    "nextCursor": {
+      "surfaceGeneration": 0,
+      "offset": 6
+    }
+  },
+  "initialEvents": [
+    {
+      "type": "context-event",
+      "subscriptionId": "4bd5e989-5050-4f36-a0d9-d2c2d2014715",
+      "event": {
+        "type": "snapshot",
+        "snapshot": {
+          "sessionId": "qa-session",
+          "eventSequence": 56,
+          "surfaceGeneration": 0,
+          "measuredAt": "2026-10-18T02:16:24.661Z",
+          "measurement": {
+            "usedTokens": 3144,
+            "estimatedRequestTokens": 3144,
+            "basis": "estimate"
+          },
+          "budget": {
+            "kind": "enabled",
+            "contextWindow": 100000,
+            "reservedOutputTokens": 500,
+            "thresholdTokens": 8000,
+            "retainTokens": 1600,
+            "exceeded": false
+          }
+        }
+      }
+    },
+    {
+      "type": "context-event",
+      "subscriptionId": "c3eaf199-7458-4f90-9361-92909765fb4f",
+      "event": {
+        "type": "snapshot",
+        "snapshot": {
+          "sessionId": "qa-session-other",
+          "eventSequence": 0,
+          "surfaceGeneration": 0,
+          "measuredAt": "2026-10-18T02:16:24.662Z",
+          "measurement": {
+            "usedTokens": 8,
+            "estimatedRequestTokens": 8,
+            "basis": "estimate"
+          },
+          "budget": {
+            "kind": "enabled",
+            "contextWindow": 100000,
+            "reservedOutputTokens": 500,
+            "thresholdTokens": 8000,
+            "retainTokens": 1600,
+            "exceeded": false
+          }
+        }
+      }
+    }
+  ],
+  "updatedEvents": [
+    {
+      "type": "context-event",
+      "subscriptionId": "4bd5e989-5050-4f36-a0d9-d2c2d2014715",
+      "event": {
+        "type": "snapshot",
+        "snapshot": {
+          "sessionId": "qa-session",
+          "eventSequence": 56,
+          "surfaceGeneration": 0,
+          "measuredAt": "2026-10-18T02:16:24.661Z",
+          "measurement": {
+            "usedTokens": 3144,
+            "estimatedRequestTokens": 3144,
+            "basis": "estimate"
+          },
+          "budget": {
+            "kind": "enabled",
+            "contextWindow": 100000,
+            "reservedOutputTokens": 500,
+            "thresholdTokens": 8000,
+            "retainTokens": 1600,
+            "exceeded": false
+          }
+        }
+      }
+    },
+    {
+      "type": "context-event",
+      "subscriptionId": "c3eaf199-7458-4f90-9361-92909765fb4f",
+      "event": {
+        "type": "snapshot",
+        "snapshot": {
+          "sessionId": "qa-session-other",
+          "eventSequence": 0,
+          "surfaceGeneration": 0,
+          "measuredAt": "2026-10-18T02:16:24.662Z",
+          "measurement": {
+            "usedTokens": 8,
+            "estimatedRequestTokens": 8,
+            "basis": "estimate"
+          },
+          "budget": {
+            "kind": "enabled",
+            "contextWindow": 100000,
+            "reservedOutputTokens": 500,
+            "thresholdTokens": 8000,
+            "retainTokens": 1600,
+            "exceeded": false
+          }
+        }
+      }
+    },
+    {
+      "type": "context-event",
+      "subscriptionId": "4bd5e989-5050-4f36-a0d9-d2c2d2014715",
+      "event": {
+        "type": "context-updated",
+        "snapshot": {
+          "sessionId": "qa-session",
+          "eventSequence": 58,
+          "surfaceGeneration": 0,
+          "measuredAt": "2026-10-18T02:16:24.703Z",
+          "measurement": {
+            "usedTokens": 3527,
+            "estimatedRequestTokens": 3527,
+            "basis": "estimate"
+          },
+          "budget": {
+            "kind": "enabled",
+            "contextWindow": 100000,
+            "reservedOutputTokens": 500,
+            "thresholdTokens": 8000,
+            "retainTokens": 1600,
+            "exceeded": false
+          }
+        }
+      }
+    },
+    {
+      "type": "context-event",
+      "subscriptionId": "4bd5e989-5050-4f36-a0d9-d2c2d2014715",
+      "event": {
+        "type": "context-updated",
+        "snapshot": {
+          "sessionId": "qa-session",
+          "eventSequence": 61,
+          "surfaceGeneration": 0,
+          "measuredAt": "2026-10-18T02:16:24.708Z",
+          "measurement": {
+            "usedTokens": 3536,
+            "estimatedRequestTokens": 3536,
+            "basis": "estimate"
+          },
+          "budget": {
+            "kind": "enabled",
+            "contextWindow": 100000,
+            "reservedOutputTokens": 500,
+            "thresholdTokens": 8000,
+            "retainTokens": 1600,
+            "exceeded": false
+          }
+        }
+      }
+    }
+  ],
+  "compaction": [
+    {
+      "kind": "started",
+      "sessionId": "qa-session",
+      "sequence": 64,
+      "timestamp": "2026-10-18T02:16:24.715Z",
+      "compactionId": "19973221-3589-4ee9-aa54-02f1e8069f0e",
+      "trigger": "manual",
+      "coveredStart": 2,
+      "coveredEnd": 26
+    },
+    {
+      "kind": "checkpoint",
+      "sessionId": "qa-session",
+      "sequence": 65,
+      "timestamp": "2026-10-18T02:16:24.718Z",
+      "compactionId": "19973221-3589-4ee9-aa54-02f1e8069f0e",
+      "coveredStart": 2,
+      "coveredEnd": 26,
+      "summaryVersion": 1,
+      "surfaceGeneration": 1
+    },
+    {
+      "kind": "ended",
+      "sessionId": "qa-session",
+      "sequence": 66,
+      "timestamp": "2026-10-18T02:16:24.720Z",
+      "compactionId": "19973221-3589-4ee9-aa54-02f1e8069f0e",
+      "status": "completed",
+      "beforeTokens": 3536,
+      "afterTokens": 2026,
+      "summaryTokens": 1,
+      "provider": "mock",
+      "model": "mock"
+    }
+  ],
+  "staleCursor": {
+    "type": "failed",
+    "failure": {
+      "code": "history-changed",
+      "message": "Session history changed; restart from the first page.",
+      "details": {
+        "surfaceGeneration": 1
+      }
+    }
+  },
+  "compactedHistory": {
+    "sessionId": "qa-session",
+    "surfaceGeneration": 1,
+    "entries": [
+      {
+        "kind": "summary-checkpoint",
+        "sequence": 65,
+        "timestamp": "2026-10-18T02:16:24.718Z",
+        "message": {
+          "id": "199d2046-28cc-4339-b708-5b6447e5d52f",
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "This checkpoint condenses earlier conversation history. Treat it as established context; continue the task directly without acknowledging the checkpoint.\n\n<compacted-summary>\nmock\n</compacted-summary>"
+            }
+          ]
+        },
+        "compactionId": "19973221-3589-4ee9-aa54-02f1e8069f0e",
+        "coveredStart": 2,
+        "coveredEnd": 26,
+        "summaryVersion": 1
+      },
+      {
+        "kind": "message",
+        "sequence": 30,
+        "timestamp": "2026-10-18T02:16:24.607Z",
+        "message": {
+          "id": "f126-seed-4",
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "seed sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"
+            }
+          ]
+        }
+      },
+      {
+        "kind": "message",
+        "sequence": 33,
+        "timestamp": "2026-10-18T02:16:24.612Z",
+        "message": {
+          "id": "b24fb57e-70b2-4d4c-abd6-c2f6b9bde0ca",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "mock"
+            }
+          ]
+        }
+      },
+      {
+        "kind": "message",
+        "sequence": 37,
+        "timestamp": "2026-10-18T02:16:24.619Z",
+        "message": {
+          "id": "f126-seed-5",
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "seed sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"
+            }
+          ]
+        }
+      },
+      {
+        "kind": "message",
+        "sequence": 40,
+        "timestamp": "2026-10-18T02:16:24.623Z",
+        "message": {
+          "id": "60126231-86db-47a6-844a-86cfc15e2303",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "mock"
+            }
+          ]
+        }
+      },
+      {
+        "kind": "message",
+        "sequence": 44,
+        "timestamp": "2026-10-18T02:16:24.630Z",
+        "message": {
+          "id": "f126-seed-6",
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "seed sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"
+            }
+          ]
+        }
+      },
+      {
+        "kind": "message",
+        "sequence": 47,
+        "timestamp": "2026-10-18T02:16:24.635Z",
+        "message": {
+          "id": "f76c16a0-5f5e-4454-9541-4c7e350da966",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "mock"
+            }
+          ]
+        }
+      },
+      {
+        "kind": "message",
+        "sequence": 51,
+        "timestamp": "2026-10-18T02:16:24.640Z",
+        "message": {
+          "id": "f126-seed-7",
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "seed sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"
+            }
+          ]
+        }
+      },
+      {
+        "kind": "message",
+        "sequence": 54,
+        "timestamp": "2026-10-18T02:16:24.644Z",
+        "message": {
+          "id": "48a7879d-bcf2-4dbd-9e1d-083108e2a444",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "mock"
+            }
+          ]
+        }
+      },
+      {
+        "kind": "message",
+        "sequence": 58,
+        "timestamp": "2026-10-18T02:16:24.702Z",
+        "message": {
+          "id": "f126-update",
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "follow update uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu"
+            }
+          ]
+        }
+      },
+      {
+        "kind": "message",
+        "sequence": 61,
+        "timestamp": "2026-10-18T02:16:24.706Z",
+        "message": {
+          "id": "5e0bd2a1-6f75-4a9a-9cb3-3c5680a8526e",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "mock"
+            }
+          ]
+        }
+      }
+    ],
+    "nextCursor": null
+  },
+  "snapshotAfter": {
+    "sessionId": "qa-session",
+    "eventSequence": 66,
+    "surfaceGeneration": 1,
+    "measuredAt": "2026-10-18T02:16:24.756Z",
+    "measurement": {
+      "usedTokens": 2026,
+      "estimatedRequestTokens": 2026,
+      "basis": "estimate"
+    },
+    "budget": {
+      "kind": "enabled",
+      "contextWindow": 100000,
+      "reservedOutputTokens": 500,
+      "thresholdTokens": 8000,
+      "retainTokens": 1600,
+      "exceeded": false
+    }
+  },
+  "cancel": {
+    "beforeCancel": 7,
+    "afterCancel": 7
+  },
+  "runtime": {
+    "electron": "44.2.0",
+    "node": "24.20.0",
+    "sessionId": "qa-session",
+    "otherId": "qa-session-other"
+  }
+}

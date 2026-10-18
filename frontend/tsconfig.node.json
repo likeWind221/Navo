@@ -20,6 +20,7 @@
     "electron/**/*.ts",
     "scripts/qa/chat.ts",
     "scripts/qa/autorun.ts",
+    "scripts/qa/session.ts",
     "electron.vite.config.ts",
     "vite.config.ts",
     "vitest.config.ts"
