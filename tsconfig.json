@@ -29,6 +29,8 @@
     "scripts/goal.ts",
     "scripts/longterm.ts",
     "scripts/longterm/**/*.ts",
+    "scripts/compaction.ts",
+    "scripts/compaction/**/*.ts",
     "scripts/real.ts",
     "scripts/rework.ts",
     "scripts/subscription.ts"

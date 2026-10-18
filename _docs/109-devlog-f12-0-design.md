@@ -1,7 +1,7 @@
 # F12.0 上下文压缩设计收口
 
 > 日期：2026-10-16  
-> 状态：✅ 基础设计已收口；F12.0–F12.6 已完成，F12.7 待步骤确认
+> 状态：✅ 基础设计已收口；F12.0–F12.6 已完成，F12.7 真实验收失败待修订
 > 范围：只收口 Phase 12 的上下文测量、Session 压缩、摘要检查点与恢复语义；不修改生产代码。跨 Session 检索与可召回压缩归入 Phase 13。
 
 ## 1. 做了什么
@@ -158,4 +158,4 @@ F12.6 的具体设计见 [115-devlog-f12-6-public-context-contract.md](115-devlo
 
 ## 8. 下一步
 
-2026-10-18：F12.0–F12.6 全部完成，F12.2 / F12.3 的本机完整验证与历史 PR CI 已补齐，见 [116](116-devlog-f12-verification.md)。F12.6 公共契约与 Electron Bridge 已合入 master，见 [115](115-devlog-f12-6-public-context-contract.md)。当前下一步为 F12.7 长程验收，待步骤确认后实施。第 4.7 节和子 Step 表保留初始设计；当前压力压缩失败语义以 [112](112-devlog-f12-3-compaction.md) 的后续确认与实现为准。
+2026-10-18：F12.0–F12.6 全部完成，F12.2 / F12.3 的本机完整验证与历史 PR CI 已补齐，见 [116](116-devlog-f12-verification.md)。F12.6 公共契约与 Electron Bridge 已合入 master，见 [115](115-devlog-f12-6-public-context-contract.md)。F12.7 已实施，离线与本机完整验证通过，真实完成链路因 BUG-014 失败；当前下一步为确认验收协议修订，见 [117](117-devlog-f12-7-acceptance.md)。第 4.7 节和子 Step 表保留初始设计；当前压力压缩失败语义以 [112](112-devlog-f12-3-compaction.md) 的后续确认与实现为准。

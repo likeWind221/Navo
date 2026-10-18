@@ -15,7 +15,7 @@ const schema: JsonObject = {
   properties: {
     summary: {
       type: "string",
-      description: "What this Node produced and how the result was checked.",
+      description: "Concise deliverable or answer, how it was checked, and any limitations. The answer itself may be the deliverable; no file or Resource is required unless the task requires one. Preserve any task-specific output format.",
     },
     resource_ids: {
       type: "array",
@@ -35,7 +35,7 @@ const schema: JsonObject = {
           satisfied: { type: "boolean" },
           note: {
             type: "string",
-            description: "Evidence for a satisfied criterion, or what is missing.",
+            description: "Brief result and evidence location for this criterion, or what is missing. Cite relevant Resource lines, an observable action/state, or the submitted answer itself as appropriate; do not invent Resource IDs or repeat full logs.",
           },
         },
         required: ["criterion_index", "satisfied", "note"],
