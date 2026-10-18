@@ -1,5 +1,7 @@
 # 文档索引
 
+- [BUG-019：模型连接失败底层诊断不足](123-bugfix-bug-019-transport-diagnostics.md)：第一轮代理服务器 TCP 超时有对应日志，第二轮底层错误仍未知；当前六次无认证探测可达，仅排查、未修改配置。
+
 - [BUG-018：验收审查回合关联错误](122-bugfix-bug-018-review-turn.md)：已修复 Node / Main Turn ID 混用，本机完整 793 项通过，代码 head CI 通过，待阶段合入。
 - [BUG-017：Node B 原始材料审查证据缺口](121-bugfix-bug-017-review-evidence.md)：前轮 A 按精简证据通过；最新重跑在 A 阶段再次 TRANSPORT，B 审查仍未覆盖，完整验收未完成。
 - [BUG-016：Main 误读合法提交的自检结构](120-bugfix-bug-016-review-submission.md)：修订后真实一次通过 Node A，接受两 Node 自检记录；目标误判未复发，完整完成被 BUG-017 阻断。
