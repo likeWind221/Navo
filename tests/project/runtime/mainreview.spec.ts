@@ -73,7 +73,7 @@ describe("Main review of a Node", () => {
     const prompt = JSON.stringify(reviewRequest.messages);
     expect(prompt).toContain("review checklist");
     expect(prompt).toContain("not a verified fact");
-    expect(prompt).toContain("claims-satisfied");
+    expect(prompt).toContain("validated-node-submission");
     expect(JSON.stringify(adapter.requests[2]?.messages)).toContain("submit_completion(");
     expect(ctx.reviews.get(project.id)).toBeUndefined();
   });

@@ -58,18 +58,13 @@ export function buildChecklist(
       && inTurn(message.timestamp));
 
   const submission = snapshot.submission;
-  const criteria = snapshot.node.objective.acceptanceCriteria.map((criterion, index) => {
-    const check = submission?.criteria[index];
-    return {
-      index: index + 1,
-      criterion,
-      nodeSelfCheck: check === undefined ? "not-submitted" : check.satisfied ? "claims-satisfied" : "claims-not-satisfied",
-      nodeNote: check === undefined ? null : clip(check.note, CHECKLIST_NOTE_CHARS),
-    };
-  });
+  const criteria = snapshot.node.objective.acceptanceCriteria.map((criterion, index) => ({
+    index: index + 1,
+    criterion,
+  }));
 
   return formatSystemReminder(
-    "review checklist for the Node you are about to check. Everything below is the Node's own statement or a pointer to evidence, not a verified fact. Verify before you decide.",
+    "review checklist for the Node you are about to check. Node state and acceptance criteria come from the system. completionSignal, when present, is the system's record of the current validated Node submission: its fields and self-check values were actually submitted. Validation covers structure only, not task correctness. Each completionSignal.criteria index is the 1-based index in criteria. Its satisfied value records the Node's claim, not a verified fact about task completion; independently verify the work using evidence. A null completionSignal means no current submission.",
     {
       node: {
         id: String(nodeId),
@@ -86,8 +81,14 @@ export function buildChecklist(
         reason: clip(snapshot.lastReview.reason, CHECKLIST_NOTE_CHARS),
       },
       completionSignal: submission === undefined ? null : {
+        source: "validated-node-submission",
         summary: clip(submission.summary, CHECKLIST_REPLY_CHARS),
         resourceIds: submission.resourceIds.map(String),
+        criteria: submission.criteria.map((check, index) => ({
+          index: index + 1,
+          satisfied: check.satisfied,
+          note: clip(check.note, CHECKLIST_NOTE_CHARS),
+        })),
         remaining: submission.remaining.map(item => clip(item, CHECKLIST_NOTE_CHARS)),
         submittedAt: submission.submittedAt,
       },
