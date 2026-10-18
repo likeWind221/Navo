@@ -11,7 +11,7 @@ Phase 0–10 与模型接入补充工作 M1 均已完成。系统现在具备：
 - 持久恢复与完成判断：SQLite 持久保存与重启恢复、会话续接、中断收尾、Node 完成信号与 Main 复盘判定（Phase 10）。
 - 模型接入：公共 Chat Completions / Responses 协议、ChatGPT 订阅授权与 OpenAI 接入（M1）。
 
-Phase 11 自动化流程已收口：F11.0–F11.4 完成，F11.3 已补齐前端独立检查与 Electron bridge 实际调用验收，见 [108](108-devlog-f11-3-desktop-acceptance.md)。正式页面 AutoRun 控件未包含在本次公共契约验收。Phase 12 上下文压缩已完成 F12.0 设计收口与 F12.1 Context Meter（[109](109-devlog-f12-0-design.md)、[110](110-devlog-f12-1-context-meter.md)）。经用户确认，后续拆为 F12.2 压力检测接入、F12.3 摘要与检查点、F12.4 超窗恢复、F12.5 主动 `/compact` 命令；F12.5 已通过 PR #77 合入 master（提交 3c464f5），本机 pnpm typecheck 与 748 项测试通过，桌面点击级验收仍未执行。F12.6 压缩与上下文压力公共契约已完成生产实现，本机后端 771 项、前端 153 项测试与 Electron Bridge 实际调用验收通过，PR #78 head CI 通过并已合入 master（3bf5e10）；F12.2 / F12.3 的本机完整验证已于 2026-10-18 补齐（122 文件、771 项通过），F12.0–F12.6 全部完成，见 [116](116-devlog-f12-verification.md)；F12.7 离线 14 项与本机完整 785 项通过；BUG-014 协议与 BUG-015 暂停观察器已修复，前轮 Luna 24 请求完成三次压缩、JSON 交接 / 审查前暂停 / 重启，Main 按精简证据通过 A，B 执行中遇 TRANSPORT、未提交及审查，完整验收未通过，见 [117](117-devlog-f12-7-acceptance.md)；RAG 留待 Phase 13。
+Phase 11 自动化流程已收口：F11.0–F11.4 完成，F11.3 已补齐前端独立检查与 Electron bridge 实际调用验收，见 [108](108-devlog-f11-3-desktop-acceptance.md)。正式页面 AutoRun 控件未包含在本次公共契约验收。Phase 12 上下文压缩已完成 F12.0 设计收口与 F12.1 Context Meter（[109](109-devlog-f12-0-design.md)、[110](110-devlog-f12-1-context-meter.md)）。经用户确认，后续拆为 F12.2 压力检测接入、F12.3 摘要与检查点、F12.4 超窗恢复、F12.5 主动 `/compact` 命令；F12.5 已通过 PR #77 合入 master（提交 3c464f5），本机 pnpm typecheck 与 748 项测试通过，桌面点击级验收仍未执行。F12.6 压缩与上下文压力公共契约已完成生产实现，本机后端 771 项、前端 153 项测试与 Electron Bridge 实际调用验收通过，PR #78 head CI 通过并已合入 master（3bf5e10）；F12.2 / F12.3 的本机完整验证已于 2026-10-18 补齐（122 文件、771 项通过），F12.0–F12.6 全部完成，见 [116](116-devlog-f12-verification.md)；F12.7 已完成本机 793 项与真实 28 请求 / 3 次压缩 / 重启 / 两 Node 审查验收，PR #79 当前 head CI 通过并合入 master，见 [117](117-devlog-f12-7-acceptance.md)；RAG 留待 Phase 13。
 
 ```text
 Project Goal
@@ -328,8 +328,8 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不恢复�
 
 ## 12. 当前下一步
 
-**Phase 10、M1、Phase 11 与 Phase 12（F12.0–F12.7）均已完成对应后端验收。F12.7 最新 gpt-6-luna 真实 28 请求 / 3 次压缩、暂停交接 / 同库重启及两 Node / Main 完整通过，本机 793 项与代码 CI 通过，见 [117](117-devlog-f12-7-acceptance.md)。BUG-014 / 015 / 016 / 017 关闭，BUG-018 待阶段 PR #79 合入后关闭。BUG-019 通用传输诊断缺口仅排查、未修复；本轮成功不证明网络持续稳定。当前下一步由用户决定 BUG-019 修复或 Phase 13 设计，不自动开始后续 Step。前端 F5.4–F5.8、正式页面 AutoRun / 上下文 UI 不因此视为完成。**
+**Phase 10、M1、Phase 11 与 Phase 12（F12.0–F12.7）均已完成对应后端验收。F12.7 最新 gpt-6-luna 真实 28 请求 / 3 次压缩、暂停交接 / 同库重启及两 Node / Main 完整通过，本机 793 项与代码 CI 通过，见 [117](117-devlog-f12-7-acceptance.md)。BUG-014 / 015 / 016 / 017 关闭，BUG-018 已随 PR #79 合入关闭。BUG-019 通用传输诊断缺口仅排查、未修复；本轮成功不证明网络持续稳定。当前下一步由用户决定 BUG-019 修复或 Phase 13 设计，不自动开始后续 Step。前端 F5.4–F5.8、正式页面 AutoRun / 上下文 UI 不因此视为完成。**
 
 - 免除记录：F10.4b 真实模型五场景验收与 F10.5 第 7–11 回合真实验收均经用户决定免除，相应能力只由离线测试覆盖，见第 7 节。
-- 未关闭 Bug（以 [Bug 跟踪表](bug-plan.md) 为准）：BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收；BUG-018 待阶段合入，BUG-019 仅排查。
+- 未关闭 Bug（以 [Bug 跟踪表](bug-plan.md) 为准）：BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 仅排查。
 - 前端依赖：F10.4a / F10.4b 的公共契约变化与控制节点移除已同步到 [前端计划](frontend-plan.md) F5 交接说明，前端展示由 F5.4–F5.8 接入。

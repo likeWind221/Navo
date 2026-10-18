@@ -6,7 +6,7 @@
 
 - [ ] BUG-019：TRANSPORT 失败只有通用消息，底层 cause 未持久化；17:58 一轮已从 Mihomo 日志定位到代理服务器 TCP 超时，18:08 一轮底层原因仍缺证据。仅排查，未修改网络或代码。见 [123](123-bugfix-bug-019-transport-diagnostics.md)。
 
-- [ ] BUG-018：实际 Main / Node Turn 正确关联，真实最终断言通过；本机与代码 CI 通过，待阶段合入后关闭。见 [122](122-bugfix-bug-018-review-turn.md)。
+- [x] BUG-018：实际 Main / Node Turn 正确关联，真实最终断言、本机完整检查与 PR head CI 通过；PR #79 已合入，关闭。见 [122](122-bugfix-bug-018-review-turn.md)。
 
 - [x] BUG-017：真实 Main 按目的读取精简原始记录及汇总，A / B 分别返回 1596 / 2507 字符，完整验收通过，关闭。见 [121](121-bugfix-bug-017-review-evidence.md)。
 
@@ -20,7 +20,7 @@
 
 - [x] BUG-012：F11.4 真实验收脚本未调用入口且未提供下游所需材料；已修正，本机完整检查、gpt-6-sol 双节点真实完成及代码 head CI 通过（PR #70，收口提交仍遵循当前 head CI 门禁）。笔记：[106](106-bugfix-bug-012-autorun-acceptance.md)。
 
-未关闭：BUG-002、BUG-007、BUG-010、BUG-018、BUG-019。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收；BUG-018 待阶段合入，BUG-019 仅排查、未修复。BUG-014 / 015 / 016 / 017 已通过 18:24 完整真实验收关闭。
+未关闭：BUG-002、BUG-007、BUG-010、BUG-019。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 仅排查、未修复；BUG-014～018 完整验收通过并随 PR #79 合入关闭。
 
 - [x] BUG-001：Node 续接时未读取已共享的新验证资源（已修复：续接资源变化通知 + Resource ID 语义）
 - [ ] BUG-002：验证节点发布文件时出现来源不可用错误（诊断已补齐，未复现；2026-10-07 用户决定保持未关闭，等待复现后依证据定性）
