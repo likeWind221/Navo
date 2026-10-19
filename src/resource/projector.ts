@@ -32,6 +32,8 @@ export function projectResourceEvent(
         description: event.data.description,
         type: event.data.resourceType,
         entryRef: event.data.entryRef,
+        libraryPath: event.data.libraryPath,
+        assetGeneration: event.data.assetGeneration,
         access: { kind: "private" },
         revision: 1,
         createdAt: event.timestamp,
@@ -49,6 +51,13 @@ export function projectResourceEvent(
     || event.revision !== current.resource.revision + 1
   ) {
     throw invalidHistory();
+  }
+
+  if (event.type === "resource-replaced") {
+    if (event.data.assetGeneration !== current.resource.assetGeneration + 1) throw invalidHistory();
+    return Object.freeze({ status: "active", resource: freezeResource({ ...current.resource,
+      entryRef: event.data.entryRef, assetGeneration: event.data.assetGeneration,
+      revision: event.revision, updatedAt: event.timestamp }) });
   }
 
   if (event.type === "resource-updated") {

@@ -171,6 +171,12 @@ export function buildRecoveryPlan(db: DatabaseSync): RecoveryPlan {
       if (history.projectId !== projectId || !projectSnapshots.has(projectId) || invalid.has(projectId)) {
         throw new RecoveryError("Resource references an unavailable Project.");
       }
+      if (history.events.some(event => {
+        const version = (event as { version?: unknown })?.version;
+        return typeof version === "number" && version !== 4;
+      })) {
+        throw new StorageError("invalid-record", `Legacy Resource history in Project ${projectId} is unsupported. Rebuild Resource data explicitly before starting this Host; no files were removed.`);
+      }
       const parsed = parseResourceHistory(
         recoveryContext(projectSnapshots, nodeSnapshots),
         createProjectId(projectId),

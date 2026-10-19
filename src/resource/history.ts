@@ -11,6 +11,8 @@ import {
   normalizeResourceAccess,
   normalizeResourcePrincipal,
 } from "./access.js";
+import { normalizeLibraryPath, libraryPathKey } from "./library.js";
+import { validateVersionEntryRef } from "./path.js";
 import { ResourceError } from "./errors.js";
 import type { ResourceEvent } from "./events.js";
 import { freezeResourceEvent } from "./events.js";
@@ -66,7 +68,7 @@ function parseResourceEvent(
   if (raw === null || typeof raw !== "object") throw invalidHistory();
   const value = raw as Record<string, unknown>;
   if (
-    value.version !== 3
+    value.version !== 4
     || typeof value.id !== "string"
     || value.projectId !== projectId
     || typeof value.resourceId !== "string"
@@ -83,7 +85,7 @@ function parseResourceEvent(
 
   const resourceId = createResourceId(value.resourceId);
   const header = {
-    version: 3 as const,
+    version: 4 as const,
     id: createEventId(value.id),
     projectId,
     resourceId,
@@ -95,9 +97,13 @@ function parseResourceEvent(
   const data = value.data as Record<string, unknown>;
 
   if (value.type === "resource-created") {
+    if (typeof data.operationId !== "string" || data.assetGeneration !== 1) throw invalidHistory();
+    const libraryPath = normalizeLibraryPath(data.libraryPath);
+    if ([...states.values()].some(state => state.status === "active" && libraryPathKey(state.resource.libraryPath) === libraryPathKey(libraryPath))) throw invalidHistory();
     const owner = parseHistoryPrincipal(data.owner);
     requireResourcePrincipal(ctx, projectId, owner, "invalid-history");
     const metadata = validateCreatedMetadata(data);
+    validateVersionEntryRef(metadata.entryRef, 1);
     return freezeResourceEvent({
       ...header,
       type: "resource-created",
@@ -107,12 +113,21 @@ function parseResourceEvent(
         description: metadata.description,
         resourceType: metadata.type,
         entryRef: metadata.entryRef,
+        libraryPath,
+        assetGeneration: 1,
+        operationId: data.operationId,
       },
     });
   }
 
   const current = states.get(resourceId);
   if (current === undefined || current.status !== "active") throw invalidHistory();
+
+  if (value.type === "resource-replaced") {
+    if (typeof data.operationId !== "string" || data.assetGeneration !== current.resource.assetGeneration + 1) throw invalidHistory();
+    return freezeResourceEvent({ ...header, type: "resource-replaced", data: {
+      entryRef: validateVersionEntryRef(data.entryRef, data.assetGeneration as number), assetGeneration: data.assetGeneration as number, operationId: data.operationId } });
+  }
 
   if (value.type === "resource-updated") {
     if (data.changes === null || typeof data.changes !== "object") throw invalidHistory();
@@ -139,12 +154,12 @@ function parseResourceEvent(
 
   if (
     value.type === "resource-deleted"
-    && Object.keys(data).length === 0
+    && typeof data.operationId === "string"
   ) {
     return freezeResourceEvent({
       ...header,
       type: "resource-deleted",
-      data: {},
+      data: { operationId: data.operationId as string },
     });
   }
 

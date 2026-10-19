@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { Service } from "cordis";
 import type { Context } from "cordis";
 
+import { fileOperationTransaction, type FileOperationTransaction } from "./operations.js";
 import { StorageError } from "./errors.js";
 import { planInterruptionRepair } from "./interruption.js";
 import { buildRecoveryPlan } from "./recovery.js";
@@ -44,13 +45,13 @@ export class StorageService extends Service {
     apply();
   }
 
-  atomic<T>(work: () => T): T {
-    if (this.pending !== undefined) return work();
+  atomic<T>(work: (tx: StorageTransaction) => T): T {
+    if (this.pending !== undefined) return work(this.transaction);
     const pending: (() => void)[] = [];
     this.pending = pending;
     let result: T;
     try {
-      result = this.commit(work);
+      result = this.commit(() => work(this.transaction));
     } finally {
       this.pending = undefined;
     }
@@ -116,7 +117,7 @@ export interface StorageConfig {
   readonly path: string;
 }
 
-export interface StorageTransaction {
+export interface StorageTransaction extends FileOperationTransaction {
   appendEvents(append: EventAppend): void;
   hasEvents(domain: EventDomain, ownerId: string): boolean;
   bindWorkspace(binding: WorkspaceBindingRecord): void;
@@ -149,6 +150,7 @@ export interface WorkspaceBindingRecord {
 
 function createTransaction(db: DatabaseSync): StorageTransaction {
   return {
+    ...fileOperationTransaction(db),
     appendEvents({ domain, ownerId, projectId, firstSeq, events }) {
       if ((projectId === null && domain !== "session") || (projectId !== null && (typeof projectId !== "string" || !projectId.trim()))) {
         throw new StorageError("invalid-record", "Stored events require a valid Project owner or a standalone Session.");

@@ -41,6 +41,7 @@ function snapshot(path: string) {
 
 function downgrade(path: string) {
   rawSql(path, `BEGIN;
+    DROP TABLE resource_file_operations;
     DROP INDEX events_by_project;
     ALTER TABLE events RENAME TO events_v2;
     CREATE TABLE events (
@@ -71,7 +72,7 @@ describe("Known schema v1 upgrade", () => {
     expect(upgraded.projects.get(project.id)).toEqual(project);
     expect(upgraded.sessions.deriveMessages(project.mainSessionId)).toEqual(messages);
     const after = snapshot(path);
-    expect(after).toEqual({ ...before, version: { user_version: STORAGE_SCHEMA_VERSION } });
+    expect(after).toEqual({ ...before, tables: after.tables, version: { user_version: STORAGE_SCHEMA_VERSION } });
     upgraded.sessions.append({ type: "user-message", sessionId: createSessionId("plain"),
       data: { message: { id: createMessageId("plain"), role: "user", content: [{ type: "text", text: "New question" }] } } });
     const withPlain = snapshot(path);

@@ -13,8 +13,18 @@ import { resolveKernelHostConfig } from "./config.js";
 import { StdioRpcServerTransport } from "./stdio.js";
 import { createAgentTurnHandler } from "./turn.js";
 import { createAgentTurnV2Handler } from "./turn/v2.js";
+import { acquireHostLock } from "./lock.js";
 
 export async function runKernelHost(): Promise<void> {
+  const release = await acquireHostLock();
+  try {
+    await serveKernelHost();
+  } finally {
+    await release();
+  }
+}
+
+async function serveKernelHost(): Promise<void> {
   const config = resolveKernelHostConfig();
   const fileEnvironment = config.file === undefined
     ? undefined

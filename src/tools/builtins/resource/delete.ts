@@ -26,22 +26,22 @@ const schema: JsonObject = {
 export function createDeleteResourceTool(ctx: Context): ToolDefinition {
   return {
     name: DELETE_RESOURCE_TOOL_NAME,
-    description: "Delete the Resource fact owned by the current Main or Node Agent at the exact current revision. Physical Resource content is retained for audit and later cleanup.",
+    description: "Delete the Resource fact owned by the current Main or Node Agent at the exact current revision. Physical content is cleaned only after active readers finish.",
     parameters: schema,
     parametersFor: sessionId => withVisibleResourceRefs(ctx, schema, sessionId),
-    execute(arguments_, execution) {
+    async execute(arguments_, execution) {
       try {
         execution.signal.throwIfAborted();
         const caller = requireResourceToolCaller(ctx, execution.sessionId);
         const id = resolveResourceRef(ctx, caller, arguments_.resource_id);
-        ctx.resources.delete({
+        await ctx.resources.delete({
           projectId: caller.projectId,
           actor: caller.principal,
           resourceId: id,
           expectedRevision: positiveRevision(arguments_.expected_revision),
         });
         return {
-          content: `Resource ${id} deleted from the active Project Resource set. Physical content was retained.`,
+          content: `Resource ${id} deleted from the active Project Resource set. Unreferenced physical content is scheduled for safe cleanup.`,
           artifact: {
             resource_id: String(id),
             deleted: true,

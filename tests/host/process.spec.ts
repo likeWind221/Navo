@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -22,6 +22,7 @@ import {
 import type { RpcClientFrame, RpcClientTransport } from "../../rpc/index.js";
 import type { SessionEvent } from "../../src/session/types.js";
 import { eventMessage } from "../../src/session/surface.js";
+import { HOST_LOCK_TARGET } from "../../src/host/lock.js";
 
 import { describe, expect, it } from "vitest";
 
@@ -29,6 +30,51 @@ const PROCESS_TEST_TIMEOUT_MS = 20_000;
 const PROCESS_WAIT_MS = 15_000;
 
 describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, () => {
+  it("rejects a second real Host across NAVO_HOME values before opening its database", async () => {
+    const base = await mkdtemp(join(tmpdir(), "navo-process-exclusive-"));
+    const first = startHost("src/host/main.ts", { NAVO_HOME: join(base, "one") });
+    const stderr = capture(first.stderr);
+    try {
+      await waitUntil(() => stderr.value.includes("[kernel-host] ready"));
+      const second = startHost("src/host/main.ts", { NAVO_HOME: join(base, "two") });
+      const rejected = capture(second.stderr);
+      await expect(exitOf(second)).resolves.toEqual({ code: 1, signal: null });
+      expect(rejected.value).toContain("host-already-running");
+      expect(rejected.value).not.toContain("[kernel-host] ready");
+      await expect(stat(join(base, "two", "navo.db"))).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      first.stdin.end();
+      await exitOf(first);
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
+  it("recovers the real Host lock after a forced process exit once its lock becomes stale", async () => {
+    const base = await mkdtemp(join(tmpdir(), "navo-process-stale-"));
+    const first = startHost("src/host/main.ts", { NAVO_HOME: base });
+    const stderr = capture(first.stderr);
+    try {
+      await waitUntil(() => stderr.value.includes("[kernel-host] ready"));
+      expect(first.kill("SIGKILL")).toBe(true);
+      await exitOf(first);
+      const expired = new Date(Date.now() - 30_000);
+      await utimes(`${HOST_LOCK_TARGET}.lock`, expired, expired);
+      const restarted = startHost("src/host/main.ts", { NAVO_HOME: base });
+      const ready = capture(restarted.stderr);
+      try {
+        await waitUntil(() => ready.value.includes("[kernel-host] ready"));
+      } finally {
+        restarted.stdin.end();
+        await expect(exitOf(restarted)).resolves.toEqual({ code: 0, signal: null });
+      }
+      await expect(stat(`${HOST_LOCK_TARGET}.lock`)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      if (first.exitCode === null && first.signalCode === null) first.kill("SIGKILL");
+      await exitOf(first);
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
   it("starts the real Host without exposing configuration on stdout and exits on stdin EOF", async () => {
     const home = await mkdtemp(join(tmpdir(), "navo-process-home-"));
     const child = startHost("src/host/main.ts", { NAVO_HOME: home });

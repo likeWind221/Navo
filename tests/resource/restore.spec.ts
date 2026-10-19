@@ -65,7 +65,7 @@ async function restoreProject(
   await target.projectWorkspaces.create(projectId, root);
 }
 
-describe("Resource history replay v3", () => {
+describe("Resource history replay v4", () => {
   it("replays Main and Node ownership, updates, access and delete", async () => {
     const source = await domain();
     const root = await fixture();
@@ -107,7 +107,7 @@ describe("Resource history replay v3", () => {
       description: "Main resource",
       type: "text/markdown",
     });
-    source.resources.delete({
+    await source.resources.delete({
       projectId: project.id,
       actor: { kind: "main" },
       resourceId: mainResource.id,

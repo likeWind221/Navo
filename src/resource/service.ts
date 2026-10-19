@@ -1,9 +1,7 @@
-import { randomUUID } from "node:crypto";
-
 import { Service } from "cordis";
 import type { Context } from "cordis";
 
-import { createProjectId, createResourceId } from "../brand/ids.js";
+import { createProjectId } from "../brand/ids.js";
 import type {
   ProjectId,
   ResourceId,
@@ -25,19 +23,18 @@ import type {
   DeleteResourceInput,
   ProjectResource,
   PublishResourceInput,
+  ReplaceResourceInput,
   ResourceEntryTarget,
   ResourcePrincipal,
   SetResourceAccessInput,
   UpdateResourceInput,
 } from "./model.js";
 import {
-  resourceEntryRefFromSource,
   resolveResourceEntry,
 } from "./path.js";
-import {
-  discardPublishedResourceContent,
-  publishResourceContent,
-} from "./publication.js";
+import { ResourceLifecycle } from "./lifecycle.js";
+import { ASSET_LIMITS } from "./assets.js";
+import { publishResource, replaceResource } from "./publication.js";
 import { activeResources } from "./projector.js";
 import { ResourceStore } from "./store.js";
 import {
@@ -48,18 +45,28 @@ import {
   requireResourceProject,
   requireResourceRevision,
   requireResourceWorkspace,
-  validateResourceMetadata,
   validateResourcePatch,
 } from "./validation.js";
 
 const emptyResources: readonly ProjectResource[] = Object.freeze([]);
 
+export interface ResourceConfig {
+  readonly maxFileBytes?: number;
+}
+
 export class ResourceService extends Service {
   static inject = ["storage", "projects", "nodes", "projectWorkspaces"];
   private readonly store = new ResourceStore(this.ctx.storage, projectId => this.ctx.emit("project/changed", projectId));
 
-  constructor(ctx: Context) {
+  private readonly lifecycle: ResourceLifecycle;
+
+  constructor(ctx: Context, config: ResourceConfig = {}) {
     super(ctx, "resources");
+    const maxFileBytes = config.maxFileBytes ?? ASSET_LIMITS.maxFileBytes;
+    if (!Number.isSafeInteger(maxFileBytes) || maxFileBytes < 1 || maxFileBytes > ASSET_LIMITS.maxFileBytes) {
+      throw new ResourceError("invalid-resource", "Resource maxFileBytes must be between 1 byte and 100 MiB.");
+    }
+    this.lifecycle = new ResourceLifecycle(this.ctx, this.store, maxFileBytes);
     for (const [ownerId, stored] of ctx.storage.recovery.events.get("resource")!) {
       try {
         if (stored.projectId !== ownerId) throw new ResourceError("invalid-history", "Resource Project does not match its storage owner.");
@@ -72,45 +79,22 @@ export class ResourceService extends Service {
     }
   }
 
-  async publish(
-    input: PublishResourceInput,
-    signal?: AbortSignal,
-  ): Promise<ProjectResource> {
-    requireActiveResourceProject(this.ctx, input.projectId);
-    const owner = normalizeResourcePrincipal(input.owner);
-    requireResourcePrincipal(this.ctx, input.projectId, owner);
-    const entryRef = resourceEntryRefFromSource(input.sourceRef);
-    const metadata = validateResourceMetadata({ ...input, entryRef });
-    const workspace = await requireResourceWorkspace(this.ctx, input.projectId);
-    const resourceId = this.nextId();
+  publish(input: PublishResourceInput, signal?: AbortSignal): Promise<ProjectResource> {
+    return publishResource(this.lifecycle, input, signal);
+  }
 
-    const published = await publishResourceContent(
-      workspace,
-      resourceId,
-      input.sourceRef,
-      signal,
-    );
-    try {
-      signal?.throwIfAborted();
-      requireActiveResourceProject(this.ctx, input.projectId);
-      requireResourcePrincipal(this.ctx, input.projectId, owner);
-      return this.store.append(this.event(
-        input.projectId,
-        resourceId,
-        0,
-        "resource-created",
-        {
-          owner,
-          name: metadata.name,
-          description: metadata.description,
-          resourceType: metadata.type,
-          entryRef: published.entryRef,
-        },
-      )).resource;
-    } catch (error: unknown) {
-      await discardPublishedResourceContent(published.root);
-      throw error;
-    }
+  replace(input: ReplaceResourceInput, signal?: AbortSignal): Promise<ProjectResource> {
+    return replaceResource(this.lifecycle, input, signal);
+  }
+
+  recover(): Promise<void> {
+    return this.lifecycle.recovery.recover();
+  }
+
+  withEntry<T>(projectId: ProjectId, resourceId: ResourceId, viewer: ResourcePrincipal,
+    work: (resource: ProjectResource, target: ResourceEntryTarget) => Promise<T>): Promise<T> {
+    requireResourceProject(this.ctx, projectId);
+    return this.lifecycle.read(projectId, resourceId, viewer, work);
   }
 
   update(input: UpdateResourceInput): ProjectResource {
@@ -153,20 +137,8 @@ export class ResourceService extends Service {
     )).resource;
   }
 
-  delete(input: DeleteResourceInput): void {
-    requireActiveResourceProject(this.ctx, input.projectId);
-    const actor = normalizeResourcePrincipal(input.actor);
-    requireResourcePrincipal(this.ctx, input.projectId, actor);
-    const current = this.requireCurrent(input.projectId, input.resourceId);
-    requireResourceOwner(current, actor);
-    requireResourceRevision(current, input.expectedRevision);
-    this.store.append(this.event(
-      input.projectId,
-      input.resourceId,
-      current.revision,
-      "resource-deleted",
-      {},
-    ));
+  delete(input: DeleteResourceInput): Promise<void> {
+    return this.lifecycle.delete(input);
   }
 
   get(
@@ -219,20 +191,16 @@ export class ResourceService extends Service {
     projectId: ProjectId,
     resourceId: ResourceId,
     viewer?: ResourcePrincipal,
-  ): Promise<ResourceEntryTarget> {
-    const resource = viewer === undefined
-      ? this.get(projectId, resourceId)
-      : this.getVisible(projectId, resourceId, viewer);
-    if (resource === undefined) {
-      throw new ResourceError(
-        "resource-unavailable",
-        "Resource is unavailable to the requested Project or viewer.",
-      );
+  ): Promise<ResourceEntryTarget & { release(): void }> {
+    requireResourceProject(this.ctx, projectId);
+    const lease = this.lifecycle.lease(projectId, resourceId, viewer);
+    try {
+      const target = await resolveResourceEntry(await requireResourceWorkspace(this.ctx, projectId), lease.resource);
+      return Object.freeze({ ...target, release: lease.release });
+    } catch (error) {
+      lease.release();
+      throw error;
     }
-    return resolveResourceEntry(
-      await requireResourceWorkspace(this.ctx, projectId),
-      resource,
-    );
   }
 
   getEvents(projectId: ProjectId): readonly ResourceEvent[] {
@@ -254,13 +222,6 @@ export class ResourceService extends Service {
     }
     const events = parseResourceHistory(this.ctx, projectId, history);
     return activeResources(this.store.restore(projectId, events));
-  }
-
-  private nextId(): ResourceId {
-    let resourceId: ResourceId;
-    do resourceId = createResourceId(randomUUID());
-    while (this.store.has(resourceId));
-    return resourceId;
   }
 
   private event<TType extends ResourceEvent["type"]>(
@@ -296,3 +257,7 @@ declare module "cordis" {
     resources: ResourceService;
   }
 }
+
+export const ResourceRecovery = Object.assign(async (ctx: Context): Promise<void> => {
+  await ctx.resources.recover();
+}, { inject: ["resources"] });

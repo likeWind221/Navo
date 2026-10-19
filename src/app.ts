@@ -14,7 +14,7 @@ import { resolveAgentBinding } from "./project/binding.js";
 import { ProjectRuntime } from "./project/runtime.js";
 import { AutoRunService } from "./project/autorun.js";
 import { MainSessionService } from "./project/session.js";
-import { ResourceService } from "./resource/service.js";
+import { ResourceService, ResourceRecovery, type ResourceConfig } from "./resource/service.js";
 import { SessionStore } from "./session/store.js";
 import { SessionError } from "./session/errors.js";
 import { StorageService } from "./storage/database.js";
@@ -40,6 +40,7 @@ import { ProjectWorkspaceStore } from "./workspace/store.js";
 
 export interface NavoAppConfig {
   readonly storage: StorageConfig;
+  readonly resources?: ResourceConfig;
   readonly runtime?: Partial<AgentRuntimeLimits>;
   readonly tools?: ToolsPluginConfig;
   readonly node: NodePluginConfig;
@@ -102,7 +103,8 @@ export async function NavoApp(
   await ctx.plugin(CommandService);
   await ctx.plugin(NodePlugin, config.node);
   await ctx.plugin(MailboxStore);
-  await ctx.plugin(ResourceService);
+  await ctx.plugin(ResourceService, config.resources);
+  await ctx.plugin(ResourceRecovery);
   await ctx.plugin(ResourceToolsPlugin);
   await ctx.plugin(SendToMainTool);
   await ctx.plugin(SubmitCompletionTool);

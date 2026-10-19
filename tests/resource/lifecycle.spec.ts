@@ -88,11 +88,11 @@ describe("Resource Service lifecycle", () => {
       projectId: project.id,
       owner: { kind: "node", nodeId: node.node.id },
       name: "Experiment report",
-      entryRef: "report.md",
+      entryRef: "versions/1/source.md",
       access: { kind: "private" },
       revision: 1,
     });
-    const copied = join(workspace.assetsRoot, String(resource.id), "report.md");
+    const copied = join(workspace.assetsRoot, String(resource.id), resource.entryRef);
     expect((await stat(copied)).isFile()).toBe(true);
     expect(await readFile(copied, "utf8")).toBe("result\n");
     expect(await readFile(join(root, "sources", "report.md"), "utf8")).toBe("result\n");
@@ -117,7 +117,7 @@ describe("Resource Service lifecycle", () => {
     expect(updated).toMatchObject({
       name: "Final report",
       description: "Final findings",
-      entryRef: "report.md",
+      entryRef: "versions/1/source.md",
       revision: 2,
     });
 
@@ -154,7 +154,7 @@ describe("Resource Service lifecycle", () => {
     });
     expect(updated.revision).toBe(2);
 
-    ctx.resources.delete({
+    await ctx.resources.delete({
       projectId: project.id,
       actor: { kind: "main" },
       resourceId: resource.id,
@@ -163,14 +163,14 @@ describe("Resource Service lifecycle", () => {
     expect(ctx.resources.get(project.id, resource.id)).toBeUndefined();
   });
 
-  it("domain delete removes the active fact but preserves published content", async () => {
+  it("domain delete removes the active fact and safely cleans published content", async () => {
     const ctx = await domain();
     const { project, workspace, root } = await projectFixture(ctx);
     const owner = ctx.nodes.create({ projectId: project.id, objective: objective("owner") });
     const resource = await publishNodeResource(ctx, project.id, root, owner.node.id);
-    const copied = join(workspace.assetsRoot, String(resource.id), "report.md");
+    const copied = join(workspace.assetsRoot, String(resource.id), resource.entryRef);
 
-    ctx.resources.delete({
+    await ctx.resources.delete({
       projectId: project.id,
       actor: { kind: "node", nodeId: owner.node.id },
       resourceId: resource.id,
@@ -178,7 +178,7 @@ describe("Resource Service lifecycle", () => {
     });
 
     expect(ctx.resources.get(project.id, resource.id)).toBeUndefined();
-    expect(await readFile(copied, "utf8")).toBe("result\n");
+    await expect(readFile(copied, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("rejects publishing from .navo and Workspace escape paths", async () => {

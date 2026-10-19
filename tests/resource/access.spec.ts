@@ -207,7 +207,7 @@ describe("Resource ownership, access and content boundary", () => {
       type: "text/markdown",
     });
 
-    const firstEntry = join(workspace.assetsRoot, String(first.id), "first.md");
+    const firstEntry = join(workspace.assetsRoot, String(first.id), first.entryRef);
     const secondRoot = join(workspace.assetsRoot, String(second.id));
     await rm(firstEntry);
     await symlink(

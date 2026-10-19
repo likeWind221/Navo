@@ -8,6 +8,8 @@ export interface ProjectResource {
   readonly description: string;
   readonly type: string;
   readonly entryRef: string;
+  readonly libraryPath: string;
+  readonly assetGeneration: number;
   readonly access: ResourceAccess;
   readonly revision: number;
   readonly createdAt: string;
@@ -24,6 +26,7 @@ export type ResourceAccess =
   | { readonly kind: "public" };
 
 export interface PublishResourceInput {
+  readonly operationId?: string;
   readonly projectId: ProjectId;
   readonly owner: ResourcePrincipal;
   readonly sourceRef: string;
@@ -55,6 +58,7 @@ export interface SetResourceAccessInput {
 }
 
 export interface DeleteResourceInput {
+  readonly operationId?: string;
   readonly projectId: ProjectId;
   readonly actor: ResourcePrincipal;
   readonly resourceId: ResourceId;
@@ -65,4 +69,8 @@ export interface ResourceEntryTarget {
   readonly resourceId: ResourceId;
   readonly root: string;
   readonly path: string;
+}
+
+export interface ReplaceResourceInput extends DeleteResourceInput {
+  readonly sourceRef: string;
 }
