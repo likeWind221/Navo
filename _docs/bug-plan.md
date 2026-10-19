@@ -6,9 +6,9 @@
 
 - [x] BUG-020：文件分页回归已显式建立不同 stat token 前提，保留覆盖拒绝和原内容断言；本机完整 851 项及代码 head c345950 CI 851 项均通过，关闭。见 [130](130-bugfix-bug-020-file-version-fixture.md)。
 
-- [x] BUG-021：Host 跨进程续接测试的 mock `completed` 模式只排一个响应，第二个 Turn 耗尽脚本并触发约 15 秒重试退避；原测试未断言续接 Turn 成功。已改为支持多 Turn 并补 `turn-completed` 断言；本机定向、完整 851 项及当前 head `5858f28` CI 851 项均通过，关闭。见 [132](132-bugfix-bug-021-022-ci-timeouts.md)。
+- [x] BUG-021：Host 跨进程续接测试的 mock `completed` 模式只排一个响应，第二个 Turn 耗尽脚本并触发约 15 秒重试退避；原测试未断言续接 Turn 成功。已改为支持多 Turn 并补 `turn-completed` 断言；本机定向、完整 851 项及代码 head `5858f28` 的 CI 851 项均通过，关闭。见 [132](132-bugfix-bug-021-022-ci-timeouts.md)。
 
-- [x] BUG-022：compaction evidence 集成测试沿用默认 5 秒预算，CI 通过/失败分别为 3.205 秒 / 5.266 秒；未发现隐藏等待或重试。已设单项 15 秒预算；本机定向、完整 851 项及当前 head `5858f28` CI 均通过（本轮 2.591 秒），关闭。见 [132](132-bugfix-bug-021-022-ci-timeouts.md)。
+- [x] BUG-022：compaction evidence 集成测试沿用默认 5 秒预算，CI 通过/失败分别为 3.205 秒 / 5.266 秒；未发现隐藏等待或重试。已设单项 15 秒预算；本机定向、完整 851 项及代码 head `5858f28` 的 CI 均通过（本轮 2.591 秒），关闭。见 [132](132-bugfix-bug-021-022-ci-timeouts.md)。
 
 - [ ] BUG-019：TRANSPORT 失败只有通用消息，底层 cause 未持久化；17:58 一轮已从 Mihomo 日志定位到代理服务器 TCP 超时，18:08 一轮底层原因仍缺证据。仅排查，未修改网络或代码。见 [123](123-bugfix-bug-019-transport-diagnostics.md)。
 
@@ -103,7 +103,7 @@
 
 2026-10-15：BUG-010 同根因扩展到 `modify_roadmap`：该工具用 `action` 承载 6 个动作并公布扁平 Schema，非当前动作的字段只在运行时拒绝；gpt-6-sol 在 F10.5 第 6 回合为 `edit_node` 填满所有字段的占位值，连续 13 次被拒。已拆为 `add_node`、`edit_node`、`remove_node`、`set_dependency`、`reorder_nodes` 五个参数全部必填的工具；复验中 sol 首次 `edit_node` 即成功。同时修正 Node 拒绝 Human 明确提交请求的问题。仍待本机 Qwen 对照与 F5.4 Electron 验收，保持未勾选。详见 [95](95-bugfix-bug-010-roadmap-schema.md)。
 
-2026-10-19：F13.1a 代码 head `c345950` 的 CI 851 项通过后，仅文档收尾的 `333f094` 在 CI 39270330070 出现两项超时，登记 BUG-021、BUG-022。BUG-021 定位为默认 `completed` mock 只排一个响应，第二个 Turn 耗尽脚本并进入约 15 秒重试退避，且原测试未断言续接 Turn 成功；BUG-022 定位为重的进程内 evidence 测试沿用默认 5 秒预算。二者均与 BUG-020 无关。修复仅改测试夹具、断言与单项预算，本机完整 851 项通过，待当前 head CI。详见 [131](131-devlog-f13-1a-ci-timeouts.md)、[132](132-bugfix-bug-021-022-ci-timeouts.md)。
+2026-10-19：F13.1a 代码 head `c345950` 的 CI 851 项通过后，仅文档收尾的 `333f094` 在 CI 39270330070 出现两项超时，登记 BUG-021、BUG-022。BUG-021 定位为默认 `completed` mock 只排一个响应，第二个 Turn 耗尽脚本并进入约 15 秒重试退避，且原测试未断言续接 Turn 成功；BUG-022 定位为重的进程内 evidence 测试沿用默认 5 秒预算。二者均与 BUG-020 无关。修复仅改测试夹具、断言与单项预算，本机完整 851 项通过；随后代码 head `5858f28` 的 CI 39274751429 为 851 项全部通过，两项关闭。详见 [131](131-devlog-f13-1a-ci-timeouts.md)、[132](132-bugfix-bug-021-022-ci-timeouts.md)。
 
 ## 修复记录规则
 
