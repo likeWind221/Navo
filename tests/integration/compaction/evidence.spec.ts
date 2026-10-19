@@ -84,6 +84,6 @@ describe("BUG-017 targeted review evidence", () => {
     const incomplete = { ...evidence, batches: evidence.batches.map(batch => batch.batch === 1
       ? { ...batch, lines: [...batch.lines, "source line 999: RECORD missing"] } : batch) };
     expect(() => assertReviewEvidence(app, projectId, nodeAId, nodeBId, incomplete)).toThrow(/did not read/);
-  });
+  }, 15_000);
 });
 

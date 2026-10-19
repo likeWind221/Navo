@@ -74,10 +74,10 @@ void main().catch((error: unknown) => {
 function createMockLlmAdapter(env: NodeJS.ProcessEnv): MockLLMAdapter {
   const mode = env.NAVO_MOCK_LLM_MODE ?? "completed";
   if (mode === "completed") {
-    return new MockLLMAdapter([{
-      kind: "handler",
+    return new MockLLMAdapter(Array.from({ length: 16 }, () => ({
+      kind: "handler" as const,
       handle: () => completedEvents(),
-    }]);
+    })));
   }
   if (mode === "session-context") {
     return new MockLLMAdapter(Array.from({ length: 16 }, () => ({

@@ -292,13 +292,15 @@ describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, 
 
       await withRealHost({ NAVO_HOME: home }, async client => {
         expect(readSessionEvents(home)).toEqual(history);
-        await collect(client.stream(projectTurnMethod, {
+        const main = await collect(client.stream(projectTurnMethod, {
           projectId: before.projectId, requestId: "continue-main", text: "Continue Main", target: { kind: "main" },
         }));
-        await collect(client.stream(projectTurnMethod, {
+        expect(main.at(-1)?.type).toBe("turn-completed");
+        const node = await collect(client.stream(projectTurnMethod, {
           projectId: before.projectId, requestId: "continue-node", text: "Continue Node",
           target: { kind: "node", nodeId: before.nodeId },
         }));
+        expect(node.at(-1)?.type).toBe("turn-completed");
         const [mailbox] = await collect(client.stream(projectMailboxMethod, { projectId: before.projectId, afterSequence: 0, limit: 50 }));
         const [resources] = await collect(client.stream(projectResourcesMethod, { projectId: before.projectId }));
         expect(mailbox).toEqual(before.mailbox);
@@ -335,12 +337,14 @@ describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, 
       const messages = history.map(eventMessage).filter(message => message !== undefined);
       await withRealHost({ NAVO_HOME: home }, async client => {
         expect(readSessionEvents(home)).toEqual(history);
-        await collect(client.stream(agentTurnV2Method, {
+        const continued = await collect(client.stream(agentTurnV2Method, {
           sessionId: "plain", requestId: "continued", text: "Continue",
         }));
-        await collect(client.stream(agentTurnV2Method, {
+        expect(continued.at(-1)?.type).toBe("turn-completed");
+        const separate = await collect(client.stream(agentTurnV2Method, {
           sessionId: "other", requestId: "separate", text: "Separate question",
         }));
+        expect(separate.at(-1)?.type).toBe("turn-completed");
       }, "scripts/host/mock.ts");
       const after = readSessionEvents(home);
       const continued = after.filter(event => event.sessionId === "plain");
