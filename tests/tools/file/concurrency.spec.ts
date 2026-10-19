@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -10,6 +10,7 @@ import { FileMutationCoordinator } from "../../../src/tools/builtins/file/lock.j
 import { FileObservationStore } from "../../../src/tools/builtins/file/observation.js";
 import { createReadTool } from "../../../src/tools/builtins/file/read.js";
 import { createWriteTool } from "../../../src/tools/builtins/file/write.js";
+import { probeFile } from "../../../src/tools/builtins/file/version.js";
 
 let root: string;
 const signal = new AbortController().signal;
@@ -76,12 +77,18 @@ describe("file version and concurrency guards", () => {
     const firstVersion = Array.from({ length: 250 }, (_, index) => `v1-${index + 1}`).join("\n");
     const secondVersion = Array.from({ length: 250 }, (_, index) => `v2-${index + 1}`).join("\n");
     await writeFile(join(root, "long.txt"), firstVersion);
+    await utimes(join(root, "long.txt"), 1_700_000_000, 1_700_000_000);
+    const firstProbe = await probeFile(join(root, "long.txt"));
     const { read, write } = kit();
     await read.execute(
       { path: "long.txt", maxLines: 200 },
       execution(sessionA, "page-v1"),
     );
     await writeFile(join(root, "long.txt"), secondVersion);
+    await utimes(join(root, "long.txt"), 1_700_000_002, 1_700_000_002);
+    const secondProbe = await probeFile(join(root, "long.txt"));
+    expect(firstProbe.kind === "file" && secondProbe.kind === "file"
+      && firstProbe.version !== secondProbe.version).toBe(true);
     await read.execute(
       { path: "long.txt", startLine: 201, maxLines: 200 },
       execution(sessionA, "page-v2"),

@@ -4,6 +4,8 @@
 
 ## 当前状态
 
+- [ ] BUG-020：文件分页回归未保证两次等长写入具有不同 stat 版本，Step D head CI 出现覆盖写入断言失败；已固定测试文件时间并断言 token 不同，待完整本机及当前 head CI。见 [130](130-bugfix-bug-020-file-version-fixture.md)。
+
 - [ ] BUG-019：TRANSPORT 失败只有通用消息，底层 cause 未持久化；17:58 一轮已从 Mihomo 日志定位到代理服务器 TCP 超时，18:08 一轮底层原因仍缺证据。仅排查，未修改网络或代码。见 [123](123-bugfix-bug-019-transport-diagnostics.md)。
 
 - [x] BUG-018：实际 Main / Node Turn 正确关联，真实最终断言、本机完整检查与 PR head CI 通过；PR #79 已合入，关闭。见 [122](122-bugfix-bug-018-review-turn.md)。
@@ -40,6 +42,7 @@
 
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
+| BUG-020 | P2 / 后端测试 | 分页跨版本回归在 Windows CI 偶发允许覆盖，阻断完整检查 | run 39267061717 为真实断言失败；测试未确保等长写入的 mtimeNs 不同；既有 stat token 契约见 21。未保留原失败现场 stat，时间碰撞为与实现一致的归因，非已测得原始值 | 显式建立不同 stat 版本前提，保留拒绝写入及内容不变断言；定向、本机完整及当前 head CI 通过 | [130：修复笔记](130-bugfix-bug-020-file-version-fixture.md) |
 | BUG-019 | P2 / 后端诊断 | 模型连接失败现场只有通用 TRANSPORT，不能区分底层超时、重置或 TLS | OpenAIAdapter 保留 cause，normalizeFailure 与验收账本未持久化；根因已确认。外部链路方面仅第一轮对应代理服务器 TCP 超时，第二轮未定位 | 在不暴露凭据或完整请求的前提下保留必要连接失败分类，定向回归与本机 / 当前 head CI 通过；不以自动重试代替诊断 | [123：排查笔记](123-bugfix-bug-019-transport-diagnostics.md) |
 | BUG-018 | P1 / 后端验收 | Node 完成后，脚本仍可能找不到 Main 审查 Turn 而误判失败 | review.lastReview.turnId 属于被审查 Node；定向 App 回归复现，已改为按 Main 请求中的系统 checklist 关联 Node ID、Node Turn 与被审查版本 | 两 Node 审查对应不同 Main Turn 的回归、本机完整检查与当前 head CI 通过；随当前阶段 PR 合入 | [122：修复笔记](122-bugfix-bug-018-review-turn.md) |
 | BUG-017 | P1 / 后端验收 | Node B 正确提交，但 Main 只能看到截断原始读结果，无法独立核验数值而升级 | 唯一 Resource 是 summary；原始批次未交接。Main 有 register / fetch 能力但未使用，且最终断言禁止全部 Turn 注册证据；确认验收证据入口与限制错配；已补精简证据与无资源审查规则，最新完整真实 A / B 审查均通过，零返工 | 保留独立核验，明确允许的证据读取流程；定向回归、本机完整检查、真实两 Node / Main 完成与当前 head CI 通过 | [121：排查笔记](121-bugfix-bug-017-review-evidence.md) |

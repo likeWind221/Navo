@@ -68,6 +68,12 @@ Windows / bundled Node 24.19.0；System32 与 bundled Node bin 前置 PATH。
 | `node node_modules/vitest/vitest.mjs run tests/host/process.spec.ts -t "asset crash recovery"`（120 秒协议预算） | 8 通过 / 0 失败；原 17 项由专项过滤未执行；255.88 秒 |
 | `pnpm test --maxWorkers=4`（最终协议预算与断言） | 851 通过 / 0 失败，134 文件；346.99 秒 |
 
+## 远端检查后续
+
+Step D head `9ea789d` 的 [Actions 39267061717](https://github.com/likeWind221/Navo/actions/runs/39267061717) 类型检查通过，完整测试 850 通过 / 1 失败。D1–D8 全部通过；失败为 `tests/tools/file/concurrency.spec.ts` 分页跨版本场景的实际写入拒绝断言，不是超时。按 [BUG-020](130-bugfix-bug-020-file-version-fixture.md) 排查：该测试未确保两个等长写入具有不同 stat token；修正测试前提，不更改既有文件工具或生命周期生产代码。
+
+BUG-020 测试前提修正后的本机 `pnpm typecheck` 通过；`pnpm test --maxWorkers=4` 为 851 通过 / 0 失败，134 文件，365.15 秒（含 D1–D8）。
+
 ## 下一步与边界
 
 矩阵与回归已完成，Step D 单独提交并推送至原分支，保留 Draft PR #80 等待人工审核。Step E 合并未授权，F13.1a 整体保持进行中。本矩阵验证用户指定的八个进程中断点；不宣称覆盖操作系统断电、文件系统硬件故障或所有指令级崩溃时刻。

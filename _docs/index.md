@@ -169,6 +169,7 @@
 - [F13.1a Step C 共享生命周期内核](127-devlog-f13-1a-kernel.md)：Schema v3、事件/操作同事务、不可变版本、读取租约、安全清理、正式 Host 单实例与启动恢复；Step C 本地 843 项通过；后续真实中断验收见 [129](129-devlog-f13-1a-interruption.md)，分支仍待审核，不合并。
 - [F13.1a CI 并发稳定化](128-devlog-f13-1a-ci.md)：核对原三项 5000 ms 超时，限制 CI worker 为 4，保留全部断言与原超时；独立提交验证后再实施 Step D。
 - [F13.1a Step D 真实进程中断验收](129-devlog-f13-1a-interruption.md)：D1–D8 测试专用暂停点、父进程 SIGKILL、用户锁自然失效、两次正式 Host 重启及同 ID 重试；生产内核与公共 RPC 不增加故障开关，整体仍待审核。
+- [BUG-020：文件版本测试前提](130-bugfix-bug-020-file-version-fixture.md)：修正等长写入分页测试的 stat 版本前提，保留完整安全断言与失败证据。
 - **F13.1c 用户资料补充与管理接入（计划阶段）**：负责可信 User owner、用户资料导入/管理领域入口与公共 RPC；不做 Renderer 页面，实施尚未开始。
 
 ## 工程治理与迁移
