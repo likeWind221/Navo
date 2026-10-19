@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-- [ ] BUG-020：文件分页回归未保证两次等长写入具有不同 stat 版本，Step D head CI 出现覆盖写入断言失败；已固定测试文件时间并断言 token 不同，待完整本机及当前 head CI。见 [130](130-bugfix-bug-020-file-version-fixture.md)。
+- [x] BUG-020：文件分页回归已显式建立不同 stat token 前提，保留覆盖拒绝和原内容断言；本机完整 851 项及代码 head c345950 CI 851 项均通过，关闭。见 [130](130-bugfix-bug-020-file-version-fixture.md)。
 
 - [ ] BUG-019：TRANSPORT 失败只有通用消息，底层 cause 未持久化；17:58 一轮已从 Mihomo 日志定位到代理服务器 TCP 超时，18:08 一轮底层原因仍缺证据。仅排查，未修改网络或代码。见 [123](123-bugfix-bug-019-transport-diagnostics.md)。
 

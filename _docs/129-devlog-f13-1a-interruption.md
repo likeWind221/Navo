@@ -74,6 +74,8 @@ Step D head `9ea789d` 的 [Actions 39267061717](https://github.com/likeWind221/N
 
 BUG-020 测试前提修正后的本机 `pnpm typecheck` 通过；`pnpm test --maxWorkers=4` 为 851 通过 / 0 失败，134 文件，365.15 秒（含 D1–D8）。
 
+修正代码 head `c345950` 的 [GitHub CI](https://github.com/likeWind221/Navo/actions/runs/39269224586) 类型检查及完整 851 项通过，D1–D8 均通过；BUG-020 关闭。后续仅补充文档收尾，不改变已验证测试或生产代码。
+
 ## 下一步与边界
 
 矩阵与回归已完成，Step D 单独提交并推送至原分支，保留 Draft PR #80 等待人工审核。Step E 合并未授权，F13.1a 整体保持进行中。本矩阵验证用户指定的八个进程中断点；不宣称覆盖操作系统断电、文件系统硬件故障或所有指令级崩溃时刻。

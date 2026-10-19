@@ -21,8 +21,8 @@ Windows，bundled Node 24.19.0，System32 与 bundled Node bin 前置 PATH。
 - `node node_modules/vitest/vitest.mjs run tests/tools/file/concurrency.spec.ts`：5 通过 / 0 失败，621 ms（随后把前提断言收紧为直接比较 token）。
 - 最终 `pnpm typecheck`：通过，无 TypeScript 错误。
 - 最终 `pnpm test --maxWorkers=4`：851 通过 / 0 失败，134 文件，365.15 秒，含收紧后的 token 前提断言及全部 D1–D8。
-- 当前 head CI：推送后核对，保持未关闭。
+- 修正代码 head `c345950` 的 [GitHub CI](https://github.com/likeWind221/Navo/actions/runs/39269224586)：typecheck 与完整 851 项均通过，0 失败，D1–D8 均通过。
 
 ## 后续
 
-修正随用户指定的原功能分支独立提交，不另开或合并 master；PR #80 保持 Draft。只有本机完整及当前 head CI 通过后才勾选关闭。本记录不把 stat freshness 升级为跨进程原子内容 CAS，也不宣称硬件故障或断电已验收。
+修正随用户指定的原功能分支独立提交，不另开或合并 master；PR #80 保持 Draft。本机完整及修正代码 head CI 均通过，BUG-020 关闭；PR 仍待人工审核。本记录不把 stat freshness 升级为跨进程原子内容 CAS，也不宣称硬件故障或断电已验收。
