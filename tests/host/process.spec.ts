@@ -23,6 +23,7 @@ import type { RpcClientFrame, RpcClientTransport } from "../../rpc/index.js";
 import type { SessionEvent } from "../../src/session/types.js";
 import { eventMessage } from "../../src/session/surface.js";
 import { HOST_LOCK_TARGET } from "../../src/host/lock.js";
+import { registerAssetCrashTests } from "./process/interruption.js";
 
 import { describe, expect, it } from "vitest";
 
@@ -558,6 +559,8 @@ describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, 
   });
 });
 
+registerAssetCrashTests({ startHost, exitOf, capture, collect, withRealHost });
+
 function readSessionEvents(home: string): SessionEvent[] {
   const db = new DatabaseSync(join(home, "navo.db"));
   try {
@@ -628,8 +631,9 @@ async function collect<TValue>(stream: AsyncIterable<TValue>): Promise<TValue[]>
 function startHost(
   entry: string,
   extraEnv: Readonly<Record<string, string>> = {},
+  args: readonly string[] = [],
 ): ChildProcessWithoutNullStreams {
-  return spawn(process.execPath, ["--import", "tsx", entry], {
+  return spawn(process.execPath, ["--import", "tsx", entry, ...args], {
     cwd: process.cwd(),
     env: { ...process.env, ...extraEnv },
     stdio: ["pipe", "pipe", "pipe"],

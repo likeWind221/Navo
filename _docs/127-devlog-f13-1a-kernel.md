@@ -76,3 +76,5 @@ Windows；bundled Node **24.19.0**。每个命令前在 PowerShell 将 `C:\Windo
 ## 下一步
 
 提交并推送本功能分支，创建 PR 等待人工审核；按本次用户指令不合并、不清理分支，不自动开始 Step D、E 或 F13.1b/c。当前交付的实现和实际边界以本文与最终代码导读为准。
+
+后续更新：CI 并发稳定化见 [128](128-devlog-f13-1a-ci.md)，Step D 真实进程强杀矩阵与回归见 [129](129-devlog-f13-1a-interruption.md)。上文未覆盖边界是 Step C 当时的验收事实，后续结果不覆盖该历史记录。

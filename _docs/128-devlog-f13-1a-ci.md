@@ -33,3 +33,5 @@ Windows / bundled Node 24.19.0；System32 与 bundled Node bin 前置 PATH。
 ## 下一步
 
 CI 稳定化独立提交并推送；确认该 head 的 GitHub CI 通过后再实施 Step D。Step D 使用真实进程强杀与自然失效锁恢复，不以普通异常、模拟数据库状态或改锁时间代替。F13.1a 保持进行中。
+
+后续验证：独立 commit `9766763` 的 [GitHub CI](https://github.com/likeWind221/Navo/actions/runs/39261284647) 已全部通过，随后才实施 Step D，见 [129](129-devlog-f13-1a-interruption.md)。
