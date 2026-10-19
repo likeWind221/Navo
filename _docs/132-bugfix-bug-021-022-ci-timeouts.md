@@ -40,10 +40,10 @@ Windows / bundled Node 24.19.0；System32 与 bundled Node bin 前置 PATH。
 - `tests/host/process.spec.ts`：25 通过 / 0 失败，260.33 秒。
 - `tests/host/process.spec.ts -t "asset crash recovery"`：8 通过 / 0 失败，242.88 秒。
 - 两个超时场景定向回归：Host 续接 1 通过，测试 1.13 秒；evidence 1 通过，测试 864 ms。standalone 续接 1 通过，测试 1.02 秒。
-- 当前 head 的 GitHub CI 待本轮推送后核对；在 CI 通过前不勾选关闭。
+- 当前 head `5858f28` 的 [CI 39274751429](https://github.com/likeWind221/Navo/actions/runs/39274751429)：typecheck 通过；851 通过 / 0 失败，134 文件，310.98 秒。原两项超时分别降为 Host 续接 3.623 秒、evidence 2.591 秒，standalone 续接 2.493 秒；D1–D8 全通过。BUG-021 / BUG-022 关闭。
 
 本记录不宣称已覆盖操作系统断电、文件系统硬件故障或其他共享 runner 的整体稳定性；15 秒单项预算只约束该长流程集成测试。
 
 ## 后续
 
-修复随原功能分支独立提交并推送，PR #80 保持 Draft，不合并 master。CI 通过后更新本记录与跟踪表；F13.1a 整体仍进行中。
+修复随原功能分支独立提交并推送，PR #80 保持 Draft，不合并 master。当前 head CI 已通过，本记录与跟踪表已关闭两项；F13.1a 整体仍进行中。

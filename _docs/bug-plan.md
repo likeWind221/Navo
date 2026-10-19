@@ -6,9 +6,9 @@
 
 - [x] BUG-020：文件分页回归已显式建立不同 stat token 前提，保留覆盖拒绝和原内容断言；本机完整 851 项及代码 head c345950 CI 851 项均通过，关闭。见 [130](130-bugfix-bug-020-file-version-fixture.md)。
 
-- [ ] BUG-021：Host 跨进程续接测试的 mock `completed` 模式只排一个响应，第二个 Turn 耗尽脚本并触发约 15 秒重试退避；原测试未断言续接 Turn 成功。已改为支持多 Turn 并补 `turn-completed` 断言，本机定向与完整检查通过，等待当前 head CI。见 [132](132-bugfix-bug-021-022-ci-timeouts.md)。
+- [x] BUG-021：Host 跨进程续接测试的 mock `completed` 模式只排一个响应，第二个 Turn 耗尽脚本并触发约 15 秒重试退避；原测试未断言续接 Turn 成功。已改为支持多 Turn 并补 `turn-completed` 断言；本机定向、完整 851 项及当前 head `5858f28` CI 851 项均通过，关闭。见 [132](132-bugfix-bug-021-022-ci-timeouts.md)。
 
-- [ ] BUG-022：compaction evidence 集成测试沿用默认 5 秒预算，CI 通过/失败分别为 3.205 秒 / 5.266 秒；未发现隐藏等待或重试。已设单项 15 秒预算，本机定向与完整检查通过，等待当前 head CI。见 [132](132-bugfix-bug-021-022-ci-timeouts.md)。
+- [x] BUG-022：compaction evidence 集成测试沿用默认 5 秒预算，CI 通过/失败分别为 3.205 秒 / 5.266 秒；未发现隐藏等待或重试。已设单项 15 秒预算；本机定向、完整 851 项及当前 head `5858f28` CI 均通过（本轮 2.591 秒），关闭。见 [132](132-bugfix-bug-021-022-ci-timeouts.md)。
 
 - [ ] BUG-019：TRANSPORT 失败只有通用消息，底层 cause 未持久化；17:58 一轮已从 Mihomo 日志定位到代理服务器 TCP 超时，18:08 一轮底层原因仍缺证据。仅排查，未修改网络或代码。见 [123](123-bugfix-bug-019-transport-diagnostics.md)。
 
@@ -26,7 +26,7 @@
 
 - [x] BUG-012：F11.4 真实验收脚本未调用入口且未提供下游所需材料；已修正，本机完整检查、gpt-6-sol 双节点真实完成及代码 head CI 通过（PR #70，收口提交仍遵循当前 head CI 门禁）。笔记：[106](106-bugfix-bug-012-autorun-acceptance.md)。
 
-未关闭：BUG-002、BUG-007、BUG-010、BUG-019、BUG-021、BUG-022。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 仅排查、未修复；BUG-021 / 022 本机验证通过、等待当前 head CI；BUG-014～018 完整验收通过并随 PR #79 合入关闭。
+未关闭：BUG-002、BUG-007、BUG-010、BUG-019。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 仅排查、未修复；BUG-014～018 完整验收通过并随 PR #79 合入关闭；BUG-021 / 022 本机完整与当前 head CI 通过后关闭。
 
 - [x] BUG-001：Node 续接时未读取已共享的新验证资源（已修复：续接资源变化通知 + Resource ID 语义）
 - [ ] BUG-002：验证节点发布文件时出现来源不可用错误（诊断已补齐，未复现；2026-10-07 用户决定保持未关闭，等待复现后依证据定性）

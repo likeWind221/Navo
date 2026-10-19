@@ -76,7 +76,7 @@ BUG-020 测试前提修正后的本机 `pnpm typecheck` 通过；`pnpm test --ma
 
 修正代码 head `c345950` 的 [GitHub CI](https://github.com/likeWind221/Navo/actions/runs/39269224586) 类型检查及完整 851 项通过，D1–D8 均通过；BUG-020 关闭。后续仅补充文档收尾，不改变已验证测试或生产代码。
 
-文档收尾 head `333f094` 的 [CI 39270330070](https://github.com/likeWind221/Navo/actions/runs/39270330070) 为 849 通过 / 2 失败，两项均为超时，D1–D8 与 BUG-020 在本轮均通过。两项超时已单独定位并修复，与 BUG-020 无关；根因、改动与验证见 [131](131-devlog-f13-1a-ci-timeouts.md) 和 [132](132-bugfix-bug-021-022-ci-timeouts.md)。
+文档收尾 head `333f094` 的 [CI 39270330070](https://github.com/likeWind221/Navo/actions/runs/39270330070) 为 849 通过 / 2 失败，两项均为超时，D1–D8 与 BUG-020 在本轮均通过。两项超时已单独定位并修复，与 BUG-020 无关；根因、改动与验证见 [131](131-devlog-f13-1a-ci-timeouts.md) 和 [132](132-bugfix-bug-021-022-ci-timeouts.md)。修复 head `5858f28` 的 [CI 39274751429](https://github.com/likeWind221/Navo/actions/runs/39274751429) 已 851 项全部通过。
 
 ## 下一步与边界
 

@@ -64,6 +64,7 @@ Windows / bundled Node 24.19.0；System32 与 bundled Node bin 前置 PATH。
 | `node node_modules/vitest/vitest.mjs run tests/host/process.spec.ts -t "continues Main and Node contexts"` | 1 通过 / 0 失败；测试 1.13 秒（修复前本机 18.32 秒） |
 | `node node_modules/vitest/vitest.mjs run tests/host/process.spec.ts -t "continues standalone Sessions"` | 1 通过 / 0 失败；测试 1.02 秒（修复前本机约 18 秒） |
 | `node node_modules/vitest/vitest.mjs run tests/integration/compaction/evidence.spec.ts` | 1 通过 / 0 失败；测试 864 ms |
+| 当前 head `5858f28` 的 [CI 39274751429](https://github.com/likeWind221/Navo/actions/runs/39274751429) | typecheck 通过；851 通过 / 0 失败，134 文件，310.98 秒；Host 续接 3.623 秒、standalone 续接 2.493 秒、evidence 2.591 秒；D1–D8 全通过 |
 
 ## 坑与发现
 
@@ -73,4 +74,4 @@ Windows / bundled Node 24.19.0；System32 与 bundled Node bin 前置 PATH。
 
 ## 下一步
 
-修复随原功能分支独立提交并推送，PR #80 保持 Draft 等待人工审核。Step E 合并未授权，F13.1a 整体保持进行中。当前 head 的 CI 结果待本轮推送后核对。
+修复随原功能分支独立提交并推送，PR #80 保持 Draft 等待人工审核。Step E 合并未授权，F13.1a 整体保持进行中。当前 head `5858f28` 的 CI 已通过（851/851），BUG-021 / BUG-022 关闭。
