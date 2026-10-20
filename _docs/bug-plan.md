@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-- [ ] BUG-023：已完成操作重试按 `resource_id` 直接返回最新 Resource，可能把替换、改元数据或删除后的状态冒充原操作结果。已改为核对提交事件、revision 与目标代次；状态变化返回 `operation-result-stale`，已删除返回 `resource-unavailable`，删除重试先核对原删除事件。本机定向 28 项与完整 856 项通过，等待 PR CI 与人工审核。见 [133](133-bugfix-bug-023-replayed-operation-result.md)。
+- [x] BUG-023：已完成操作重试先核对原提交事件、revision 与目标代次；Resource 后续变化返回 `operation-result-stale`，删除后返回 `resource-unavailable`，删除重试不重复副作用。新增 5 项回归，本机定向 28 项与完整 856 项通过；PR #81 已合并且 GitHub Actions CI 通过。见 [133](133-bugfix-bug-023-replayed-operation-result.md)。
 
 - [x] BUG-020：文件分页回归已显式建立不同 stat token 前提，保留覆盖拒绝和原内容断言；本机完整 851 项及代码 head c345950 CI 851 项均通过，关闭。见 [130](130-bugfix-bug-020-file-version-fixture.md)。
 
@@ -28,7 +28,7 @@
 
 - [x] BUG-012：F11.4 真实验收脚本未调用入口且未提供下游所需材料；已修正，本机完整检查、gpt-6-sol 双节点真实完成及代码 head CI 通过（PR #70，收口提交仍遵循当前 head CI 门禁）。笔记：[106](106-bugfix-bug-012-autorun-acceptance.md)。
 
-未关闭：BUG-002、BUG-007、BUG-010、BUG-019、BUG-023。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 仅排查、未修复，BUG-023 修复与本地完整验证完成、等待 PR CI 与人工审核；BUG-014～018 完整验收通过并随 PR #79 合入关闭；BUG-021 / 022 本机完整与当前 head CI 通过后关闭。
+未关闭：BUG-002、BUG-007、BUG-010、BUG-019。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 仅排查、未修复；BUG-014～018 已随 PR #79 合入关闭，BUG-021 / 022 与 BUG-023 均已满足各自关闭条件。
 
 - [x] BUG-001：Node 续接时未读取已共享的新验证资源（已修复：续接资源变化通知 + Resource ID 语义）
 - [ ] BUG-002：验证节点发布文件时出现来源不可用错误（诊断已补齐，未复现；2026-10-07 用户决定保持未关闭，等待复现后依证据定性）
@@ -74,7 +74,7 @@
 
 ## 处理时间线
 
-2026-10-20：F13.1a 收尾审查发现 BUG-023：已完成操作的重试路径只按 `resource_id` 返回最新 Resource，不核对原提交事件与版本。修复新增共享的“操作记录 ↔ 提交事件”核对，状态已变化返回 `operation-result-stale`，Resource 已删除返回 `resource-unavailable`，删除重试先核对原删除事件。新增 5 项回归；本机定向 28 项与完整 856 项通过（Node 22.23.1，未达项目 Node ≥24 基线），等待 PR CI 与人工审核。详见 [133](133-bugfix-bug-023-replayed-operation-result.md)。
+2026-10-20：F13.1a 收尾审查发现 BUG-023：已完成操作的重试路径只按 `resource_id` 返回最新 Resource，不核对原提交事件与版本。修复新增共享的“操作记录 ↔ 提交事件”核对，状态已变化返回 `operation-result-stale`，Resource 已删除返回 `resource-unavailable`，删除重试先核对原删除事件。新增 5 项回归；本机定向 28 项与完整 856 项通过（本机 Node 22.23.1，未达项目 Node ≥24 基线）；PR #81 的 GitHub Actions CI 已通过并合入 master。详见 [133](133-bugfix-bug-023-replayed-operation-result.md)。
 
 2026-09-22：登记 4 项未关闭问题，尚未实施生产修复。用户明确要求将已发现问题转入此表后先合并 F9.8 阶段成果；本次允许带已知真实验收失败合并，不改变后续验证门禁，也不声称真实模型闭环已通过。阶段交付见 [PR #30](https://github.com/likeWind221/Navo/pull/30)。
 

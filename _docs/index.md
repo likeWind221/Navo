@@ -163,12 +163,12 @@
 
 ## Phase 13 规划
 
-- [F13 项目资料库与任务检索规划](124-devlog-f13-plan.md)：将项目 Resource 集合升级为项目资料库，登记 F13.0–F13.6 功能目标、前后端分工、首版边界与验收要求；初始规划已确认；F13.0 见 125，F13.1a 审计与设计修订见 126，后续功能未实施。
+- [F13 项目资料库与任务检索规划](124-devlog-f13-plan.md)：登记 F13.0–F13.6 功能目标、前后端分工、首版边界与验收要求；F13.0 已完成，F13.1a 已实现并验收，当前收尾 PR 同步文档状态；F13.1b/c 及后续功能尚未实施。
 - [F13.0 产品设计（已完成）](125-devlog-f13-0-design.md)：用户已确认资料管理、页面操作、异常恢复、搜索变化、Agent 按需检索、文件级引用及六组验收场景；含前后端交接、调研取舍与新会话开发交接，F13.1–F13.6 未实施。
-- [F13.1a：共享资产生命周期内核 v1.3](126-devlog-f13-1a-design.md)：收口单文件资产生命周期、操作记录同事务提交、路径规范、Host 单实例与方案 B 读取租约；Step C 代码与本地检查见 [127](127-devlog-f13-1a-kernel.md)，整体验收未完成。
-- [F13.1a Step C 共享生命周期内核](127-devlog-f13-1a-kernel.md)：Schema v3、事件/操作同事务、不可变版本、读取租约、安全清理、正式 Host 单实例与启动恢复；Step C 本地 843 项通过；后续真实中断验收见 [129](129-devlog-f13-1a-interruption.md)，分支仍待审核，不合并。
+- [F13.1a：共享资产生命周期内核 v1.3](126-devlog-f13-1a-design.md)：共享资产生命周期、操作记录同事务提交、路径规范、Host 单实例与方案 B 读取租约；Step A–D 已完成，PR #80 合并，已完成操作重试修复见 PR #81 / [133](133-bugfix-bug-023-replayed-operation-result.md)。
+- [F13.1a Step C 共享生命周期内核](127-devlog-f13-1a-kernel.md)：Schema v3、事件/操作同事务、不可变版本、读取租约、安全清理、正式 Host 单实例与启动恢复；代码已随 PR #80 合并，真实中断验收见 [129](129-devlog-f13-1a-interruption.md)。
 - [F13.1a CI 并发稳定化](128-devlog-f13-1a-ci.md)：核对原三项 5000 ms 超时，限制 CI worker 为 4，保留全部断言与原超时；独立提交验证后再实施 Step D。
-- [F13.1a Step D 真实进程中断验收](129-devlog-f13-1a-interruption.md)：D1–D8 测试专用暂停点、父进程 SIGKILL、用户锁自然失效、两次正式 Host 重启及同 ID 重试；生产内核与公共 RPC 不增加故障开关，整体仍待审核。
+- [F13.1a Step D 真实进程中断验收](129-devlog-f13-1a-interruption.md)：D1–D8 测试专用暂停点、父进程 SIGKILL、用户锁自然失效、两次正式 Host 重启及同 ID 重试；PR #80 已合并，未宣称覆盖断电、硬件故障或所有指令级崩溃时刻。
 - [BUG-020：文件版本测试前提](130-bugfix-bug-020-file-version-fixture.md)：修正等长写入分页测试的 stat 版本前提，保留完整安全断言与失败证据。
 - [F13.1a CI 超时复盘与修复](131-devlog-f13-1a-ci-timeouts.md)：定位 mock 脚本耗尽触发的 15 秒重试退避与 evidence 默认 5 秒预算过紧，补 Turn 成功断言并设置单项预算。
 - [BUG-021 / BUG-022：CI 两项超时](132-bugfix-bug-021-022-ci-timeouts.md)：Host 续接测试夹具耗尽重试与 evidence 预算问题，逐项保留成功/失败 run 证据与验证结果。

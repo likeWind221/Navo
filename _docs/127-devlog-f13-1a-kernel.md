@@ -4,7 +4,7 @@
 
 ## 做了什么
 
-按 [v1.3 设计](126-devlog-f13-1a-design.md) 实现 Step C。代码与本地验证完成，提交分支等待人工审核；F13.1a 保持进行中，未进入 Step D 的完整故障验收或 Step E 合并。此次共享控制面由 Codex 单独串行维护，未委派其他 Agent。
+按 [v1.3 设计](126-devlog-f13-1a-design.md) 实现 Step C。本文记录 Step C 实施当时的改动与验证；随后 Step D 完成真实进程中断验收，PR #80 已合并。F13.1a 收尾时另发现并修复 BUG-023，PR #81 已合并且 CI 通过。当前完整阶段状态见 [126](126-devlog-f13-1a-design.md)。此次共享控制面由 Codex 单独串行维护，未委派其他 Agent。
 
 | 模块 | 文件与职责 |
 |---|---|
@@ -71,10 +71,10 @@ Windows；bundled Node **24.19.0**。每个命令前在 PowerShell 将 `C:\Windo
 
 设计 v1.3 第 10.1 节逐项对照：1 仅 Main/Node、User 延后；2 Schema/同事务已实现；3 旧 Resource 明确失败、普通业务保留迁移；4 路径和提交冲突检查已实现；5 方案 B 已实现；6 正式 Host 用户锁已实现；7 启动/后续操作恢复已实现、无后台服务；8 单文件限额已实现，批次默认值交接 F13.1c；9 单文件边界已实现，无用户批次编排。
 
-未解决的验收范围：Step D 尚须完整执行各关键步骤的真实进程中断/重启矩阵；本轮生命周期故障主要是可控异常与重建持久化中断状态，不能代替真实崩溃全覆盖。Host 锁测试通过修改已退出进程的锁 mtime 模拟过期，没有实等 10 秒。没有真实模型、Renderer、Electron Bridge、用户资料或检索验收。F13.1a 整体保持未完成。
+本节记录 Step C 当时的验收边界：Step C 本身未覆盖完整真实进程中断矩阵，后续已由 [129](129-devlog-f13-1a-interruption.md) 补齐 D1–D8 专项及正式 Host 重启验收。真实模型、Renderer、Electron Bridge、用户资料导入和检索不属于 F13.1a 验收范围；F13.1b/c 与正式 UI 仍未完成。
 
 ## 下一步
 
-提交并推送本功能分支，创建 PR 等待人工审核；按本次用户指令不合并、不清理分支，不自动开始 Step D、E 或 F13.1b/c。当前交付的实现和实际边界以本文与最终代码导读为准。
+历史交付动作：提交并推送 Step C 分支，后由 PR #80 完成审核与合并。Step D 验收见 [129](129-devlog-f13-1a-interruption.md)；后续 BUG-023 修复与验证见 [133](133-bugfix-bug-023-replayed-operation-result.md)。当前 F13.1a 已收口，不表示 F13.1b/c 已开始。
 
 后续更新：CI 并发稳定化见 [128](128-devlog-f13-1a-ci.md)，Step D 真实进程强杀矩阵与回归见 [129](129-devlog-f13-1a-interruption.md)。上文未覆盖边界是 Step C 当时的验收事实，后续结果不覆盖该历史记录。
