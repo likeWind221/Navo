@@ -208,8 +208,6 @@ missing row / new asset generation
 
 ## 6. 处理流程、触发与恢复
 
-## 6. 处理流程、触发与恢复
-
 ### 6.1 创建与替换
 
 1. 现有 ResourceLifecycle 完成原始文件操作和 Resource 事件提交。
@@ -242,8 +240,6 @@ missing row / new asset generation
 
 Host 启动时拥有既有单实例锁，因此不设计多 Host 抢占和租约超时。进程内仍通过条件更新与尝试 ID 保护重复触发和迟到结果。启动对账本身必须可重复执行，且不得因某份 PDF 损坏而阻断 Host ready.
 
-Host 启动时拥有既有单实例锁，因此不设计多 Host 抢占和租约超时。进程内仍通过条件更新与尝试 ID 保护重复触发和迟到结果。
-
 ### 6.4 删除与读取
 
 - Resource 删除提交后，正文读取先验证 Resource 当前有效性；已删除的 Resource 即使仍残留正文行，也不得返回正文。
@@ -255,7 +251,7 @@ Host 启动时拥有既有单实例锁，因此不设计多 Host 抢占和租约
 
 ### 7.1 引擎
 
-使用 `pdfjs-dist`（Mozilla PDF.js）作为 PDF 解析引擎，不引入 `unpdf` 封装层。PDF.js 为 Apache-2.0 许可；实现时固定兼容当前 Node.js 24 / TypeScript 环境的具体版本并更新 lockfile。当前设计不更改依赖文件。
+使用 `pdfjs-dist`（Mozilla PDF.js）作为 PDF 解析引擎，不引入 `unpdf` 封装层。PDF.js 为 Apache-2.0 许可；实现时固定兼容当前 Node.js 24 / TypeScript 环境的具体版本并更新 lockfile。当前设计不更改依赖文件。实现须按锁定版本核对 [PDFPageProxy API](https://mozilla.github.io/pdf.js/api/draft/module-pdfjsLib-PDFPageProxy.html) 与 [PDFDocumentLoadingTask API](https://mozilla.github.io/pdf.js/api/draft/module-pdfjsLib-PDFDocumentLoadingTask.html)：`page.cleanup()` 返回同步布尔值，而 `loadingTask.destroy()` 返回需等待完成的 Promise。
 
 ### 7.2 PDF 提取流程
 
