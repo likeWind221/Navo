@@ -38,6 +38,12 @@
 
 当前 Schema 为 v3。实现时新增 v3→v4 迁移，并保留 v1→v2→v3→v4 的既有迁移链。
 
+## 2.1 DeepSeek Harness 只读参考
+
+按仓库约定只读检查了 `deepseek-ai/deepseek-harness/packages/document/office-to-pdf/src/queue.ts`。该队列采用有界输入准入、显式 AbortController、真实任务完成后才释放处理容量，并在 dispose 时取消任务并等待实际任务与清理结束。
+
+F13.1b 只借鉴这些生命周期原则：限制并发 / 输入规模、将取消传入解析器、只有解析实际结束后才释放处理槽位、Host 关闭时等待或协调任务结束。它不需要照搬 Harness 的优先级队列、共享读者、结果缓存、Office 转 PDF 管线或通用转换服务；Navo 首版由单个正文处理协调器串行处理任务即可。PDF.js 的逐页文本读取仍是本阶段自己的适配器。
+
 ## 3. 架构与职责
 
 ```text
