@@ -3,6 +3,7 @@ import { createProjectId, createResourceId } from "../brand/ids.js";
 import type { Context } from "cordis";
 import type { FileOperation } from "../storage/operations.js";
 import { assetLocation, pruneVersion, removeAsset, removeVersion, versionOwner } from "./assets.js";
+import { agreesWithOperation, operationEvent } from "./commit.js";
 import type { ResourceStore } from "./store.js";
 
 export class AssetRecovery {
@@ -47,18 +48,10 @@ export class AssetRecovery {
     if (["completed", "failed", "cancelled"].includes(operation.execution_state)) return;
     const projectId = createProjectId(operation.project_id);
     try {
-      const events = this.store.getEvents(projectId);
-      const committed = events.find(event => "operationId" in event.data && event.data.operationId === operationId);
+      const committed = operationEvent(this.store.getEvents(projectId), operationId);
       if (committed !== undefined) {
-        const expected = `resource-${operation.operation_kind === "create" ? "created" : operation.operation_kind === "replace" ? "replaced" : "deleted"}`;
-        if (committed.type !== expected || committed.resourceId !== operation.resource_id
-          || committed.baseRevision !== operation.base_revision || operation.business_result !== "succeeded") {
+        if (!agreesWithOperation(committed, operation) || operation.business_result !== "succeeded") {
           throw new Error("Resource event and operation commit disagree.");
-        }
-        if ((committed.type === "resource-created" || committed.type === "resource-replaced")
-          && (committed.data.assetGeneration !== operation.target_generation
-            || operation.target_relpath !== `assets/${committed.resourceId}/${committed.data.entryRef}`)) {
-          throw new Error("Resource event and prepared asset disagree.");
         }
       } else if (operation.business_result === "succeeded") {
         throw new Error("Committed operation has no authoritative Resource event.");

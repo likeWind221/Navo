@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { posix } from "node:path";
 import type { Context } from "cordis";
-import { createResourceId } from "../brand/ids.js";
+import { createProjectId, createResourceId } from "../brand/ids.js";
 import type { ProjectId, ResourceId } from "../brand/ids.js";
 import type { FileOperation } from "../storage/operations.js";
 import type { ProjectWorkspace } from "../workspace/model.js";
 import { requireResourceOwner, normalizeResourcePrincipal, canReadResource } from "./access.js";
 import { assetLocation, prepareVersion, stageAsset } from "./assets.js";
+import { agreesWithOperation, operationEvent, type CommittedEvent } from "./commit.js";
 import { ResourceError } from "./errors.js";
 import { createResourceEvent, type ResourceEvent } from "./events.js";
 import { libraryPathKey, normalizeLibraryPath } from "./library.js";
@@ -67,6 +68,7 @@ export class ResourceLifecycle {
       this.requireOperation(previous, input.projectId, "delete", input.actor, input.resourceId);
       this.requireRequest(previous, input);
       if (previous.business_result !== "succeeded") throw new ResourceError("invalid-resource", "Operation has not succeeded.");
+      this.requireCommitted(previous);
       return this.recovery.recover().catch(() => undefined);
     }
     const current = this.current(input.projectId, input.resourceId, input.actor, input.expectedRevision);
@@ -118,10 +120,9 @@ export class ResourceLifecycle {
       this.requireOperation(previous, input.projectId, replacing ? "replace" : "create", actor, replacing ? input.resourceId : undefined);
       this.requireRequest(previous, input);
       if (previous.business_result !== "succeeded") throw new ResourceError("invalid-resource", "Operation ended without a committed Resource; use a new operation ID.");
-      const state = this.store.getState(createResourceId(previous.resource_id!));
-      if (state === undefined) throw new ResourceError("resource-unavailable", "Committed Resource is unavailable.");
+      const result = this.committedResult(previous);
       await this.recovery.recover().catch(() => undefined);
-      return state.resource;
+      return result;
     }
     signal?.throwIfAborted();
     const current = replacing ? this.current(input.projectId, input.resourceId, actor, input.expectedRevision) : undefined;
@@ -203,6 +204,27 @@ export class ResourceLifecycle {
   private authorize(projectId: ProjectId, actor: ResourcePrincipal): void {
     requireActiveResourceProject(this.ctx, projectId);
     requireResourcePrincipal(this.ctx, projectId, normalizeResourcePrincipal(actor));
+  }
+
+  private committedResult(operation: FileOperation): ProjectResource {
+    const event = this.requireCommitted(operation);
+    const state = this.store.getState(createResourceId(operation.resource_id!));
+    if (state === undefined || state.status !== "active") {
+      throw new ResourceError("resource-unavailable", "Committed Resource is unavailable.");
+    }
+    if (event.type === "resource-deleted" || state.resource.revision !== event.revision
+      || state.resource.assetGeneration !== event.data.assetGeneration) {
+      throw new ResourceError("operation-result-stale", "Resource changed after the operation succeeded.");
+    }
+    return state.resource;
+  }
+
+  private requireCommitted(operation: FileOperation): CommittedEvent {
+    const event = operationEvent(this.store.getEvents(createProjectId(operation.project_id)), operation.operation_id);
+    if (event === undefined || !agreesWithOperation(event, operation)) {
+      throw new ResourceError("invalid-history", "Committed operation has no matching Resource event.");
+    }
+    return event;
   }
 
   private requireOperation(operation: FileOperation, projectId: ProjectId, kind: FileOperation["operation_kind"], actor: ResourcePrincipal, resourceId?: ResourceId): void {
