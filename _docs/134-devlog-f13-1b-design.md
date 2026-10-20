@@ -342,5 +342,5 @@ PDF.js 能提取 PDF 中已有的文本，但不负责将扫描图片自动转�
 
 - 用户已确认：使用 SQLite 正文方案；正文为空统一记为 failed；保留 PDF 页码映射；保留 `processing_attempt_id`；PDF 解析引擎采用 PDF.js。
 - 首轮只读审核（2026-10-20）发现 1 项阻断、5 项重要问题和 4 项一般建议；本修订版已纳入取消语义、页码偏移、项目隔离、启动异步处理、反向对账、PDF.js 清理、STRICT DDL、删除事务、超限验收与读取租约。
-- 本修订仍为设计草案，待复审确认；正文大小 / 页数上限、锁定的 `pdfjs-dist` 版本及具体关闭时序，须在实施前结合代表性 PDF 样本与当前 Node.js 24 / TypeScript 环境核定。
+- 第二轮只读复审（2026-10-20）结论为 PASS WITH MINOR FIXES：第一轮 10 项问题均已闭环，未发现 Blocker / Major。已补充 DDL 约束，要求非 `ready` 状态下 `page_map_json` 与 `extractor_version` 必须为 NULL；`created_at` 不列为首版必需字段。设计现已冻结，可交由实现 Agent。
 - 当前未修改生产代码、依赖或测试。设计审核与文档修订不等于功能实现验收。
