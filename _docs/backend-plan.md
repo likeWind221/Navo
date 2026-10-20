@@ -318,7 +318,7 @@ Host restart -> unmatched compaction marked interrupted -> replay committed chec
 
 ## 11. Phase 13（F13）：项目资料库与任务检索
 
-**阶段目标：** 将项目内 Resource 的集合升级为项目资料库，统一组织用户参考资料与 Agent 成果，让用户及 Main / Node 在权限范围内找到相关内容、按需阅读原文，并用可核验的依据完成长程任务。2026-10-18 用户已确认阶段方向与七步规划；阶段规划见 [124](124-devlog-f13-plan.md)；F13.0 已于 2026-10-19 经用户确认完成，见 [125](125-devlog-f13-0-design.md)。F13.1a 的共享资产生命周期内核与真实进程中断验收已完成，PR #80 已合并；BUG-023 的操作重试语义修复已由 PR #81 合并且 CI 通过。当前仅需同步文档状态；F13.1b 正文提取与处理恢复、F13.1c 用户资料补充与管理接入仍未实施。详见 [126](126-devlog-f13-1a-design.md)、[127](127-devlog-f13-1a-kernel.md)、[129](129-devlog-f13-1a-interruption.md)、[133](133-bugfix-bug-023-replayed-operation-result.md)。
+**阶段目标：** 将项目内 Resource 的集合升级为项目资料库，统一组织用户参考资料与 Agent 成果，让用户及 Main / Node 在权限范围内找到相关内容、按需阅读原文，并用可核验的依据完成长程任务。2026-10-18 用户已确认阶段方向与七步规划；阶段规划见 [124](124-devlog-f13-plan.md)；F13.0 已于 2026-10-19 经用户确认完成，见 [125](125-devlog-f13-0-design.md)。F13.1a 的共享资产生命周期内核与真实进程中断验收已完成，PR #80 已合并；BUG-023 的操作重试语义修复已由 PR #81 合并且 CI 通过。PR #82 的 F13.1a 文档收尾已合入 master；F13.1b 技术设计草案见 [134](134-devlog-f13-1b-design.md)，实现尚未开始；F13.1c 用户资料补充与管理接入仍未实施。详见 [126](126-devlog-f13-1a-design.md)、[127](127-devlog-f13-1a-kernel.md)、[129](129-devlog-f13-1a-interruption.md)、[133](133-bugfix-bug-023-replayed-operation-result.md)。
 
 ### 首版范围与边界
 
