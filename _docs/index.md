@@ -172,6 +172,7 @@
 - [BUG-020：文件版本测试前提](130-bugfix-bug-020-file-version-fixture.md)：修正等长写入分页测试的 stat 版本前提，保留完整安全断言与失败证据。
 - [F13.1a CI 超时复盘与修复](131-devlog-f13-1a-ci-timeouts.md)：定位 mock 脚本耗尽触发的 15 秒重试退避与 evidence 默认 5 秒预算过紧，补 Turn 成功断言并设置单项预算。
 - [BUG-021 / BUG-022：CI 两项超时](132-bugfix-bug-021-022-ci-timeouts.md)：Host 续接测试夹具耗尽重试与 evidence 预算问题，逐项保留成功/失败 run 证据与验证结果。
+- [BUG-023：已完成操作重试返回后续状态](133-bugfix-bug-023-replayed-operation-result.md)：重试先核对提交事件、revision 与目标代次，状态变化返回 `operation-result-stale`，删除后返回不可用；含五项回归与本机完整验证边界。
 - **F13.1c 用户资料补充与管理接入（计划阶段）**：负责可信 User owner、用户资料导入/管理领域入口与公共 RPC；不做 Renderer 页面，实施尚未开始。
 
 ## 工程治理与迁移

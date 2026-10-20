@@ -4,6 +4,8 @@
 
 ## 当前状态
 
+- [ ] BUG-023：已完成操作重试按 `resource_id` 直接返回最新 Resource，可能把替换、改元数据或删除后的状态冒充原操作结果。已改为核对提交事件、revision 与目标代次；状态变化返回 `operation-result-stale`，已删除返回 `resource-unavailable`，删除重试先核对原删除事件。本机定向 28 项与完整 856 项通过，等待 PR CI 与人工审核。见 [133](133-bugfix-bug-023-replayed-operation-result.md)。
+
 - [x] BUG-020：文件分页回归已显式建立不同 stat token 前提，保留覆盖拒绝和原内容断言；本机完整 851 项及代码 head c345950 CI 851 项均通过，关闭。见 [130](130-bugfix-bug-020-file-version-fixture.md)。
 
 - [x] BUG-021：Host 跨进程续接测试的 mock `completed` 模式只排一个响应，第二个 Turn 耗尽脚本并触发约 15 秒重试退避；原测试未断言续接 Turn 成功。已改为支持多 Turn 并补 `turn-completed` 断言；本机定向、完整 851 项及代码 head `5858f28` 的 CI 851 项均通过，关闭。见 [132](132-bugfix-bug-021-022-ci-timeouts.md)。
@@ -26,7 +28,7 @@
 
 - [x] BUG-012：F11.4 真实验收脚本未调用入口且未提供下游所需材料；已修正，本机完整检查、gpt-6-sol 双节点真实完成及代码 head CI 通过（PR #70，收口提交仍遵循当前 head CI 门禁）。笔记：[106](106-bugfix-bug-012-autorun-acceptance.md)。
 
-未关闭：BUG-002、BUG-007、BUG-010、BUG-019。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 仅排查、未修复；BUG-014～018 完整验收通过并随 PR #79 合入关闭；BUG-021 / 022 本机完整与当前 head CI 通过后关闭。
+未关闭：BUG-002、BUG-007、BUG-010、BUG-019、BUG-023。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 仅排查、未修复，BUG-023 修复与本地完整验证完成、等待 PR CI 与人工审核；BUG-014～018 完整验收通过并随 PR #79 合入关闭；BUG-021 / 022 本机完整与当前 head CI 通过后关闭。
 
 - [x] BUG-001：Node 续接时未读取已共享的新验证资源（已修复：续接资源变化通知 + Resource ID 语义）
 - [ ] BUG-002：验证节点发布文件时出现来源不可用错误（诊断已补齐，未复现；2026-10-07 用户决定保持未关闭，等待复现后依证据定性）
@@ -46,6 +48,7 @@
 
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
+| BUG-023 | P1 / 后端 | 同一已完成操作重试可能返回替换后的代次、后续 revision 或已删除 Resource，冒充原操作结果；删除重试未核对原删除事件 | 已证实 `write()` 只按 `resource_id` 读取当前投影，未核对提交事件、revision 与目标代次；`projector` 删除后保留 Resource 主体。新增回归复现替换、改元数据、删除三类错误返回 | 重试核对提交事件、请求身份、提交 revision 与目标代次；状态变化返回 `operation-result-stale`，删除后返回 `resource-unavailable`，删除重试不重复副作用；定向、本机完整及当前 head CI 通过 | [133：修复与验证](133-bugfix-bug-023-replayed-operation-result.md) |
 | BUG-021 | P2 / 后端测试 | Host 跨进程续接测试在 CI 达到 20 秒上限；失败 Turn 未使测试失败 | 成功 run 17.969 秒、失败 run 20012 ms；阶段计时显示第二次 Host 的 `continue-node` 约 14.956 秒；默认 `completed` mock 只排一个响应，第二个 Turn 触发 `script-exhausted` → `stream-failed` 重试退避 | 续接 Turn 真实以 `turn-completed` 结束；定向回归、本机完整及当前 head CI 通过 | [132：复盘与修复](132-bugfix-bug-021-022-ci-timeouts.md) |
 | BUG-022 | P2 / 后端测试 | compaction evidence 集成测试在 CI 达到默认 5 秒上限 | 成功 run 3.205 秒、失败 run 5.266 秒；本机阶段合计约 0.91 秒；`maxModelRetries: 0`，无固定等待或锁等待 | 显式单项预算并保留全部断言；定向回归、本机完整及当前 head CI 通过 | [132：复盘与修复](132-bugfix-bug-021-022-ci-timeouts.md) |
 | BUG-020 | P2 / 后端测试 | 分页跨版本回归在 Windows CI 偶发允许覆盖，阻断完整检查 | run 39267061717 为真实断言失败；测试未确保等长写入的 mtimeNs 不同；既有 stat token 契约见 21。未保留原失败现场 stat，时间碰撞为与实现一致的归因，非已测得原始值 | 显式建立不同 stat 版本前提，保留拒绝写入及内容不变断言；定向、本机完整及当前 head CI 通过 | [130：修复笔记](130-bugfix-bug-020-file-version-fixture.md) |
@@ -70,6 +73,8 @@
 | BUG-011 | P2 / 后端 | 重启后 `getByProject` / `listByProject` 的顺序改变，资源列表 RPC、Main 项目事实、节点可见资源和复盘清单的顺序随之改变；数据不受影响 | F10.5 场景观察到节点顺序改变；已证实恢复时按 `ORDER BY owner_id, seq` 读取，Store 按读取顺序插入 `Map`。UI 上的影响根据代码推断，未实际观察。2026-10-15 已修复：按 owner 首条事件 rowid 回放；资源列表经核实本不受影响 | 重启前后上述列表及依赖它们的 RPC、模型上下文顺序一致；有重启顺序回归测试；F10.5 测试改回严格比较 | [99：排查与修复笔记](99-bugfix-bug-011-restart-order.md) |
 
 ## 处理时间线
+
+2026-10-20：F13.1a 收尾审查发现 BUG-023：已完成操作的重试路径只按 `resource_id` 返回最新 Resource，不核对原提交事件与版本。修复新增共享的“操作记录 ↔ 提交事件”核对，状态已变化返回 `operation-result-stale`，Resource 已删除返回 `resource-unavailable`，删除重试先核对原删除事件。新增 5 项回归；本机定向 28 项与完整 856 项通过（Node 22.23.1，未达项目 Node ≥24 基线），等待 PR CI 与人工审核。详见 [133](133-bugfix-bug-023-replayed-operation-result.md)。
 
 2026-09-22：登记 4 项未关闭问题，尚未实施生产修复。用户明确要求将已发现问题转入此表后先合并 F9.8 阶段成果；本次允许带已知真实验收失败合并，不改变后续验证门禁，也不声称真实模型闭环已通过。阶段交付见 [PR #30](https://github.com/likeWind221/Navo/pull/30)。
 
