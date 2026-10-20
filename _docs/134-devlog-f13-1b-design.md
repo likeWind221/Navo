@@ -125,7 +125,8 @@ CREATE TABLE resource_content (
     (status = 'processing' AND processing_attempt_id IS NOT NULL AND length(trim(processing_attempt_id)) > 0)
     OR (status != 'processing' AND processing_attempt_id IS NULL)
   ),
-  CHECK (status != 'failed' OR error_code IS NOT NULL)
+  CHECK (status != 'failed' OR error_code IS NOT NULL),
+  CHECK (status = 'ready' OR (page_map_json IS NULL AND extractor_version IS NULL))
 ) STRICT;
 CREATE INDEX resource_content_by_project_status
   ON resource_content (project_id, status, updated_at);
