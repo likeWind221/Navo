@@ -42,8 +42,8 @@
 | `node node_modules/vitest/vitest.mjs run tests/resource/assets/retry.spec.ts tests/resource/assets/flow.spec.ts tests/resource/assets/recovery.spec.ts tests/resource/lifecycle.spec.ts` | 4 文件、28 项通过 |
 | `pnpm test --maxWorkers=4` | 135 文件、856 项通过（基线 851 项 + 新增 5 项） |
 
-回归同时断言返回值、Resource 事件数量、操作终态与磁盘文件存在性。未覆盖：PR head 的 CI 尚未运行；未验证 Node 24 环境；不包含完整不可变操作结果快照模型。
+回归同时断言返回值、Resource 事件数量、操作终态与磁盘文件存在性。PR #81 head `bb43dcb0f4bcae1464faff229e79ae248c7a72ff` 的 GitHub Actions CI 已通过，PR 已于 2026-10-20 合并（merge commit `cb32c9a1d0ad4b7bed446e240a6063502c90eeab`）。本机完整测试使用 Node 22.23.1，未达到项目声明的 Node ≥24 基线；远端 CI 通过不等于本机 Node 24 已单独验收。不包含完整不可变操作结果快照模型。
 
 ## 后续
 
-推送分支并创建 PR，等待人工审核与当前 head CI；通过后再按仓库规则合并。若未来确实需要返回原操作的完整响应快照，应单独设计操作结果模型，不在本次范围内。
+已完成：PR #81 已合并且 GitHub Actions CI 通过。若未来确实需要返回原操作的完整响应快照，应单独设计操作结果模型，不在本次范围内。
