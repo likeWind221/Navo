@@ -2,9 +2,10 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type { DatabaseSync, SQLInputValue } from "node:sqlite";
 
+import { FILE_OPERATIONS_SCHEMA } from "./operations.js";
 import { StorageError } from "./errors.js";
 
-export const STORAGE_SCHEMA_VERSION = 2;
+export const STORAGE_SCHEMA_VERSION = 3;
 export const STORAGE_APPLICATION_ID = 0x4e41564f;
 
 export const EVENT_HISTORY_QUERY =
@@ -23,6 +24,7 @@ CREATE INDEX events_by_project ON events (project_id, domain, owner_id, seq);
 `;
 
 const SCHEMA = `${EVENTS_SCHEMA}
+${FILE_OPERATIONS_SCHEMA}
 CREATE TABLE workspace_bindings (
   project_id TEXT PRIMARY KEY,
   root       TEXT NOT NULL UNIQUE
@@ -69,13 +71,14 @@ function configureDatabase(db: DatabaseSync, path: string): void {
         throw unsupported(path, "has an unversioned schema or a foreign application id");
       }
       db.exec(SCHEMA);
-    } else if ((version !== 1 && version !== STORAGE_SCHEMA_VERSION) || applicationId !== STORAGE_APPLICATION_ID) {
+    } else if ((version !== 1 && version !== 2 && version !== STORAGE_SCHEMA_VERSION) || applicationId !== STORAGE_APPLICATION_ID) {
       throw unsupported(path, `has schema ${String(version)} / application id ${String(applicationId)}`);
     } else {
+      const requiredTables = version === 3 ? [...REQUIRED_TABLES, "resource_file_operations"] : REQUIRED_TABLES;
       const tables = db.prepare(
-        `SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN (${REQUIRED_TABLES.map(() => "?").join(", ")})`,
-      ).all(...REQUIRED_TABLES);
-      if (tables.length !== REQUIRED_TABLES.length) throw unsupported(path, "is missing required tables");
+        `SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN (${requiredTables.map(() => "?").join(", ")})`,
+      ).all(...requiredTables);
+      if (tables.length !== requiredTables.length) throw unsupported(path, "is missing required tables");
       if (version === 1) {
         db.exec(`
           DROP INDEX events_by_project;
@@ -83,8 +86,11 @@ function configureDatabase(db: DatabaseSync, path: string): void {
           ${EVENTS_SCHEMA}
           INSERT INTO events SELECT domain, owner_id, seq, project_id, payload FROM events_v1;
           DROP TABLE events_v1;
-          PRAGMA user_version = ${STORAGE_SCHEMA_VERSION};
+          PRAGMA user_version = 2;
         `);
+      }
+      if (version === 1 || version === 2) {
+        db.exec(`${FILE_OPERATIONS_SCHEMA} PRAGMA user_version = 3;`);
       }
     }
     db.exec("COMMIT");

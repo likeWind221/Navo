@@ -21,7 +21,14 @@ export type ResourceEvent = ResourceEventHeader & (
         readonly description: string;
         readonly resourceType: string;
         readonly entryRef: string;
+        readonly libraryPath: string;
+        readonly assetGeneration: number;
+        readonly operationId: string;
       };
+    }
+  | {
+      readonly type: "resource-replaced";
+      readonly data: { readonly entryRef: string; readonly assetGeneration: number; readonly operationId: string };
     }
   | {
       readonly type: "resource-updated";
@@ -33,12 +40,12 @@ export type ResourceEvent = ResourceEventHeader & (
     }
   | {
       readonly type: "resource-deleted";
-      readonly data: Record<string, never>;
+      readonly data: { readonly operationId: string };
     }
 );
 
 export interface ResourceEventHeader {
-  readonly version: 3;
+  readonly version: 4;
   readonly id: EventId;
   readonly projectId: ProjectId;
   readonly resourceId: ResourceId;
@@ -57,7 +64,7 @@ export function createResourceEvent(input: {
   readonly data: ResourceEvent["data"];
 }): ResourceEvent {
   return freezeResourceEvent({
-    version: 3,
+    version: 4,
     id: createEventId(randomUUID()),
     projectId: input.projectId,
     resourceId: input.resourceId,

@@ -67,10 +67,10 @@ describe("Resource owner CRUD capabilities", () => {
     });
     expect(deleted.kind).toBe("success");
     expect(app.resources.listByProject(project.id)).toEqual([]);
-    expect(await readFile(
-      join(workspace.assetsRoot, resourceId, "report.md"),
+    await expect(readFile(
+      join(workspace.assetsRoot, resourceId, "versions/1/source.md"),
       "utf8",
-    )).toBe("alpha\nbeta\ngamma\n");
+    )).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("reports the missing source path and errno when registration cannot find the file", async () => {

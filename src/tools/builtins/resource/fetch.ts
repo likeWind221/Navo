@@ -1,7 +1,6 @@
 import type { Context } from "cordis";
 
 import type { JsonObject } from "../../../llm/types.js";
-import { ResourceError } from "../../../resource/errors.js";
 import { createFileEnvironment } from "../file/path.js";
 import { readTextFile } from "../file/read.js";
 import { FILE_LIMITS } from "../file/types.js";
@@ -45,57 +44,43 @@ export function createFetchResourceTool(ctx: Context): ToolDefinition {
         execution.signal.throwIfAborted();
         const caller = requireResourceToolCaller(ctx, execution.sessionId);
         const id = resolveResourceRef(ctx, caller, arguments_.resource_id);
-        const resource = ctx.resources.getVisible(
-          caller.projectId,
-          id,
-          caller.principal,
-        );
-        if (resource === undefined) {
-          throw new ResourceError(
-            "resource-unavailable",
-            "Resource is unavailable to the current caller.",
-          );
-        }
-        const target = await ctx.resources.resolveEntry(
-          caller.projectId,
-          id,
-          caller.principal,
-        );
-        const environment = await createFileEnvironment(target.root, target.root);
-        const result = await readTextFile(environment, {
-          path: resource.entryRef,
-          ...(arguments_.start_line === undefined
-            ? {}
-            : { startLine: arguments_.start_line as number }),
-          ...(arguments_.max_lines === undefined
-            ? {}
-            : { maxLines: arguments_.max_lines as number }),
-        }, execution.signal);
-        const body = result.lines
-          .map(({ line, text }) => `${line}: ${text}`)
-          .join("\n");
-        const footer = result.nextLine === null
-          ? "[End of Resource]"
-          : `[Continue with start_line=${result.nextLine}]`;
-        return {
-          content: [
-            `Resource: ${resource.name} (${resource.id})`,
-            `Revision: ${resource.revision}`,
-            `Lines: ${result.totalLines}`,
-            "",
-            body,
-            footer,
-          ].join("\n"),
-          artifact: {
-            ...resourceArtifact(resource),
-            start_line: result.startLine,
-            total_lines: result.totalLines,
-            next_line: result.nextLine,
-            max_lines: arguments_.max_lines === undefined
-              ? FILE_LIMITS.defaultReadLines
-              : arguments_.max_lines,
-          },
-        };
+        return await ctx.resources.withEntry(caller.projectId, id, caller.principal, async (resource, target) => {
+          const environment = await createFileEnvironment(target.root, target.root);
+          const result = await readTextFile(environment, {
+            path: resource.entryRef,
+            ...(arguments_.start_line === undefined
+              ? {}
+              : { startLine: arguments_.start_line as number }),
+            ...(arguments_.max_lines === undefined
+              ? {}
+              : { maxLines: arguments_.max_lines as number }),
+          }, execution.signal);
+          const body = result.lines
+            .map(({ line, text }) => `${line}: ${text}`)
+            .join("\n");
+          const footer = result.nextLine === null
+            ? "[End of Resource]"
+            : `[Continue with start_line=${result.nextLine}]`;
+          return {
+            content: [
+              `Resource: ${resource.name} (${resource.id})`,
+              `Revision: ${resource.revision}`,
+              `Lines: ${result.totalLines}`,
+              "",
+              body,
+              footer,
+            ].join("\n"),
+            artifact: {
+              ...resourceArtifact(resource),
+              start_line: result.startLine,
+              total_lines: result.totalLines,
+              next_line: result.nextLine,
+              max_lines: arguments_.max_lines === undefined
+                ? FILE_LIMITS.defaultReadLines
+                : arguments_.max_lines,
+            },
+          };
+        });
       } catch (error: unknown) {
         return resourceToolFailure(error);
       }

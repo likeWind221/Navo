@@ -9,7 +9,8 @@ import {
 
 import type { ResourceId } from "../brand/ids.js";
 import type { ProjectWorkspace } from "../workspace/model.js";
-import { ensureOwnedDirectory } from "../workspace/path.js";
+import { assetLocation } from "./assets.js";
+import { normalizeLibraryPath } from "./library.js";
 import { ResourceError } from "./errors.js";
 import type {
   ProjectResource,
@@ -19,6 +20,15 @@ import type {
 export interface ResourcePublishSource {
   readonly path: string;
   readonly entryRef: string;
+}
+
+export function validateVersionEntryRef(value: unknown, generation: number): string {
+  const entryRef = validateResourceEntryRef(value);
+  if (!Number.isSafeInteger(generation) || generation < 1
+    || !new RegExp(`^versions/${generation}/source(?:\\.[a-z0-9]+)?$`).test(entryRef)) {
+    throw new ResourceError("invalid-resource", "Resource entry does not match its immutable asset generation.");
+  }
+  return entryRef;
 }
 
 export function validateResourceEntryRef(value: unknown): string {
@@ -36,6 +46,7 @@ export function validateResourceEntryRef(value: unknown): string {
       "Resource entryRef must be a portable relative path.",
     );
   }
+  normalizeLibraryPath(value);
   const segments = value.split("/");
   if (segments.some(segment => segment.length === 0 || segment === "." || segment === "..")) {
     throw new ResourceError(
@@ -86,27 +97,11 @@ export async function resolveResourcePublishSource(
   });
 }
 
-export async function ensureResourceRoot(
-  workspace: ProjectWorkspace,
-  resourceId: ResourceId,
-): Promise<string> {
-  const candidate = join(workspace.assetsRoot, resourceDirectoryName(resourceId));
-  try {
-    return await ensureOwnedDirectory(candidate, workspace.assetsRoot);
-  } catch (error: unknown) {
-    throw new ResourceError(
-      "resource-content-unavailable",
-      "Resource content root could not be prepared.",
-      { cause: error },
-    );
-  }
-}
-
 export async function resolveResourceEntry(
   workspace: ProjectWorkspace,
   resource: ProjectResource,
 ): Promise<ResourceEntryTarget> {
-  const entryRef = validateResourceEntryRef(resource.entryRef);
+  const entryRef = validateVersionEntryRef(resource.entryRef, resource.assetGeneration);
   const expectedRoot = join(
     workspace.assetsRoot,
     resourceDirectoryName(resource.id),
@@ -115,6 +110,7 @@ export async function resolveResourceEntry(
   let resourceRoot: string;
   let target: string;
   try {
+    await assetLocation(workspace, `assets/${resourceDirectoryName(resource.id)}/${entryRef}`);
     resourceRoot = await realpath(expectedRoot);
     assertContained(workspace.assetsRoot, resourceRoot);
     target = await realpath(join(resourceRoot, ...entryRef.split("/")));
@@ -156,6 +152,7 @@ function validateWorkspaceSourceRef(value: unknown): string {
       "Resource source path must be a portable Workspace-relative path.",
     );
   }
+  normalizeLibraryPath(value);
   const segments = value.split("/");
   if (
     segments.some(segment => segment.length === 0 || segment === "." || segment === "..")

@@ -50,7 +50,7 @@ it("restores messages and Resource lifecycle and continues their sequences", asy
   ctx.resources.update({ projectId, resourceId: resource.id, actor: resource.owner, expectedRevision: 1, changes: { name: "Final" } });
   ctx.resources.setAccess({ projectId, resourceId: resource.id, actor: { kind: "main" }, expectedRevision: 2, access: { kind: "public" } });
   const deleted = await publish();
-  ctx.resources.delete({ projectId, resourceId: deleted.id, actor: deleted.owner, expectedRevision: 1 });
+  await ctx.resources.delete({ projectId, resourceId: deleted.id, actor: deleted.owner, expectedRevision: 1 });
   const messages = ctx.mailbox.getHistory(projectId);
   const events = ctx.resources.getEvents(projectId);
   const list = ctx.resources.listByProject(projectId);
