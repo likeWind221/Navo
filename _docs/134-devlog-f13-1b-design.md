@@ -2,7 +2,7 @@
 
 日期：2026-10-20
 基线：`master` / PR #82 合并后，commit `d340e18b202017ed294d10bfbc48de23137c3c18`
-状态：设计草案，待只读审核；未实施
+状态：设计草案 v2，已根据首轮只读审核修订，待复审；未实施
 范围：仅 F13.1b 正文提取、正文持久化、处理状态与恢复。不修改生产代码。
 
 ## 1. 目标与非目标
@@ -82,11 +82,12 @@ F13.3 consumes current ready body (future; not implemented here)
 
 新增 SQLite 表 `resource_content`。每个 Resource 最多保留一条当前正文记录，不保留旧正文历史，也不新增独立任务表。
 
-建议字段：
+建议字段与正式 DDL：
 
 | 字段 | 约束与用途 |
 |---|---|
-| `resource_id` | 主键；关联当前 Resource ID。Resource 不是 SQL 主表，因此不声明指向不存在表的外键 |
+| `project_id` | 非空 Project ID；用于项目隔离、按项目对账和清理 |
+| `resource_id` | 非空 Resource ID；与 `project_id` 组成复合主键。Resource 不是 SQL 主表，因此不声明指向不存在表的外键 |
 | `source_asset_generation` | 正整数；正文对应的原始文件代次 |
 | `status` | `pending` / `processing` / `ready` / `metadata_only` / `failed` |
 | `body` | 完整规范化正文；仅 `ready` 状态允许非空 |
@@ -97,18 +98,54 @@ F13.3 consumes current ready body (future; not implemented here)
 | `error_message` | 有长度上限、可供诊断的安全错误摘要 |
 | `updated_at` | UTC 更新时间 |
 
+正式 DDL 在 `src/storage/schema.ts` 中作为 Schema v4 的一部分维护，并使用仓库现有的 SQLite `STRICT` 表约定：
+
+```sql
+CREATE TABLE resource_content (
+  project_id TEXT NOT NULL CHECK (length(trim(project_id)) > 0),
+  resource_id TEXT NOT NULL CHECK (length(trim(resource_id)) > 0),
+  source_asset_generation INTEGER NOT NULL CHECK (source_asset_generation >= 1),
+  status TEXT NOT NULL CHECK (status IN ('pending', 'processing', 'ready', 'metadata_only', 'failed')),
+  body TEXT,
+  page_map_json TEXT CHECK (
+    page_map_json IS NULL OR
+    (json_valid(page_map_json) AND json_type(page_map_json) = 'array')
+  ),
+  extractor_version TEXT,
+  processing_attempt_id TEXT,
+  error_code TEXT,
+  error_message TEXT CHECK (error_message IS NULL OR length(error_message) <= 1000),
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (project_id, resource_id),
+  CHECK (
+    (status = 'ready' AND body IS NOT NULL AND length(trim(body)) > 0 AND extractor_version IS NOT NULL)
+    OR (status != 'ready' AND body IS NULL)
+  ),
+  CHECK (
+    (status = 'processing' AND processing_attempt_id IS NOT NULL AND length(trim(processing_attempt_id)) > 0)
+    OR (status != 'processing' AND processing_attempt_id IS NULL)
+  ),
+  CHECK (status != 'failed' OR error_code IS NOT NULL)
+) STRICT;
+CREATE INDEX resource_content_by_project_status
+  ON resource_content (project_id, status, updated_at);
+```
+
+`StorageTransaction` 需增加项目范围明确的正文记录访问方法（读取、按项目列举、写入 / 更新、删除），并确保所有查询都同时使用 `project_id` 和 `resource_id`。
+
 不增加 `attempt_count`：首版不按尝试次数自动退避或改变任务策略，失败信息与更新时间用于基本诊断。失败任务通过显式重试触发；Host 重启恢复的是中断中的任务，不是无限自动重试所有失败项。
 
 `processing_attempt_id` 是一次处理尝试的唯一标识，不是大模型文本 Token。领取任务时生成新的 UUID；提交时要求该 ID 仍匹配，阻止已取消或过期的旧任务提交结果。
 
 ### 4.2 数据约束
 
-- `resource_id` 唯一；`source_asset_generation` 必须为正整数。
+- `(project_id, resource_id)` 为复合主键；所有读取、更新、删除均须同时带上 Project ID，禁止只凭 Resource ID 跨项目访问正文。
+- `source_asset_generation` 必须为正整数。
 - `ready` 必须同时满足正文存在且规范化后非空；非 `ready` 状态的 `body` 为 NULL。
 - `processing` 必须持有非空 `processing_attempt_id`；其他状态清空该字段。
 - `metadata_only` 和 `failed` 不保存可用正文。
-- 对状态和代次建立必要索引，支持 Host 启动扫描待处理记录。
-- 因没有 Resource SQL 主表，不能依赖外键级联删除；领域服务负责及时清理，启动对账负责补偿遗漏。
+- 建立 `(project_id, status, updated_at)` 索引，支持项目范围内的启动对账与待处理记录查询。
+- 因没有 Resource SQL 主表，不能声明指向 Resource 的外键；删除流程在同一 SQLite 事务内清理正文记录，启动反向对账作为异常残留的兜底。
 - 不使用 Resource 的 `revision` 判定正文有效性：名称、描述、权限变更会改变 revision，却不改变原始文件内容。正文有效性由 Resource 当前状态与 `assetGeneration` 决定。
 
 ### 4.3 PDF 页码映射
@@ -124,7 +161,7 @@ F13.3 consumes current ready body (future; not implemented here)
 
 - 区间采用 `[start, end)`。
 - 偏移量以 JavaScript 字符串 UTF-16 code unit 为单位，与后续 JS 字符串切片一致。
-- 合并页面时使用固定页面分隔符，页码区间按最终规范化正文计算。
+- 每页先完成确定性的单页规范化，再追加固定的 `\n\n` 页面分隔符并计算该页区间；偏移量必须对应最终持久化正文。拼接完成后禁止再执行会改变字符数量的全局规范化。
 - 空白页可记录空区间，避免丢失原始页码关系。
 - F13.3 可据此将 Chunk 的正文区间映射回一个或多个 PDF 页码；F13.1b 不负责 Chunk 切分。
 
@@ -160,7 +197,16 @@ missing row / new asset generation
 
 替换为新代次时，记录切换到新 `source_asset_generation`、清空旧正文和页码映射、清除旧尝试 ID，并回到 `pending`。在记录更新之前，读取方也必须通过代次校验使旧正文立即失效。
 
-不新增 `cancelled` 状态：Host 关闭或任务取消时，当前尝试被撤销并回到 `pending`；若进程被强制终止，则由下次启动恢复遗留的 `processing`。首版不提供单个 Resource 的永久停用处理状态。
+不新增 `cancelled` 状态，但必须区分 Host 停机中断与运行期失败：
+
+- **Host 优雅关闭**：停止领取新任务，向当前处理器发出专用的 shutdown signal；在能成功提交状态的前提下，将当前尝试撤销并重置为 `pending`，随后等待 PDF.js 清理完成。关闭流程不得再次 drain 队列。
+- **Host 被强制终止**：数据库中可能残留 `processing`；下次启动确认旧 Host 已退出并取得单实例锁后，将其恢复为 `pending`。
+- **运行期取消、超时、超限或解析失败**：转为 `failed`，记录稳定错误码（例如 `cancelled`、`timeout`、`content_limit_exceeded`、`pdf_parse_failed`），不自动重新入队；只有显式重试才回到 `pending`。
+- **状态写入本身失败**：不得在内存中无限立即重试；停止该任务的自动重入队并记录诊断，遗留状态由后续启动对账恢复。
+
+首版不提供独立的用户取消 UI；上述运行期取消语义约束内部 AbortSignal 与未来调用方。
+
+## 6. 处理流程、触发与恢复
 
 ## 6. 处理流程、触发与恢复
 
@@ -169,12 +215,12 @@ missing row / new asset generation
 1. 现有 ResourceLifecycle 完成原始文件操作和 Resource 事件提交。
 2. 成功后为当前代次创建或更新 `resource_content` 的 `pending` 记录，并安排进程内处理。
 3. 处理器在短 SQLite 事务中以条件更新领取任务，生成 `processing_attempt_id`；只有成功更新一行的调用方取得处理权。
-4. 通过现有 Resource 读取入口获取固定原始文件代次；在数据库事务外解析文件。
+4. 通过 `ResourceService.resolveEntry(projectId, resourceId)` 获取固定代次的原始文件目标，并在整个文件读取 / 正文提取期间持有返回的读取租约；无论成功、失败或取消，都在 `finally` 中释放租约。这样替换 / 删除的安全清理不会在提取器仍使用原始文件时移除资产。解析仍在 SQLite 事务外执行。
 5. 提取成功后，重新核对 Resource 仍有效、当前 `assetGeneration` 相同、记录状态仍为 `processing` 且尝试 ID 匹配。
 6. 只有所有条件满足时，才在一个 SQLite 事务中同时写入正文、页码映射、提取器版本并将状态改为 `ready`。
 7. 不支持格式写入 `metadata_only`；正文为空、文件损坏或解析失败写入 `failed` 和错误码。
 
-文件操作提交与正文记录创建不是同一事务。若进程在两者之间中断，Host 启动对账必须发现当前 Resource 缺少记录并补建 `pending`；正文处理失败不能回滚原始文件操作。
+文件操作提交与新代次正文记录创建不是同一事务。若进程在两者之间中断，Host 启动对账必须发现当前 Resource 缺少记录或代次不一致并补建 / 重置为 `pending`；正文处理失败不能回滚原始文件操作。Resource 删除则不同：删除事件与正文行删除应在同一 SQLite 事务内提交。
 
 ### 6.2 同代次重复触发与重试
 
@@ -186,21 +232,22 @@ missing row / new asset generation
 
 ### 6.3 Host 启动恢复
 
-在 Host 单实例锁成功、Storage 初始化、Resource 投影恢复和现有 ResourceRecovery 完成之后执行：
+在 Host 单实例锁成功、Storage 初始化、所有可恢复 Project 的 Resource 投影恢复和现有 ResourceRecovery 完成之后执行。此处同步步骤仅做有界的元数据 / SQLite 对账，不执行 PDF 读取或正文提取：
 
-1. 遍历当前有效 Resource。
-2. 对缺失的正文记录创建当前代次的 `pending`。
-3. 对 `source_asset_generation` 与当前 `assetGeneration` 不一致的记录，使旧正文立即失效，重置为当前代次 `pending`。
-4. 将遗留的 `processing` 重置为 `pending` 并清除旧尝试 ID。
-5. 删除已不存在或已删除 Resource 的孤儿正文记录。
-6. 处理所有 `pending` 记录；对当前 `ready` 且代次一致的记录不重复解析。
+1. 按 Project 遍历当前有效 Resource，对缺失正文行的 Resource 创建当前代次的 `pending`。
+2. 对代次不一致的记录，先使旧正文立即失效，再重置为当前代次的 `pending`。
+3. 将遗留的 `processing` 重置为 `pending` 并清除旧尝试 ID。此操作只在新 Host 已取得单实例锁后执行。
+4. **反向扫描正文表**：列举 `resource_content` 的全部记录，并按每行的 `project_id` / `resource_id` 核对当前 Resource；清理对应 Resource 已删除或不存在的孤儿记录。Project / Resource 尚未完成恢复时，不得误判为孤儿。
+5. 对账完成后，Host 可继续启动；ContentProcessor 在 Host ready 后异步串行消费 `pending`。启动路径不得等待正文提取。
+
+Host 启动时拥有既有单实例锁，因此不设计多 Host 抢占和租约超时。进程内仍通过条件更新与尝试 ID 保护重复触发和迟到结果。启动对账本身必须可重复执行，且不得因某份 PDF 损坏而阻断 Host ready.
 
 Host 启动时拥有既有单实例锁，因此不设计多 Host 抢占和租约超时。进程内仍通过条件更新与尝试 ID 保护重复触发和迟到结果。
 
 ### 6.4 删除与读取
 
 - Resource 删除提交后，正文读取先验证 Resource 当前有效性；已删除的 Resource 即使仍残留正文行，也不得返回正文。
-- 删除流程尽力删除对应 `resource_content` 行；失败不复活 Resource，启动对账会清理孤儿记录。
+- `ResourceLifecycle.delete` 应在同一个 `ctx.storage.atomic` 事务中提交 `resource-deleted` 事件并调用新增的 `tx.deleteResourceContent(projectId, resourceId)` 删除正文行。若事务失败，两者一起回滚；启动反向对账只负责清理历史遗留或异常残留的孤儿记录。
 - 正文读取必须验证 `status = ready`、Resource 仍有效，以及 `source_asset_generation = current assetGeneration`。
 - 返回给 F13.3 的正文输入应附带 Resource ID、来源代次、提取器版本及可选页码映射；F13.3 不得把过期代次的正文加入索引。
 
@@ -212,13 +259,13 @@ Host 启动时拥有既有单实例锁，因此不设计多 Host 抢占和租约
 
 ### 7.2 PDF 提取流程
 
-1. 从固定代次的原始文件读取字节，按 PDF.js Node API 创建文档加载任务。
-2. 检查解析结果与页数；按页顺序逐页调用 `getPage(pageNumber)` 和 `getTextContent()`，不对全部页面使用无界 `Promise.all`。
-3. 按 PDF.js 文本项顺序拼接文本，并利用 `hasEOL` 恢复行边界；每页完成后更新页码映射与输出长度。
-4. 在页间执行取消检查；任何页失败则整个提取失败，不发布部分正文。
-5. 正常或异常结束都释放 PDF 文档与加载任务资源。
-6. 对正文做有限规范化，保留可用换行与段落；不尝试重建复杂布局、表格、公式或 OCR。
-7. 规范化后为空白的正文按 `empty_content` 失败。
+1. 在读取租约有效期间，从固定代次原始文件读取字节，按锁定版本的 PDF.js Node API 创建 `PDFDocumentLoadingTask`。
+2. 检查解析结果与页数上限；按页顺序逐页调用 `getPage(pageNumber)` 和 `getTextContent()`，不对全部页面使用无界 `Promise.all`。
+3. 按 PDF.js 文本项顺序拼接文本，并利用 `hasEOL` 恢复行边界。先对单页文本执行确定性规范化，再追加固定的 `\n\n` 分隔符；在最终输出字符串上记录该页 `[start, end)`，不将分隔符计入页面正文区间。拼接完成后不再执行会改变字符数量的全局规范化。
+4. 每页的文本复制到输出缓冲后，在该页的 `finally` 中调用同步的 `page.cleanup()`；页级清理返回值按锁定版本 API 解释，不将其误当作 Promise。PDF 文档加载任务在整体提取的 `finally` 中执行并等待 `await loadingTask.destroy()`。
+5. 在页间执行取消检查；任何页失败则整个提取失败，不发布部分正文。取消 / 超时需终止当前 PDF.js 加载任务并等待其清理，不得提前释放处理槽位。
+6. 对单页文本做有限规范化，保留可用换行与段落；不尝试重建复杂布局、表格、公式或 OCR。
+7. 规范化后的完整正文为空白时按 `empty_content` 失败。
 
 PDF.js 能提取 PDF 中已有的文本，但不负责将扫描图片自动转换为文字。扫描 PDF 因正文为空而失败，不归入 `metadata_only`。
 
@@ -233,7 +280,7 @@ PDF.js 能提取 PDF 中已有的文本，但不负责将扫描图片自动转�
 
 - 沿用 F13.1a 的原始文件 100 MiB 上限；不意味着解析结果可以无限增长。
 - 实现必须设置明确的 PDF 页数、正文 UTF-8 字节数和单次处理并发上限；超过限制时返回稳定错误码，不得部分发布正文。具体数值在实施前通过样例 PDF 验证并写入配置 / 常量与测试，不得无界分配内存。
-- 首版建议同一 Host 同时只处理一个正文任务；按页处理并在页间检查取消，Host 关闭时尝试销毁 PDF.js 文档并将任务重置为待处理。
+- 首版建议同一 Host 同时只处理一个正文任务；按页处理并在页间检查取消。运行期取消 / 超时 / 超限必须进入 `failed` 并停止自动重试；只有专用 Host shutdown signal 才允许在优雅关闭时撤销任务并回到 `pending`。强制终止后的恢复由下一次启动对账完成。
 - 原始文件是非可信输入；解析异常必须被转换为可诊断的 `failed` 结果，不能导致 Host 崩溃。
 - 不执行正文中的任何指令，不将正文解析与 Agent 权限或工具授权相连。
 - 错误摘要需限制长度，避免保存大段原始解析器堆栈或不必要的本地绝对路径。
@@ -265,11 +312,15 @@ PDF.js 能提取 PDF 中已有的文本，但不负责将扫描图片自动转�
 | 8. 旧任务与新代次交错完成 | 旧任务不能覆盖新代次 | 让旧代次任务延迟完成，确认代次或尝试 ID 校验拒绝提交 |
 | 9. SQLite 提交失败 | 正文与 ready 不出现部分提交 | 在提交时注入失败，确认事务回滚；重启后可恢复 |
 | 10. 正文代次与当前 Resource 不一致 | 过期正文永不被读取或交给 F13.3 | 人工构造不一致记录，读取拒绝，启动对账重置并重新处理 |
+| 11. 页数 / 正文大小超限或运行期取消 | 不发布部分正文，不自动循环重试，解析资源与租约最终释放 | 注入页数 / UTF-8 字节数超限、取消与超时；断言状态为 `failed`、错误码稳定、调用 `page.cleanup()` 与 `loadingTask.destroy()`，并确认只在显式重试后再次领取 |
+| 12. 删除事务原子性 | 删除事件与正文行同时提交或同时回滚 | 在删除事务中注入失败，确认 Resource 未被标记删除且正文行仍一致；成功删除后正文行同步消失 |
 
 补充验收：
 
 - Schema v1、v2、v3 数据库均能迁移至 v4；现有 Resource / 文件操作测试保持通过。
-- PDF 解析验证逐页顺序、换行、空白页、损坏文件、页数 / 正文大小上限、取消及资源释放。
+- PDF 解析验证逐页顺序、换行、空白页、页码映射在规范化后仍精确、损坏文件、页数 / 正文大小上限、取消及页面 / 文档资源释放。
+- 验证 `project_id` 复合主键与项目范围查询；正文对账覆盖正向补建和反向孤儿清理。
+- 验证正文提取期间读取租约始终有效，直到原始文件读取 / 解析完成。
 - 不对真实模型、Embedding 或检索质量作验收声明；这些属于后续阶段。
 
 ## 10. 实施步骤建议
@@ -293,6 +344,6 @@ PDF.js 能提取 PDF 中已有的文本，但不负责将扫描图片自动转�
 ## 12. 审核记录与当前状态
 
 - 用户已确认：使用 SQLite 正文方案；正文为空统一记为 failed；保留 PDF 页码映射；保留 `processing_attempt_id`；PDF 解析引擎采用 PDF.js。
-- 当前为技术设计草案。正文大小 / 页数上限、具体依赖版本及启动关闭时的取消细节，须在实施前结合仓库实际接口和代表性 PDF 样本最终核定。
-- 当前会话未修改生产代码、依赖或测试。代码审计与设计审核不等于功能实现验收。
-- 子代理只读审核：待执行。当前执行环境没有可直接调用的子代理运行工具；在可用的本地 Agent 环境中，应按本文件进行只读设计审核，记录问题并修订后再冻结实施方案。
+- 首轮只读审核（2026-10-20）发现 1 项阻断、5 项重要问题和 4 项一般建议；本修订版已纳入取消语义、页码偏移、项目隔离、启动异步处理、反向对账、PDF.js 清理、STRICT DDL、删除事务、超限验收与读取租约。
+- 本修订仍为设计草案，待复审确认；正文大小 / 页数上限、锁定的 `pdfjs-dist` 版本及具体关闭时序，须在实施前结合代表性 PDF 样本与当前 Node.js 24 / TypeScript 环境核定。
+- 当前未修改生产代码、依赖或测试。设计审核与文档修订不等于功能实现验收。
