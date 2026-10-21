@@ -41,6 +41,7 @@ function snapshot(path: string) {
 
 function downgrade(path: string) {
   rawSql(path, `BEGIN;
+    DROP TABLE resource_content;
     DROP TABLE resource_file_operations;
     DROP INDEX events_by_project;
     ALTER TABLE events RENAME TO events_v2;

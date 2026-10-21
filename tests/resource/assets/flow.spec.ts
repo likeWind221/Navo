@@ -58,6 +58,8 @@ it("creates, replaces and deletes immutable generations without changing metadat
   await expect(stat(join(workspace.assetsRoot, first.id, first.entryRef))).rejects.toMatchObject({ code: "ENOENT" });
   await ctx.resources.delete({ projectId: input.projectId, actor: input.owner, resourceId: first.id, expectedRevision: 2, operationId: "delete" });
   expect(ctx.resources.get(input.projectId, first.id)).toBeUndefined();
+  await ctx.content.idle();
+  await ctx.resources.recover();
   expect(operation(ctx, "delete")).toMatchObject({ execution_state: "completed", business_result: "succeeded" });
   await expect(stat(join(workspace.assetsRoot, next.id, next.entryRef))).rejects.toMatchObject({ code: "ENOENT" });
 });
@@ -132,6 +134,8 @@ it("deletion rejects new leases but lets an admitted read finish before cleanup"
   expect(operation(ctx, "delete").execution_state).toBe("cleanup_pending");
   finish.resolve();
   expect(await reading).toBe("generation one");
+  await ctx.content.idle();
+  await ctx.resources.recover();
   expect(operation(ctx, "delete").execution_state).toBe("completed");
   await expect(stat(join(workspace.assetsRoot, first.id, first.entryRef))).rejects.toMatchObject({ code: "ENOENT" });
 });
@@ -141,5 +145,7 @@ it("releases leases after read failures so logical deletion can clean the asset"
   const first = await ctx.resources.publish(input);
   await expect(ctx.resources.withEntry(input.projectId, first.id, input.owner, async () => { throw new Error("read failed"); })).rejects.toThrow("read failed");
   await ctx.resources.delete({ projectId: input.projectId, resourceId: first.id, actor: input.owner, expectedRevision: 1, operationId: "delete" });
+  await ctx.content.idle();
+  await ctx.resources.recover();
   expect(operation(ctx, "delete").execution_state).toBe("completed");
 });

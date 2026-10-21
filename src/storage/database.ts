@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { Service } from "cordis";
 import type { Context } from "cordis";
 
+import { resourceContentTransaction, type ResourceContentTransaction } from "./content.js";
 import { fileOperationTransaction, type FileOperationTransaction } from "./operations.js";
 import { StorageError } from "./errors.js";
 import { planInterruptionRepair } from "./interruption.js";
@@ -12,6 +13,7 @@ import { EVENT_HISTORY_QUERY, openDatabase } from "./schema.js";
 
 export class StorageService extends Service {
   private readonly db: DatabaseSync;
+  private readonly closing = new Set<() => Promise<void>>();
   readonly recovery: RecoveryPlan;
   private pending: (() => void)[] | undefined;
   private readonly transaction: StorageTransaction;
@@ -19,7 +21,8 @@ export class StorageService extends Service {
   constructor(ctx: Context, config: StorageConfig) {
     super(ctx, "storage");
     this.db = openDatabase(config.path);
-    this.ctx.effect(() => () => {
+    this.ctx.effect(() => async () => {
+      await Promise.all([...this.closing].map(work => work()));
       if (this.db.isOpen) this.db.close();
     }, "storage.lifecycle");
     try {
@@ -33,6 +36,11 @@ export class StorageService extends Service {
       if (this.db.isOpen) this.db.close();
       throw error;
     }
+  }
+
+  beforeClose(work: () => Promise<void>): () => void {
+    this.closing.add(work);
+    return () => { this.closing.delete(work); };
   }
 
   write(persist: (tx: StorageTransaction) => void, apply: () => void): void {
@@ -117,7 +125,7 @@ export interface StorageConfig {
   readonly path: string;
 }
 
-export interface StorageTransaction extends FileOperationTransaction {
+export interface StorageTransaction extends FileOperationTransaction, ResourceContentTransaction {
   appendEvents(append: EventAppend): void;
   hasEvents(domain: EventDomain, ownerId: string): boolean;
   bindWorkspace(binding: WorkspaceBindingRecord): void;
@@ -151,6 +159,7 @@ export interface WorkspaceBindingRecord {
 function createTransaction(db: DatabaseSync): StorageTransaction {
   return {
     ...fileOperationTransaction(db),
+    ...resourceContentTransaction(db),
     appendEvents({ domain, ownerId, projectId, firstSeq, events }) {
       if ((projectId === null && domain !== "session") || (projectId !== null && (typeof projectId !== "string" || !projectId.trim()))) {
         throw new StorageError("invalid-record", "Stored events require a valid Project owner or a standalone Session.");

@@ -2,10 +2,11 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type { DatabaseSync, SQLInputValue } from "node:sqlite";
 
+import { RESOURCE_CONTENT_SCHEMA } from "./content.js";
 import { FILE_OPERATIONS_SCHEMA } from "./operations.js";
 import { StorageError } from "./errors.js";
 
-export const STORAGE_SCHEMA_VERSION = 3;
+export const STORAGE_SCHEMA_VERSION = 4;
 export const STORAGE_APPLICATION_ID = 0x4e41564f;
 
 export const EVENT_HISTORY_QUERY =
@@ -25,6 +26,7 @@ CREATE INDEX events_by_project ON events (project_id, domain, owner_id, seq);
 
 const SCHEMA = `${EVENTS_SCHEMA}
 ${FILE_OPERATIONS_SCHEMA}
+${RESOURCE_CONTENT_SCHEMA}
 CREATE TABLE workspace_bindings (
   project_id TEXT PRIMARY KEY,
   root       TEXT NOT NULL UNIQUE
@@ -71,10 +73,10 @@ function configureDatabase(db: DatabaseSync, path: string): void {
         throw unsupported(path, "has an unversioned schema or a foreign application id");
       }
       db.exec(SCHEMA);
-    } else if ((version !== 1 && version !== 2 && version !== STORAGE_SCHEMA_VERSION) || applicationId !== STORAGE_APPLICATION_ID) {
+    } else if ((version !== 1 && version !== 2 && version !== 3 && version !== STORAGE_SCHEMA_VERSION) || applicationId !== STORAGE_APPLICATION_ID) {
       throw unsupported(path, `has schema ${String(version)} / application id ${String(applicationId)}`);
     } else {
-      const requiredTables = version === 3 ? [...REQUIRED_TABLES, "resource_file_operations"] : REQUIRED_TABLES;
+      const requiredTables = [...REQUIRED_TABLES, ...(Number(version) >= 3 ? ["resource_file_operations"] : []), ...(version === 4 ? ["resource_content"] : [])];
       const tables = db.prepare(
         `SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN (${requiredTables.map(() => "?").join(", ")})`,
       ).all(...requiredTables);
@@ -92,6 +94,7 @@ function configureDatabase(db: DatabaseSync, path: string): void {
       if (version === 1 || version === 2) {
         db.exec(`${FILE_OPERATIONS_SCHEMA} PRAGMA user_version = 3;`);
       }
+      if (Number(version) < 4) db.exec(`${RESOURCE_CONTENT_SCHEMA} PRAGMA user_version = 4;`);
     }
     db.exec("COMMIT");
   } catch (error: unknown) {

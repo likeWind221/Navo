@@ -77,6 +77,7 @@ export class ResourceLifecycle {
       tx.insertFileOperation({ ...operation, execution_state: "committed", business_result: "succeeded",
         cleanup_targets_json: JSON.stringify([this.target(current)]) });
       this.append(input.projectId, current.id, current.revision, "resource-deleted", { operationId });
+      tx.deleteResourceContent(input.projectId, current.id);
     });
     return this.recovery.recover().catch(() => undefined);
   }

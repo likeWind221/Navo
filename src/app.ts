@@ -14,6 +14,7 @@ import { resolveAgentBinding } from "./project/binding.js";
 import { ProjectRuntime } from "./project/runtime.js";
 import { AutoRunService } from "./project/autorun.js";
 import { MainSessionService } from "./project/session.js";
+import { ContentProcessor } from "./resource/content.js";
 import { ResourceService, ResourceRecovery, type ResourceConfig } from "./resource/service.js";
 import { SessionStore } from "./session/store.js";
 import { SessionError } from "./session/errors.js";
@@ -105,6 +106,7 @@ export async function NavoApp(
   await ctx.plugin(MailboxStore);
   await ctx.plugin(ResourceService, config.resources);
   await ctx.plugin(ResourceRecovery);
+  await ctx.plugin(ContentProcessor);
   await ctx.plugin(ResourceToolsPlugin);
   await ctx.plugin(SendToMainTool);
   await ctx.plugin(SubmitCompletionTool);
@@ -128,6 +130,7 @@ export async function createApp(
   const ctx = new Context();
   try {
     await ctx.plugin(NavoApp, config);
+    ctx.content.start();
     return ctx;
   } catch (error: unknown) {
     await ctx.fiber.dispose();
