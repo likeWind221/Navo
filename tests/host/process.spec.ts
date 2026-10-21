@@ -23,6 +23,7 @@ import type { RpcClientFrame, RpcClientTransport } from "../../rpc/index.js";
 import type { SessionEvent } from "../../src/session/types.js";
 import { eventMessage } from "../../src/session/surface.js";
 import { HOST_LOCK_TARGET } from "../../src/host/lock.js";
+import { registerContentCrashTests } from "./process/content.js";
 import { registerAssetCrashTests, type HostProcessPhase } from "./process/interruption.js";
 
 import { describe, expect, it } from "vitest";
@@ -569,6 +570,7 @@ if (mode === "all" || mode === "normal") describe("Kernel Host process lifecycle
 });
 
 if (mode !== "normal") {
+  registerContentCrashTests({ startHost, exitOf, capture, collect, withRealHost });
   registerAssetCrashTests({ startHost, exitOf, capture, collect, withRealHost },
     mode === "crash-pr" ? { points: ["D6", "D8"], restarts: 1 } : undefined);
 }

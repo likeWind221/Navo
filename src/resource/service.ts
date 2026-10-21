@@ -79,12 +79,16 @@ export class ResourceService extends Service {
     }
   }
 
-  publish(input: PublishResourceInput, signal?: AbortSignal): Promise<ProjectResource> {
-    return publishResource(this.lifecycle, input, signal);
+  async publish(input: PublishResourceInput, signal?: AbortSignal): Promise<ProjectResource> {
+    const resource = await publishResource(this.lifecycle, input, signal);
+    this.ctx.emit("resource/committed", resource.projectId, resource.id);
+    return resource;
   }
 
-  replace(input: ReplaceResourceInput, signal?: AbortSignal): Promise<ProjectResource> {
-    return replaceResource(this.lifecycle, input, signal);
+  async replace(input: ReplaceResourceInput, signal?: AbortSignal): Promise<ProjectResource> {
+    const resource = await replaceResource(this.lifecycle, input, signal);
+    this.ctx.emit("resource/committed", resource.projectId, resource.id);
+    return resource;
   }
 
   recover(): Promise<void> {
@@ -253,6 +257,9 @@ export class ResourceService extends Service {
 }
 
 declare module "cordis" {
+  interface Events {
+    "resource/committed"(projectId: ProjectId, resourceId: ResourceId): void;
+  }
   interface Context {
     resources: ResourceService;
   }
