@@ -25,5 +25,5 @@
 
 ## 验证与下一步
 
-- 本机 Windows / Node 24：`pnpm typecheck` 通过；Resource / RPC / Host 定向测试 15 文件 / 147 项通过；最终代码用户导入专项 6 项通过，`pnpm test --maxWorkers=4` 通过，140 文件 / 897 项。当前 PR head CI 待记录。
+- 本机 Windows / Node 24：`pnpm typecheck` 通过；Resource / RPC / Host 定向测试 15 文件 / 147 项通过；最终代码用户导入专项 6 项通过，`pnpm test --maxWorkers=4` 通过，140 文件 / 897 项。PR #88 代码 head `1ef0907` 的必需 `verify` CI run `39565765501` 成功。
 - 尚无 Renderer 页面、Electron 文件选择器与正式 Bridge 点击级验收；F13.2 接入桌面管理和资料浏览。F13.1c 仅交付 Host RPC 与内部管理服务。
