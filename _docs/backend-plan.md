@@ -318,7 +318,7 @@ Host restart -> unmatched compaction marked interrupted -> replay committed chec
 
 ## 11. Phase 13（F13）：项目资料库与任务检索
 
-**阶段目标：** 将项目内 Resource 的集合升级为项目资料库，统一组织用户参考资料与 Agent 成果，让用户及 Main / Node 在权限范围内找到相关内容、按需阅读原文，并用可核验的依据完成长程任务。2026-10-18 用户已确认阶段方向与七步规划；阶段规划见 [124](124-devlog-f13-plan.md)；F13.0 已于 2026-10-19 经用户确认完成，见 [125](125-devlog-f13-0-design.md)。F13.1a 的共享资产生命周期内核与真实进程中断验收已完成，PR #80 已合并；BUG-023 的操作重试语义修复随 PR #81 合并且 CI 通过；PR #82 文档收尾已合入 master。F13.1b 已按冻结设计 [134](134-devlog-f13-1b-design.md) 实现并随 PR #87 合并至 master（提交 `845b864`），当前 head CI 成功，本机 typecheck 与 891 项完整测试通过，实施记录见 [135](135-devlog-f13-1b-content.md)。F13.1c 已按技术设计 [136](136-devlog-f13-1c-design.md) 实施，本机 Node 24 类型检查与 896 项完整测试通过；当前等待 PR head CI 收口，见 [137](137-devlog-f13-1c-user-intake.md)。
+**阶段目标：** 将项目内 Resource 的集合升级为项目资料库，统一组织用户参考资料与 Agent 成果，让用户及 Main / Node 在权限范围内找到相关内容、按需阅读原文，并用可核验的依据完成长程任务。2026-10-18 用户已确认阶段方向与七步规划；阶段规划见 [124](124-devlog-f13-plan.md)；F13.0 已于 2026-10-19 经用户确认完成，见 [125](125-devlog-f13-0-design.md)。F13.1a 的共享资产生命周期内核与真实进程中断验收已完成，PR #80 已合并；BUG-023 的操作重试语义修复随 PR #81 合并且 CI 通过；PR #82 文档收尾已合入 master。F13.1b 已按冻结设计 [134](134-devlog-f13-1b-design.md) 实现并随 PR #87 合并至 master（提交 `845b864`），当前 head CI 成功，本机 typecheck 与 891 项完整测试通过，实施记录见 [135](135-devlog-f13-1b-content.md)。F13.1c 已按技术设计 [136](136-devlog-f13-1c-design.md) 实施，本机 Node 24 类型检查与 897 项完整测试通过；当前等待 PR head CI 收口，见 [137](137-devlog-f13-1c-user-intake.md)。
 
 ### 首版范围与边界
 

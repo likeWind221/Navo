@@ -20,9 +20,10 @@
 
 - F13.1b 的 `ResourceService.publish` 只接受 Workspace 相对来源，用户导入必须使用独立受信任入口；正文状态由 `resource/committed` 通知接续，不能直接改正文表。
 - `project.resources.v1` 的旧 owner 输出只识别 Main / Node；新 User owner 需一并扩展输出校验，否则资源列表会解析失败。
+- F13.1a 失败操作原样保存异常消息，用户导入读取本地来源失败时可能带入绝对路径；用户操作改为只持久化稳定错误码，原 Agent 分支保持原行为。
 - Windows 当前会话创建普通文件 symlink 返回 EPERM；测试改用 junction 验证目录链接不被遍历。
 
 ## 验证与下一步
 
-- 本机 Windows / Node 24：`pnpm typecheck` 通过；Resource / RPC / Host 定向测试 15 文件 / 147 项通过；最终代码 `pnpm test --maxWorkers=4` 通过，140 文件 / 896 项。当前 PR head CI 待记录。
+- 本机 Windows / Node 24：`pnpm typecheck` 通过；Resource / RPC / Host 定向测试 15 文件 / 147 项通过；最终代码用户导入专项 6 项通过，`pnpm test --maxWorkers=4` 通过，140 文件 / 897 项。当前 PR head CI 待记录。
 - 尚无 Renderer 页面、Electron 文件选择器与正式 Bridge 点击级验收；F13.2 接入桌面管理和资料浏览。F13.1c 仅交付 Host RPC 与内部管理服务。

@@ -122,3 +122,14 @@ it("strictly parses the RPC contract and exposes it only through the Host regist
   expect(router.resolve("resource.user-import.v2")).toBeUndefined();
   expect(ctx.resources.listByProject(createProjectId(input.projectId))).toHaveLength(1);
 });
+
+it("does not persist the absolute source path when user staging fails", async () => {
+  const { ctx, path, project } = await fixture();
+  const selected = join(dirname(path), "sensitive-local-source.md");
+  await expect(ctx.resources.importUser({ projectId: project.id, operationId: "privatepath",
+    sourceRef: "user-intake/privatepath/source.md", libraryPath: "source.md",
+    name: "source.md", description: "", type: "text/markdown" },
+  { filename: "source.md", receive: async () => ({ path: selected }) })).rejects.toThrow();
+  expect(operation(ctx, "privatepath").error_code).toBe("asset-write-failed");
+  expect(operation(ctx, "privatepath").request_json).not.toContain(selected);
+});

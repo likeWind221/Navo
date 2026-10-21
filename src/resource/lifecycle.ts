@@ -213,7 +213,8 @@ export class ResourceLifecycle {
       if (persisted.business_result !== "succeeded") {
         const cancelled = signal?.aborted === true;
         this.recovery.save({ ...persisted, execution_state: "cleanup_pending", business_result: cancelled ? "cancelled" : "failed",
-          error_code: error instanceof Error ? error.message : "asset-write-failed" });
+          error_code: user ? (error instanceof ResourceError ? error.code : "asset-write-failed")
+            : error instanceof Error ? error.message : "asset-write-failed" });
       }
       throw error;
     } finally {
