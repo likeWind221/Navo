@@ -5,21 +5,32 @@ import { describe, expect, it } from "vitest";
 import { projectResourcesMethod, type StreamRpcClient } from "../../../rpc/index.js";
 import { HOST_LOCK_TARGET } from "../../../src/host/lock.js";
 import { assertCheckpoint, assertRecovered, removeCrashFixture, seedCrashFixture } from "./fixture.js";
-import { CRASH_POINTS, type Checkpoint, type CrashRequest } from "./protocol.js";
+import { CRASH_POINTS, type Checkpoint, type CrashPoint, type CrashRequest } from "./protocol.js";
 
 export interface HostProcessHarness {
   readonly startHost: (entry: string, env?: Readonly<Record<string, string>>, args?: readonly string[]) => ChildProcessWithoutNullStreams;
   readonly exitOf: (child: ChildProcessWithoutNullStreams) => Promise<{ readonly code: number | null; readonly signal: NodeJS.Signals | null }>;
   readonly capture: (stream: NodeJS.ReadableStream) => { readonly value: string };
   readonly collect: <T>(stream: AsyncIterable<T>) => Promise<T[]>;
-  readonly withRealHost: <T>(env: Readonly<Record<string, string>>, use: (client: StreamRpcClient) => Promise<T>) => Promise<T>;
+  readonly withRealHost: <T>(env: Readonly<Record<string, string>>, use: (client: StreamRpcClient) => Promise<T>,
+    entry?: "src/host/main.ts" | "scripts/host/mock.ts", onPhase?: (phase: HostProcessPhase) => void) => Promise<T>;
 }
+
+export interface AssetCrashOptions {
+  readonly points: readonly CrashPoint[];
+  readonly restarts: 1 | 2;
+}
+
+export type HostProcessPhase = "ready" | "assertions" | "dispose" | "exit";
 
 const CRASH_CASE_TIMEOUT_MS = 20_000 + 11_000 + 2 * (15_000 + 15_000) + 15_000 + 14_000;
 
-export function registerAssetCrashTests(harness: HostProcessHarness): void {
+export function registerAssetCrashTests(
+  harness: HostProcessHarness,
+  { points, restarts }: AssetCrashOptions = { points: CRASH_POINTS, restarts: 2 },
+): void {
   describe("asset crash recovery", () => {
-    it.each(CRASH_POINTS)("%s survives parent SIGKILL and two fresh formal Host recoveries", { timeout: CRASH_CASE_TIMEOUT_MS }, async point => {
+    it.each(points)(`%s survives parent SIGKILL and ${restarts} fresh formal Host recovery runs`, { timeout: CRASH_CASE_TIMEOUT_MS }, async point => {
       let previous = performance.now();
       const timings: Record<string, number> = {};
       const mark = (phase: string) => {
@@ -50,7 +61,7 @@ export function registerAssetCrashTests(harness: HostProcessHarness): void {
         mark("lockExpiry");
 
         let firstSnapshot: Awaited<ReturnType<typeof assertRecovered>> | undefined;
-        for (let restart = 1; restart <= 2; restart++) {
+        for (let restart = 1; restart <= restarts; restart++) {
           await harness.withRealHost({ NAVO_HOME: fixture.home }, async client => {
             const snapshot = await assertRecovered(fixture, point);
             const [reply] = await harness.collect(client.stream(projectResourcesMethod, { projectId: fixture.projectId }));
@@ -61,8 +72,7 @@ export function registerAssetCrashTests(harness: HostProcessHarness): void {
             }
             if (firstSnapshot === undefined) firstSnapshot = snapshot;
             else expect(snapshot).toEqual(firstSnapshot);
-          });
-          mark(`restart${restart}`);
+          }, "src/host/main.ts", phase => mark(`restart${restart}.${phase}`));
         }
 
         const retry = harness.startHost("tests/host/process/child.ts", {}, [JSON.stringify({ ...request, mode: "retry" })]);
@@ -73,7 +83,7 @@ export function registerAssetCrashTests(harness: HostProcessHarness): void {
         expect(JSON.parse(result.value)).toMatchObject({ outcome: expectedOutcome });
         expect(await assertRecovered(fixture, point)).toEqual(firstSnapshot);
         mark("retry");
-        console.info(`${point}: pid=${child.pid}, SIGKILL; writerTransaction=${checkpoint.transaction}, writerEvents=${checkpoint.matchingEvents}; two formal restarts + retry=${expectedOutcome}; DB/RPC/content/cleanup/guard assertions passed; phaseMs=${JSON.stringify(timings)}`);
+        console.info(`${point}: pid=${child.pid}, SIGKILL; writerTransaction=${checkpoint.transaction}, writerEvents=${checkpoint.matchingEvents}; formalRestarts=${restarts}, retry=${expectedOutcome}; DB/RPC/content/cleanup/guard assertions passed; phaseMs=${JSON.stringify(timings)}`);
       } finally {
         if (!terminated && child.exitCode === null && child.signalCode === null) {
           child.kill("SIGKILL");
