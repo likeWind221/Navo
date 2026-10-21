@@ -58,6 +58,33 @@ export class UserResourceService extends Service {
     return this.ctx.resources.deleteUser(input);
   }
 
+  folders(projectId: ProjectId) {
+    return this.ctx.resources.listLibraryFolders(projectId);
+  }
+
+  browse(projectId: ProjectId, path: string | null = null) {
+    const { directories, resources } = this.ctx.resources.browseUserLibrary(projectId, path);
+    return { directories, resources: resources.map(resource => ({ resource,
+      contentStatus: this.ctx.content.status(projectId, resource.id)?.status ?? null })) };
+  }
+
+  createFolder(projectId: ProjectId, path: string) {
+    return this.ctx.resources.createUserFolder(projectId, path);
+  }
+
+  organizeResource(input: { projectId: ProjectId; resourceId: import("../brand/ids.js").ResourceId;
+    expectedRevision: number; name?: string; folder?: string }) {
+    return this.ctx.resources.organizeUserResource(input);
+  }
+
+  organizeFolder(projectId: ProjectId, path: string, targetPath: string) {
+    return this.ctx.resources.organizeUserFolder(projectId, path, targetPath);
+  }
+
+  deleteFolder(input: { projectId: ProjectId; path: string; recursive: boolean; operationId: string; signal?: AbortSignal }) {
+    return this.ctx.resources.deleteUserFolder(input);
+  }
+
   async *import(input: UserImportInput, signal: AbortSignal): AsyncGenerator<UserImportResult> {
     requireActiveResourceProject(this.ctx, input.projectId);
     const files = await collectFiles(input.sources, signal);

@@ -24,6 +24,29 @@ export function numberedLibraryPath(path: string, occupied: ReadonlySet<string>)
   return candidate;
 }
 
+export function parentLibraryPath(path: string): string | null {
+  const index = path.lastIndexOf("/");
+  return index < 0 ? null : path.slice(0, index);
+}
+
+export function folderPrefixes(path: string): readonly string[] {
+  const parts = normalizeLibraryPath(path).split("/");
+  return parts.slice(0, -1).map((_, index) => parts.slice(0, index + 1).join("/"));
+}
+
+export function insideFolder(path: string, folder: string): boolean {
+  const key = libraryPathKey(path);
+  const root = libraryPathKey(folder);
+  return key === root || key.startsWith(`${root}/`);
+}
+
+export function numberedFolderPath(path: string, occupied: ReadonlySet<string>): string {
+  const normalized = normalizeLibraryPath(path);
+  let candidate = normalized;
+  for (let n = 1; occupied.has(libraryPathKey(candidate)); n++) candidate = `${normalized} (${n})`;
+  return candidate;
+}
+
 function invalidPath(): ResourceError {
   return new ResourceError("invalid-resource", "Resource logical path must be a safe NFC portable relative path.");
 }

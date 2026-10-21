@@ -6,6 +6,7 @@ import type { Context } from "cordis";
 import { resourceContentTransaction, type ResourceContentTransaction } from "./content.js";
 import { fileOperationTransaction, type FileOperationTransaction } from "./operations.js";
 import { StorageError } from "./errors.js";
+import { libraryFolderTransaction, type LibraryFolder, type LibraryFolderTransaction } from "./folders.js";
 import { planInterruptionRepair } from "./interruption.js";
 import { buildRecoveryPlan } from "./recovery.js";
 import type { RecoveryPlan } from "./recovery.js";
@@ -108,6 +109,19 @@ export class StorageService extends Service {
     });
   }
 
+  loadFolders(projectId: string): readonly LibraryFolder[] {
+    const rows = read("Stored library folders could not be read.", () => this.db.prepare(
+      "SELECT project_id, path, created_at, updated_at FROM library_folders WHERE project_id = ? ORDER BY path",
+    ).all(projectId));
+    return rows.map(row => {
+      if (typeof row.project_id !== "string" || typeof row.path !== "string"
+        || typeof row.created_at !== "string" || typeof row.updated_at !== "string") {
+        throw new StorageError("invalid-record", "Stored library folder has an invalid shape.");
+      }
+      return { projectId: row.project_id, path: row.path, createdAt: row.created_at, updatedAt: row.updated_at };
+    });
+  }
+
   private commit<T>(work: () => T): T {
     run(this.db, "BEGIN IMMEDIATE");
     try {
@@ -125,7 +139,7 @@ export interface StorageConfig {
   readonly path: string;
 }
 
-export interface StorageTransaction extends FileOperationTransaction, ResourceContentTransaction {
+export interface StorageTransaction extends FileOperationTransaction, ResourceContentTransaction, LibraryFolderTransaction {
   appendEvents(append: EventAppend): void;
   hasEvents(domain: EventDomain, ownerId: string): boolean;
   bindWorkspace(binding: WorkspaceBindingRecord): void;
@@ -160,6 +174,7 @@ function createTransaction(db: DatabaseSync): StorageTransaction {
   return {
     ...fileOperationTransaction(db),
     ...resourceContentTransaction(db),
+    ...libraryFolderTransaction(db),
     appendEvents({ domain, ownerId, projectId, firstSeq, events }) {
       if ((projectId === null && domain !== "session") || (projectId !== null && (typeof projectId !== "string" || !projectId.trim()))) {
         throw new StorageError("invalid-record", "Stored events require a valid Project owner or a standalone Session.");

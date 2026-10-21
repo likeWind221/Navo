@@ -1,8 +1,9 @@
 import type { ProjectId, ResourceId } from "../brand/ids.js";
-import type { StorageService } from "../storage/database.js";
+import type { StorageService, StorageTransaction } from "../storage/database.js";
 import { ResourceError } from "./errors.js";
 import type { ResourceEvent } from "./events.js";
 import { freezeResourceEvent } from "./events.js";
+import { libraryPathKey } from "./library.js";
 import {
   projectResourceEvent,
   type ResourceState,
@@ -45,35 +46,57 @@ export class ResourceStore {
   }
 
   append(event: ResourceEvent): ResourceState {
-    const history = this.getEvents(event.projectId);
-    if (event.sequence !== history.length + 1 || this.eventIds.has(event.id)) {
-      throw new ResourceError(
-        "invalid-history",
-        "Resource event sequence or identity is invalid.",
-      );
-    }
-    if (event.type === "resource-created" && this.states.has(event.resourceId)) {
-      throw new ResourceError(
-        "resource-already-exists",
-        "Resource id is already owned.",
-      );
-    }
+    return this.appendMany([event])[0]!;
+  }
 
-    const frozen = freezeResourceEvent(event);
-    const state = projectResourceEvent(this.states.get(event.resourceId), frozen);
-    this.storage.write(tx => {
-      tx.appendEvents({ domain: "resource", ownerId: event.projectId, projectId: event.projectId, firstSeq: event.sequence, events: [frozen] });
-    }, () => {
-      this.histories.set(event.projectId, Object.freeze([...history, frozen]));
-      this.states.set(event.resourceId, state);
-      this.eventIds.add(frozen.id);
-      if (frozen.type === "resource-created") {
-        const order = this.orders.get(event.projectId) ?? Object.freeze([]);
-        this.orders.set(event.projectId, Object.freeze([...order, event.resourceId]));
+  appendMany(events: readonly ResourceEvent[], persist?: (tx: StorageTransaction) => void): readonly ResourceState[] {
+    if (events.length === 0) {
+      if (persist !== undefined) this.storage.atomic(persist);
+      return [];
+    }
+    const projectId = events[0]!.projectId;
+    const history = this.getEvents(projectId);
+    const staged = new Map<ResourceId, ResourceState>();
+    const frozenEvents: ResourceEvent[] = [];
+    const identities = new Set<string>();
+    for (const event of events) {
+      if (event.projectId !== projectId || event.sequence !== history.length + frozenEvents.length + 1
+        || this.eventIds.has(event.id) || identities.has(event.id)) {
+        throw new ResourceError("invalid-history", "Resource event sequence or identity is invalid.");
       }
-      this.onAppend(event.projectId);
+      if (event.type === "resource-created" && this.states.has(event.resourceId)) {
+        throw new ResourceError("resource-already-exists", "Resource id is already owned.");
+      }
+      const frozen = freezeResourceEvent(event);
+      const state = projectResourceEvent(staged.get(event.resourceId) ?? this.states.get(event.resourceId), frozen);
+      staged.set(event.resourceId, state);
+      frozenEvents.push(frozen);
+      identities.add(frozen.id);
+    }
+    const active = [...this.listStates(projectId).filter(state => state.status === "active")]
+      .filter(state => !staged.has(state.resource.id)).concat([...staged.values()].filter(state => state.status === "active"));
+    const paths = new Set<string>();
+    for (const state of active) {
+      const key = libraryPathKey(state.resource.libraryPath);
+      if (paths.has(key) || [...paths].some(path => path.startsWith(`${key}/`) || key.startsWith(`${path}/`))) {
+        throw new ResourceError("resource-already-exists", "Logical Resource path conflicts with another file.");
+      }
+      paths.add(key);
+    }
+    const results = frozenEvents.map(event => staged.get(event.resourceId)!);
+    this.storage.atomic(tx => {
+      persist?.(tx);
+      this.storage.write(inner => inner.appendEvents({ domain: "resource", ownerId: projectId,
+        projectId, firstSeq: history.length + 1, events: frozenEvents }), () => {
+        this.histories.set(projectId, Object.freeze([...history, ...frozenEvents]));
+        for (const [id, state] of staged) this.states.set(id, state);
+        for (const event of frozenEvents) this.eventIds.add(event.id);
+        const created = frozenEvents.filter(event => event.type === "resource-created").map(event => event.resourceId);
+        if (created.length) this.orders.set(projectId, Object.freeze([...(this.orders.get(projectId) ?? []), ...created]));
+        this.onAppend(projectId);
+      });
     });
-    return state;
+    return results;
   }
 
   restore(

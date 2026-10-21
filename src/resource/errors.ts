@@ -22,4 +22,6 @@ export type ResourceErrorCode =
   | "stale-revision"
   | "operation-result-stale"
   | "resource-not-owned"
-  | "resource-content-unavailable";
+  | "resource-content-unavailable"
+  | "folder-unavailable"
+  | "folder-conflict";
