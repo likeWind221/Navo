@@ -26,4 +26,4 @@
 ## 验证与下一步
 
 - Windows 本机：最终代码 `pnpm typecheck` 通过；`pnpm exec vitest run tests/storage/schema.spec.ts tests/resource` 通过，14 文件 / 128 项。SQLite 第二条 Resource 事件写入失败的故障注入确认数据库与内存均无部分路径更新；递归删除测试覆盖确认、取消、部分失败和重试。
-- `pnpm test --maxWorkers=4 --reporter=verbose --testTimeout=30000` 通过，141 文件 / 909 项，含既有 D1–D8 正式 Host 中断恢复。完整运行后只增加 1 项文件夹与文件同名编号测试，并将空目录删除的预取消检查前移；最终代码的 Resource 专项与类型检查已复跑通过。PR head CI 结果待记录。F13.2b 公共 RPC、Electron Bridge 和页面尚未实施，F13.2 父项不得标完成。
+- `pnpm test --maxWorkers=4 --reporter=verbose --testTimeout=30000` 通过，141 文件 / 909 项，含既有 D1–D8 正式 Host 中断恢复。完整运行后只增加 1 项文件夹与文件同名编号测试，并将空目录删除的预取消检查前移；最终代码的 Resource 专项与类型检查已复跑通过。PR #89 代码 head `1194983` 的 `verify` CI run `39581595352` 成功，squash 合入 master 为 `eabaf35`。F13.2b 公共 RPC、Electron Bridge 和页面尚未实施，F13.2 父项不得标完成。
