@@ -298,7 +298,7 @@ function parseResource(value: unknown): ProjectResourceV1 {
     "access", "revision", "createdAt", "updatedAt"], "project resource");
   return {
     resourceId: id(resource.resourceId, "resourceId"),
-    owner: parseParticipant(resource.owner),
+    owner: parseResourceOwner(resource.owner),
     name: visibleText(resource.name, "resource name", TEXT_MAX),
     description: text(resource.description, "resource description"),
     type: visibleText(resource.type, "resource type", TEXT_MAX),
@@ -308,6 +308,12 @@ function parseResource(value: unknown): ProjectResourceV1 {
     createdAt: timestamp(resource.createdAt, "createdAt"),
     updatedAt: timestamp(resource.updatedAt, "updatedAt"),
   };
+}
+
+function parseResourceOwner(value: unknown): ProjectResourceV1["owner"] {
+  const owner = requireRecord(value, "resource owner");
+  if (owner.kind === "user" && exactKeys(owner, ["kind"])) return { kind: "user" };
+  return parseParticipant(value);
 }
 
 function parseAccess(value: unknown): ProjectResourceAccessV1 {

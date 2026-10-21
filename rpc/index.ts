@@ -14,5 +14,6 @@ export * from "./notification.js";
 export * from "./command.js";
 export * from "./failure.js";
 export * from "./project.js";
+export * from "./resource.js";
 export * from "./session.js";
 export * from "./session/validation.js";

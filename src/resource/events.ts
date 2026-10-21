@@ -17,6 +17,7 @@ export type ResourceEvent = ResourceEventHeader & (
       readonly type: "resource-created";
       readonly data: {
         readonly owner: ResourcePrincipal;
+        readonly access?: ResourceAccess;
         readonly name: string;
         readonly description: string;
         readonly resourceType: string;

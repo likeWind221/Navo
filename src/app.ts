@@ -16,6 +16,7 @@ import { AutoRunService } from "./project/autorun.js";
 import { MainSessionService } from "./project/session.js";
 import { ContentProcessor } from "./resource/content.js";
 import { ResourceService, ResourceRecovery, type ResourceConfig } from "./resource/service.js";
+import { UserResourceService } from "./resource/user.js";
 import { SessionStore } from "./session/store.js";
 import { SessionError } from "./session/errors.js";
 import { StorageService } from "./storage/database.js";
@@ -107,6 +108,7 @@ export async function NavoApp(
   await ctx.plugin(ResourceService, config.resources);
   await ctx.plugin(ResourceRecovery);
   await ctx.plugin(ContentProcessor);
+  await ctx.plugin(UserResourceService);
   await ctx.plugin(ResourceToolsPlugin);
   await ctx.plugin(SendToMainTool);
   await ctx.plugin(SubmitCompletionTool);

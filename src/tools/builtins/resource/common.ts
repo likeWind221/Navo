@@ -117,9 +117,9 @@ export function resourceArtifact(
   return {
     resource_id: String(resource.id),
     project_id: String(resource.projectId),
-    owner: resource.owner.kind === "main"
-      ? { kind: "main" }
-      : { kind: "node", node_id: String(resource.owner.nodeId) },
+    owner: resource.owner.kind === "node"
+      ? { kind: "node", node_id: String(resource.owner.nodeId) }
+      : { kind: resource.owner.kind },
     name: resource.name,
     description: resource.description,
     type: resource.type,

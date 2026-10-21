@@ -36,6 +36,8 @@ import { ResourceLifecycle } from "./lifecycle.js";
 import { ASSET_LIMITS } from "./assets.js";
 import { publishResource, replaceResource } from "./publication.js";
 import { activeResources } from "./projector.js";
+import { numberedLibraryPath, libraryPathKey } from "./library.js";
+import type { AssetIntake } from "./lifecycle.js";
 import { ResourceStore } from "./store.js";
 import {
   effectiveResourceChanges,
@@ -83,6 +85,34 @@ export class ResourceService extends Service {
     const resource = await publishResource(this.lifecycle, input, signal);
     this.ctx.emit("resource/committed", resource.projectId, resource.id);
     return resource;
+  }
+
+  async importUser(input: Omit<PublishResourceInput, "owner"> & { readonly libraryPath: string }, intake: AssetIntake, signal?: AbortSignal): Promise<ProjectResource> {
+    const resource = await this.lifecycle.createUser(input, { ...intake,
+      choosePath: resources => numberedLibraryPath(input.libraryPath,
+        new Set(resources.map(item => libraryPathKey(item.libraryPath)))) }, signal);
+    this.ctx.emit("resource/committed", resource.projectId, resource.id);
+    return resource;
+  }
+
+  updateUser(input: Omit<UpdateResourceInput, "actor">): ProjectResource {
+    requireActiveResourceProject(this.ctx, input.projectId);
+    const current = this.requireCurrent(input.projectId, input.resourceId);
+    requireResourceRevision(current, input.expectedRevision);
+    const effective = effectiveResourceChanges(current, validateResourcePatch(input.changes));
+    if (Object.keys(effective).length === 0) return current;
+    return this.store.append(this.event(input.projectId, input.resourceId, current.revision,
+      "resource-updated", { changes: effective })).resource;
+  }
+
+  async replaceUser(input: Omit<ReplaceResourceInput, "actor">, intake: AssetIntake, signal?: AbortSignal): Promise<ProjectResource> {
+    const resource = await this.lifecycle.replaceUser(input, intake, signal);
+    this.ctx.emit("resource/committed", resource.projectId, resource.id);
+    return resource;
+  }
+
+  deleteUser(input: Omit<DeleteResourceInput, "actor">): Promise<void> {
+    return this.lifecycle.deleteUser(input);
   }
 
   async replace(input: ReplaceResourceInput, signal?: AbortSignal): Promise<ProjectResource> {

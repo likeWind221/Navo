@@ -78,7 +78,7 @@ export function describeNode(ctx: Context, projectId: ProjectId, snapshot: NodeS
 export function describeResource(resource: ProjectResource): ProjectResourceV1 {
   return {
     resourceId: resource.id,
-    owner: participant(resource.owner),
+    owner: resource.owner.kind === "user" ? { kind: "user" } : participant(resource.owner),
     name: resource.name,
     description: resource.description,
     type: resource.type,

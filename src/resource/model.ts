@@ -17,6 +17,7 @@ export interface ProjectResource {
 }
 
 export type ResourcePrincipal =
+  | { readonly kind: "user" }
   | { readonly kind: "main" }
   | { readonly kind: "node"; readonly nodeId: NodeId };
 

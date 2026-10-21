@@ -34,7 +34,7 @@ export function projectResourceEvent(
         entryRef: event.data.entryRef,
         libraryPath: event.data.libraryPath,
         assetGeneration: event.data.assetGeneration,
-        access: { kind: "private" },
+        access: event.data.access ?? { kind: "private" },
         revision: 1,
         createdAt: event.timestamp,
         updatedAt: event.timestamp,
