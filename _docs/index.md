@@ -183,7 +183,7 @@
 - [源码目录与命名重构实施记录](24-devlog-structure.md)：77 条路径迁移、RPC 与共享契约拆分、用户偏好记忆和 278 项测试及 Electron 验收。
 - [计划功能性描述重写与 F3.2 拆分](25-devlog-plan-functional-rewrite.md)：计划步骤改为功能性目标描述、CLAUDE.md 新增撰写原则、F3.2 拆为四个功能子步骤并确定 /hello 占位命令。
 - [Navo 品牌迁移](49-devlog-navo-brand-migration.md)：SkillWorld → Navo 的 package、应用标识、环境变量、IPC、UI 与文档迁移边界。
-- [CI 与 PR 流程接入](60-devlog-ci-pr-flow.md)：GitHub Actions 的 typecheck/test 门禁、Step 分支与 squash 合并约定，以及 CI 暴露的平台测试问题。
+- [CI 与 PR 流程接入](60-devlog-ci-pr-flow.md)：GitHub Actions 的 typecheck/test 门禁、Step 分支与 squash 合并约定；含 CI 文档分流、手动完整检查及取消 master 重复运行的取舍与验证。
 
 - [BUG-012：AutoRun 真实验收入口与输入](106-bugfix-bug-012-autorun-acceptance.md)：补齐真实入口、共享测试材料与逐回合证据，保留原失败现场。
 
