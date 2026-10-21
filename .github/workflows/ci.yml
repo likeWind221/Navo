@@ -2,8 +2,7 @@ name: CI
 
 on:
   pull_request:
-  push:
-    branches: [master]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,11 +17,33 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Classify changes
+        id: changes
+        shell: pwsh
+        run: |
+          $docsOnly = $false
+          if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
+            $files = @(git -c core.quotepath=false diff --no-renames --name-only HEAD^1 HEAD)
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $otherFiles = @($files | Where-Object { $_ -cnotmatch '^(_docs/.+\.md|README\.md|AGENTS\.md)$' })
+            $docsOnly = $files.Count -gt 0 -and $otherFiles.Count -eq 0
+          }
+          "docs_only=$($docsOnly.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+      - name: Report documentation-only changes
+        if: steps.changes.outputs.docs_only == 'true'
+        run: Write-Output 'Documentation-only changes; code checks were not run.'
       - uses: pnpm/action-setup@v4
+        if: steps.changes.outputs.docs_only != 'true'
       - uses: actions/setup-node@v4
+        if: steps.changes.outputs.docs_only != 'true'
         with:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        if: steps.changes.outputs.docs_only != 'true'
       - run: pnpm typecheck
+        if: steps.changes.outputs.docs_only != 'true'
       - run: pnpm test --maxWorkers=4
+        if: steps.changes.outputs.docs_only != 'true'
