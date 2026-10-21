@@ -51,3 +51,10 @@
 ## 下一步
 
 本机验证已通过；提交并交付本 Step PR，GitHub CI 结果以当前 PR head 为准；由用户审核后决定后续处理，不自动合并或开始 F13.1c。代码导读随本次最终回复交付，涵盖存储、提取、处理与启停接入。
+
+
+## 合并收口（2026-10-21）
+
+- PR #87 已合并至 `master`，合并提交为 `845b864f8f5d136c7704c7c53e61f47ba8ccbc71`。
+- 当前 PR head 的 GitHub Actions CI run [39542644391](https://github.com/likeWind221/Navo/actions/runs/39542644391) 结果为 success。
+- 上文“待审核 / 不合并”等文字记录实施当时的授权与状态；本节记录后续合并结果，不改变本 Step 的验收边界。
