@@ -41,6 +41,7 @@ function snapshot(path: string) {
 
 function downgrade(path: string) {
   rawSql(path, `BEGIN;
+    DROP TABLE library_folders;
     DROP TABLE resource_content;
     DROP TABLE resource_file_operations;
     DROP INDEX events_by_project;
@@ -113,3 +114,24 @@ describe("Known schema v1 upgrade", () => {
     expect(snapshot(path)).toEqual(original);
   });
 });
+
+for (const version of [2, 3, 4]) {
+  it(`upgrades schema v${version} to v5 without changing existing records`, async () => {
+    const path = await temporaryDatabase(roots, `navo-schema-v${version}-`);
+    const ctx = await app(path);
+    const project = ctx.projects.create({ name: "Preserved", goal: null });
+    await close(ctx);
+    rawSql(path, `DROP TABLE library_folders;
+      ${version < 4 ? "DROP TABLE resource_content;" : ""}
+      ${version < 3 ? "DROP TABLE resource_file_operations;" : ""}
+      PRAGMA user_version = ${version};`);
+    const before = snapshot(path);
+    const upgraded = await app(path);
+    expect(upgraded.projects.get(project.id)).toEqual(project);
+    const after = snapshot(path);
+    expect(after.events).toEqual(before.events);
+    expect(after.bindings).toEqual(before.bindings);
+    expect(after.version).toEqual({ user_version: 5 });
+    expect(after.tables).toContainEqual({ name: "library_folders" });
+  });
+}

@@ -54,6 +54,13 @@ export function parseResourceHistory(
       event.resourceId,
       projectResourceEvent(states.get(event.resourceId), event),
     );
+    const updated = states.get(event.resourceId)!;
+    if (updated.status === "active" && [...states.values()].some(state => {
+      if (state === updated || state.status !== "active") return false;
+      const other = libraryPathKey(state.resource.libraryPath);
+      const path = libraryPathKey(updated.resource.libraryPath);
+      return other === path || other.startsWith(`${path}/`) || path.startsWith(`${other}/`);
+    })) throw invalidHistory();
   }
   return Object.freeze(events);
 }
@@ -143,6 +150,14 @@ function parseResourceEvent(
       type: "resource-updated",
       data: { changes },
     });
+  }
+
+  if (value.type === "resource-organized") {
+    const libraryPath = normalizeLibraryPath(data.libraryPath);
+    if (data.name !== undefined && (typeof data.name !== "string" || normalizeLibraryPath(data.name).includes("/"))) throw invalidHistory();
+    return freezeResourceEvent({ ...header, type: "resource-organized", data: {
+      libraryPath, ...(data.name === undefined ? {} : { name: data.name as string }),
+    } });
   }
 
   if (value.type === "resource-access-changed") {

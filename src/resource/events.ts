@@ -36,6 +36,10 @@ export type ResourceEvent = ResourceEventHeader & (
       readonly data: { readonly changes: ResourceMetadataPatch };
     }
   | {
+      readonly type: "resource-organized";
+      readonly data: { readonly libraryPath: string; readonly name?: string };
+    }
+  | {
       readonly type: "resource-access-changed";
       readonly data: { readonly access: ResourceAccess };
     }

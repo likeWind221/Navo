@@ -39,6 +39,7 @@ import { activeResources } from "./projector.js";
 import { numberedLibraryPath, libraryPathKey } from "./library.js";
 import type { AssetIntake } from "./lifecycle.js";
 import { ResourceStore } from "./store.js";
+import { ResourceOrganization } from "./organization.js";
 import {
   effectiveResourceChanges,
   requireActiveResourceProject,
@@ -59,6 +60,7 @@ export interface ResourceConfig {
 export class ResourceService extends Service {
   static inject = ["storage", "projects", "nodes", "projectWorkspaces"];
   private readonly store = new ResourceStore(this.ctx.storage, projectId => this.ctx.emit("project/changed", projectId));
+  private readonly organization = new ResourceOrganization(this.ctx, this.store);
 
   private readonly lifecycle: ResourceLifecycle;
 
@@ -82,7 +84,7 @@ export class ResourceService extends Service {
   }
 
   async publish(input: PublishResourceInput, signal?: AbortSignal): Promise<ProjectResource> {
-    const resource = await publishResource(this.lifecycle, input, signal);
+    const resource = await publishResource(this.lifecycle, input, signal, () => this.organization.occupied(input.projectId));
     this.ctx.emit("resource/committed", resource.projectId, resource.id);
     return resource;
   }
@@ -90,7 +92,7 @@ export class ResourceService extends Service {
   async importUser(input: Omit<PublishResourceInput, "owner"> & { readonly libraryPath: string }, intake: AssetIntake, signal?: AbortSignal): Promise<ProjectResource> {
     const resource = await this.lifecycle.createUser(input, { ...intake,
       choosePath: resources => numberedLibraryPath(input.libraryPath,
-        new Set(resources.map(item => libraryPathKey(item.libraryPath)))) }, signal);
+        new Set([...this.organization.occupied(input.projectId), ...resources.map(item => libraryPathKey(item.libraryPath))])) }, signal);
     this.ctx.emit("resource/committed", resource.projectId, resource.id);
     return resource;
   }
@@ -101,6 +103,12 @@ export class ResourceService extends Service {
     requireResourceRevision(current, input.expectedRevision);
     const effective = effectiveResourceChanges(current, validateResourcePatch(input.changes));
     if (Object.keys(effective).length === 0) return current;
+    if (effective.name !== undefined) {
+      const { name, ...changes } = effective;
+      const { changes: _requestedChanges, ...identity } = input;
+      return this.organization.organizeResource({ ...identity, name,
+        ...(Object.keys(changes).length === 0 ? {} : { changes }) });
+    }
     return this.store.append(this.event(input.projectId, input.resourceId, current.revision,
       "resource-updated", { changes: effective })).resource;
   }
@@ -113,6 +121,35 @@ export class ResourceService extends Service {
 
   deleteUser(input: Omit<DeleteResourceInput, "actor">): Promise<void> {
     return this.lifecycle.deleteUser(input);
+  }
+
+  listLibraryFolders(projectId: ProjectId) {
+    requireResourceProject(this.ctx, projectId);
+    return this.organization.folders(projectId);
+  }
+
+  browseUserLibrary(projectId: ProjectId, path: string | null = null) {
+    requireResourceProject(this.ctx, projectId);
+    return this.organization.browse(projectId, path);
+  }
+
+  createUserFolder(projectId: ProjectId, path: string) {
+    return this.organization.createFolder(projectId, path);
+  }
+
+  organizeUserResource(input: { projectId: ProjectId; resourceId: ResourceId; expectedRevision: number;
+    name?: string; folder?: string }) {
+    return this.organization.organizeResource(input);
+  }
+
+  organizeUserFolder(projectId: ProjectId, path: string, targetPath: string) {
+    return this.organization.organizeFolder(projectId, path, targetPath);
+  }
+
+  deleteUserFolder(input: { projectId: ProjectId; path: string; recursive: boolean; operationId: string; signal?: AbortSignal }) {
+    return this.organization.deleteFolder({ ...input, deleteResource: (resource, operationId) =>
+      this.deleteUser({ projectId: input.projectId, resourceId: resource.id,
+        expectedRevision: resource.revision, operationId }) });
   }
 
   async replace(input: ReplaceResourceInput, signal?: AbortSignal): Promise<ProjectResource> {

@@ -30,7 +30,7 @@ it("upgrades v2 once and provides operation CRUD and pending queries on the exis
   const first = await open(path);
   first.storage.atomic(tx => tx.appendEvents({ domain: "session", ownerId: "ordinary", projectId: null, firstSeq: 1, events: [{ existing: true }] }));
   await first.fiber.dispose();
-  rawSql(path, "DROP TABLE resource_content; DROP TABLE resource_file_operations; PRAGMA user_version = 2;");
+  rawSql(path, "DROP TABLE library_folders; DROP TABLE resource_content; DROP TABLE resource_file_operations; PRAGMA user_version = 2;");
   const ctx = await open(path);
   expect(ctx.storage.loadEvents("session").get("ordinary")?.events).toEqual([{ existing: true }]);
   const record = operation();

@@ -72,6 +72,12 @@ export function projectResourceEvent(
     });
   }
 
+  if (event.type === "resource-organized") {
+    return Object.freeze({ status: "active", resource: freezeResource({ ...current.resource,
+      libraryPath: event.data.libraryPath, ...(event.data.name === undefined ? {} : { name: event.data.name }),
+      revision: event.revision, updatedAt: event.timestamp }) });
+  }
+
   if (event.type === "resource-access-changed") {
     return Object.freeze({
       status: "active",
