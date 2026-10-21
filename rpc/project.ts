@@ -331,7 +331,7 @@ export interface ProjectResourcesV1 {
 
 export interface ProjectResourceV1 {
   readonly resourceId: string;
-  readonly owner: ProjectParticipantV1;
+  readonly owner: ProjectResourceOwnerV1;
   readonly name: string;
   readonly description: string;
   readonly type: string;
@@ -341,6 +341,8 @@ export interface ProjectResourceV1 {
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+export type ProjectResourceOwnerV1 = ProjectParticipantV1 | { readonly kind: "user" };
 
 export type ProjectResourceAccessV1 =
   | { readonly kind: "private" }

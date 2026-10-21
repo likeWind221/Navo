@@ -102,6 +102,8 @@ function parseResourceEvent(
     if ([...states.values()].some(state => state.status === "active" && libraryPathKey(state.resource.libraryPath) === libraryPathKey(libraryPath))) throw invalidHistory();
     const owner = parseHistoryPrincipal(data.owner);
     requireResourcePrincipal(ctx, projectId, owner, "invalid-history");
+    const access = data.access === undefined ? undefined : parseHistoryAccess(data.access, owner);
+    if (access !== undefined) requireResourceAccessNodes(ctx, projectId, access, "invalid-history");
     const metadata = validateCreatedMetadata(data);
     validateVersionEntryRef(metadata.entryRef, 1);
     return freezeResourceEvent({
@@ -109,6 +111,7 @@ function parseResourceEvent(
       type: "resource-created",
       data: {
         owner,
+        ...(access === undefined ? {} : { access }),
         name: metadata.name,
         description: metadata.description,
         resourceType: metadata.type,
@@ -187,6 +190,9 @@ function parseHistoryPrincipal(value: unknown): ResourcePrincipal {
   if (value === null || typeof value !== "object") throw invalidHistory();
   const principal = value as Record<string, unknown>;
   try {
+    if (principal.kind === "user" && Object.keys(principal).length === 1) {
+      return normalizeResourcePrincipal({ kind: "user" });
+    }
     if (principal.kind === "main" && Object.keys(principal).length === 1) {
       return normalizeResourcePrincipal({ kind: "main" });
     }

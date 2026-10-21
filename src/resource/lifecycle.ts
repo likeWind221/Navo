@@ -47,6 +47,20 @@ export class ResourceLifecycle {
     return task;
   }
 
+  createUser(input: Omit<PublishResourceInput, "owner">, intake: AssetCreation, signal?: AbortSignal): Promise<ProjectResource> {
+    const request = { ...input, owner: { kind: "user" as const } };
+    const operationId = this.operationId(request.operationId);
+    this.authorize(request.projectId, request.owner, true);
+    const running = this.running.get(operationId);
+    if (running !== undefined) {
+      if (running.request !== this.request(request)) throw new ResourceError("invalid-resource", "Operation ID belongs to different input or actor.");
+      return running.result;
+    }
+    const task = this.write(operationId, request, intake, signal, true).finally(() => this.running.delete(operationId));
+    this.running.set(operationId, { request: this.request(request), result: task });
+    return task;
+  }
+
   replace(input: ReplaceResourceInput, intake: AssetIntake, signal?: AbortSignal): Promise<ProjectResource> {
     const operationId = this.operationId(input.operationId);
     this.authorize(input.projectId, input.actor);
@@ -60,18 +74,40 @@ export class ResourceLifecycle {
     return task;
   }
 
+  replaceUser(input: Omit<ReplaceResourceInput, "actor">, intake: AssetIntake, signal?: AbortSignal): Promise<ProjectResource> {
+    const request = { ...input, actor: { kind: "user" as const } };
+    const operationId = this.operationId(request.operationId);
+    this.authorize(request.projectId, request.actor, true);
+    const running = this.running.get(operationId);
+    if (running !== undefined) {
+      if (running.request !== this.request(request)) throw new ResourceError("invalid-resource", "Operation ID belongs to different input or actor.");
+      return running.result;
+    }
+    const task = this.write(operationId, request, intake, signal, true).finally(() => this.running.delete(operationId));
+    this.running.set(operationId, { request: this.request(request), result: task });
+    return task;
+  }
+
   delete(input: DeleteResourceInput): Promise<void> {
+    return this.remove(input, false);
+  }
+
+  deleteUser(input: Omit<DeleteResourceInput, "actor">): Promise<void> {
+    return this.remove({ ...input, actor: { kind: "user" } }, true);
+  }
+
+  private remove(input: DeleteResourceInput, user: boolean): Promise<void> {
     const operationId = this.operationId(input.operationId);
-    this.authorize(input.projectId, input.actor);
+    this.authorize(input.projectId, input.actor, user);
     const previous = this.recovery.get(operationId);
     if (previous !== undefined) {
-      this.requireOperation(previous, input.projectId, "delete", input.actor, input.resourceId);
+      this.requireOperation(previous, input.projectId, "delete", input.actor, input.resourceId, user);
       this.requireRequest(previous, input);
       if (previous.business_result !== "succeeded") throw new ResourceError("invalid-resource", "Operation has not succeeded.");
       this.requireCommitted(previous);
       return this.recovery.recover().catch(() => undefined);
     }
-    const current = this.current(input.projectId, input.resourceId, input.actor, input.expectedRevision);
+    const current = this.current(input.projectId, input.resourceId, input.actor, input.expectedRevision, user);
     const operation = this.intent(operationId, input, "delete", current);
     this.ctx.storage.atomic(tx => {
       tx.insertFileOperation({ ...operation, execution_state: "committed", business_result: "succeeded",
@@ -113,12 +149,12 @@ export class ResourceLifecycle {
     } };
   }
 
-  private async write(operationId: string, input: PublishResourceInput | ReplaceResourceInput, intake: AssetIntake | AssetCreation, signal?: AbortSignal): Promise<ProjectResource> {
+  private async write(operationId: string, input: PublishResourceInput | ReplaceResourceInput, intake: AssetIntake | AssetCreation, signal?: AbortSignal, user = false): Promise<ProjectResource> {
     const replacing = "resourceId" in input;
     const actor = normalizeResourcePrincipal(replacing ? input.actor : input.owner);
     const previous = this.recovery.get(operationId);
     if (previous !== undefined) {
-      this.requireOperation(previous, input.projectId, replacing ? "replace" : "create", actor, replacing ? input.resourceId : undefined);
+      this.requireOperation(previous, input.projectId, replacing ? "replace" : "create", actor, replacing ? input.resourceId : undefined, user);
       this.requireRequest(previous, input);
       if (previous.business_result !== "succeeded") throw new ResourceError("invalid-resource", "Operation ended without a committed Resource; use a new operation ID.");
       const result = this.committedResult(previous);
@@ -126,7 +162,7 @@ export class ResourceLifecycle {
       return result;
     }
     signal?.throwIfAborted();
-    const current = replacing ? this.current(input.projectId, input.resourceId, actor, input.expectedRevision) : undefined;
+    const current = replacing ? this.current(input.projectId, input.resourceId, actor, input.expectedRevision, user) : undefined;
     const filename = normalizeLibraryPath(intake.filename);
     const metadata = replacing ? undefined : validateResourceMetadata({ ...input, entryRef: filename });
     await this.recovery.recover();
@@ -150,8 +186,8 @@ export class ResourceLifecycle {
       operation = this.recovery.save({ ...operation, execution_state: "prepared" });
       signal?.throwIfAborted();
       this.ctx.storage.atomic(tx => {
-        this.authorize(input.projectId, actor);
-        if (replacing) this.current(input.projectId, resourceId, actor, input.expectedRevision);
+        this.authorize(input.projectId, actor, user);
+        if (replacing) this.current(input.projectId, resourceId, actor, input.expectedRevision, user);
         const persisted = tx.getFileOperation(operationId);
         if (persisted?.execution_state !== "prepared" || persisted.resource_id !== resourceId) throw new Error("File operation ownership changed before commit.");
         if (replacing) {
@@ -164,7 +200,8 @@ export class ResourceLifecycle {
             throw new ResourceError("resource-already-exists", "Logical Resource path is already in use.");
           }
           this.append(input.projectId, resourceId, 0, "resource-created", { owner: actor, name: metadata!.name,
-            description: metadata!.description, resourceType: metadata!.type, libraryPath, entryRef, assetGeneration: 1, operationId });
+            description: metadata!.description, resourceType: metadata!.type, libraryPath, entryRef, assetGeneration: 1, operationId,
+            ...(user ? { access: { kind: "public" as const } } : {}) });
         }
         operation = { ...operation, execution_state: "committed", business_result: "succeeded",
           cleanup_targets_json: JSON.stringify(current === undefined ? [] : [this.target(current)]) };
@@ -194,16 +231,17 @@ export class ResourceLifecycle {
       cleanup_targets_json: "[]", error_code: null, created_at: now, updated_at: now };
   }
 
-  private current(projectId: ProjectId, resourceId: ResourceId, actor: ResourcePrincipal, revision: number): ProjectResource {
+  private current(projectId: ProjectId, resourceId: ResourceId, actor: ResourcePrincipal, revision: number, user = false): ProjectResource {
     const state = this.store.getState(resourceId);
     if (state?.status !== "active" || state.resource.projectId !== projectId) throw new ResourceError("resource-unavailable", "Resource is unavailable.");
-    requireResourceOwner(state.resource, actor);
+    if (!user) requireResourceOwner(state.resource, actor);
     requireResourceRevision(state.resource, revision);
     return state.resource;
   }
 
-  private authorize(projectId: ProjectId, actor: ResourcePrincipal): void {
+  private authorize(projectId: ProjectId, actor: ResourcePrincipal, user = false): void {
     requireActiveResourceProject(this.ctx, projectId);
+    if (user && actor.kind === "user") return;
     requireResourcePrincipal(this.ctx, projectId, normalizeResourcePrincipal(actor));
   }
 
@@ -228,13 +266,13 @@ export class ResourceLifecycle {
     return event;
   }
 
-  private requireOperation(operation: FileOperation, projectId: ProjectId, kind: FileOperation["operation_kind"], actor: ResourcePrincipal, resourceId?: ResourceId): void {
+  private requireOperation(operation: FileOperation, projectId: ProjectId, kind: FileOperation["operation_kind"], actor: ResourcePrincipal, resourceId?: ResourceId, user = false): void {
     if (operation.project_id !== projectId || operation.operation_kind !== kind || (resourceId !== undefined && resourceId !== operation.resource_id)) {
       throw new ResourceError("invalid-resource", "Operation ID belongs to a different request.");
     }
     if (operation.resource_id !== null) {
       const state = this.store.getState(createResourceId(operation.resource_id));
-      if (state !== undefined) requireResourceOwner(state.resource, actor);
+      if (state !== undefined && !user) requireResourceOwner(state.resource, actor);
     }
   }
 

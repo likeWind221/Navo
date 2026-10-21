@@ -9,6 +9,7 @@ import type {
 export function normalizeResourcePrincipal(
   value: ResourcePrincipal,
 ): ResourcePrincipal {
+  if (value.kind === "user") return Object.freeze({ kind: "user" });
   if (value.kind === "main") return Object.freeze({ kind: "main" });
   if (value.kind === "node") {
     return Object.freeze({
@@ -24,7 +25,7 @@ export function sameResourcePrincipal(
   right: ResourcePrincipal,
 ): boolean {
   if (left.kind !== right.kind) return false;
-  return left.kind === "main"
+  return left.kind === "main" || left.kind === "user"
     || (right.kind === "node" && left.nodeId === right.nodeId);
 }
 
@@ -78,11 +79,11 @@ export function canReadResource(
   resource: ProjectResource,
   viewer: ResourcePrincipal,
 ): boolean {
-  if (viewer.kind === "main") return true;
+  if (viewer.kind === "main" || viewer.kind === "user") return true;
   if (sameResourcePrincipal(resource.owner, viewer)) return true;
   if (resource.access.kind === "public") return true;
   if (resource.access.kind === "private") return false;
-  return resource.access.nodeIds.includes(viewer.nodeId);
+  return viewer.kind === "node" && resource.access.nodeIds.includes(viewer.nodeId);
 }
 
 export function requireResourceOwner(

@@ -32,7 +32,7 @@ export function validateResourceMetadata(input: {
 } {
   return Object.freeze({
     name: requireResourceText(input.name, "name"),
-    description: requireResourceText(input.description, "description"),
+    description: requireResourceText(input.description, "description", true),
     type: requireResourceText(input.type, "type"),
     entryRef: validateResourceEntryRef(input.entryRef),
   });
@@ -60,7 +60,7 @@ export function validateResourcePatch(
         : { name: requireResourceText(input.name, "name") }),
       ...(input.description === undefined
         ? {}
-        : { description: requireResourceText(input.description, "description") }),
+        : { description: requireResourceText(input.description, "description", true) }),
       ...(input.type === undefined
         ? {}
         : { type: requireResourceText(input.type, "type") }),
@@ -100,7 +100,8 @@ export function requireResourcePrincipal(
   principal: ResourcePrincipal,
   code: "node-unavailable" | "invalid-history" | "invalid-access" = "node-unavailable",
 ): void {
-  if (principal.kind === "main") return;
+  if (principal.kind === "main" || (principal.kind === "user" && code === "invalid-history")) return;
+  if (principal.kind === "user") throw new ResourceError(code, "User principal requires the trusted user service.");
   requireResourceWorkNode(ctx, projectId, principal.nodeId, code);
 }
 
@@ -137,10 +138,10 @@ export function requireResourceAccessNodes(
   }
 }
 
-function requireResourceText(value: unknown, field: string): string {
+function requireResourceText(value: unknown, field: string, allowEmpty = false): string {
   if (
     typeof value !== "string"
-    || value.trim().length === 0
+    || (!allowEmpty && value.trim().length === 0)
     || value.includes("\0")
   ) {
     throw new ResourceError(
