@@ -23,14 +23,19 @@ import type { RpcClientFrame, RpcClientTransport } from "../../rpc/index.js";
 import type { SessionEvent } from "../../src/session/types.js";
 import { eventMessage } from "../../src/session/surface.js";
 import { HOST_LOCK_TARGET } from "../../src/host/lock.js";
-import { registerAssetCrashTests } from "./process/interruption.js";
+import { registerAssetCrashTests, type HostProcessPhase } from "./process/interruption.js";
 
 import { describe, expect, it } from "vitest";
 
 const PROCESS_TEST_TIMEOUT_MS = 20_000;
 const PROCESS_WAIT_MS = 15_000;
+const mode = process.env.NAVO_TEST_MODE ?? "all";
 
-describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, () => {
+if (!["all", "normal", "crash-pr", "crash-full"].includes(mode)) {
+  throw new Error(`Unknown NAVO_TEST_MODE: ${mode}`);
+}
+
+if (mode === "all" || mode === "normal") describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, () => {
   it("rejects a second real Host across NAVO_HOME values before opening its database", async () => {
     const base = await mkdtemp(join(tmpdir(), "navo-process-exclusive-"));
     const first = startHost("src/host/main.ts", { NAVO_HOME: join(base, "one") });
@@ -563,7 +568,10 @@ describe("Kernel Host process lifecycle", { timeout: PROCESS_TEST_TIMEOUT_MS }, 
   });
 });
 
-registerAssetCrashTests({ startHost, exitOf, capture, collect, withRealHost });
+if (mode !== "normal") {
+  registerAssetCrashTests({ startHost, exitOf, capture, collect, withRealHost },
+    mode === "crash-pr" ? { points: ["D6", "D8"], restarts: 1 } : undefined);
+}
 
 function readSessionEvents(home: string): SessionEvent[] {
   const db = new DatabaseSync(join(home, "navo.db"));
@@ -579,19 +587,24 @@ async function withRealHost<T>(
   env: Readonly<Record<string, string>>,
   use: (client: StreamRpcClient) => Promise<T>,
   entry: "src/host/main.ts" | "scripts/host/mock.ts" = "src/host/main.ts",
+  onPhase?: (phase: HostProcessPhase) => void,
 ): Promise<T> {
   const child = startHost(entry, env);
   const stderr = capture(child.stderr);
   const ready = entry === "src/host/main.ts" ? "[kernel-host] ready" : "[mock-kernel-host] ready";
   await waitUntil(() => stderr.value.includes(ready));
+  onPhase?.("ready");
   const client = new StreamRpcClient(new ChildRpcTransport(child));
   let result: T;
   try {
     result = await use(client);
+    onPhase?.("assertions");
   } finally {
     await client.dispose();
+    onPhase?.("dispose");
   }
   await expect(exitOf(child)).resolves.toEqual({ code: 0, signal: null });
+  onPhase?.("exit");
   return result;
 }
 

@@ -54,3 +54,50 @@
 ### 下一步
 
 - 按当前 PR head CI 门禁收口；慢进程测试优化不属于本轮范围。
+
+## 2026-10-21：Other 路线分阶段与分级验收
+
+### 做了什么
+
+- 保留单个 Windows `verify` job，Docs only 分类、Node 24、pnpm 缓存、冻结安装和类型检查不变；不新增 job、依赖或生产配置。
+- 代码检查分为普通测试（4 worker）和崩溃恢复测试（1 worker）两个顺序阶段，避免真实 Host 子进程与其他文件/SQLite 测试竞争。
+- PR 运行 848 项普通测试及 D6 / D8 两个真实中断场景，各一次正式 Host 恢复；手动 `workflow_dispatch` 运行普通测试及 D1–D8 完整矩阵，各两次正式恢复。
+- 所有保留场景仍使用真实 SIGKILL、自然锁过期、同 operationId 重试以及原数据库、文件、RPC、其他资源保护断言；不调整锁时间、持久化强度或测试超时。
+- 正式 Host 的恢复计时细分为 ready、assertions、dispose、exit；不把阶段计时总和与并行套件的墙钟耗时混淆。
+
+### 关键决策
+
+- `NAVO_TEST_MODE` 只由测试入口读取：未设置或 `all` 保持本地完整套件；`normal` 不注册崩溃矩阵；`crash-pr` 选择 D6 / D8 及一次重启；`crash-full` 选择八项及两次重启。未知值在收集阶段报错。
+- 没有删除 D1–D8：日常 PR 只覆盖事务提交前回滚（D6）与提交后清理恢复（D8）；其他真实中断点与第二次正式恢复的幂等性保留在完整验收。精简通过不等同于完整验收通过。
+- 修改资产生命周期/恢复、SQLite 存储/事务/迁移、Host 生命周期/用户锁、崩溃测试/探针/夹具时，合并前必须手动运行当前分支 head 的完整 CI；发布前同样执行。核对 Actions `headSha` 与当前 PR head，不能仅凭精简 `verify` 成功自动合并。
+- 此完整验收要求是开发流程门禁，本轮未新增路径自动判断或 branch protection。分支追加提交后必须重新核对 head；旧 head 的完整成功不能替代新 head。
+- 保留 `process.spec.ts` 单文件串行所有权，避免默认本地完整运行的测试争用同一 OS 用户锁。该文件已超过 300 行，本次仅增加入口选择和既有 Host helper 的计时回调，不做历史场景重构；新增辅助配置与接口留在既有 `process/interruption.ts`。
+- 本轮属于 CI 工程治理，不推进产品 Step；不修改 Agent 协议或生产生命周期，因此不引入 Harness 机制或额外生产测试开关。
+
+### 使用方式
+
+```powershell
+pnpm typecheck
+pnpm test --maxWorkers=4
+
+$env:NAVO_TEST_MODE = 'normal'
+pnpm test --maxWorkers=4
+$env:NAVO_TEST_MODE = 'crash-pr'
+pnpm test tests/host/process.spec.ts --maxWorkers=1
+$env:NAVO_TEST_MODE = $null
+
+gh workflow run ci.yml --ref <当前PR分支>
+```
+
+前两行在未设置 `NAVO_TEST_MODE` 时运行本地完整套件；中间命令复现精简分阶段执行，完成后清除环境变量；手动工作流始终走完整模式。单独复现完整崩溃组时，将模式设为 `crash-full` 并限定 `tests/host/process.spec.ts`。
+
+### 验证与实际边界
+
+- 优化前基线：PR #84 的 run `39534323704` 为 856 项通过，job 350 秒；D1–D8 约 277 秒。Docs only 的临时 PR #85 / run `39535240672` 已实测 job 18 秒、触发到完成约 23 秒，测试 PR 已关闭且分支已删除。
+- 测试收集核对：`all` 856 项、`normal` 848 项、限定进程入口的 `crash-pr` 2 项及 `crash-full` 8 项；未知模式被拒绝。类型检查已通过。
+- Windows / bundled Node 24.19.0，System32 前置；复用主目录现有依赖，不修改清单或锁文件。执行 `node node_modules/typescript/bin/tsc --noEmit` 通过；清除模式变量后执行 `node node_modules/vitest/vitest.mjs run --maxWorkers=4`，135 文件 / 856 项全部通过，279.72 秒，验证本地默认完整行为。`git diff --check` 通过。
+- GitHub 精简/完整的当前 head 运行链接、结果和实测耗时统一登记于本次 PR 描述与 Actions，合并前逐项确认。普通 PR 目标为 job 三分钟以内，不包含 GitHub 排队，不宣称每次运行均有硬性耗时保证。
+
+### 下一步
+
+- 以当前 head 的线上精简 CI 和手动完整 CI 共同作为本轮合并门禁；若仍超过三分钟，依据新阶段计时定位，不自动进一步削减覆盖。
