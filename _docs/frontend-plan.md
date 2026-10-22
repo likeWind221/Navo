@@ -255,7 +255,7 @@ Final answer (outside collapse)
 | ⬜ | 桌面完整任务验收（对应 F13.6） | 在正式页面完成资料导入、组织、搜索、Agent 使用与引用核验，覆盖资料不足、权限、变化和重启场景；Bridge 实际调用不得代替 Renderer 交互或用户验收 |
 
 - F13.0 产品规则、交接和六组验收场景已于 2026-10-19 经用户整体确认并收口，设计与新会话交接见 [125](125-devlog-f13-0-design.md)。F13.1c 提供用户资料补充与管理 RPC；后端公共能力仍通过正式 Bridge 交付，F13.2b（管理）、F13.3b（搜索）、F13.5b（引用）负责相应桌面接入。契约须明确版本、运行时校验、错误和取消语义；Renderer 不直接依赖后端内部模块。
-- F13.1b 后端正文提取与恢复已随 PR #87 合并至 master，见 [135](135-devlog-f13-1b-content.md)；内部正文状态与读取能力已实现，未提供重处理公共 RPC。F13.1c 用户导入与内部管理服务已实现，见 [137](137-devlog-f13-1c-user-intake.md)。F13.2a 目录浏览与资料整理后端能力已随 PR #89 合入，见 [139](139-devlog-f13-2a-library-organization.md)；F13.2b 已交付资料浏览、文件夹管理、资料更新 / 替换 / 删除、流式导入及状态跟随的版本化 RPC 与 `window.desktop.resource` Electron Bridge，并通过实际调用验收，见 [140](140-devlog-f13-2b-desktop-resource-management.md)。正式 Renderer 页面与交互仍未实施，前端当前下一步仍为 F5.4。
+- F13.1b 后端正文提取与恢复已随 PR #87 合并至 master，见 [135](135-devlog-f13-1b-content.md)；内部正文状态与读取能力已实现，未提供重处理公共 RPC。F13.1c 用户导入与内部管理服务已实现，见 [137](137-devlog-f13-1c-user-intake.md)。F13.2a 目录浏览与资料整理后端能力已随 PR #89 合入，见 [139](139-devlog-f13-2a-library-organization.md)；F13.2b 已交付资料浏览、文件夹管理、资料更新 / 替换 / 删除、流式导入及状态跟随的版本化 RPC 与 `window.desktop.resource` Electron Bridge，并通过实际调用验收，见 [140](140-devlog-f13-2b-desktop-resource-management.md)。正式 Renderer 页面与交互仍未实施，前端当前下一步仍为 F5.4。2026-10-22 用户确认后端主线继续进入 F13.3a；不新增 F13.2c，F13.2 的 Renderer 页面独立登记在本计划，不阻塞后端检索开发。
 - F5.4–F5.8 状态与顺序不变。F5.7 仍只承担消息记录和基础 Resource 元数据查看，不增加资料正文、搜索或管理范围；F13 项目资料库的信息面板与 F5.7 使用同一资料信息。
 - Node 对话、成果与引用的正式 UI 验收依赖对应 F5 页面交付，不能把后端 F13 完成视为前端依赖已满足。F13.0 仅完成产品设计，后续 UI 实施顺序按已确认依赖推进。
 - 首版限定项目内；不新增跨项目知识库、Session 历史召回、外部同步或复杂扫描件体验。任何资料变化不得隐式启动 Agent 回合。本次登记不授权开始或连续实施任何步骤。
@@ -264,7 +264,7 @@ Final answer (outside collapse)
 
 F11.3 后端公共契约的前端独立验收已通过：前端 typecheck/test/build、Electron bridge 实际调用和代码 head CI 均通过（收口提交仍执行当前 head CI 门禁），记录见 [108](108-devlog-f11-3-desktop-acceptance.md)，[BUG-013](107-bugfix-bug-013-autorun-desktop.md) 已关闭。此次只验收 Electron bridge 的启动、查询、暂停、恢复和状态返回，不新增正式页面 AutoRun 控件，也不推进 F5.4–F5.8；阶段状态以 [backend-plan.md](backend-plan.md) 为准。
 
-**下一前端步骤为 F5.4 Main 对话、目标确认与项目状态跟随，尚未开始，需用户确认后进入。** F5.3–F5.8 按第 3 节逐步实施，不授权连续执行；规划记录见 [88](88-devlog-f5-project-plan.md)。
+**下一前端步骤仍为 F5.4 Main 对话、目标确认与项目状态跟随，尚未开始，需用户确认后进入。** F13.2 资料库 Renderer 页面尚未实施，按 F13 产品设计保留在本计划；不新增 F13.2c，也不改变当前前端步骤顺序。 F5.3–F5.8 按第 3 节逐步实施，不授权连续执行；规划记录见 [88](88-devlog-f5-project-plan.md)。
 
 F13.0 产品设计已收口，后端下一步骤为 F13.1，由用户在新会话单独启动；它不替代当前前端 F5.4 实施顺序，详见第 3 节 F13 交接与 [后端计划](backend-plan.md)。
 
