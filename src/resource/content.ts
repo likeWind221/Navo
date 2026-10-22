@@ -46,7 +46,7 @@ export class ContentProcessor extends Service {
   notify(projectId: ProjectId, resourceId: ResourceId): void {
     if (this.shutdown.signal.aborted) return;
     try {
-      this.store.ensure(projectId, resourceId);
+      if (this.store.ensure(projectId, resourceId)) this.ctx.emit("resource/content-changed", projectId, resourceId);
       this.schedule();
     } catch {
       this.diagnose();
@@ -55,7 +55,7 @@ export class ContentProcessor extends Service {
 
   retry(projectId: ProjectId, resourceId: ResourceId): void {
     if (this.shutdown.signal.aborted) return;
-    this.store.ensure(projectId, resourceId, true);
+    if (this.store.ensure(projectId, resourceId, true)) this.ctx.emit("resource/content-changed", projectId, resourceId);
     this.schedule();
   }
 
@@ -113,6 +113,7 @@ export class ContentProcessor extends Service {
       const attemptId = randomUUID();
       try {
         if (!this.store.claim(row, attemptId)) continue;
+        this.ctx.emit("resource/content-changed", createProjectId(row.project_id), createResourceId(row.resource_id));
         await this.process(row, attemptId);
       } catch {
         this.blocked.add(this.key(row));
@@ -143,7 +144,9 @@ export class ContentProcessor extends Service {
       this.active = undefined;
     }
     if (this.shutdown.signal.aborted) return;
-    this.store.finish(row, attemptId, result);
+    if (this.store.finish(row, attemptId, result)) {
+      this.ctx.emit("resource/content-changed", projectId, resourceId);
+    }
     await this.resources.recover();
   }
 
@@ -159,5 +162,8 @@ export class ContentProcessor extends Service {
 declare module "cordis" {
   interface Context {
     content: ContentProcessor;
+  }
+  interface Events {
+    "resource/content-changed"(projectId: ProjectId, resourceId: ResourceId): void;
   }
 }

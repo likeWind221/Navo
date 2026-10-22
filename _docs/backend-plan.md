@@ -318,7 +318,7 @@ Host restart -> unmatched compaction marked interrupted -> replay committed chec
 
 ## 11. Phase 13（F13）：项目资料库与任务检索
 
-**阶段目标：** 将项目内 Resource 的集合升级为项目资料库，统一组织用户参考资料与 Agent 成果，让用户及 Main / Node 在权限范围内找到相关内容、按需阅读原文，并用可核验的依据完成长程任务。2026-10-18 用户已确认阶段方向与七步规划；阶段规划见 [124](124-devlog-f13-plan.md)；F13.0 已于 2026-10-19 经用户确认完成，见 [125](125-devlog-f13-0-design.md)。F13.1a 的共享资产生命周期内核与真实进程中断验收已完成，PR #80 已合并；BUG-023 的操作重试语义修复随 PR #81 合并且 CI 通过；PR #82 文档收尾已合入 master。F13.1b 已按冻结设计 [134](134-devlog-f13-1b-design.md) 实现并随 PR #87 合并至 master（提交 `845b864`），当前 head CI 成功，本机 typecheck 与 891 项完整测试通过，实施记录见 [135](135-devlog-f13-1b-content.md)。F13.1c 已按技术设计 [136](136-devlog-f13-1c-design.md) 实施，本机 Node 24 类型检查与 897 项完整测试通过；PR #88 代码 head `1ef0907` 的 CI run `39565765501` 成功，见 [137](137-devlog-f13-1c-user-intake.md)。 F13.2a 目录浏览与资料整理技术设计已于 2026-10-21 经用户确认并落盘，见 [138](138-devlog-f13-2a-design.md)；后端实现与 PR #89 CI 已完成并合入 master，见 [139](139-devlog-f13-2a-library-organization.md)。
+**阶段目标：** 将项目内 Resource 的集合升级为项目资料库，统一组织用户参考资料与 Agent 成果，让用户及 Main / Node 在权限范围内找到相关内容、按需阅读原文，并用可核验的依据完成长程任务。2026-10-18 用户已确认阶段方向与七步规划；阶段规划见 [124](124-devlog-f13-plan.md)；F13.0 已于 2026-10-19 经用户确认完成，见 [125](125-devlog-f13-0-design.md)。F13.1a 的共享资产生命周期内核与真实进程中断验收已完成，PR #80 已合并；BUG-023 的操作重试语义修复随 PR #81 合并且 CI 通过；PR #82 文档收尾已合入 master。F13.1b 已按冻结设计 [134](134-devlog-f13-1b-design.md) 实现并随 PR #87 合并至 master（提交 `845b864`），当前 head CI 成功，本机 typecheck 与 891 项完整测试通过，实施记录见 [135](135-devlog-f13-1b-content.md)。F13.1c 已按技术设计 [136](136-devlog-f13-1c-design.md) 实施，本机 Node 24 类型检查与 897 项完整测试通过；PR #88 代码 head `1ef0907` 的 CI run `39565765501` 成功，见 [137](137-devlog-f13-1c-user-intake.md)。F13.2a 后端实现与 PR #89 CI 已完成并合入 master，见 [139](139-devlog-f13-2a-library-organization.md)；F13.2b 资料管理公共 RPC、Electron Bridge 与实际调用验收已完成，见 [140](140-devlog-f13-2b-desktop-resource-management.md)，正式 Renderer 页面仍待前端实施。
 
 ### 首版范围与边界
 
@@ -343,10 +343,10 @@ Host restart -> unmatched compaction marked interrupted -> replay committed chec
 | ✅ | F13.1a Step C 可靠保存与安全清理 | 原始资产与读取安全 | Agent 发布的文件可可靠保存，读取、替换和删除互不破坏，失败后可恢复 | 共享生命周期内核已合入 master（PR #80）；实现与验证边界见 [127](127-devlog-f13-1a-kernel.md) |
 | ✅ | F13.1a Step D 进程中断后恢复可验证 | 资产一致性与异常恢复验收 | 突然终止后重新启动仍可读取已提交资料，并安全回收未提交副本 | D1–D8 专项、两次正式 Host 重启及相同操作重试通过；本机完整套件与对应代码 head CI 通过。验收范围与边界见 [129](129-devlog-f13-1a-interruption.md) |
 | ✅ | F13.1b 正文提取与处理恢复 | 正文处理、状态与恢复 | 已保存资料能按支持范围提供正文，并明确处理结果及失败恢复 | 保存成功与正文可用分开；替换后不混用旧正文；处理中断可恢复、失败可显式重处理；不承担检索索引与 Agent 检索决策。冻结设计见 [134](134-devlog-f13-1b-design.md)，实现见 [135](135-devlog-f13-1b-content.md)；PR #87 已合并，CI run `39542644391` 成功，本机 typecheck 与 891 项完整测试通过 |
-| ⬜ | F13.2 项目资料库浏览与组织 | 资料目录、分类与访问范围 | 用户能看清项目资料，通过文件夹、格式、来源与可用状态组织资料 | 列表、文件夹、详情与筛选行为可验证；同目录重名自动编号；不扩大 Resource 权限；桌面浏览管理由前端承接，后端交付不能替代页面验收 |
+| 🔄 | F13.2 项目资料库浏览与组织 | 资料目录、分类与访问范围 | 用户能看清项目资料，通过文件夹、格式、来源与可用状态组织资料 | 目录与资料管理后端及桌面公共能力已完成，正式 Renderer 页面与交互验收仍待前端实施；不扩大 Resource 权限 |
 | ✅ | F13.1c 用户资料补充与管理接入 | 可信用户主体、用户资料导入与公共 RPC | 用户能将本地参考资料补充进项目资料库，并由可信用户主体管理资料 | 固定 User principal 与可信用户入口；支持单文件、多文件及目录导入，保留相对路径并复用 F13.1a 生命周期；用户导入资料默认对同一 Project 内所有 Node 可用；部分成功保留、取消不回滚已保存项、保存失败可重新提交；正文处理由 F13.1b 接管；不新增 UserID、createdBy/sourceKind 字段或 Renderer 页面，资料浏览与文件夹管理由 F13.2 承接。本机 typecheck 与 897 项完整测试、PR #88 代码 head CI 通过；见 [137](137-devlog-f13-1c-user-intake.md) |
 | ✅ | F13.2a 目录浏览与资料整理 | 项目目录与资料管理 | 用户能浏览目录与资料信息，创建和整理文件夹，修改、移动和删除资料 | 重名、相对路径、非空目录删除确认及用户 / Agent 操作边界符合 F13.0；不扩大既有 Node 权限。技术设计见 [138](138-devlog-f13-2a-design.md)，实施与验证见 [139](139-devlog-f13-2a-library-organization.md)；本机 typecheck、909 项完整测试及 PR #89 当前代码 head CI 通过，已合入 master |
-| ⬜ | F13.2b 桌面资料管理交接 | Host / RPC / Electron 公共能力 | 桌面能查询和管理资料，并跟随导入与处理状态 | 版本化公共契约明确运行时校验、错误、取消和兼容语义；取消保留成功项，失败可读，Bridge 实际调用通过；不替代正式页面验收 |
+| ✅ | F13.2b 桌面资料管理交接 | Host / RPC / Electron 公共能力 | 桌面能查询和管理资料，并跟随导入与处理状态 | 版本化公共契约、Host / Electron Bridge、严格运行时校验、错误与按窗口取消清理已实现；真实 Bridge 调用通过，不替代正式页面验收，见 [140](140-devlog-f13-2b-desktop-resource-management.md) |
 | ⬜ | F13.3 内容检索与原文定位 | 权限内搜索、结果与原文阅读 | 用户能用问题或术语找到相关资料卡片，Agent 可获得相关片段并继续读取正文 | 前端以文件卡片显示名称、格式和相对路径，不做正文预览；Agent 获得相关片段与读取信息；支持明确的范围筛选；无结果与处理失败可区分；无权资料的标题、片段和正文均不泄露；正式搜索与资料定位体验由前端验收 |
 | ⬜ | F13.3a 项目资料搜索与阅读 | 权限内检索与正文阅读 | 用户和 Agent 可在项目或指定文件夹范围内查找资料，Agent 能继续阅读相关正文 | 全格式支持文件信息搜索，支持格式提供正文命中；文件结果去重、片段保留来源；分页与读取不混用变化前后的内容，无权信息不泄露 |
 | ⬜ | F13.3b 桌面搜索交接 | Host / RPC / Electron 公共能力 | 桌面能分页搜索并定位资料，识别处理中、失败及结果变化 | 版本化契约与 Bridge 实际调用通过；查询 / 范围可保留，变化需明确刷新，查询取消不修改资料；不交付正文预览，不替代搜索 UI 验收 |
@@ -359,7 +359,7 @@ Host restart -> unmatched compaction marked interrupted -> replay committed chec
 ### 交付顺序与依赖
 
 - 按 F13.0 → F13.1 → F13.2 → F13.3 → F13.4 → F13.5 → F13.6 逐步确认、实施和验收，不授权连续执行；较大步骤在开始前按可独立验收的功能目标细分。
-- F13.1 按原始资料生命周期 a、正文处理与恢复 b、用户资料接入 c 顺序推进，全部功能与对应验收完成后才收口父项。F13.1a 已合入 master；F13.1b 已随 PR #87 合并并完成本机与 CI 验证，见 [135](135-devlog-f13-1b-content.md)；F13.1c 本机与 PR #88 代码 head CI 验证通过，见 [137](137-devlog-f13-1c-user-intake.md)。父项还需桌面入口与交互验收。F13.2、F13.3、F13.5 各自先完成 a 的功能再完成 b 的桌面交接，全部子项与对应验收完成后才收口父项。 F13.2a 技术设计已于 2026-10-21 确认并落盘，见 [138](138-devlog-f13-2a-design.md)；F13.2a 已完成并随 PR #89 合入，见 [139](139-devlog-f13-2a-library-organization.md)；F13.2b 尚未开始。
+- F13.1 按原始资料生命周期 a、正文处理与恢复 b、用户资料接入 c 顺序推进，全部功能与对应验收完成后才收口父项。F13.1a 已合入 master；F13.1b 已随 PR #87 合并并完成本机与 CI 验证，见 [135](135-devlog-f13-1b-content.md)；F13.1c 本机与 PR #88 代码 head CI 验证通过，见 [137](137-devlog-f13-1c-user-intake.md)。父项还需桌面入口与交互验收。F13.2、F13.3、F13.5 各自先完成 a 的功能再完成 b 的桌面交接，全部子项与对应验收完成后才收口父项。F13.2a 已完成并随 PR #89 合入，见 [139](139-devlog-f13-2a-library-organization.md)；F13.2b 公共 RPC、Electron Bridge 与实际调用验收已完成，见 [140](140-devlog-f13-2b-desktop-resource-management.md)，F13.2 父项仍待 Renderer 页面与交互验收。
 - 后端负责资料能力、权限、检索与 Agent 使用；前端负责导入反馈、资料库页面、搜索与定位、引用交互。F13.2b / F13.3b / F13.5b 分别交付管理、搜索和引用公共能力。共享控制面与契约串行交付，契约须明确版本、运行时校验、错误、取消和兼容语义。
 - F5.4–F5.8 保持原状态；F13 资料库信息面板与 F5.7 使用同一资料信息，不扩展 F5.7 的文件管理范围。Node 对话与成果引用的正式 UI 验收依赖对应 F5 页面交付；不将该依赖默认为已完成。F13.0 整体产品设计已获用户确认；后续功能与页面仍须分别实施和验收。
 
@@ -367,7 +367,7 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不恢复�
 
 ## 12. 当前下一步
 
-**Phase 10、M1、Phase 11 与 Phase 12（F12.0–F12.7）均已完成对应后端验收。F12.7 最新 gpt-6-luna 真实 28 请求 / 3 次压缩、暂停交接 / 同库重启及两 Node / Main 完整通过，本机 793 项与代码 CI 通过，见 [117](117-devlog-f12-7-acceptance.md)。BUG-014 / 015 / 016 / 017 关闭，BUG-018 已随 PR #79 合入关闭。BUG-019 通用传输诊断缺口仅排查、未修复；本轮成功不证明网络持续稳定。F13.0 产品设计已收口，见 [125](125-devlog-f13-0-design.md)；F13.1a 已完成并合入 master，F13.1b 已随 PR #87 合并（提交 `845b864`），CI run `39542644391` 成功，本机 typecheck 与 891 项完整测试通过，见 [135](135-devlog-f13-1b-content.md)。F13.1c 后端能力已实现，本机 typecheck 与 897 项完整测试、PR #88 代码 head CI 通过，见 [137](137-devlog-f13-1c-user-intake.md)；F13.2a 技术设计已于 2026-10-21 确认并落盘，见 [138](138-devlog-f13-2a-design.md)，F13.2a 后端实现已完成并随 PR #89 合入，见 [139](139-devlog-f13-2a-library-organization.md)；F13.1 父项仍待桌面入口与交互验收。BUG-019 保持仅排查，不阻断产品设计。前端 F5.4–F5.8、正式页面 AutoRun / 上下文 UI 不因此视为完成。**
+**Phase 10、M1、Phase 11 与 Phase 12（F12.0–F12.7）均已完成对应后端验收。F12.7 最新 gpt-6-luna 真实 28 请求 / 3 次压缩、暂停交接 / 同库重启及两 Node / Main 完整通过，本机 793 项与代码 CI 通过，见 [117](117-devlog-f12-7-acceptance.md)。BUG-014 / 015 / 016 / 017 关闭，BUG-018 已随 PR #79 合入关闭。BUG-019 通用传输诊断缺口仅排查、未修复；本轮成功不证明网络持续稳定。F13.0 产品设计已收口，见 [125](125-devlog-f13-0-design.md)；F13.1a 已完成并合入 master，F13.1b 已随 PR #87 合并（提交 `845b864`），CI run `39542644391` 成功，本机 typecheck 与 891 项完整测试通过，见 [135](135-devlog-f13-1b-content.md)。F13.1c 后端能力已实现，本机 typecheck 与 897 项完整测试、PR #88 代码 head CI 通过，见 [137](137-devlog-f13-1c-user-intake.md)；F13.2a 后端实现已随 PR #89 合入，见 [139](139-devlog-f13-2a-library-organization.md)；F13.2b 公共 RPC、Electron Bridge、本机 912 项完整测试与真实 Bridge 调用验收已完成，见 [140](140-devlog-f13-2b-desktop-resource-management.md)。F13.1 与 F13.2 父项仍待正式 Renderer 入口和交互验收。BUG-019 保持仅排查，不阻断产品设计。前端 F5.4–F5.8、正式页面 AutoRun / 上下文 UI 不因此视为完成。**
 
 - 免除记录：F10.4b 真实模型五场景验收与 F10.5 第 7–11 回合真实验收均经用户决定免除，相应能力只由离线测试覆盖，见第 7 节。
 - 未关闭 Bug（以 [Bug 跟踪表](bug-plan.md) 为准）：BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 仅排查。

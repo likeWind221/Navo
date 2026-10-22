@@ -163,7 +163,7 @@
 
 ## Phase 13 规划
 
-- [F13 项目资料库与任务检索规划](124-devlog-f13-plan.md)：登记 F13.0–F13.6 功能目标、前后端分工、首版边界与验收要求；F13.0、F13.1a 已完成，PR #87 已将 F13.1b 合入 master；F13.1c 本机与 PR #88 代码 head CI 通过，实施见 [137](137-devlog-f13-1c-user-intake.md)；F13.2a 已随 PR #89 合入，设计见 [138](138-devlog-f13-2a-design.md)、实施见 [139](139-devlog-f13-2a-library-organization.md)。
+- [F13 项目资料库与任务检索规划](124-devlog-f13-plan.md)：登记 F13.0–F13.6 功能目标、前后端分工、首版边界与验收要求；F13.0、F13.1a 已完成，PR #87 已将 F13.1b 合入 master；F13.1c 实施见 [137](137-devlog-f13-1c-user-intake.md)；F13.2a 已随 PR #89 合入，F13.2b 公共能力与桌面交接见 [140](140-devlog-f13-2b-desktop-resource-management.md)。
 - [F13.0 产品设计（已完成）](125-devlog-f13-0-design.md)：用户已确认资料管理、页面操作、异常恢复、搜索变化、Agent 按需检索、文件级引用及六组验收场景；含前后端交接、调研取舍与新会话开发交接，F13.1–F13.6 未实施。
 - [F13.1a：共享资产生命周期内核 v1.3](126-devlog-f13-1a-design.md)：共享资产生命周期、操作记录同事务提交、路径规范、Host 单实例与方案 B 读取租约；Step A–D 已完成，PR #80 合并，已完成操作重试修复见 PR #81 / [133](133-bugfix-bug-023-replayed-operation-result.md)。
 - [F13.1a Step C 共享生命周期内核](127-devlog-f13-1a-kernel.md)：Schema v3、事件/操作同事务、不可变版本、读取租约、安全清理、正式 Host 单实例与启动恢复；代码已随 PR #80 合并，真实中断验收见 [129](129-devlog-f13-1a-interruption.md)。
@@ -179,6 +179,7 @@
 - [F13.1c 用户资料补充与管理接入实施](137-devlog-f13-1c-user-intake.md)：User owner、原子初始 public、受限批量及目录导入、用户管理服务、Host RPC 与 F13.1b 正文处理联动；当前验证与交付边界见记录。
 - [F13.2a 目录浏览与资料整理技术设计](138-devlog-f13-2a-design.md)：确定逻辑目录与显式空文件夹模型、SQLite v5 迁移、Resource 路径事件的批量原子提交、既有生命周期删除与部分失败语义，以及不扩展 Agent 权限、不提前实现 RPC / 桌面页面的边界；实施见 [139](139-devlog-f13-2a-library-organization.md)。
 - [F13.2a 目录浏览与资料整理实施](139-devlog-f13-2a-library-organization.md)：SQLite v5、显式与推导目录、路径组织事件、批量原子提交及递归删除的实现与验证。
+- [F13.2b 桌面资料管理交接实施](140-devlog-f13-2b-desktop-resource-management.md)：版本化资料管理 RPC、严格 Electron Bridge、流式导入与状态跟随、按窗口取消清理及真实 Electron 调用验收。
 
 ## 工程治理与迁移
 

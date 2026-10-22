@@ -15,6 +15,7 @@ export default defineConfig({
           project: resolve("scripts/qa/project.ts"),
           autorun: resolve("scripts/qa/autorun.ts"),
           session: resolve("scripts/qa/session.ts"),
+          resource: resolve("scripts/qa/resource.ts"),
         },
       },
     },

@@ -23,6 +23,7 @@
     "qa:process": "electron scripts/qa/process.cjs",
     "qa:project": "electron out/main/project.js",
     "qa:session-context": "electron out/main/session.js",
+    "qa:resource": "electron out/main/resource.js",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
   },
   "dependencies": {

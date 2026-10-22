@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { createDesktopAgentApi } from "./preload/agent.js";
 import { createDesktopProjectApi } from "./preload/project.js";
+import { createDesktopResourceApi } from "./preload/resource.js";
 import { createDesktopSessionApi } from "./preload/session.js";
 
 const desktopApi = Object.freeze({
@@ -11,6 +12,7 @@ const desktopApi = Object.freeze({
   }),
   agent: createDesktopAgentApi(ipcRenderer),
   project: createDesktopProjectApi(ipcRenderer),
+  resource: createDesktopResourceApi(ipcRenderer),
   session: createDesktopSessionApi(ipcRenderer),
 });
 

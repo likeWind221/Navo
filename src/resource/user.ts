@@ -73,7 +73,7 @@ export class UserResourceService extends Service {
   }
 
   organizeResource(input: { projectId: ProjectId; resourceId: import("../brand/ids.js").ResourceId;
-    expectedRevision: number; name?: string; folder?: string }) {
+    expectedRevision: number; name?: string; folder?: string; description?: string }) {
     return this.ctx.resources.organizeUserResource(input);
   }
 

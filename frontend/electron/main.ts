@@ -8,6 +8,8 @@ import { AgentTurnV2Controller } from "./ipc/agent/v2.js";
 import { cancelAgentSessionOwner, registerAgentSessionIpc } from "./ipc/session.js";
 import { registerSessionContextIpc, SessionContextController } from "./ipc/session-context.js";
 import { registerProjectIpc } from "./ipc/project.js";
+import { registerResourceIpc } from "./ipc/resource.js";
+import { ResourceController } from "./ipc/resource/controller.js";
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 let quittingAfterCleanup = false;
@@ -15,9 +17,11 @@ let kernelHost: KernelHostProcess | undefined;
 let agentTurns: AgentTurnV2Controller | undefined;
 let agentCommands: AgentCommandController | undefined;
 let sessionContext: SessionContextController | undefined;
+let resources: ResourceController | undefined;
 let unregisterAgentSessionIpc: (() => void) | undefined;
 let unregisterProjectIpc: (() => void) | undefined;
 let unregisterSessionContextIpc: (() => void) | undefined;
+let unregisterResourceIpc: (() => void) | undefined;
 
 function createWindow(): void {
   const window = new BrowserWindow({
@@ -48,6 +52,7 @@ function createWindow(): void {
       cancelAgentSessionOwner(agentTurns, agentCommands, ownerId);
     }
     sessionContext?.cancelOwner(ownerId);
+    resources?.cancelOwner(ownerId);
   });
 
   const rendererUrl = process.env.ELECTRON_RENDERER_URL;
@@ -73,9 +78,11 @@ if (!hasSingleInstanceLock) {
     agentTurns = new AgentTurnV2Controller(kernelHost);
     agentCommands = new AgentCommandController(kernelHost);
     sessionContext = new SessionContextController(kernelHost);
+    resources = new ResourceController(kernelHost);
     unregisterAgentSessionIpc = registerAgentSessionIpc(agentTurns, agentCommands);
     unregisterProjectIpc = registerProjectIpc(kernelHost);
     unregisterSessionContextIpc = registerSessionContextIpc(sessionContext);
+    unregisterResourceIpc = registerResourceIpc(resources);
     void kernelHost.start().catch((error: unknown) => {
       const message = error instanceof Error ? error.message : "Unknown Kernel Host startup failure";
       console.error(`[electron-main] ${message}`);
@@ -93,9 +100,11 @@ if (!hasSingleInstanceLock) {
     unregisterAgentSessionIpc?.();
     unregisterProjectIpc?.();
     unregisterSessionContextIpc?.();
+    unregisterResourceIpc?.();
     agentTurns?.dispose();
     agentCommands?.dispose();
     sessionContext?.dispose();
+    resources?.dispose();
     void kernelHost.close().finally(() => app.quit());
   });
 
