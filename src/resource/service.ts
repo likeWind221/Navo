@@ -138,8 +138,14 @@ export class ResourceService extends Service {
   }
 
   organizeUserResource(input: { projectId: ProjectId; resourceId: ResourceId; expectedRevision: number;
-    name?: string; folder?: string }) {
-    return this.organization.organizeResource(input);
+    name?: string; folder?: string; description?: string }) {
+    const { description, ...organization } = input;
+    if (description !== undefined && input.name === undefined && input.folder === undefined) {
+      return this.updateUser({ projectId: input.projectId, resourceId: input.resourceId,
+        expectedRevision: input.expectedRevision, changes: { description } });
+    }
+    return this.organization.organizeResource({ ...organization,
+      ...(description === undefined ? {} : { changes: { description } }) });
   }
 
   organizeUserFolder(projectId: ProjectId, path: string, targetPath: string) {

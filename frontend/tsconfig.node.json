@@ -21,6 +21,7 @@
     "scripts/qa/chat.ts",
     "scripts/qa/autorun.ts",
     "scripts/qa/session.ts",
+    "scripts/qa/resource.ts",
     "electron.vite.config.ts",
     "vite.config.ts",
     "vitest.config.ts"

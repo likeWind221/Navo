@@ -1,0 +1,14 @@
+export const RESOURCE_BROWSE_CHANNEL = "navo:resource:browse";
+export const RESOURCE_FOLDER_CREATE_CHANNEL = "navo:resource:folder:create";
+export const RESOURCE_FOLDER_ORGANIZE_CHANNEL = "navo:resource:folder:organize";
+export const RESOURCE_FOLDER_DELETE_CHANNEL = "navo:resource:folder:delete";
+export const RESOURCE_UPDATE_CHANNEL = "navo:resource:update";
+export const RESOURCE_REPLACE_CHANNEL = "navo:resource:replace";
+export const RESOURCE_DELETE_CHANNEL = "navo:resource:delete";
+export const RESOURCE_IMPORT_START_CHANNEL = "navo:resource:import:start";
+export const RESOURCE_FOLLOW_START_CHANNEL = "navo:resource:follow:start";
+export const RESOURCE_CANCEL_CHANNEL = "navo:resource:cancel";
+export const RESOURCE_CHOOSE_FILES_CHANNEL = "navo:resource:choose:files";
+export const RESOURCE_CHOOSE_DIRECTORY_CHANNEL = "navo:resource:choose:directory";
+export const RESOURCE_CHOOSE_REPLACEMENT_CHANNEL = "navo:resource:choose:replacement";
+export const RESOURCE_EVENT_CHANNEL = "navo:resource:event";

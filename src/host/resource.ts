@@ -1,19 +1,74 @@
 import type { Context } from "cordis";
-import { userImportMethod } from "../../rpc/resource.js";
-import { RpcError } from "../../rpc/errors.js";
+import {
+  resourceDeleteMethod,
+  resourceFolderCreateMethod,
+  resourceFolderDeleteMethod,
+  resourceFolderOrganizeMethod,
+  resourceLibraryBrowseMethod,
+  resourceLibraryFollowMethod,
+  resourceReplaceMethod,
+  resourceUpdateMethod,
+  userImportMethod,
+} from "../../rpc/resource.js";
 import type { StreamRpcRouter } from "../../rpc/stream/router.js";
-import { createProjectId } from "../brand/ids.js";
-import { ResourceError } from "../resource/errors.js";
+import type { RpcStreamHandler } from "../../rpc/stream.js";
+import { createProjectId, createResourceId } from "../brand/ids.js";
+import { createResourceFollowHandler } from "./resource/follow.js";
+import { toResourceFailure } from "./resource/failure.js";
+import { describeLibraryItem, describeLibrarySnapshot } from "./resource/view.js";
 
 export function registerResourceMethods(router: StreamRpcRouter, ctx: Context): () => void {
-  return router.register(userImportMethod, async function* (input, signal) {
+  const unregister = [
+    router.register(userImportMethod, importResources(ctx)),
+    router.register(resourceLibraryBrowseMethod, unary(input => describeLibrarySnapshot(ctx,
+      createProjectId(input.projectId), input.path))),
+    router.register(resourceLibraryFollowMethod, createResourceFollowHandler(ctx)),
+    router.register(resourceFolderCreateMethod, unary(input => ctx.userResources.createFolder(
+      createProjectId(input.projectId), input.path))),
+    router.register(resourceFolderOrganizeMethod, unary(input => ctx.userResources.organizeFolder(
+      createProjectId(input.projectId), input.path, input.targetPath))),
+    router.register(resourceFolderDeleteMethod, unary((input, signal) => ctx.userResources.deleteFolder({
+      ...input, projectId: createProjectId(input.projectId), signal,
+    }))),
+    router.register(resourceUpdateMethod, unary(input => describeLibraryItem(ctx, ctx.userResources.organizeResource({
+      ...input, projectId: createProjectId(input.projectId), resourceId: createResourceId(input.resourceId),
+    })))),
+    router.register(resourceReplaceMethod, unary(async (input, signal) => describeLibraryItem(ctx,
+      await ctx.userResources.replace({ projectId: createProjectId(input.projectId),
+        resourceId: createResourceId(input.resourceId), expectedRevision: input.expectedRevision,
+        operationId: input.operationId }, input.sourcePath, signal)))),
+    router.register(resourceDeleteMethod, unary(async input => {
+      await ctx.userResources.delete({ projectId: createProjectId(input.projectId),
+        resourceId: createResourceId(input.resourceId), expectedRevision: input.expectedRevision,
+        operationId: input.operationId });
+      return { resourceId: input.resourceId, deleted: true as const };
+    })),
+  ];
+  return () => { for (const dispose of unregister) dispose(); };
+}
+
+function importResources(ctx: Context): RpcStreamHandler<
+  import("../../rpc/resource.js").UserImportInputV1,
+  import("../../rpc/resource.js").UserImportItemV1
+> {
+  return async function* (input, signal) {
     try {
       yield* ctx.userResources.import({ ...input, projectId: createProjectId(input.projectId) }, signal);
     } catch (error) {
-      const code = error instanceof ResourceError ? error.code : "import-failed";
-      throw new RpcError("remote-error", "User import failed.", {
-        failure: { code, message: "User import failed.", details: {} },
-      });
+      throw toResourceFailure(error);
     }
-  });
+  };
+}
+
+function unary<TInput, TOutput>(
+  action: (input: TInput, signal: AbortSignal) => TOutput | Promise<TOutput>,
+): RpcStreamHandler<TInput, TOutput> {
+  return async function* (input, signal) {
+    try {
+      signal.throwIfAborted();
+      yield await action(input, signal);
+    } catch (error) {
+      throw toResourceFailure(error);
+    }
+  };
 }

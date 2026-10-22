@@ -1,11 +1,190 @@
-import type { RpcMethod } from "./protocol.js";
 import { RpcError } from "./errors.js";
-import { exactKeys, requireBoundedString, requireRecord } from "./validation.js";
+import type { RpcMethod, RpcOutputValidator } from "./protocol.js";
+import type { ProjectResourceAccessV1, ProjectResourceOwnerV1 } from "./project.js";
+import {
+  parseFolderCreateInput,
+  parseFolderDeleteInput,
+  parseFolderDeleteResult,
+  parseFolderOrganizeInput,
+  parseLibraryDirectory,
+  parseLibraryInput,
+  parseLibraryItem,
+  parseLibrarySnapshot,
+  parseResourceDeleteInput,
+  parseResourceDeleteResult,
+  parseResourceReplaceInput,
+  parseResourceUpdateInput,
+  parseUserImportInput,
+  parseUserImportItem,
+} from "./resource/validation.js";
+
+export const resourceLibraryBrowseMethod: RpcMethod<ResourceLibraryInputV1, ResourceLibrarySnapshotV1> = method(
+  "resource.library.browse.v1", parseLibraryInput, parseLibrarySnapshot,
+);
+
+export const resourceLibraryFollowMethod: RpcMethod<ResourceLibraryInputV1, ResourceLibrarySnapshotV1> = Object.freeze({
+  name: "resource.library.follow.v1",
+  parseInput: parseLibraryInput,
+  parseOutput: parseLibrarySnapshot,
+  createOutputValidator: (input: ResourceLibraryInputV1) => {
+    let received = false;
+    return {
+      parse(value: unknown) {
+        const snapshot = parseLibrarySnapshot(value);
+        if (snapshot.projectId !== input.projectId || snapshot.path !== input.path) {
+          throw new RpcError("invalid-output", "Resource library follow crossed its requested scope");
+        }
+        received = true;
+        return snapshot;
+      },
+      end() {
+        if (!received) throw new RpcError("invalid-output", "Resource library follow ended before its baseline");
+      },
+    };
+  },
+});
+
+export const resourceFolderCreateMethod: RpcMethod<ResourceFolderCreateInputV1, ResourceLibraryDirectoryV1> = method(
+  "resource.folder.create.v1", parseFolderCreateInput, parseLibraryDirectory,
+);
+
+export const resourceFolderOrganizeMethod: RpcMethod<ResourceFolderOrganizeInputV1, ResourceLibraryDirectoryV1> = method(
+  "resource.folder.organize.v1", parseFolderOrganizeInput, parseLibraryDirectory,
+);
+
+export const resourceFolderDeleteMethod: RpcMethod<ResourceFolderDeleteInputV1, ResourceFolderDeleteResultV1> = method(
+  "resource.folder.delete.v1", parseFolderDeleteInput, parseFolderDeleteResult,
+);
+
+export const resourceUpdateMethod: RpcMethod<ResourceUpdateInputV1, ResourceLibraryItemV1> = method(
+  "resource.update.v1", parseResourceUpdateInput, parseLibraryItem,
+);
+
+export const resourceReplaceMethod: RpcMethod<ResourceReplaceInputV1, ResourceLibraryItemV1> = method(
+  "resource.replace.v1", parseResourceReplaceInput, parseLibraryItem,
+);
+
+export const resourceDeleteMethod: RpcMethod<ResourceDeleteInputV1, ResourceDeleteResultV1> = method(
+  "resource.delete.v1", parseResourceDeleteInput, parseResourceDeleteResult,
+);
+
+export const userImportMethod: RpcMethod<UserImportInputV1, UserImportItemV1> = Object.freeze({
+  name: "resource.user-import.v1",
+  parseInput: parseUserImportInput,
+  parseOutput: parseUserImportItem,
+});
+
+export type ResourceFailureCode =
+  | "invalid-request"
+  | "project-unavailable"
+  | "resource-unavailable"
+  | "folder-unavailable"
+  | "path-conflict"
+  | "revision-conflict"
+  | "operation-conflict"
+  | "internal";
+
+export interface ResourceLibraryInputV1 {
+  readonly projectId: string;
+  readonly path: string | null;
+}
+
+export interface ResourceLibrarySnapshotV1 {
+  readonly projectId: string;
+  readonly path: string | null;
+  readonly directories: readonly ResourceLibraryDirectoryV1[];
+  readonly resources: readonly ResourceLibraryItemV1[];
+}
+
+export interface ResourceLibraryDirectoryV1 {
+  readonly path: string;
+  readonly explicit: boolean;
+}
+
+export interface ResourceLibraryItemV1 {
+  readonly resourceId: string;
+  readonly owner: ProjectResourceOwnerV1;
+  readonly name: string;
+  readonly description: string;
+  readonly type: string;
+  readonly libraryPath: string;
+  readonly access: ProjectResourceAccessV1;
+  readonly revision: number;
+  readonly assetGeneration: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly content: ResourceContentStatusV1 | null;
+}
+
+export interface ResourceContentStatusV1 {
+  readonly status: "pending" | "processing" | "ready" | "metadata_only" | "failed";
+  readonly errorCode: string | null;
+  readonly errorMessage: string | null;
+  readonly updatedAt: string;
+}
+
+export interface ResourceFolderCreateInputV1 {
+  readonly projectId: string;
+  readonly path: string;
+}
+
+export interface ResourceFolderOrganizeInputV1 {
+  readonly projectId: string;
+  readonly path: string;
+  readonly targetPath: string;
+}
+
+export interface ResourceFolderDeleteInputV1 {
+  readonly projectId: string;
+  readonly path: string;
+  readonly recursive: boolean;
+  readonly operationId: string;
+}
+
+export interface ResourceFolderDeleteResultV1 {
+  readonly status: "confirmation-required" | "deleted" | "partial" | "cancelled";
+  readonly deleted: readonly string[];
+  readonly failed: readonly { readonly resourceId: string; readonly code: string }[];
+}
+
+export interface ResourceUpdateInputV1 {
+  readonly projectId: string;
+  readonly resourceId: string;
+  readonly expectedRevision: number;
+  readonly name?: string;
+  readonly folder?: string;
+  readonly description?: string;
+}
+
+export interface ResourceReplaceInputV1 {
+  readonly projectId: string;
+  readonly resourceId: string;
+  readonly expectedRevision: number;
+  readonly operationId: string;
+  readonly sourcePath: string;
+}
+
+export interface ResourceDeleteInputV1 {
+  readonly projectId: string;
+  readonly resourceId: string;
+  readonly expectedRevision: number;
+  readonly operationId: string;
+}
+
+export interface ResourceDeleteResultV1 {
+  readonly resourceId: string;
+  readonly deleted: true;
+}
 
 export interface UserImportInputV1 {
   readonly projectId: string;
   readonly requestId: string;
-  readonly sources: readonly { readonly kind: "file" | "directory"; readonly path: string }[];
+  readonly sources: readonly UserImportSourceV1[];
+}
+
+export interface UserImportSourceV1 {
+  readonly kind: "file" | "directory";
+  readonly path: string;
 }
 
 export type UserImportItemV1 =
@@ -16,58 +195,24 @@ export type UserImportItemV1 =
       readonly code: string; readonly message: string }
   | { readonly status: "cancelled"; readonly name: string; readonly relativePath: string };
 
-export const userImportMethod: RpcMethod<UserImportInputV1, UserImportItemV1> = Object.freeze({
-  name: "resource.user-import.v1",
-  parseInput,
-  parseOutput,
-});
+function method<TInput, TOutput>(
+  name: string,
+  parseInput: (value: unknown) => TInput,
+  parseOutput: (value: unknown) => TOutput,
+): RpcMethod<TInput, TOutput> {
+  return Object.freeze({ name, parseInput, parseOutput, createOutputValidator: () => singleOutput(parseOutput) });
+}
 
-function parseInput(value: unknown): UserImportInputV1 {
-  const input = shape(value, ["projectId", "requestId", "sources"]);
-  if (!Array.isArray(input.sources) || input.sources.length < 1 || input.sources.length > 32) invalid();
-  const requestId = requireBoundedString(input.requestId, "requestId", 64);
-  if (!/^[a-zA-Z0-9_-]+$/.test(requestId)) invalid();
+function singleOutput<T>(parse: (value: unknown) => T): RpcOutputValidator<T> {
+  let received = false;
   return {
-    projectId: requireBoundedString(input.projectId, "projectId", 128),
-    requestId,
-    sources: input.sources.map(value => {
-      const source = shape(value, ["kind", "path"]);
-      if (source.kind !== "file" && source.kind !== "directory") return invalid();
-      return { kind: source.kind, path: requireBoundedString(source.path, "source path", 4096) };
-    }),
+    parse(value) {
+      if (received) throw new RpcError("invalid-output", "Resource method returns exactly one item");
+      received = true;
+      return parse(value);
+    },
+    end() {
+      if (!received) throw new RpcError("invalid-output", "Resource method ended without a result");
+    },
   };
-}
-
-function parseOutput(value: unknown): UserImportItemV1 {
-  const item = requireRecord(value, "import item");
-  if (item.status === "saved" && exactKeys(item,
-    ["status", "name", "relativePath", "resourceId", "libraryPath", "contentStatus"])) {
-    const status = item.contentStatus;
-    if (status !== null && status !== "pending" && status !== "processing" && status !== "ready"
-      && status !== "metadata_only" && status !== "failed") return invalid();
-    return { status: "saved", name: label(item.name), relativePath: label(item.relativePath),
-      resourceId: label(item.resourceId), libraryPath: label(item.libraryPath), contentStatus: status };
-  }
-  if (item.status === "failed" && exactKeys(item, ["status", "name", "relativePath", "code", "message"])) {
-    return { status: "failed", name: label(item.name), relativePath: label(item.relativePath),
-      code: label(item.code), message: label(item.message) };
-  }
-  if (item.status === "cancelled" && exactKeys(item, ["status", "name", "relativePath"])) {
-    return { status: "cancelled", name: label(item.name), relativePath: label(item.relativePath) };
-  }
-  return invalid();
-}
-
-function label(value: unknown): string {
-  return requireBoundedString(value, "import result field", 4096);
-}
-
-function shape(value: unknown, keys: readonly string[]): Record<string, unknown> {
-  const record = requireRecord(value, "import input");
-  if (!exactKeys(record, keys)) invalid();
-  return record;
-}
-
-function invalid(): never {
-  throw new RpcError("invalid-input", "Malformed user import data.");
 }

@@ -13,6 +13,7 @@ import { MockLLMAdapter } from "../../src/llm/adapters/mock.js";
 import type { ModelEvent } from "../../src/llm/types.js";
 import { createSessionCommandHandler } from "../../src/host/command.js";
 import { registerProjectMethods } from "../../src/host/project.js";
+import { registerResourceMethods } from "../../src/host/resource.js";
 import { registerSessionMethods } from "../../src/host/session.js";
 import {
   createMockAgentTurnHandler,
@@ -48,6 +49,7 @@ async function main(): Promise<void> {
   }));
   router.register(sessionCommandMethod, createSessionCommandHandler(ctx));
   registerProjectMethods(router, ctx);
+  registerResourceMethods(router, ctx);
   registerSessionMethods(router, ctx);
   const server = new StreamRpcServer(transport, router);
   const stop = (): void => { void server.dispose(); };

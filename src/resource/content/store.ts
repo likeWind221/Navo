@@ -18,15 +18,17 @@ export class ResourceContentStore {
     return row?.source_asset_generation === resource.assetGeneration ? row : undefined;
   }
 
-  ensure(projectId: ProjectId, resourceId: ResourceId, retry = false): void {
+  ensure(projectId: ProjectId, resourceId: ResourceId, retry = false): boolean {
     const resource = this.resources.get(projectId, resourceId);
-    if (resource === undefined) return;
-    this.storage.atomic(tx => {
+    if (resource === undefined) return false;
+    return this.storage.atomic(tx => {
       const row = tx.getResourceContent(projectId, resourceId);
       if (row === undefined || row.source_asset_generation !== resource.assetGeneration
         || (retry && (row.status === "failed" || row.status === "metadata_only"))) {
         tx.putResourceContent(pendingContent(projectId, resourceId, resource.assetGeneration));
+        return true;
       }
+      return false;
     });
   }
 
@@ -61,18 +63,18 @@ export class ResourceContentStore {
     return this.storage.atomic(tx => tx.claimResourceContent(row.project_id, row.resource_id, row.source_asset_generation, attemptId));
   }
 
-  finish(row: ResourceContentRecord, attemptId: string, result: ContentExtraction | ContentError | "shutdown"): void {
-    this.storage.atomic(tx => {
+  finish(row: ResourceContentRecord, attemptId: string, result: ContentExtraction | ContentError | "shutdown"): boolean {
+    return this.storage.atomic(tx => {
       if (result !== "shutdown") {
         const resource = this.resources.get(createProjectId(row.project_id), createResourceId(row.resource_id));
-        if (resource?.assetGeneration !== row.source_asset_generation) return;
+        if (resource?.assetGeneration !== row.source_asset_generation) return false;
       }
       const base = pendingContent(row.project_id, row.resource_id, row.source_asset_generation);
       const record: ResourceContentRecord = result === "shutdown" ? base
         : "code" in result ? { ...base, status: "failed", error_code: result.code, error_message: result.message.slice(0, 1000) }
           : result.status === "metadata_only" ? { ...base, status: "metadata_only" }
             : { ...base, status: "ready", body: result.body, page_map_json: JSON.stringify(result.pageMap), extractor_version: result.extractorVersion };
-      tx.finishResourceContent(record, attemptId);
+      return tx.finishResourceContent(record, attemptId);
     });
   }
 }

@@ -2,6 +2,7 @@
 
 import type { DesktopAgentApi } from "../shared/agent.js";
 import type { DesktopProjectApi } from "../shared/project.js";
+import type { DesktopResourceApi } from "../shared/resource.js";
 import type { DesktopSessionApi } from "../shared/session.js";
 
 declare global {
@@ -14,6 +15,7 @@ declare global {
       };
       readonly agent: DesktopAgentApi;
       readonly project: DesktopProjectApi;
+      readonly resource: DesktopResourceApi;
       readonly session: DesktopSessionApi;
     };
   }
