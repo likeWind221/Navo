@@ -182,7 +182,7 @@
 - [F13.2b 桌面资料管理交接实施](140-devlog-f13-2b-desktop-resource-management.md)：版本化资料管理 RPC、严格 Electron Bridge、流式导入与状态跟随、按窗口取消清理及真实 Electron 调用验收。
 - [F13.2 状态校准与 F13.3 后端交接](141-devlog-f13-2-handoff-f13-3.md)：明确不新增 F13.2c；F13.2 父项因 Renderer UI 未完成仍保持进行中，但不阻塞后端主线。
 - [F13.3a GraphRAG 后端技术设计](142-devlog-f13-3a-graphrag-design.md)：核心方向已确认并收口；纯 SQLite、API Embedding、批量 LLM 抽取，首期混合与图局部 / 多跳检索，社区摘要及全局检索后置。
-- [F13.3b Chunk 与 Embedding 索引设计](143-devlog-f13-3b-chunk-embedding-design.md)：设计讨论中；用户已确认 Chunk、Embedding、关键词索引全部使用 SQLite，不引入额外数据库或原生扩展。Chunk 边界规则、批次参数与索引发布细节继续审核；未修改生产代码。
+- [F13.3b Chunk 与 Embedding 索引设计](143-devlog-f13-3b-chunk-embedding-design.md)：设计讨论中；用户已确认全部使用 SQLite，且认可 Chunk 结构优先、句子 / 子句逐级拆分、安全字符兜底的规则（软目标 1,200、硬上限 1,600、重叠目标 150）。Embedding 批次、FTS5 中文策略与索引发布细节继续审核；未修改生产代码。
 
 ## 工程治理与迁移
 
