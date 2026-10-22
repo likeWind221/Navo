@@ -32,4 +32,5 @@
 - `frontend` 的 `pnpm typecheck`、`pnpm test`（27 文件 / 159 项）与 `pnpm build` 通过。
 - 根目录 `pnpm test --maxWorkers=4 --reporter=verbose --testTimeout=30000` 通过，142 文件 / 912 项，包含 D1–D8 正式 Host 中断恢复。
 - `frontend` 的 `pnpm qa:resource` 通过真实 Electron Bridge：创建项目和文件夹、状态跟随、流式导入、浏览、重命名 / 移动 / 描述修改、文件夹移动、替换、递归确认与删除、单资料删除、取消及窗口清理均成功；Electron 44.2.0 / Node 24.20.0，证据目录为 `C:\Users\likeW\AppData\Local\Temp\navo-f132b-evidence-1792640302712`。
-- 正式 Renderer 资料库页面仍未实施，F13.2 父项保持进行中；前端当前下一步仍为 F5.4。本记录将在 PR 当前 head CI 后补充 run 与合并提交。
+- PR #90 代码 head `4d59e1b` 的首轮 CI normal tests 有两条既有 recovery 用例触发 5 秒超时；同两文件按默认预算本机复跑 14 / 14 通过。CI run `39718746895` 失败 job 随后原样重跑，Node 24 typecheck、normal tests 与 crash recovery tests 全部成功；PR 已 squash 合入 master 为 `d470f6f`。
+- 正式 Renderer 资料库页面仍未实施，F13.2 父项保持进行中；前端当前下一步仍为 F5.4。
