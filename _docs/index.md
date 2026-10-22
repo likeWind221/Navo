@@ -181,7 +181,7 @@
 - [F13.2a 目录浏览与资料整理实施](139-devlog-f13-2a-library-organization.md)：SQLite v5、显式与推导目录、路径组织事件、批量原子提交及递归删除的实现与验证。
 - [F13.2b 桌面资料管理交接实施](140-devlog-f13-2b-desktop-resource-management.md)：版本化资料管理 RPC、严格 Electron Bridge、流式导入与状态跟随、按窗口取消清理及真实 Electron 调用验收。
 - [F13.2 状态校准与 F13.3 后端交接](141-devlog-f13-2-handoff-f13-3.md)：明确不新增 F13.2c；F13.2 父项因 Renderer UI 未完成仍保持进行中，但不阻塞后端主线。
-- [F13.3a GraphRAG 后端技术设计草案](142-devlog-f13-3a-graphrag-design.md)：完成只读审计，提出文本 / 向量检索、实体关系抽取、证据追溯、图局部检索与社区全局检索的分层设计；尚待用户审核，未修改生产代码。
+- [F13.3a GraphRAG 后端技术设计草案](142-devlog-f13-3a-graphrag-design.md)：只读审计后形成方案；用户已确认首期纯 SQLite 与混合 / 图局部检索，社区摘要及全局检索后置；未修改生产代码。
 
 ## 工程治理与迁移
 
