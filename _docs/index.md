@@ -182,7 +182,8 @@
 - [F13.2b 桌面资料管理交接实施](140-devlog-f13-2b-desktop-resource-management.md)：版本化资料管理 RPC、严格 Electron Bridge、流式导入与状态跟随、按窗口取消清理及真实 Electron 调用验收。
 - [F13.2 状态校准与 F13.3 后端交接](141-devlog-f13-2-handoff-f13-3.md)：明确不新增 F13.2c；F13.2 父项因 Renderer UI 未完成仍保持进行中，但不阻塞后端主线。
 - [F13.3a GraphRAG 后端技术设计](142-devlog-f13-3a-graphrag-design.md)：核心方向已确认并收口；纯 SQLite、API Embedding、批量 LLM 抽取，首期混合与图局部 / 多跳检索，社区摘要及全局检索后置。
-- [F13.3b Chunk 与 Embedding 索引设计](143-devlog-f13-3b-chunk-embedding-design.md)：设计讨论中；用户已确认全部使用 SQLite，且认可 Chunk 结构优先、句子 / 子句逐级拆分、安全字符兜底的规则（软目标 1,200、硬上限 1,600、重叠目标 150）。Embedding 批量与失败恢复方案已确认；用户确认首版仅启用语义召回，FTS5 / BM25 与中文分词后置。索引结构已收敛并获确认：仅新增 resource_index_builds 与 resource_chunks 两张表，Chunk 与 Embedding 合并存储，不单独建批次表或活动指针表；设计收口，尚未修改生产代码。
+- [F13.3b Chunk 与 Embedding 索引设计](143-devlog-f13-3b-chunk-embedding-design.md)：冻结 SQLite 两表索引、结构化 Chunk、Qwen3 Embedding 批量 / 恢复、原子发布和首版精确语义召回方案；实施见 [144](144-devlog-f13-3b-chunk-embedding.md)。
+- [F13.3b Chunk 与 Embedding 索引实施](144-devlog-f13-3b-chunk-embedding.md)：Schema v6、确定性 Chunker、独立 Embedding Provider、可恢复原子构建与权限内有界 Top-K；本机 146 个 spec 文件 / 933 项通过，PR / CI 待验证。
 
 ## 工程治理与迁移
 
