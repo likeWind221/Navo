@@ -183,7 +183,7 @@
 - [F13.2 状态校准与 F13.3 后端交接](141-devlog-f13-2-handoff-f13-3.md)：明确不新增 F13.2c；F13.2 父项因 Renderer UI 未完成仍保持进行中，但不阻塞后端主线。
 - [F13.3a GraphRAG 后端技术设计](142-devlog-f13-3a-graphrag-design.md)：核心方向已确认并收口；纯 SQLite、API Embedding、批量 LLM 抽取，首期混合与图局部 / 多跳检索，社区摘要及全局检索后置。
 - [F13.3b Chunk 与 Embedding 索引设计](143-devlog-f13-3b-chunk-embedding-design.md)：冻结 SQLite 两表索引、结构化 Chunk、Qwen3 Embedding 批量 / 恢复、原子发布和首版精确语义召回方案；实施见 [144](144-devlog-f13-3b-chunk-embedding.md)。
-- [F13.3b Chunk 与 Embedding 索引实施](144-devlog-f13-3b-chunk-embedding.md)：Schema v6、确定性 Chunker、独立 Embedding Provider、可恢复原子构建与权限内有界 Top-K；本机 146 个 spec 文件 / 933 项通过，PR / CI 待验证。
+- [F13.3b Chunk 与 Embedding 索引实施](144-devlog-f13-3b-chunk-embedding.md)：Schema v6、确定性 Chunker、独立 Embedding Provider、可恢复原子构建与权限内有界 Top-K；本机 146 个 spec 文件 / 933 项与 PR #91 代码 head CI 通过，等待人工审核。
 
 ## 工程治理与迁移
 

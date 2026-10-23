@@ -1,7 +1,7 @@
 # F13.3b：Chunk 与 Embedding 索引实施
 
 日期：2026-10-23
-状态：🔄 生产实现与本机验证完成，PR / CI 待创建与验证
+状态：✅ 生产实现、本机验证与 PR #91 代码 head CI 已通过；等待人工审核，不自动合并
 基线：`master` 提交 `53b2428`，开发分支 `phase13-f13.3b-chunk-embedding`
 
 ## 做了什么
@@ -35,8 +35,8 @@
 - 完整测试按目录分组覆盖仓库全部 146 个 `.spec.ts` 文件，共 933 项通过：核心 43 文件 / 293 项，Host 常规 17 / 85，Host 真实进程 1 / 26，LLM 12 / 81，Integration 14 / 24，Project + Resource + Tools 59 / 424。
 - `git diff --check` 待最终文档与提交前复核。
 - 所有 Embedding 协议与检索链路均使用 mock Provider；没有连接用户的 Qwen3 服务，没有形成真实模型召回质量、延迟、Token 上限或请求体上限结论。
-- PR 尚未创建，GitHub Actions CI 尚未运行，因此本 Step 暂保持 `🔄`，不得标记为最终完成或合并。
+- PR #91 代码 head `a58aa47` 的 GitHub Actions run `39899109070` 已成功；本 Step 的实现和验证完成。PR 按用户要求等待人工审核，不自动合并。
 
 ## 下一步
 
-完成最终 diff 审计和提交，推送本分支并创建 F13.3b PR；当前 PR head 的 `typecheck` 与完整测试 CI 通过后再更新状态。真实 Qwen3 API smoke test 需用户另行提供配置并明确授权，不属于 CI 门禁。
+人工审核 PR #91。真实 Qwen3 API smoke test 需用户另行提供配置并明确授权，不属于 CI 门禁；本次不开始 F13.3c 或后续步骤。
