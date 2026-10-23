@@ -18,6 +18,22 @@ describe("Kernel Host storage config", () => {
   });
 });
 
+describe("Kernel Host Embedding configuration", () => {
+  it("keeps Embedding optional and resolves a configured Qwen3-compatible endpoint", () => {
+    expect(resolveKernelHostConfig({})).not.toHaveProperty("embedding");
+    expect(resolveKernelHostConfig({ EMBEDDING_BASE_URL: " http://localhost:8000/v1 ",
+      EMBEDDING_API_KEY: "secret", EMBEDDING_MODEL: " custom-model ", EMBEDDING_REVISION: " r1 " }).embedding)
+      .toEqual({ endpoint: "http://localhost:8000/v1", apiKey: "secret", model: "custom-model", revision: "r1" });
+  });
+
+  it("rejects orphaned or unsafe Embedding settings", () => {
+    expect(() => resolveKernelHostConfig({ EMBEDDING_MODEL: "model" })).toThrow("EMBEDDING_BASE_URL");
+    expect(() => resolveKernelHostConfig({ EMBEDDING_BASE_URL: " " })).toThrow("EMBEDDING_BASE_URL");
+    expect(() => resolveKernelHostConfig({ EMBEDDING_BASE_URL: "http://localhost", EMBEDDING_API_KEY: "bad\nkey" }))
+      .toThrow("EMBEDDING_API_KEY");
+  });
+});
+
 describe("Kernel Host subscription configuration", () => {
   it("selects the requested model without Qwen defaults and shares the credential home", () => {
     const config = resolveKernelHostConfig({ LLM_PROVIDER: "openai", LLM_MODEL: " gpt-6-luna ",

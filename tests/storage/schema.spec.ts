@@ -41,6 +41,8 @@ function snapshot(path: string) {
 
 function downgrade(path: string) {
   rawSql(path, `BEGIN;
+    DROP TABLE resource_chunks;
+    DROP TABLE resource_index_builds;
     DROP TABLE library_folders;
     DROP TABLE resource_content;
     DROP TABLE resource_file_operations;
@@ -115,13 +117,15 @@ describe("Known schema v1 upgrade", () => {
   });
 });
 
-for (const version of [2, 3, 4]) {
-  it(`upgrades schema v${version} to v5 without changing existing records`, async () => {
+for (const version of [2, 3, 4, 5]) {
+  it(`upgrades schema v${version} to v6 without changing existing records`, async () => {
     const path = await temporaryDatabase(roots, `navo-schema-v${version}-`);
     const ctx = await app(path);
     const project = ctx.projects.create({ name: "Preserved", goal: null });
     await close(ctx);
-    rawSql(path, `DROP TABLE library_folders;
+    rawSql(path, `DROP TABLE resource_chunks;
+      DROP TABLE resource_index_builds;
+      ${version < 5 ? "DROP TABLE library_folders;" : ""}
       ${version < 4 ? "DROP TABLE resource_content;" : ""}
       ${version < 3 ? "DROP TABLE resource_file_operations;" : ""}
       PRAGMA user_version = ${version};`);
@@ -131,7 +135,9 @@ for (const version of [2, 3, 4]) {
     const after = snapshot(path);
     expect(after.events).toEqual(before.events);
     expect(after.bindings).toEqual(before.bindings);
-    expect(after.version).toEqual({ user_version: 5 });
+    expect(after.version).toEqual({ user_version: 6 });
     expect(after.tables).toContainEqual({ name: "library_folders" });
+    expect(after.tables).toContainEqual({ name: "resource_index_builds" });
+    expect(after.tables).toContainEqual({ name: "resource_chunks" });
   });
 }
