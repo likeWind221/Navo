@@ -1,21 +1,21 @@
 # F13.3b：Chunk 与 Embedding 索引设计
 
 日期：2026-10-22  
-状态：🔄 设计讨论中；存储架构已由用户确认，Chunk 参数与实现细节待继续审核；未修改生产代码  
+状态：🔄 设计讨论中；已确认 SQLite-only、Chunk 算法、Qwen3 Embedding 批量策略，以及首版仅启用语义召回；索引表结构与原子发布仍待审核  
 基线：master，F13.3a 设计方向已确认  
 范围：只读审计与实施设计；本记录通过审核后，再给出编码提示词。
 
 ## 1. 目标与边界
 
-本 Step 为 Navo 的项目资料建立可重建的 Chunk、Embedding 与关键词索引，为后续实体关系抽取和混合检索提供稳定输入。
+本 Step 为 Navo 的项目资料建立可重建的 Chunk 与 Embedding 索引，先交付语义召回基础能力，并为后续关键词混合检索、实体关系抽取和 GraphRAG 提供稳定输入。
 
 本 Step 交付范围：
 
 - 将当前代次且正文状态为 `ready` 的 Resource 正文切分为带来源位置的 Chunk。
 - 新增独立 Embedding Provider 契约，支持 OpenAI-compatible Embeddings API 的批量请求。
 - 将 Chunk、向量和索引构建状态持久化在现有 SQLite 中；先使用精确余弦相似度作为语义检索基线。
-- 建立关键词检索基础，验证当前 Node 24 / `node:sqlite` 环境的 FTS5；若环境验证不通过，不得让 FTS5 的可选能力破坏数据库启动，应回报证据并提出轻量 fallback。
-- 为后续语义 / 关键词检索提供内部服务接口与单测，不在本 Step 提供最终公共 RPC、Electron Bridge、Renderer UI 或 GraphRAG 图检索。
+- 首版只实现语义召回：通过查询 Embedding 与 SQLite 中的 Chunk 向量进行精确相似度检索。
+- 保留单一内部 `IndexSearch` 服务边界，Agent / 上层调用方不需要知道底层算法；本 Step 暂不实现 FTS5、关键词召回、混合排序或最终公共 RPC、Electron Bridge、Renderer UI、GraphRAG 图检索。
 - 不实现实体关系抽取、消歧、多跳检索、社区摘要或全局检索。
 
 ## 2. 已有能力与限制
@@ -49,19 +49,11 @@ Resource + current ready resource_content
                  v
     atomic publish if source is current
                  |
-         +-------+-------+
-         |               |
-         v               v
-   exact cosine       FTS5 lexical
-   similarity        index (if verified)
-         |               |
-         +-------+-------+
-                 |
                  v
-    internal candidate search service
+    internal semantic candidate search
 ```
 
-原始 Resource 与 `resource_content` 仍是权威数据。Chunk、向量和全文索引均为派生数据，可从当前正文重建。
+原始 Resource 与 `resource_content` 仍是权威数据。Chunk 与向量均为派生数据，可从当前正文重建。FTS5 / 关键词召回保留为后续可选增强，不是本 Step 的交付前置条件。
 
 ## 4. Chunking 设计
 
@@ -161,7 +153,7 @@ Chunk 正文会发送到用户配置的 Embedding API。调用前不需要额外
 2. **Chunk 记录**：build ID、ordinal、文本、UTF-16 起止偏移、页码范围、chunker 版本。
 3. **Embedding 记录**：build ID + chunk ID、向量 BLOB（Float32 little-endian）、dimension / encoding metadata。避免把向量存成 JSON 浮点数组，以减少空间与解析开销；不要使用不透明 BLOB 而不保存可校验的维度和编码版本。
 
-可按需要增加 FTS5 虚拟表，以 Chunk ID 为索引键；FTS 记录必须与当前发布的 Chunk 同步。表名、索引和具体 DDL 由实现者结合当前 storage 事务封装确定，并写入实施记录。
+本 Step 不增加 FTS5 虚拟表。关键词索引如在后续阶段启用，应作为 Chunk 的派生索引，并与活动 build 的生命周期保持一致。
 
 ### 6.2 原子发布
 
@@ -178,20 +170,14 @@ Chunk 正文会发送到用户配置的 Embedding API。调用前不需要额外
 - 已完成的 Embedding 批次应有可识别的持久化状态，重启后跳过已验证的批次，避免无意义地重复计费；但最终发布仍必须重新验证完整性与当前源代次。
 - 原始正文始终保留；向量索引损坏或被清理后可以重新生成，不得反向影响 Resource 资产和 `resource_content`。
 
-## 7. 关键词索引与语义检索基线
+## 7. 首版语义检索
 
-### 7.1 FTS5
-
-- 在支持的 Node 24 / SQLite 环境中验证 FTS5 是否可创建、写入、删除与重建；测试 `trusted_schema = OFF`、WAL 和现有迁移路径下的真实行为。
-- FTS5 的默认 tokenizer 对中文连续文本可能无法获得理想召回，必须用中英文混合样本验证。首版不为了中文检索直接引入大型外部分词依赖。
-- 如果 FTS5 不可用，实施者应在冻结 DDL 前报告并提出最小 fallback；不得悄悄将全文检索降级成未经测试的 LIKE 查询，也不得令现有 v5 数据库无法启动。
-- 查询结果只允许从当前 active build 召回，并在返回前核对 Resource 访问权限与代次。
-
-### 7.2 精确向量检索
-
-- 首版扫描当前查询范围内的有效向量，使用点积 / 范数计算余弦相似度并取 Top-K；不得先载入所有项目 / 所有 Resource 的向量再做无界内存分配。
-- 先用 SQL 限定项目、active build、模型与维度，再分批读取向量并维护有界 Top-K；返回的分数、排序和 tie-breaker 必须确定性。
-- 语义查询与关键词查询分别返回 Chunk 候选及 rank / score；后续 Step 通过 RRF 等方法融合。本 Step 不实现图关系扩展和最终 Agent 上下文拼装。
+- 首版仅使用 Embedding 语义召回，不实现 FTS5、关键词召回或混合排序；这样可以先独立验证 Chunk 质量、Embedding 模型效果与向量检索正确性。
+- 查询文本使用已确认的 Qwen3-Embedding-0.6B 查询指令模板生成向量；文档向量与查询向量必须使用同一模型版本、维度、归一化方式和兼容的输入模板配置。
+- 首版扫描当前查询范围内的有效向量，使用归一化向量点积计算余弦相似度并取 Top-K；不得先载入所有项目 / 所有 Resource 的向量再做无界内存分配。
+- 先用 SQL 限定项目、活动 build、模型与维度，再分批读取向量并维护有界 Top-K；分数、排序和 tie-breaker 必须确定性。
+- 返回结果只允许来自当前活动索引，并在返回前核对 Resource 访问权限与 `assetGeneration`。语义召回分数是相关性信号，不代表事实正确性。
+- 保留统一的内部 `IndexSearch` 接口。后续可在其内部增加 FTS5 / BM25 候选召回和排名融合，但不要求 Agent 直接选择检索算法，也不将关键词检索设为本 Step 的阻塞项。
 
 ## 8. 内部接口边界
 
@@ -201,7 +187,7 @@ Chunk 正文会发送到用户配置的 Embedding API。调用前不需要额外
 - EmbeddingProvider：批量请求和向量校验。
 - ResourceIndexProcessor：按 Resource 当前代次排队、领取、执行、取消、重试、恢复和发布索引。
 - ResourceIndexStore：在 StorageService 事务内管理 build、Chunk、Embedding 与 active pointer。
-- IndexSearch：提供内部语义 Top-K 与关键词 Top-K 候选，为后续混合检索和 GraphRAG 提供基础。
+- IndexSearch：提供单一内部语义 Top-K 查询接口；后续可在不改变上层调用契约的前提下增加关键词召回与混合排序。
 - Service 在 `app.ts` 中按现有 Cordis 生命周期装配；Resource 正文提交后以内部事件触发索引，不在 Resource 提交事务中调用外部 API。
 
 具体类型、错误码、Provider 配置接入点和是否采用独立的 `EmbeddingService` 名称，以当前配置与 Service 装配审计为准；不得把 Embedding 逻辑放进 `LLMService` 的流式聊天协议。
@@ -225,8 +211,8 @@ Chunk 正文会发送到用户配置的 Embedding API。调用前不需要额外
 - 从 v1、v2、v3、v4、v5 迁移到新版本，失败回滚与既有表数据保持不变。
 - `ready / metadata_only / failed` 正文准入；Resource 替换、删除、索引过程中代次变化、重复通知、取消、重启恢复、数据库关闭等待。
 - 新索引成功后原子切换；失败 / 中断不能暴露部分索引；旧索引不应在新 build 成功发布前提前删除。
-- FTS5 可用性、增删改同步、重建及中英文召回基线。
-- 精确余弦与独立参考实现的数值一致性；零范数、维度不匹配、空索引和有界 Top-K。
+- 语义检索的余弦相似度与独立参考实现数值一致；覆盖零范数、维度不匹配、空索引和有界 Top-K。
+- 首版不要求 FTS5 测试；后续若决定启用关键词召回，再单独验收 FTS5 环境兼容性、中文分词与增删改同步。
 - 越权、旧代次和已删除 Resource 的 Chunk / 文本 / 分数均不得泄露。
 
 ### 9.4 质量与成本记录
@@ -235,6 +221,7 @@ Chunk 正文会发送到用户配置的 Embedding API。调用前不需要额外
 
 ## 10. 本 Step 明确不做
 
+- 不实现 FTS5、关键词召回、混合排序。
 - 不实现实体与关系抽取、实体消歧、图谱关系表、多跳检索或社区摘要。
 - 不引入 `sqlite-vec`、LanceDB、Qdrant、Neo4j 或本地模型下载。
 - 不实现公共 RPC、Electron Bridge、Renderer UI 或最终搜索体验。
@@ -246,10 +233,10 @@ Chunk 正文会发送到用户配置的 Embedding API。调用前不需要额外
 
 ### 已确认
 
-1. **存储全部使用 SQLite。** Chunk、Embedding 向量、索引构建状态和关键词索引均在现有 SQLite 持久化体系内管理；不引入 LanceDB、sqlite-vec、Qdrant、Neo4j 或其他独立数据库 / 原生扩展。
+1. **存储全部使用 SQLite。** Chunk、Embedding 向量与索引构建状态均在现有 SQLite 持久化体系内管理；不引入 LanceDB、sqlite-vec、Qdrant、Neo4j 或其他独立数据库 / 原生扩展。
 2. **向量检索先用精确相似度基线。** 由 Navo 的存储与检索层读取 SQLite 中的 Float32 BLOB，计算余弦相似度并返回 Top-K。向量计算可以使用经过评估的轻量数学工具，但不引入另一个向量数据库；是否需要额外数学依赖以实现审查为准。
 3. **Embedding 通过独立 API Provider 批量调用**，不内置或自动安装本地模型。
-4. **本 Step 只建设 Chunk / Embedding / 关键词索引及内部候选检索**，不提前实现图谱构建、多跳检索、公共 RPC 或 Renderer UI。
+4. **首版只建设 Chunk / Embedding 索引与内部语义召回**；FTS5 / 关键词召回后置，不提前实现图谱构建、多跳检索、公共 RPC 或 Renderer UI。
 
 ### 仍待审核
 
@@ -258,4 +245,4 @@ Chunk 正文会发送到用户配置的 Embedding API。调用前不需要额外
 3. Embedding 批量与恢复策略已由用户确认：Qwen3-Embedding-0.6B（建议 vLLM API）、默认每批 16 条、硬上限 32 条、单构建并发 1、60 秒请求超时、最多 3 次尝试、指数退避并遵守 Retry-After、响应整批校验后事务落盘；重启跳过已校验批次，取消停止后续工作。具体服务端 Token / 请求体限制仍需部署后验证。
 4. FTS5 在目标 Node / SQLite 环境的可用性与中文检索方案仍需实测，不能仅凭设计假定其中文效果。
 
-Embedding 批量调用与失败恢复方案已由用户确认；FTS5 的环境兼容性与中文检索策略仍待审核。本文仍为设计稿，尚未修改生产代码，尚未执行 typecheck、测试或真实 API 调用。
+Embedding 批量调用与失败恢复方案已由用户确认；用户进一步确认首版仅启用语义召回，FTS5 / 关键词召回延后。索引表结构与原子发布仍待审核。本文仍为设计稿，尚未修改生产代码，尚未执行 typecheck、测试或真实 API 调用。
