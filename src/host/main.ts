@@ -15,6 +15,7 @@ import { StdioRpcServerTransport } from "./stdio.js";
 import { createAgentTurnHandler } from "./turn.js";
 import { createAgentTurnV2Handler } from "./turn/v2.js";
 import { acquireHostLock } from "./lock.js";
+import { OpenAIEmbeddingProvider } from "../embedding/openai.js";
 
 export async function runKernelHost(): Promise<void> {
   const release = await acquireHostLock();
@@ -47,6 +48,7 @@ async function serveKernelHost(): Promise<void> {
     storage: config.storage,
     node: { session: { model: config.agent.model } },
     agent: config.agent,
+    ...(config.embedding === undefined ? {} : { embedding: new OpenAIEmbeddingProvider(config.embedding) }),
     ...(config.search === undefined && fileEnvironment === undefined
       ? {}
       : { tools }),

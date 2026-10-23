@@ -6,8 +6,9 @@ import { RESOURCE_CONTENT_SCHEMA } from "./content.js";
 import { FILE_OPERATIONS_SCHEMA } from "./operations.js";
 import { StorageError } from "./errors.js";
 import { LIBRARY_FOLDERS_SCHEMA } from "./folders.js";
+import { RESOURCE_INDEX_SCHEMA } from "./indexing.js";
 
-export const STORAGE_SCHEMA_VERSION = 5;
+export const STORAGE_SCHEMA_VERSION = 6;
 export const STORAGE_APPLICATION_ID = 0x4e41564f;
 
 export const EVENT_HISTORY_QUERY =
@@ -29,6 +30,7 @@ const SCHEMA = `${EVENTS_SCHEMA}
 ${FILE_OPERATIONS_SCHEMA}
 ${RESOURCE_CONTENT_SCHEMA}
 ${LIBRARY_FOLDERS_SCHEMA}
+${RESOURCE_INDEX_SCHEMA}
 CREATE TABLE workspace_bindings (
   project_id TEXT PRIMARY KEY,
   root       TEXT NOT NULL UNIQUE
@@ -59,6 +61,7 @@ export function openDatabase(path: string): DatabaseSync {
 function configureDatabase(db: DatabaseSync, path: string): void {
   db.exec("PRAGMA busy_timeout = 5000");
   db.exec("PRAGMA trusted_schema = OFF");
+  db.exec("PRAGMA foreign_keys = ON");
   if (path !== ":memory:" && pragma(db, "journal_mode = WAL", "journal_mode") !== "wal") {
     throw new StorageError("storage-unavailable", `Navo database at "${path}" could not enable WAL.`);
   }
@@ -75,10 +78,10 @@ function configureDatabase(db: DatabaseSync, path: string): void {
         throw unsupported(path, "has an unversioned schema or a foreign application id");
       }
       db.exec(SCHEMA);
-    } else if ((version !== 1 && version !== 2 && version !== 3 && version !== 4 && version !== STORAGE_SCHEMA_VERSION) || applicationId !== STORAGE_APPLICATION_ID) {
+    } else if (![1, 2, 3, 4, 5, STORAGE_SCHEMA_VERSION].includes(Number(version)) || applicationId !== STORAGE_APPLICATION_ID) {
       throw unsupported(path, `has schema ${String(version)} / application id ${String(applicationId)}`);
     } else {
-      const requiredTables = [...REQUIRED_TABLES, ...(Number(version) >= 3 ? ["resource_file_operations"] : []), ...(Number(version) >= 4 ? ["resource_content"] : []), ...(version === 5 ? ["library_folders"] : [])];
+      const requiredTables = [...REQUIRED_TABLES, ...(Number(version) >= 3 ? ["resource_file_operations"] : []), ...(Number(version) >= 4 ? ["resource_content"] : []), ...(Number(version) >= 5 ? ["library_folders"] : []), ...(Number(version) >= 6 ? ["resource_index_builds", "resource_chunks"] : [])];
       const tables = db.prepare(
         `SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN (${requiredTables.map(() => "?").join(", ")})`,
       ).all(...requiredTables);
@@ -98,6 +101,7 @@ function configureDatabase(db: DatabaseSync, path: string): void {
       }
       if (Number(version) < 4) db.exec(`${RESOURCE_CONTENT_SCHEMA} PRAGMA user_version = 4;`);
       if (Number(version) < 5) db.exec(`${LIBRARY_FOLDERS_SCHEMA} PRAGMA user_version = 5;`);
+      if (Number(version) < 6) db.exec(`${RESOURCE_INDEX_SCHEMA} PRAGMA user_version = 6;`);
     }
     db.exec("COMMIT");
   } catch (error: unknown) {

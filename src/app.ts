@@ -15,6 +15,9 @@ import { ProjectRuntime } from "./project/runtime.js";
 import { AutoRunService } from "./project/autorun.js";
 import { MainSessionService } from "./project/session.js";
 import { ContentProcessor } from "./resource/content.js";
+import { ResourceIndexProcessor } from "./resource/index.js";
+import { IndexSearch } from "./resource/search.js";
+import type { EmbeddingProvider } from "./embedding/types.js";
 import { ResourceService, ResourceRecovery, type ResourceConfig } from "./resource/service.js";
 import { UserResourceService } from "./resource/user.js";
 import { SessionStore } from "./session/store.js";
@@ -43,6 +46,7 @@ import { ProjectWorkspaceStore } from "./workspace/store.js";
 export interface NavoAppConfig {
   readonly storage: StorageConfig;
   readonly resources?: ResourceConfig;
+  readonly embedding?: EmbeddingProvider;
   readonly runtime?: Partial<AgentRuntimeLimits>;
   readonly tools?: ToolsPluginConfig;
   readonly node: NodePluginConfig;
@@ -108,6 +112,8 @@ export async function NavoApp(
   await ctx.plugin(ResourceService, config.resources);
   await ctx.plugin(ResourceRecovery);
   await ctx.plugin(ContentProcessor);
+  await ctx.plugin(ResourceIndexProcessor, config.embedding === undefined ? {} : { provider: config.embedding });
+  await ctx.plugin(IndexSearch, config.embedding === undefined ? {} : { provider: config.embedding });
   await ctx.plugin(UserResourceService);
   await ctx.plugin(ResourceToolsPlugin);
   await ctx.plugin(SendToMainTool);
@@ -133,6 +139,7 @@ export async function createApp(
   try {
     await ctx.plugin(NavoApp, config);
     ctx.content.start();
+    ctx.resourceIndex.start();
     return ctx;
   } catch (error: unknown) {
     await ctx.fiber.dispose();

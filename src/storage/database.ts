@@ -11,6 +11,7 @@ import { planInterruptionRepair } from "./interruption.js";
 import { buildRecoveryPlan } from "./recovery.js";
 import type { RecoveryPlan } from "./recovery.js";
 import { EVENT_HISTORY_QUERY, openDatabase } from "./schema.js";
+import { resourceIndexTransaction, type ResourceIndexTransaction } from "./indexing.js";
 
 export class StorageService extends Service {
   private readonly db: DatabaseSync;
@@ -139,7 +140,7 @@ export interface StorageConfig {
   readonly path: string;
 }
 
-export interface StorageTransaction extends FileOperationTransaction, ResourceContentTransaction, LibraryFolderTransaction {
+export interface StorageTransaction extends FileOperationTransaction, ResourceContentTransaction, LibraryFolderTransaction, ResourceIndexTransaction {
   appendEvents(append: EventAppend): void;
   hasEvents(domain: EventDomain, ownerId: string): boolean;
   bindWorkspace(binding: WorkspaceBindingRecord): void;
@@ -175,6 +176,7 @@ function createTransaction(db: DatabaseSync): StorageTransaction {
     ...fileOperationTransaction(db),
     ...resourceContentTransaction(db),
     ...libraryFolderTransaction(db),
+    ...resourceIndexTransaction(db),
     appendEvents({ domain, ownerId, projectId, firstSeq, events }) {
       if ((projectId === null && domain !== "session") || (projectId !== null && (typeof projectId !== "string" || !projectId.trim()))) {
         throw new StorageError("invalid-record", "Stored events require a valid Project owner or a standalone Session.");
