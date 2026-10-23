@@ -238,7 +238,7 @@ Chunk 正文会发送到用户配置的 Embedding API。调用前不需要额外
 - 不调用真实付费 Embedding API 作为 CI 必需步骤。
 - 不修改原始 Resource 资产和正文提取规则。
 
-## 11. 已确认决策与待审核事项
+## 11. 已冻结决策与实现阶段验证
 
 ### 已确认
 
@@ -247,7 +247,7 @@ Chunk 正文会发送到用户配置的 Embedding API。调用前不需要额外
 3. **Embedding 通过独立 API Provider 批量调用**，不内置或自动安装本地模型。
 4. **首版只建设 Chunk / Embedding 索引与内部语义召回**；FTS5 / 关键词召回后置，不提前实现图谱构建、多跳检索、公共 RPC 或 Renderer UI。
 
-### 仍待审核
+### 实现阶段必须验证
 
 1. Chunk 规则已按用户确认细化：结构块优先、句子 / 子句逐级拆分、字符安全兜底；软目标 1,200、硬上限 1,600、重叠目标 150，按 Unicode code point 计长、按 UTF-16 code unit 保存原文偏移。后续实现必须通过切割点和原文覆盖测试。
 2. **最小索引表结构已由用户确认。** 仅新增 `resource_index_builds` 与 `resource_chunks` 两张表；Chunk 与向量合并存储，build 状态承担活动索引指示，不新增批次表或 active pointer 表。以事务原子切换 `building / active / superseded` 状态。
