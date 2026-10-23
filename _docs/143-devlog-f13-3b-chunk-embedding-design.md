@@ -1,7 +1,7 @@
 # F13.3b：Chunk 与 Embedding 索引设计
 
 日期：2026-10-22  
-状态：🔄 设计讨论中；已确认 SQLite-only、Chunk 算法、Qwen3 Embedding 批量策略，以及首版仅启用语义召回；索引表结构与原子发布仍待审核  
+状态：✅ 设计已收口，待按冻结方案实现；SQLite-only、Chunk 算法、Qwen3 Embedding 批量策略、首版语义召回及两表索引生命周期均已确认  
 基线：master，F13.3a 设计方向已确认  
 范围：只读审计与实施设计；本记录通过审核后，再给出编码提示词。
 
