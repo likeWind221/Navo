@@ -144,38 +144,47 @@ Chunk 正文会发送到用户配置的 Embedding API。调用前不需要额外
 
 ## 6. SQLite 持久化与索引代次
 
-### 6.1 建议的数据模型
+### 6.1 最小数据模型：只新增两张表
 
-在不预先绑定最终表名的前提下，建议引入三类数据：
+复用现有 Resource / `resource_content`，不把索引状态塞入正文表。首版只新增两张表：
 
-1. **索引构建记录**：project / resource、源 `assetGeneration`、pipeline / chunker 版本、provider / model / 可用的模型版本、dimension、文档 / 查询输入模板版本、encoding version、状态、attempt ID、错误码和时间戳。至少区分 `pending / processing / ready / failed`。
-2. **批次记录**：build ID、稳定的批次标识 / 输入范围、输入指纹、状态、尝试次数、最后错误类别和时间戳。批次向量与成功状态必须在同一事务提交。
-2. **Chunk 记录**：build ID、ordinal、文本、UTF-16 起止偏移、页码范围、chunker 版本。
-3. **Embedding 记录**：build ID + chunk ID、向量 BLOB（Float32 little-endian）、dimension / encoding metadata。避免把向量存成 JSON 浮点数组，以减少空间与解析开销；不要使用不透明 BLOB 而不保存可校验的维度和编码版本。
+1. **`resource_index_builds`：一次索引构建的元数据与生命周期**
+   - 主键 `build_id`；`project_id`、`resource_id`、`source_asset_generation`。
+   - `status`：`building / active / failed / superseded`。
+   - `chunker_version`、`embedding_provider`、`embedding_model`、可用的模型 revision、`embedding_dimension`、文档 / 查询输入模板版本、`vector_encoding_version`。
+   - `expected_chunk_count`、`attempt_count`、最近错误类别 / 简短错误信息、创建与更新时间。
+   - 建立按 Resource 查询的索引；使用部分唯一索引保证同一 Resource 最多一个 `active` build，并避免同一 Resource 同时存在多个 `building` build。具体 DDL 必须符合当前 SQLite / trusted_schema 配置及现有迁移模式。
 
-本 Step 不增加 FTS5 虚拟表。关键词索引如在后续阶段启用，应作为 Chunk 的派生索引，并与活动 build 的生命周期保持一致。
+2. **`resource_chunks`：Chunk 正文、来源定位与向量**
+   - 主键 `chunk_id`；外键 `build_id`；`ordinal`。
+   - `text`、`embedding_text`、原文 UTF-16 起止偏移、标题路径、页码映射。
+   - `embedding`：Float32 little-endian BLOB；Embedding 尚未成功生成时允许为 NULL。
+   - 对 `(build_id, ordinal)` 建唯一约束，并为 `build_id` 建立检索索引。维度、模型和编码版本在 build 元数据中统一保存，避免每个 Chunk 重复存储。
+
+不新增独立 Embedding 表、批次表或活动指针表。Chunk 与向量是一对一且生命周期一致，故合并存储符合当前需求；构建状态直接由 build 行表达，`status = active` 即活动索引，不再维护第二份指针状态。
 
 ### 6.2 原子发布
 
-- 每次构建使用独立 build ID，在 staging 状态写入 Chunk 与 Embedding；不在外部 API 调用期间持有 SQLite 事务。
-- 全部 Chunk 与向量校验成功后，在一个短 SQLite 事务内重新核对 Resource 当前存在、当前 `assetGeneration` 与 build 的源代次一致，然后将 build 标记 ready 并切换 active pointer。
-- 若源代次在处理期间变化、Resource 被删除、任务取消或结果不完整，不得发布该 build；迟到的 API 响应不能覆盖新版本。
-- 旧索引在新版本原子发布后清理；如果构建失败，保留旧的有效索引（若其来源仍是当前代次），并记录失败状态。不能让半套新索引与旧索引混合参与搜索。
-- 删除 Resource 时，在现有生命周期事务内删除或失效关联索引；若清理大数据不适合放入删除事务，可先原子标记不可检索，再异步清理孤儿数据。无论如何，删除提交后检索不能返回其旧 Chunk。
+- 每次构建使用独立 `build_id`，先写入 `building` build 与 Chunk；外部 Embedding API 调用期间不得持有 SQLite 事务。
+- 每个 API 批次的响应完成校验后，在一个 SQLite 事务内整体写入该批所有 Chunk 向量。事务成功即表示这批完成；崩溃后通过 `embedding IS NULL` 找出未完成的 Chunk 并重新组批，不单独持久化批次表。若 API 已响应但落盘前崩溃，可能重复请求；不承诺跨 HTTP 与 SQLite 的 exactly-once。
+- 所有 Chunk 与向量完成后，发布事务内重新核对 Resource 仍存在、当前 `assetGeneration` 与 build 的源代次一致、该 build 仍是当前有效构建、Chunk 数量 / 向量维度 / 输入配置完整。
+- 校验通过后，在同一个短事务内将旧 `active` build 标记为 `superseded`，再将新 build 标记为 `active`。部分唯一索引约束同一 Resource 只有一个 active build。任何校验失败都回滚发布，不暴露半成品。
+- Resource 代次变化或 Resource 被删除时，旧代次索引不再具备检索资格，即使新构建失败也不能返回已过期内容。只有来源代次仍有效的旧索引才能作为构建失败时的回退。
+- 删除 Resource 时，应在现有生命周期事务内使其索引立即不可检索；派生数据可随后清理，但删除提交后不得返回旧 Chunk。
 
 ### 6.3 恢复与重建
 
-- 启动时对账索引构建记录：遗留 processing 批次恢复为 pending，并重新核对已成功批次的向量数量、维度与输入指纹；只自动恢复可安全重做的工作，不无限重试持久化失败。
-- 以 `projectId + resourceId + assetGeneration + chunkerVersion + embedding provider/model` 识别所需索引版本。正文代次、Chunker 或 Embedding 模型变化时需要新建索引，不能原位混写。
-- 已完成的 Embedding 批次应有可识别的持久化状态，重启后跳过已验证的批次，避免无意义地重复计费；但最终发布仍必须重新验证完整性与当前源代次。
-- 原始正文始终保留；向量索引损坏或被清理后可以重新生成，不得反向影响 Resource 资产和 `resource_content`。
+- 启动时检查遗留 `building` build。对仍对应当前 Resource、当前 `assetGeneration` 与所需配置的构建，将其安全恢复；其他构建标记为 `superseded` 或 `failed`，不允许迟到结果发布。
+- 恢复时校验已落盘向量的维度、编码与有限数值；为 NULL 的向量重新组批请求。每批的有限重试在请求执行期间管理，build 记录持久化总体尝试次数与最后错误；不增加批次表。
+- 以 `projectId + resourceId + assetGeneration + chunkerVersion + embedding provider/model/revision + input-template version + vector-encoding version` 识别所需索引版本。正文代次、Chunker、模型或向量兼容配置变化时建立新 build，不在同一 build 内混用配置。
+- 原始正文始终保留；派生索引损坏或被清理后可以重建，不得反向影响 Resource 资产和 `resource_content`。
 
 ## 7. 首版语义检索
 
 - 首版仅使用 Embedding 语义召回，不实现 FTS5、关键词召回或混合排序；这样可以先独立验证 Chunk 质量、Embedding 模型效果与向量检索正确性。
 - 查询文本使用已确认的 Qwen3-Embedding-0.6B 查询指令模板生成向量；文档向量与查询向量必须使用同一模型版本、维度、归一化方式和兼容的输入模板配置。
 - 首版扫描当前查询范围内的有效向量，使用归一化向量点积计算余弦相似度并取 Top-K；不得先载入所有项目 / 所有 Resource 的向量再做无界内存分配。
-- 先用 SQL 限定项目、活动 build、模型与维度，再分批读取向量并维护有界 Top-K；分数、排序和 tie-breaker 必须确定性。
+- 先用 SQL 限定项目、Resource 权限与活动 build，再分批读取有效向量并维护有界 Top-K；只使用与查询模型 / 维度 / 配置版本兼容的 build，分数、排序和 tie-breaker 必须确定性。
 - 返回结果只允许来自当前活动索引，并在返回前核对 Resource 访问权限与 `assetGeneration`。语义召回分数是相关性信号，不代表事实正确性。
 - 保留统一的内部 `IndexSearch` 接口。后续可在其内部增加 FTS5 / BM25 候选召回和排名融合，但不要求 Agent 直接选择检索算法，也不将关键词检索设为本 Step 的阻塞项。
 
@@ -186,7 +195,7 @@ Chunk 正文会发送到用户配置的 Embedding API。调用前不需要额外
 - Chunker：纯函数 / 可独立单测的文本切分与来源位置映射。
 - EmbeddingProvider：批量请求和向量校验。
 - ResourceIndexProcessor：按 Resource 当前代次排队、领取、执行、取消、重试、恢复和发布索引。
-- ResourceIndexStore：在 StorageService 事务内管理 build、Chunk、Embedding 与 active pointer。
+- ResourceIndexStore：在 StorageService 事务内管理 build 与 Chunk / Embedding；活动索引直接由 build 状态表达，不维护单独 active pointer。
 - IndexSearch：提供单一内部语义 Top-K 查询接口；后续可在不改变上层调用契约的前提下增加关键词召回与混合排序。
 - Service 在 `app.ts` 中按现有 Cordis 生命周期装配；Resource 正文提交后以内部事件触发索引，不在 Resource 提交事务中调用外部 API。
 
@@ -208,9 +217,9 @@ Chunk 正文会发送到用户配置的 Embedding API。调用前不需要额外
 
 ### 9.3 SQLite / 生命周期
 
-- 从 v1、v2、v3、v4、v5 迁移到新版本，失败回滚与既有表数据保持不变。
+- 从 v1、v2、v3、v4、v5 迁移到新版本，失败回滚与既有表数据保持不变；迁移仅增加两张索引表及必要索引 / 约束。
 - `ready / metadata_only / failed` 正文准入；Resource 替换、删除、索引过程中代次变化、重复通知、取消、重启恢复、数据库关闭等待。
-- 新索引成功后原子切换；失败 / 中断不能暴露部分索引；旧索引不应在新 build 成功发布前提前删除。
+- 新索引成功后通过单事务切换 build 状态；失败 / 中断不能暴露部分索引；旧索引不应在新 build 成功发布前提前删除。
 - 语义检索的余弦相似度与独立参考实现数值一致；覆盖零范数、维度不匹配、空索引和有界 Top-K。
 - 首版不要求 FTS5 测试；后续若决定启用关键词召回，再单独验收 FTS5 环境兼容性、中文分词与增删改同步。
 - 越权、旧代次和已删除 Resource 的 Chunk / 文本 / 分数均不得泄露。
@@ -241,8 +250,8 @@ Chunk 正文会发送到用户配置的 Embedding API。调用前不需要额外
 ### 仍待审核
 
 1. Chunk 规则已按用户确认细化：结构块优先、句子 / 子句逐级拆分、字符安全兜底；软目标 1,200、硬上限 1,600、重叠目标 150，按 Unicode code point 计长、按 UTF-16 code unit 保存原文偏移。后续实现必须通过切割点和原文覆盖测试。
-2. Float32 BLOB + 独立 build ID / active pointer 的原子发布模型仍为推荐方案，待设计收口时一并冻结。
+2. **最小索引表结构已由用户确认。** 仅新增 `resource_index_builds` 与 `resource_chunks` 两张表；Chunk 与向量合并存储，build 状态承担活动索引指示，不新增批次表或 active pointer 表。以事务原子切换 `building / active / superseded` 状态。
 3. Embedding 批量与恢复策略已由用户确认：Qwen3-Embedding-0.6B（建议 vLLM API）、默认每批 16 条、硬上限 32 条、单构建并发 1、60 秒请求超时、最多 3 次尝试、指数退避并遵守 Retry-After、响应整批校验后事务落盘；重启跳过已校验批次，取消停止后续工作。具体服务端 Token / 请求体限制仍需部署后验证。
 4. FTS5 在目标 Node / SQLite 环境的可用性与中文检索方案仍需实测，不能仅凭设计假定其中文效果。
 
-Embedding 批量调用与失败恢复方案已由用户确认；用户进一步确认首版仅启用语义召回，FTS5 / 关键词召回延后。索引表结构与原子发布仍待审核。本文仍为设计稿，尚未修改生产代码，尚未执行 typecheck、测试或真实 API 调用。
+Embedding 批量调用与失败恢复方案已由用户确认；首版仅启用语义召回；用户已确认最小存储方案为两张新表（build + chunk/embedding 合表），不新增批次表或活动指针表。设计已收口，尚未修改生产代码，尚未执行 typecheck、测试或真实 API 调用。
