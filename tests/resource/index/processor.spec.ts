@@ -92,7 +92,7 @@ describe("Resource index lifecycle and semantic search", () => {
   });
 
   it("resumes a current building generation and skips already persisted vectors", async () => {
-    const initial = await fixture(undefined);
+    const initial = await fixture(undefined, true);
     await writeFile(join(initial.root, "resume.md"), "resume body", "utf8");
     const resource = await initial.ctx.resources.publish({ projectId: initial.project.id, owner: { kind: "main" },
       sourceRef: "resume.md", name: "Resume", description: "", type: "text/markdown" });
@@ -156,12 +156,12 @@ class MockEmbedding implements EmbeddingProvider {
   embedMany = vi.fn(async ({ inputs }: EmbeddingRequest) => inputs.map(input => /apple|alpha|secret/i.test(input) ? [1, 0] : [0, 1]));
 }
 
-async function fixture(provider: EmbeddingProvider | undefined) {
+async function fixture(provider: EmbeddingProvider | undefined, persistent = false) {
   const base = await mkdtemp(join(tmpdir(), "navo-index-"));
   roots.push(base);
   const root = join(base, "workspace");
   await mkdir(root);
-  const path = join(base, "navo.db");
+  const path = persistent ? join(base, "navo.db") : ":memory:";
   const ctx = await createApp({ storage: { path },
     node: { session: { model: { provider: "mock", model: "test" } } },
     ...(provider === undefined ? {} : { embedding: provider }) });
