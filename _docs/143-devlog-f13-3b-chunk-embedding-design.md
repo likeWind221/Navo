@@ -130,7 +130,9 @@ Resource + current ready resource_content
 - `embedMany({ model, inputs, signal })`：接收非空文本数组，返回与输入顺序一一对应的向量数组。
 - Provider 标识、模型标识、维度和必要的能力信息明确可查。
 - 配置通过现有安全配置机制提供 endpoint / model / credentials；密钥不得写入 SQLite、索引状态、错误日志或普通诊断。
-- 首版采用 OpenAI-compatible `/embeddings` 请求形态；通过可注入 `fetch` 便于测试，不额外引入大型 SDK。兼容指请求与响应协议，不保证任意声称兼容的服务都完全遵循协议。
+- 首版目标为用户自建的 Qwen3-Embedding-0.6B 推理服务器，建议通过 vLLM 暴露 OpenAI-compatible `POST /v1/embeddings`；Navo 仅作为 API 客户端，不负责下载或启动模型。使用可注入 `fetch` 便于测试，不额外引入大型 SDK。
+- 默认模型 ID 为 `Qwen/Qwen3-Embedding-0.6B`，固定输出维度 1024，不启用自定义降维。索引构建记录模型 ID / 可用的服务端模型版本；模型版本变化时允许重建。
+- 文档侧使用 Chunk 的正文，可在 `embeddingText` 中附加标题路径；查询侧使用版本化的检索任务指令模板。不得把查询指令混入文档正文；输入模板版本变化时需重建对应向量。
 - 支持 AbortSignal、请求超时、有限重试与安全错误分类；取消不得被当成可重试的普通网络错误。
 - API 请求必须按输入索引或响应的 `index` 字段还原顺序，检查每个输入均有且仅有一个向量。
 
@@ -138,9 +140,11 @@ Resource + current ready resource_content
 
 - 向量长度必须大于零且在同一构建代次内一致；每个元素必须是有限数值。
 - 同一个索引 build 绑定明确的 provider、model 和 dimension；禁止将不同模型或不同维度的向量混用。
-- 存储前转换为 Float32 表示并核验转换后的值仍有限；记录 dimension 与 encoding version。查询向量必须与当前索引的 provider / model / dimension 匹配，否则返回可诊断的配置不匹配错误。
-- 首版使用精确余弦相似度排序。零范数向量不能参与正常相似度排序，应拒绝或标记为无效，不得返回 NaN 排序结果。
-- 批次按输入条数、单条字符上限与请求体大小共同约束；首版建议默认每批 32 个 Chunk，设置硬上限并允许配置。若 API 返回上下文超限或批次验证失败，拆分批次重试；不无限重试、不重复提交已经成功且已持久化的批次。
+- 文档向量和查询向量使用相同的 L2 归一化规则，随后编码为 Float32 little-endian BLOB；记录 dimension 与 encoding version。查询向量必须与当前索引的 provider / model / dimension / 输入模板版本匹配，否则返回可诊断的配置不匹配错误。零范数或非有限向量拒绝入库。
+- 首版对归一化向量使用点积计算余弦相似度，并执行精确 Top-K 排序。
+- **批量默认值（Qwen3-Embedding-0.6B 首版）**：默认每批 16 个 Chunk，硬上限 32 个；同一索引构建最多同时请求 1 个批次。运行策略应可配置，不作为模型协议常量。实际批次还受单条输入 Token 上限、服务端限制、请求体字节数与输入条数共同约束；单条输入必须在请求前验证。服务端明确报告整批超限时将批次对半拆分；单条仍超限则报错，不静默截断。
+- **请求与重试**：单次请求超时 60 秒，最多 3 次尝试（含首次）；网络错误、超时、HTTP 408 / 429 / 可恢复的 5xx 使用指数退避（约 1 秒、2 秒并加入随机抖动），429 优先遵守 `Retry-After`。401 / 403、模型不存在及配置错误不自动重试。取消立即停止后续派发并尽可能中止在途请求。
+- **响应和落盘**：按响应 `index` 恢复输入顺序，校验数量、索引唯一性、1024 维及所有元素为有限数值。缺项、重复索引、维度错误或格式异常时整批拒绝。校验通过后，在单个 SQLite 事务内写入整批向量并标记批次成功；已成功持久化的批次恢复时跳过。若 API 已完成但客户端在写入前崩溃，仍可能重发，不承诺跨 HTTP 与 SQLite 的 exactly-once。
 
 ### 5.3 隐私说明
 
@@ -152,7 +156,8 @@ Chunk 正文会发送到用户配置的 Embedding API。调用前不需要额外
 
 在不预先绑定最终表名的前提下，建议引入三类数据：
 
-1. **索引构建记录**：project / resource、源 `assetGeneration`、pipeline / chunker 版本、provider / model / dimension、状态、attempt ID、错误码、时间戳。至少区分 `pending / processing / ready / failed`，必要时用单独的 active pointer 标识当前发布版本。
+1. **索引构建记录**：project / resource、源 `assetGeneration`、pipeline / chunker 版本、provider / model / 可用的模型版本、dimension、文档 / 查询输入模板版本、encoding version、状态、attempt ID、错误码和时间戳。至少区分 `pending / processing / ready / failed`。
+2. **批次记录**：build ID、稳定的批次标识 / 输入范围、输入指纹、状态、尝试次数、最后错误类别和时间戳。批次向量与成功状态必须在同一事务提交。
 2. **Chunk 记录**：build ID、ordinal、文本、UTF-16 起止偏移、页码范围、chunker 版本。
 3. **Embedding 记录**：build ID + chunk ID、向量 BLOB（Float32 little-endian）、dimension / encoding metadata。避免把向量存成 JSON 浮点数组，以减少空间与解析开销；不要使用不透明 BLOB 而不保存可校验的维度和编码版本。
 
@@ -168,7 +173,7 @@ Chunk 正文会发送到用户配置的 Embedding API。调用前不需要额外
 
 ### 6.3 恢复与重建
 
-- 启动时对账索引构建记录：遗留 processing 重置为 pending 或 failed（按现有恢复惯例选择）；只自动恢复可安全重做的工作，不无限重试持久化失败。
+- 启动时对账索引构建记录：遗留 processing 批次恢复为 pending，并重新核对已成功批次的向量数量、维度与输入指纹；只自动恢复可安全重做的工作，不无限重试持久化失败。
 - 以 `projectId + resourceId + assetGeneration + chunkerVersion + embedding provider/model` 识别所需索引版本。正文代次、Chunker 或 Embedding 模型变化时需要新建索引，不能原位混写。
 - 已完成的 Embedding 批次应有可识别的持久化状态，重启后跳过已验证的批次，避免无意义地重复计费；但最终发布仍必须重新验证完整性与当前源代次。
 - 原始正文始终保留；向量索引损坏或被清理后可以重新生成，不得反向影响 Resource 资产和 `resource_content`。
@@ -250,7 +255,7 @@ Chunk 正文会发送到用户配置的 Embedding API。调用前不需要额外
 
 1. Chunk 规则已按用户确认细化：结构块优先、句子 / 子句逐级拆分、字符安全兜底；软目标 1,200、硬上限 1,600、重叠目标 150，按 Unicode code point 计长、按 UTF-16 code unit 保存原文偏移。后续实现必须通过切割点和原文覆盖测试。
 2. Float32 BLOB + 独立 build ID / active pointer 的原子发布模型仍为推荐方案，待设计收口时一并冻结。
-3. Embedding API 每批默认 32 个输入是否合适，以及批次上限、拆批重试与部分成功状态的具体规则。
+3. Embedding 批量与恢复策略已由用户确认：Qwen3-Embedding-0.6B（建议 vLLM API）、默认每批 16 条、硬上限 32 条、单构建并发 1、60 秒请求超时、最多 3 次尝试、指数退避并遵守 Retry-After、响应整批校验后事务落盘；重启跳过已校验批次，取消停止后续工作。具体服务端 Token / 请求体限制仍需部署后验证。
 4. FTS5 在目标 Node / SQLite 环境的可用性与中文检索方案仍需实测，不能仅凭设计假定其中文效果。
 
-本文仍为设计草案，尚未修改生产代码，尚未执行 typecheck、测试或真实 API 调用。
+Embedding 批量调用与失败恢复方案已由用户确认；FTS5 的环境兼容性与中文检索策略仍待审核。本文仍为设计稿，尚未修改生产代码，尚未执行 typecheck、测试或真实 API 调用。
