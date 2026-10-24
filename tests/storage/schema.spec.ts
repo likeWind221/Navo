@@ -41,7 +41,7 @@ function snapshot(path: string) {
 
 function downgrade(path: string) {
   rawSql(path, `BEGIN;
-    DROP TABLE resource_chunks;
+    DROP TABLE graph_evidence; DROP TABLE graph_relations; DROP TABLE graph_entities; DROP TABLE graph_builds; DROP TABLE resource_chunks;
     DROP TABLE resource_index_builds;
     DROP TABLE library_folders;
     DROP TABLE resource_content;
@@ -117,14 +117,14 @@ describe("Known schema v1 upgrade", () => {
   });
 });
 
-for (const version of [2, 3, 4, 5]) {
-  it(`upgrades schema v${version} to v6 without changing existing records`, async () => {
+for (const version of [2, 3, 4, 5, 6]) {
+  it(`upgrades schema v${version} to v7 without changing existing records`, async () => {
     const path = await temporaryDatabase(roots, `navo-schema-v${version}-`);
     const ctx = await app(path);
     const project = ctx.projects.create({ name: "Preserved", goal: null });
     await close(ctx);
-    rawSql(path, `DROP TABLE resource_chunks;
-      DROP TABLE resource_index_builds;
+    rawSql(path, `DROP TABLE graph_evidence; DROP TABLE graph_relations; DROP TABLE graph_entities; DROP TABLE graph_builds;
+      ${version < 6 ? "DROP TABLE resource_chunks; DROP TABLE resource_index_builds;" : ""}
       ${version < 5 ? "DROP TABLE library_folders;" : ""}
       ${version < 4 ? "DROP TABLE resource_content;" : ""}
       ${version < 3 ? "DROP TABLE resource_file_operations;" : ""}
@@ -135,9 +135,10 @@ for (const version of [2, 3, 4, 5]) {
     const after = snapshot(path);
     expect(after.events).toEqual(before.events);
     expect(after.bindings).toEqual(before.bindings);
-    expect(after.version).toEqual({ user_version: 6 });
+    expect(after.version).toEqual({ user_version: STORAGE_SCHEMA_VERSION });
     expect(after.tables).toContainEqual({ name: "library_folders" });
     expect(after.tables).toContainEqual({ name: "resource_index_builds" });
     expect(after.tables).toContainEqual({ name: "resource_chunks" });
+    for (const name of ["graph_builds", "graph_entities", "graph_relations", "graph_evidence"]) expect(after.tables).toContainEqual({ name });
   });
 }

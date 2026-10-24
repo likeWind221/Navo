@@ -184,6 +184,7 @@
 - [F13.3a GraphRAG 后端技术设计](142-devlog-f13-3a-graphrag-design.md)：核心方向已确认并收口；纯 SQLite、API Embedding、批量 LLM 抽取，首期混合与图局部 / 多跳检索，社区摘要及全局检索后置。
 - [F13.3b Chunk 与 Embedding 索引设计](143-devlog-f13-3b-chunk-embedding-design.md)：冻结 SQLite 两表索引、结构化 Chunk、Qwen3 Embedding 批量 / 恢复、原子发布和首版精确语义召回方案；实施见 [144](144-devlog-f13-3b-chunk-embedding.md)。
 - [F13.3b Chunk 与 Embedding 索引实施](144-devlog-f13-3b-chunk-embedding.md)：Schema v6、确定性 Chunker、独立 Embedding Provider、可恢复原子构建与权限内有界 Top-K；本机 146 个 spec 文件 / 933 项与 PR #91 代码 head CI 通过，等待人工审核。
+- [F13.3c：实体关系抽取与图谱持久化](146-devlog-f13-3c-graph.md)：冻结设计、实现与验证。
 
 ## 工程治理与迁移
 
@@ -201,6 +202,8 @@
 - [F11.3：桌面公共契约独立验收](108-devlog-f11-3-desktop-acceptance.md)：前端完整检查与真实 Electron bridge 的独立验收。
 
 ## 调研与归档
+
+- [BUG-024：索引版本兼容性](145-bugfix-bug-024-index-compatibility.md)：统一复用与恢复条件，废弃旧版本 building 并重新构建。
 
 - [DeepSeek Harness 参考分析](01-harness-design.md)：单对话核心与最小 Agent 闭环设计。
 - [Codex 提交审查归档](30-codex-reviews-archive.md)：原 `codex-reviews/` 目录的 10 份 post-commit 审查报告（阶段 2–7、F3、F4）合并归档；审查钩子已移除，不再生成新报告。

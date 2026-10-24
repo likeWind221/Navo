@@ -1,3 +1,5 @@
+import { ResourceGraph } from "./resource/graph.js";
+import type { GraphConfig } from "./resource/graph/extraction.js";
 import { Context } from "cordis";
 
 import { AgentRuntime } from "./agent/runtime.js";
@@ -47,6 +49,7 @@ export interface NavoAppConfig {
   readonly storage: StorageConfig;
   readonly resources?: ResourceConfig;
   readonly embedding?: EmbeddingProvider;
+  readonly graph?: GraphConfig;
   readonly runtime?: Partial<AgentRuntimeLimits>;
   readonly tools?: ToolsPluginConfig;
   readonly node: NodePluginConfig;
@@ -114,6 +117,7 @@ export async function NavoApp(
   await ctx.plugin(ContentProcessor);
   await ctx.plugin(ResourceIndexProcessor, config.embedding === undefined ? {} : { provider: config.embedding });
   await ctx.plugin(IndexSearch, config.embedding === undefined ? {} : { provider: config.embedding });
+  await ctx.plugin(ResourceGraph, config.graph);
   await ctx.plugin(UserResourceService);
   await ctx.plugin(ResourceToolsPlugin);
   await ctx.plugin(SendToMainTool);
@@ -140,6 +144,7 @@ export async function createApp(
     await ctx.plugin(NavoApp, config);
     ctx.content.start();
     ctx.resourceIndex.start();
+    ctx.resourceGraph.start();
     return ctx;
   } catch (error: unknown) {
     await ctx.fiber.dispose();

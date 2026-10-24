@@ -1,3 +1,5 @@
+import type { GraphTransaction } from "./graph.js";
+import { graphTransaction } from "./graph/transaction.js";
 import type { DatabaseSync } from "node:sqlite";
 
 import { Service } from "cordis";
@@ -140,7 +142,7 @@ export interface StorageConfig {
   readonly path: string;
 }
 
-export interface StorageTransaction extends FileOperationTransaction, ResourceContentTransaction, LibraryFolderTransaction, ResourceIndexTransaction {
+export interface StorageTransaction extends FileOperationTransaction, ResourceContentTransaction, LibraryFolderTransaction, ResourceIndexTransaction, GraphTransaction {
   appendEvents(append: EventAppend): void;
   hasEvents(domain: EventDomain, ownerId: string): boolean;
   bindWorkspace(binding: WorkspaceBindingRecord): void;
@@ -177,6 +179,7 @@ function createTransaction(db: DatabaseSync): StorageTransaction {
     ...resourceContentTransaction(db),
     ...libraryFolderTransaction(db),
     ...resourceIndexTransaction(db),
+    ...graphTransaction(db),
     appendEvents({ domain, ownerId, projectId, firstSeq, events }) {
       if ((projectId === null && domain !== "session") || (projectId !== null && (typeof projectId !== "string" || !projectId.trim()))) {
         throw new StorageError("invalid-record", "Stored events require a valid Project owner or a standalone Session.");
