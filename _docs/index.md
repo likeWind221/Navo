@@ -203,6 +203,8 @@
 
 ## 调研与归档
 
+- [BUG-024：索引版本兼容性](145-bugfix-bug-024-index-compatibility.md)：统一复用与恢复条件，废弃旧版本 building 并重新构建。
+
 - [DeepSeek Harness 参考分析](01-harness-design.md)：单对话核心与最小 Agent 闭环设计。
 - [Codex 提交审查归档](30-codex-reviews-archive.md)：原 `codex-reviews/` 目录的 10 份 post-commit 审查报告（阶段 2–7、F3、F4）合并归档；审查钩子已移除，不再生成新报告。
 - [ChatGPT / Codex 式过程 UI 开源参考调研](43-devlog-chatgpt-codex-ui-research.md)：ai-elements、assistant-ui、lobehub、openai/codex 的思考/工具/过程折叠实现对比、许可证与可借鉴机制。

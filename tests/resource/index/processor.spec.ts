@@ -124,6 +124,51 @@ describe("Resource index lifecycle and semantic search", () => {
     expect(resumed.resourceIndex.status(initial.project.id, resource.id)).toMatchObject({ status: "active", buildId: "resume-build" });
   });
 
+  it.each([
+    ["active", "chunker_version"], ["active", "vector_encoding_version"],
+    ["building", "chunker_version"], ["building", "vector_encoding_version"],
+  ] as const)("rebuilds %s indexes with an old %s", async (status, version) => {
+    const initial = await fixture(undefined, true);
+    await writeFile(join(initial.root, "old.md"), "current body", "utf8");
+    const resource = await initial.ctx.resources.publish({ projectId: initial.project.id, owner: { kind: "main" },
+      sourceRef: "old.md", name: "Old", description: "", type: "text/markdown" });
+    await initial.ctx.content.idle();
+    const provider = new MockEmbedding();
+    const now = new Date().toISOString();
+    initial.ctx.storage.atomic(tx => tx.createIndexBuild({
+      build_id: "old-build", project_id: initial.project.id, resource_id: resource.id,
+      source_asset_generation: resource.assetGeneration, status, chunker_version: CHUNKER_VERSION,
+      embedding_provider: provider.id, embedding_model: provider.model, embedding_revision: provider.revision,
+      embedding_dimension: provider.dimension, document_template_version: provider.documentTemplateVersion,
+      query_template_version: provider.queryTemplateVersion, vector_encoding_version: VECTOR_ENCODING_VERSION,
+      expected_chunk_count: 1, attempt_count: 1, error_code: null, error_message: null, created_at: now, updated_at: now,
+      [version]: "old-version",
+    }, [{ chunk_id: "old-build:00000000", build_id: "old-build", ordinal: 0, text: "old chunk", embedding_text: "old chunk",
+      start_offset_utf16: 0, end_offset_utf16: 9, heading_path_json: "[]", structure: "paragraph", page_map_json: "[]",
+      embedding: encodeVector([1, 0], 2) }]));
+    await close(initial.ctx);
+
+    provider.embedMany.mockImplementation(async ({ inputs }) => {
+      if (status === "building") {
+        expect(resumed.storage.atomic(tx => tx.getIndexBuild("old-build"))?.status).toBe("superseded");
+      }
+      return inputs.map(() => [0, 1]);
+    });
+    const resumed = await createApp({ storage: { path: initial.path }, embedding: provider,
+      node: { session: { model: { provider: "mock", model: "test" } } } });
+    contexts.push(resumed);
+    await resumed.resourceIndex.idle();
+    expect(provider.embedMany).toHaveBeenCalledTimes(1);
+    expect(provider.embedMany.mock.calls[0]?.[0].inputs).toEqual(["current body"]);
+    const builds = resumed.storage.atomic(tx => tx.listIndexBuilds());
+    expect(builds).toHaveLength(2);
+    expect(builds.find(build => build.build_id === "old-build")?.status).toBe("superseded");
+    expect(builds.find(build => build.status === "active")).toMatchObject({
+      source_asset_generation: resource.assetGeneration, chunker_version: CHUNKER_VERSION,
+      vector_encoding_version: VECTOR_ENCODING_VERSION,
+    });
+  });
+
   it("rejects a late provider response after cancellation without persisting the batch", async () => {
     let release: (() => void) | undefined;
     const provider = new MockEmbedding();

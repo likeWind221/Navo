@@ -30,7 +30,12 @@ export class ResourceIndexStore {
   }
 
   recoverable(provider: EmbeddingProvider): readonly ResourceIndexBuildRecord[] {
-    return this.storage.atomic(tx => tx.listIndexBuilds("building").filter(build => compatibleProvider(build, provider)));
+    return this.storage.atomic(tx => tx.listIndexBuilds("building").filter(build => {
+      const content = tx.getResourceContent(build.project_id, build.resource_id);
+      if (content !== undefined && compatible(build, content, provider)) return true;
+      tx.supersedeIndexBuild(build.build_id);
+      return false;
+    }));
   }
 
   chunks(buildId: string): readonly ResourceChunkRecord[] {

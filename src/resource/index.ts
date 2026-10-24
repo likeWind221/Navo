@@ -5,7 +5,7 @@ import { createProjectId, createResourceId, type ProjectId, type ResourceId } fr
 import type { ResourceContentRecord } from "../storage/content.js";
 import type { ResourceIndexBuildRecord } from "../storage/indexing.js";
 import { chunkText } from "./index/chunker.js";
-import { ResourceIndexStore } from "./index/store.js";
+import { compatible, ResourceIndexStore } from "./index/store.js";
 import { encodeVector } from "./index/vector.js";
 
 export interface ResourceIndexConfig { readonly provider?: EmbeddingProvider; readonly batchSize?: number }
@@ -115,10 +115,7 @@ export class ResourceIndexProcessor extends Service {
   private needsBuild(content: ResourceContentRecord, provider: EmbeddingProvider): boolean {
     const builds = this.store.builds().filter(build => build.project_id === content.project_id && build.resource_id === content.resource_id);
     return !builds.some(build => (build.status === "building" || build.status === "active")
-      && build.source_asset_generation === content.source_asset_generation && build.embedding_provider === provider.id
-      && build.embedding_model === provider.model && build.embedding_revision === provider.revision
-      && build.embedding_dimension === provider.dimension && build.document_template_version === provider.documentTemplateVersion
-      && build.query_template_version === provider.queryTemplateVersion);
+      && compatible(build, content, provider));
   }
 
   private async run(build: ResourceIndexBuildRecord, content: ResourceContentRecord): Promise<void> {
