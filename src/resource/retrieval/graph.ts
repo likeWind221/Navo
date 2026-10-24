@@ -4,10 +4,11 @@ import type { RankedChunk, RelationPath } from "./types.js";
 export function graphSearch(graph: GraphSnapshot, query: string, semanticHits: ReadonlySet<string>, maxHops: number,
   signal?: AbortSignal): readonly RankedChunk[] {
   const entities = new Map(graph.entities.map(entity => [entity.id, entity]));
-  const direct = graph.entities.filter(entity => mentions(query, entity.name)).slice(0, 16);
+  const ordered = [...graph.entities].sort((a, b) => a.id.localeCompare(b.id));
+  const direct = matchEntities(query, ordered);
   const semantic = new Map<string, GraphSnapshot["entities"][number]>();
   for (const chunkId of semanticHits) {
-    for (const entity of graph.entities) {
+    for (const entity of ordered) {
       if (!direct.includes(entity) && entity.evidence.some(source => source.chunkId === chunkId)) semantic.set(entity.id, entity);
       if (semantic.size >= 10) break;
     }
@@ -64,10 +65,32 @@ function node(entity: GraphSnapshot["entities"][number]): RelationPath["entities
   return { id: entity.id, name: entity.name, type: entity.type };
 }
 
-function mentions(query: string, name: string): boolean {
-  const normalized = name.normalize("NFKC").toLowerCase();
+function matchEntities(query: string, entities: GraphSnapshot["entities"]): GraphSnapshot["entities"] {
   const text = query.normalize("NFKC").toLowerCase();
-  if (/\p{Script=Han}/u.test(normalized)) return text.includes(normalized);
-  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
-  return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, "u").test(text);
+  const boundaries = new Set<number>();
+  for (const part of new Intl.Segmenter("zh", { granularity: "word" }).segment(text)) {
+    boundaries.add(part.index);
+    boundaries.add(part.index + part.segment.length);
+  }
+  const matches: { entity: GraphSnapshot["entities"][number]; start: number; end: number }[] = [];
+  for (const entity of entities) {
+    const name = entity.name.normalize("NFKC").toLowerCase();
+    if (!name) continue;
+    if (/^\p{Script=Han}$/u.test(name) && text.trim() !== name) continue;
+    for (let start = text.indexOf(name); start !== -1; start = text.indexOf(name, start + 1)) {
+      const end = start + name.length;
+      if (boundaries.has(start) && boundaries.has(end)) matches.push({ entity, start, end });
+    }
+  }
+  matches.sort((a, b) => (b.end - b.start) - (a.end - a.start) || a.start - b.start || a.entity.id.localeCompare(b.entity.id));
+  const selected: typeof matches = [];
+  const result = new Map<string, GraphSnapshot["entities"][number]>();
+  for (const match of matches) {
+    if (selected.some(other => match.start < other.end && match.end > other.start
+      && (match.start !== other.start || match.end !== other.end))) continue;
+    selected.push(match);
+    result.set(match.entity.id, match.entity);
+    if (result.size === 16) break;
+  }
+  return [...result.values()];
 }

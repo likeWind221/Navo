@@ -38,24 +38,27 @@ export class ResourceRetrieval extends Service {
     const graphHits = mode !== "hybrid" ? [] : graphSearch(this.ctx.resourceGraph.read(request.projectId, request.viewer, ids),
       query, new Set(vectorHits.map(hit => hit.chunkId)), maxHops, request.signal);
     request.signal?.throwIfAborted();
-    const groups = new Map<ResourceId, { resource: ProjectResource; score: number; chunks: RetrievalChunk[] }>();
+    const groups = new Map<ResourceId, { resource: ProjectResource; fusionScore: number; chunks: RetrievalChunk[] }>();
     const allowed = new Map(resources.map(resource => [resource.id, resource]));
-    let selected = 0;
-    for (const hit of fuseRanks([vectorHits, graphHits])) {
-      const row = this.ctx.storage.atomic(tx => tx.getSearchChunk(request.projectId, hit.chunkId, CHUNKER_VERSION));
-      const resource = row === undefined ? undefined : allowed.get(row.resource_id as ResourceId);
-      if (row === undefined || resource?.assetGeneration !== row.source_asset_generation) continue;
-      const group = groups.get(resource.id) ?? { resource, score: hit.score, chunks: [] };
-      if (group.chunks.length >= 3) continue;
-      group.chunks.push({ resourceId: resource.id, chunkId: row.chunk_id, ordinal: row.ordinal, rank: ++selected,
-        text: row.text, startOffsetUtf16: row.start_offset_utf16, endOffsetUtf16: row.end_offset_utf16,
-        ...chunkMetadata(row),
-        assetGeneration: resource.assetGeneration, score: hit.score, matches: hit.matches, paths: hit.paths });
-      groups.set(resource.id, group);
-      if (selected === topK) break;
-    }
-    return [...groups.values()].map(({ resource, score, chunks }) => ({ resourceId: resource.id, name: resource.name,
-      libraryPath: resource.libraryPath, assetGeneration: resource.assetGeneration, score, chunks }));
+    const fused = fuseRanks([vectorHits, graphHits]);
+    this.ctx.storage.atomic(tx => {
+      let selected = 0;
+      for (const hit of fused) {
+        const row = tx.getSearchChunk(request.projectId, hit.chunkId, CHUNKER_VERSION);
+        const resource = row === undefined ? undefined : allowed.get(row.resource_id as ResourceId);
+        if (row === undefined || resource?.assetGeneration !== row.source_asset_generation) continue;
+        const group = groups.get(resource.id) ?? { resource, fusionScore: hit.score, chunks: [] };
+        if (group.chunks.length >= 3) continue;
+        group.chunks.push({ resourceId: resource.id, chunkId: row.chunk_id, ordinal: row.ordinal, rank: ++selected,
+          text: row.text, startOffsetUtf16: row.start_offset_utf16, endOffsetUtf16: row.end_offset_utf16,
+          ...chunkMetadata(row),
+          assetGeneration: resource.assetGeneration, fusionScore: hit.score, matches: hit.matches, paths: hit.paths });
+        groups.set(resource.id, group);
+        if (selected === topK) break;
+      }
+    });
+    return [...groups.values()].map(({ resource, fusionScore, chunks }) => ({ resourceId: resource.id, name: resource.name,
+      libraryPath: resource.libraryPath, assetGeneration: resource.assetGeneration, fusionScore, chunks }));
   }
 
   private scope(request: RetrievalRequest): readonly ProjectResource[] {

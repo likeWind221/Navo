@@ -155,11 +155,15 @@ describe("Scoped hybrid retrieval", () => {
     }
     const interleaved = Array.from({ length: 10 }, (_, index) => [...byResource.values()].flatMap(group => group[index] ?? [])).flat();
     const spy = vi.spyOn(ctx.indexSearch, "search").mockImplementation(async input => interleaved.slice(0, input.topK));
+    const atomic = vi.spyOn(ctx.storage, "atomic");
     const result = await ctx.retrieval.search(request);
+    expect(atomic).toHaveBeenCalledOnce();
     const chunks = result.flatMap(group => group.chunks).sort((a, b) => a.rank - b.rank);
     expect(chunks).toHaveLength(10);
     expect(chunks.map(chunk => chunk.chunkId)).toEqual(interleaved.slice(0, 10).map(chunk => chunk.chunkId));
     expect(chunks.map(chunk => chunk.rank)).toEqual(Array.from({ length: 10 }, (_, index) => index + 1));
+    expect(result.every(group => !Object.hasOwn(group, "score") && group.fusionScore === group.chunks[0]!.fusionScore)).toBe(true);
+    expect(chunks.every(chunk => !Object.hasOwn(chunk, "score") && chunk.fusionScore > 0)).toBe(true);
     expect(spy).toHaveBeenLastCalledWith(expect.objectContaining({ topK: 30 }));
     const capped = await ctx.retrieval.search({ ...request, topK: 20, vectorTopK: 50 });
     expect(capped.flatMap(group => group.chunks)).toHaveLength(15);
