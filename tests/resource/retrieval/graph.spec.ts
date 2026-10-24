@@ -8,6 +8,26 @@ import { cleanup, fixture, publish } from "../graph/fixture.js";
 afterEach(cleanup);
 
 describe("Local graph retrieval", () => {
+  it("matches full Chinese names with longest overlap priority regardless of graph order", () => {
+    const names = ["图", "图谱", "检索", "图谱检索"];
+    const graph: GraphSnapshot = { entities: names.map((name, index) => ({ id: String(index), name, type: "Topic",
+      evidence: [{ resourceId: createResourceId(`r${index}`), assetGeneration: 1, chunkId: `c${index}` }] })), relations: [] };
+    const search = (query: string, value = graph) => graphSearch(value, query, new Set(), 0).map(hit => hit.chunkId);
+    expect(search("如何使用图谱检索？")).toEqual(["c3"]);
+    expect(search("如何使用图谱检索？", { ...graph, entities: [...graph.entities].reverse() })).toEqual(["c3"]);
+    expect(search("图谱检索与图谱")).toEqual(["c3", "c1"]);
+    expect(search("图")).toEqual(["c0"]);
+    expect(search("地图", { ...graph, entities: graph.entities.slice(0, 1) })).toEqual([]);
+  });
+
+  it("selects capped exact seeds deterministically and keeps word boundaries and normalization", () => {
+    const graph = cycle(30);
+    const query = graph.entities.map(entity => entity.name).reverse().join(" ");
+    expect(graphSearch(graph, query, new Set(), 0)).toEqual(graphSearch({ ...graph, entities: [...graph.entities].reverse() }, query, new Set(), 0));
+    expect(graphSearch(graph, "ＮＡＭＥ０", new Set(), 0).map(hit => hit.chunkId)).toEqual(["c0"]);
+    expect(graphSearch(graph, "Name000", new Set(), 0)).toEqual([]);
+  });
+
   it("uses visible relationship evidence for endpoints without a separate mention record", async () => {
     const { ctx, project, workspace } = await fixture(chunks => ({ entities: [
       { id: "a", name: "Alice", type: "Person", chunkIds: [] },

@@ -1,6 +1,6 @@
 import type { ResourceId } from "../../brand/ids.js";
 import type { GraphSource } from "../graph/read.js";
-import type { IndexSearchRequest, IndexSearchResult } from "../search.js";
+import type { IndexSearchRequest } from "../search.js";
 
 export interface RetrievalRequest extends IndexSearchRequest {
   readonly folder?: string;
@@ -14,11 +14,20 @@ export interface RetrievalResult {
   readonly name: string;
   readonly libraryPath: string;
   readonly assetGeneration: number;
-  readonly score: number;
+  readonly fusionScore: number;
   readonly chunks: readonly RetrievalChunk[];
 }
 
-export interface RetrievalChunk extends IndexSearchResult {
+export interface RetrievalChunk {
+  readonly resourceId: ResourceId;
+  readonly chunkId: string;
+  readonly ordinal: number;
+  readonly text: string;
+  readonly startOffsetUtf16: number;
+  readonly endOffsetUtf16: number;
+  readonly headingPath: readonly string[];
+  readonly pages: readonly number[];
+  readonly fusionScore: number;
   readonly rank: number;
   readonly assetGeneration: number;
   readonly matches: readonly RetrievalRoute[];
