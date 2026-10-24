@@ -24,7 +24,7 @@ it.each([2, 3])("migrates v%s to v6 once while preserving existing events", asyn
   const first = await open(path);
   first.storage.atomic(tx => tx.appendEvents({ domain: "session", ownerId: "s", projectId: null, firstSeq: 1, events: ["existing"] }));
   await first.fiber.dispose();
-  rawSql(path, `DROP TABLE resource_chunks; DROP TABLE resource_index_builds; DROP TABLE library_folders;
+  rawSql(path, `DROP TABLE graph_evidence; DROP TABLE graph_relations; DROP TABLE graph_entities; DROP TABLE graph_builds; DROP TABLE resource_chunks; DROP TABLE resource_index_builds; DROP TABLE library_folders;
     DROP TABLE resource_content; ${version === 2 ? "DROP TABLE resource_file_operations;" : ""} PRAGMA user_version = ${version};`);
   const next = await open(path);
   expect(next.storage.loadEvents("session").get("s")?.events).toEqual(["existing"]);
