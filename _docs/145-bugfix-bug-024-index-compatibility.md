@@ -26,8 +26,15 @@ Windows PowerShell，Node `v24.19.0`：
 - `pnpm typecheck`：通过。
 - `git diff --check`：通过。
 
-使用 mock Embedding，不调用真实模型 API。本轮按请求执行相关检查，未运行完整套件或 CI，不推送或合并；[Bug 跟踪表](bug-plan.md) 保留待合并验证状态。
+使用 mock Embedding，不调用真实模型 API。2026-10-23 首轮仅进行本地相关检查；2026-10-24 用户授权并入 F13.3c 的 [PR #92](https://github.com/likeWind221/Navo/pull/92)，本次组合验证见下。
 
 ## 后续
 
-本地修改尚未提交和推送；后续 PR 合并仍需满足仓库完整验证和 CI 门禁。
+修复已通过独立提交并入 `phase13-f13.3c-graph`，随 PR #92 推送；保留人工审核，不自动合并。
+
+## 2026-10-24 组合验证
+
+- `pnpm exec vitest run tests/resource/index tests/resource/graph tests/storage/indexing.spec.ts --maxWorkers=4`：7 文件、39 项通过。
+- `pnpm typecheck`：通过。
+- `pnpm test --maxWorkers=4`：150 文件、963 项全部通过，用时 352.98 秒。
+- `git diff --check`：通过。新 PR head CI 待远端验证，不自动合并。

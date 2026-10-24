@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-- [ ] BUG-024：F13.3b 索引复用与恢复版本校验已修复；本机相关 14 项测试与 typecheck 通过。本轮仅本地交付，待完整验证与 PR / CI 收口，见 [145](145-bugfix-bug-024-index-compatibility.md)。
+- [ ] BUG-024：F13.3b 索引复用与恢复版本校验已修复；初次相关 14 项、与图谱组合 39 项及 typecheck 通过；已按用户授权并入 PR #92，组合完整 963 项通过，待当前 head CI 与人工审核收口，见 [145](145-bugfix-bug-024-index-compatibility.md)。
 
 - [x] BUG-023：已完成操作重试先核对原提交事件、revision 与目标代次；Resource 后续变化返回 `operation-result-stale`，删除后返回 `resource-unavailable`，删除重试不重复副作用。新增 5 项回归，本机定向 28 项与完整 856 项通过；PR #81 已合并且 GitHub Actions CI 通过。见 [133](133-bugfix-bug-023-replayed-operation-result.md)。
 

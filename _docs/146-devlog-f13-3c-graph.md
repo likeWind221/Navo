@@ -46,7 +46,7 @@
 
 ## 工作区与代码审查说明
 
-本轮使用独立 worktree；主目录 BUG-024 未提交修改原样保留，不混入 PR。文档 145 已由该修复记录占用，本轮分配 146。新模块均未超过 250 行；`graph/errors.ts` 保持独立可抛出错误边界，`storage/graph/facts.ts` 封装实体、关系与证据的共同写入/清理规则，供构建事务使用。数据库结构通过四张表表达，无新依赖。
+本轮使用独立 worktree。2026-10-24 用户追加授权将 BUG-024 纳入同一 PR；索引兼容性修复与四项回归已并入，记录见 [145](145-bugfix-bug-024-index-compatibility.md)。本轮开发记录编号为 146。新模块均未超过 250 行；`graph/errors.ts` 保持独立可抛出错误边界，`storage/graph/facts.ts` 封装实体、关系与证据的共同写入/清理规则，供构建事务使用。数据库结构通过四张表表达，无新依赖。
 
 ## 实现审查入口
 
@@ -57,3 +57,7 @@
 - readGraph：先 listVisible，再按可见 Resource 查询当前已发布证据；不聚合不可见来源数量或内容。
 
 本 Step 没有仅声明未接入的生产协议；服务通过可选 NavoAppConfig.graph 接入，Host 环境变量、公共检索接口和真实 LLM 质量验证不在本轮交付中。代码导读随最终回复交付。
+
+## BUG-024 合入后的验证
+
+2026-10-24：按用户要求将 [BUG-024](145-bugfix-bug-024-index-compatibility.md) 纳入 [PR #92](https://github.com/likeWind221/Navo/pull/92)。索引与图谱组合专项 7 文件 / 39 项、typecheck、完整 150 文件 / 963 项（352.98 秒）及 diff 检查通过。原 head `060a5ae` 的 CI run `40059416429` 成功；该结果不覆盖后加入的修复，新的 PR head CI 仍待验证。继续等待人工审核，不自动合并。
