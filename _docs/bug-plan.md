@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-- [ ] BUG-026：F13.3d 多出独立关键词召回且 topK 按 Resource 计数；按用户建议精简为向量与图谱两路并按 Chunk 控制输出，修复与验证中，见 [149](149-bugfix-bug-026-retrieval.md)。
+- [x] BUG-026：已恢复向量与图谱双路，最终按 Chunk Top-K、每资料最多 3 个并保留全局排名；本机 typecheck、985 项完整测试及 PR #94 当前代码 head CI 通过，已合入 master（408a83c），关闭，见 [149](149-bugfix-bug-026-retrieval.md)。
 
 - [ ] BUG-025：固定地址 HTTP 测试在 F13.3d 首轮完整套件超过默认 5 秒，分支与 master 定向均 7 项通过，同分支完整复验 980 项通过；仅排查、未修复，根因未知，见 [148](148-bugfix-bug-025-fetch-timeout.md)。
 
@@ -54,7 +54,7 @@
 
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
-| BUG-026 | P2 / 后端 | 独立关键词召回偏离双路方案，默认最多 50 个 Chunk 超出上下文预期 | PR #93 的 lexical 分支、Resource 分组后截断和每组 5 个已核实 | 删除独立关键词通道；全局 Chunk Top-K、每资料最多 3 个、排名可恢复；相关回归、完整本机及当前 head CI 通过 | [149：修复中](149-bugfix-bug-026-retrieval.md) |
+| BUG-026 | P2 / 后端 | 独立关键词召回偏离双路方案，默认最多 50 个 Chunk 超出上下文预期 | PR #93 的 lexical 分支、Resource 分组后截断和每组 5 个已核实 | 删除独立关键词通道；全局 Chunk Top-K、每资料最多 3 个、排名可恢复；相关回归、完整本机及当前 head CI 通过 | [149：已修复并合入 PR #94](149-bugfix-bug-026-retrieval.md) |
 | BUG-025 | P2 / 后端测试 | 固定地址 HTTP 连接测试在首轮完整套件超过默认 5 秒 | 本轮未改动测试或 Fetch 网络代码；定向 7 项通过；并发负载或调度仅为假设，未确认根因 | 定位原因并完成必要修复；相关回归、本机完整与当前 head CI 通过 | [148：排查记录](148-bugfix-bug-025-fetch-timeout.md) |
 | BUG-024 | P2 / 后端 | 旧 Chunker / 向量编码索引可能被错误复用，旧 Chunker 的 building 可能恢复发布 | 已证实 needsBuild 手写条件遗漏两项版本；recoverable 仅比较 Provider，遗漏 Chunker 且未废弃不兼容记录 | 两入口复用完整兼容判断；不兼容 building 先 superseded 再重建；两版本的 active / building 回归、typecheck 与 diff 检查通过 | [145：修复与验证](145-bugfix-bug-024-index-compatibility.md) |
 | BUG-023 | P1 / 后端 | 同一已完成操作重试可能返回替换后的代次、后续 revision 或已删除 Resource，冒充原操作结果；删除重试未核对原删除事件 | 已证实 `write()` 只按 `resource_id` 读取当前投影，未核对提交事件、revision 与目标代次；`projector` 删除后保留 Resource 主体。新增回归复现替换、改元数据、删除三类错误返回 | 重试核对提交事件、请求身份、提交 revision 与目标代次；状态变化返回 `operation-result-stale`，删除后返回 `resource-unavailable`，删除重试不重复副作用；定向、本机完整及当前 head CI 通过 | [133：修复与验证](133-bugfix-bug-023-replayed-operation-result.md) |

@@ -1,6 +1,6 @@
 # Navo 前端开发计划
 
-> 后端交接补充：F13.3d 的双路检索与全局 Chunk 数量语义正在修复（交由 `backend-plan.md` 实施），见 [149](149-bugfix-bug-026-retrieval.md)。搜索公共接口、Bridge 与正式页面仍未交付，不改变前端当前步骤。
+> 后端交接补充：F13.3d 的双路检索与全局 Chunk 数量语义已随 PR #94 完成修复（交由 `backend-plan.md` 实施，本机与代码 head CI 均通过），见 [149](149-bugfix-bug-026-retrieval.md)。搜索公共接口、Bridge 与正式页面仍未交付，不改变前端当前步骤。
 
 ## 1. 当前范围
 

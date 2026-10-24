@@ -1,7 +1,7 @@
 # BUG-026：双路检索精简与 Chunk Top-K
 
 日期：2026-10-24
-状态：修复已实现，本机完整验证通过，当前 PR head CI 待完成。
+状态：✅ 本机完整验证与当前代码 head CI 通过，PR #94 已合入 master（408a83c）。
 
 ## 现象与复现
 
@@ -57,4 +57,4 @@ Query + Project + Viewer
 
 ## 后续
 
-跟踪入口见 [Bug 计划](bug-plan.md)。PR / CI 收口待完成；只修复既有 F13.3d，不启动 F13.4、公共 RPC / Bridge、前端、重排模型或社区检索。当前请求/输出为已接入 ctx.retrieval.search 的内部能力。最终交付需附代码导读。
+跟踪入口见 [Bug 计划](bug-plan.md)。[PR #94](https://github.com/likeWind221/Navo/pull/94) 代码 head `57c9121` 的 [CI run 40104826929](https://github.com/likeWind221/Navo/actions/runs/40104826929) 全部成功（typecheck、normal tests、crash recovery tests），已 squash 合入 master（`408a83c`）。本地与远端修复分支已删除，保留主仓库和既有其他 worktree；无本次专用开发目录。最终回复交付模块地图、代码导读和实际边界。只修复既有 F13.3d，不启动 F13.4、公共 RPC / Bridge、前端、重排模型或社区检索。当前请求/输出为已接入 ctx.retrieval.search 的内部能力。最终交付需附代码导读。
