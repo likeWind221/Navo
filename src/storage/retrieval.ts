@@ -2,16 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { ActiveChunkRecord } from "./indexing.js";
 
 export interface RetrievalTransaction {
-  scanSearchChunks(input: SearchChunkQuery): readonly ActiveChunkRecord[];
   getSearchChunk(projectId: string, chunkId: string, chunkerVersion: string): ActiveChunkRecord | undefined;
-}
-
-export interface SearchChunkQuery {
-  readonly projectId: string;
-  readonly resourceIds: readonly string[];
-  readonly chunkerVersion: string;
-  readonly afterChunkId: string | null;
-  readonly limit: number;
 }
 
 const currentChunks = `SELECT c.*, b.project_id, b.resource_id, b.source_asset_generation, b.embedding_provider,
@@ -24,12 +15,6 @@ const currentChunks = `SELECT c.*, b.project_id, b.resource_id, b.source_asset_g
 
 export function retrievalTransaction(db: DatabaseSync): RetrievalTransaction {
   return {
-    scanSearchChunks(input) {
-      if (input.resourceIds.length === 0) return [];
-      return db.prepare(`${currentChunks} AND b.resource_id IN (${input.resourceIds.map(() => "?").join(",")})
-        AND c.chunk_id > ? ORDER BY c.chunk_id LIMIT ?`)
-        .all(input.projectId, input.chunkerVersion, ...input.resourceIds, input.afterChunkId ?? "", input.limit) as unknown as ActiveChunkRecord[];
-    },
     getSearchChunk(projectId, chunkId, chunkerVersion) {
       return db.prepare(`${currentChunks} AND c.chunk_id = ?`).get(projectId, chunkerVersion, chunkId) as unknown as ActiveChunkRecord | undefined;
     },

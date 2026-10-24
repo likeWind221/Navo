@@ -1,12 +1,19 @@
 import type { GraphSnapshot } from "../graph/read.js";
 import type { RankedChunk, RelationPath } from "./types.js";
 
-export function graphSearch(graph: GraphSnapshot, query: string, textHits: ReadonlySet<string>, maxHops: number,
+export function graphSearch(graph: GraphSnapshot, query: string, semanticHits: ReadonlySet<string>, maxHops: number,
   signal?: AbortSignal): readonly RankedChunk[] {
   const entities = new Map(graph.entities.map(entity => [entity.id, entity]));
-  const direct = graph.entities.filter(entity => mentions(query, entity.name));
-  const seeds = [...direct, ...graph.entities.filter(entity => !direct.includes(entity)
-    && entity.evidence.some(source => textHits.has(source.chunkId)))].slice(0, 16);
+  const direct = graph.entities.filter(entity => mentions(query, entity.name)).slice(0, 16);
+  const semantic = new Map<string, GraphSnapshot["entities"][number]>();
+  for (const chunkId of semanticHits) {
+    for (const entity of graph.entities) {
+      if (!direct.includes(entity) && entity.evidence.some(source => source.chunkId === chunkId)) semantic.set(entity.id, entity);
+      if (semantic.size >= 10) break;
+    }
+    if (semantic.size >= 10) break;
+  }
+  const seeds = [...direct, ...semantic.values()];
   const adjacency = new Map<string, GraphSnapshot["relations"][number][]>();
   for (const relation of [...graph.relations].sort((a, b) => a.id.localeCompare(b.id))) {
     if (!entities.has(relation.sourceId) || !entities.has(relation.targetId) || relation.evidence.length === 0) continue;
@@ -44,7 +51,13 @@ export function graphSearch(graph: GraphSnapshot, query: string, textHits: Reado
     }
     if (visited.size >= 64) break;
   }
-  return hits;
+  const candidates = new Set<string>();
+  return hits.filter(hit => {
+    if (candidates.has(hit.chunkId)) return true;
+    if (candidates.size >= 40) return false;
+    candidates.add(hit.chunkId);
+    return true;
+  });
 }
 
 function node(entity: GraphSnapshot["entities"][number]): RelationPath["entities"][number] {

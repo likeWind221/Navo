@@ -185,7 +185,7 @@
 - [F13.3b Chunk 与 Embedding 索引设计](143-devlog-f13-3b-chunk-embedding-design.md)：冻结 SQLite 两表索引、结构化 Chunk、Qwen3 Embedding 批量 / 恢复、原子发布和首版精确语义召回方案；实施见 [144](144-devlog-f13-3b-chunk-embedding.md)。
 - [F13.3b Chunk 与 Embedding 索引实施](144-devlog-f13-3b-chunk-embedding.md)：Schema v6、确定性 Chunker、独立 Embedding Provider、可恢复原子构建与权限内有界 Top-K；本机 146 个 spec 文件 / 933 项与 PR #91 代码 head CI 通过，等待人工审核。
 - [F13.3c：实体关系抽取与图谱持久化](146-devlog-f13-3c-graph.md)：冻结设计、实现与验证。
-- [F13.3d：混合与图局部检索](147-devlog-f13-3d-retrieval.md)：权限内 FTS5 / BM25、向量与局部图路径召回、RRF 融合及原文定位。
+- [F13.3d：混合与图局部检索](147-devlog-f13-3d-retrieval.md)：首次交付的三路召回记录；当前双路与 Chunk Top-K 修复见 149。
 
 ## 工程治理与迁移
 
@@ -205,6 +205,7 @@
 ## 调研与归档
 
 - [BUG-024：索引版本兼容性](145-bugfix-bug-024-index-compatibility.md)：统一复用与恢复条件，废弃旧版本 building 并重新构建。
+- [BUG-026：双路检索精简与 Chunk Top-K](149-bugfix-bug-026-retrieval.md)：移除独立关键词通道、收紧候选并保留全局片段排名。
 - [BUG-025：固定地址 HTTP 测试偶发超时](148-bugfix-bug-025-fetch-timeout.md)：保留首轮失败与复验，未确认根因、未修复。
 
 - [DeepSeek Harness 参考分析](01-harness-design.md)：单对话核心与最小 Agent 闭环设计。

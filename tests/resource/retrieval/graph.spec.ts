@@ -78,23 +78,32 @@ describe("Local graph retrieval", () => {
     const graph = cycle(90);
     const reverse = graphSearch(graph, "Name0", new Set(), 1);
     expect(reverse.some(hit => hit.paths.some(path => path.relations[0]!.direction === "incoming"))).toBe(true);
-    const hits = graphSearch(graph, "Name0", new Set(), 3);
-    expect(hits.every(hit => hit.paths.every(path => path.relations.length <= 3))).toBe(true);
+    const hits = graphSearch(graph, "Name0", new Set(), 2);
+    expect(hits.every(hit => hit.paths.every(path => path.relations.length <= 2))).toBe(true);
     expect(hits.every(hit => hit.paths.every(path => new Set(path.entities.map(entity => entity.id)).size === path.entities.length))).toBe(true);
-    expect(graphSearch(graph, "Name000", new Set(), 3)).toEqual([]);
-    const broad = graphSearch(graph, "", new Set(graph.entities.map(entity => entity.evidence[0]!.chunkId)), 3);
-    expect(broad.filter(hit => hit.route === "graph").length).toBeLessThanOrEqual(100 * 8);
+    expect(graphSearch(graph, "Name000", new Set(), 2)).toEqual([]);
+    const broad = graphSearch(graph, "", new Set(graph.entities.map(entity => entity.evidence[0]!.chunkId)), 2);
+    expect(new Set(broad.map(hit => hit.chunkId)).size).toBeLessThanOrEqual(40);
+    expect(new Set(broad.filter(hit => hit.route === "entity").map(hit => hit.chunkId)).size).toBeLessThanOrEqual(10);
     expect(new Set(broad.flatMap(hit => hit.paths.flatMap(path => path.entities.map(entity => entity.id)))).size).toBeLessThanOrEqual(64);
+  });
+
+  it("caps graph evidence at 40 distinct Chunks", () => {
+    const graph = cycle(60);
+    const star = { ...graph, relations: graph.relations.map((relation, index) => ({ ...relation,
+      sourceId: "0", targetId: String(index + 1) })) };
+    const hits = graphSearch(star, "Name0", new Set(), 2);
+    expect(new Set(hits.map(hit => hit.chunkId)).size).toBe(40);
   });
 
   it("uses RRF ranks rather than incomparable raw scores and counts each route once per Chunk", () => {
     const a = { chunkId: "a", route: "vector" as const, paths: [] };
     const b = { chunkId: "b", route: "vector" as const, paths: [] };
-    const c = { chunkId: "c", route: "keyword" as const, paths: [] };
-    const fused = fuseRanks([[a, a, b], [c, { ...b, route: "keyword" }]]);
+    const c = { chunkId: "c", route: "graph" as const, paths: [] };
+    const fused = fuseRanks([[a, a, b], [c, { ...b, route: "graph" }]]);
     expect(fused.map(hit => hit.chunkId)).toEqual(["b", "a", "c"]);
     expect(fused[0]!.score).toBeCloseTo(2 / 62);
-    expect(fused[0]!.matches).toEqual(["vector", "keyword"]);
+    expect(fused[0]!.matches).toEqual(["vector", "graph"]);
     expect(fused[1]!.score).toBeCloseTo(1 / 61);
   });
 });

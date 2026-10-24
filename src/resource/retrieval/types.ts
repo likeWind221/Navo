@@ -4,7 +4,8 @@ import type { IndexSearchRequest, IndexSearchResult } from "../search.js";
 
 export interface RetrievalRequest extends IndexSearchRequest {
   readonly folder?: string;
-  readonly mode?: "hybrid" | "vector" | "keyword";
+  readonly mode?: "hybrid" | "vector";
+  readonly vectorTopK?: number;
   readonly maxHops?: number;
 }
 
@@ -18,6 +19,7 @@ export interface RetrievalResult {
 }
 
 export interface RetrievalChunk extends IndexSearchResult {
+  readonly rank: number;
   readonly assetGeneration: number;
   readonly matches: readonly RetrievalRoute[];
   readonly paths: readonly RelationPath[];
@@ -35,7 +37,7 @@ export interface RelationPath {
   }[];
 }
 
-export type RetrievalRoute = "vector" | "keyword" | "entity" | "graph";
+export type RetrievalRoute = "vector" | "entity" | "graph";
 
 export interface RankedChunk {
   readonly chunkId: string;
