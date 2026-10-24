@@ -4,6 +4,8 @@
 
 ## 当前状态
 
+- [ ] BUG-025：固定地址 HTTP 测试在 F13.3d 首轮完整套件超过默认 5 秒，分支与 master 定向均 7 项通过，同分支完整复验 980 项通过；仅排查、未修复，根因未知，见 [148](148-bugfix-bug-025-fetch-timeout.md)。
+
 - [x] BUG-024：F13.3b 索引复用与恢复版本校验已修复；初次相关 14 项、与图谱组合 39 项及 typecheck 通过；已按用户授权并入 PR #92，组合完整 963 项通过，PR #92 最新 head CI 成功并已按用户授权合入 master（de2bb17），关闭，见 [145](145-bugfix-bug-024-index-compatibility.md)。
 
 - [x] BUG-023：已完成操作重试先核对原提交事件、revision 与目标代次；Resource 后续变化返回 `operation-result-stale`，删除后返回 `resource-unavailable`，删除重试不重复副作用。新增 5 项回归，本机定向 28 项与完整 856 项通过；PR #81 已合并且 GitHub Actions CI 通过。见 [133](133-bugfix-bug-023-replayed-operation-result.md)。
@@ -50,6 +52,7 @@
 
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
+| BUG-025 | P2 / 后端测试 | 固定地址 HTTP 连接测试在首轮完整套件超过默认 5 秒 | 本轮未改动测试或 Fetch 网络代码；定向 7 项通过；并发负载或调度仅为假设，未确认根因 | 定位原因并完成必要修复；相关回归、本机完整与当前 head CI 通过 | [148：排查记录](148-bugfix-bug-025-fetch-timeout.md) |
 | BUG-024 | P2 / 后端 | 旧 Chunker / 向量编码索引可能被错误复用，旧 Chunker 的 building 可能恢复发布 | 已证实 needsBuild 手写条件遗漏两项版本；recoverable 仅比较 Provider，遗漏 Chunker 且未废弃不兼容记录 | 两入口复用完整兼容判断；不兼容 building 先 superseded 再重建；两版本的 active / building 回归、typecheck 与 diff 检查通过 | [145：修复与验证](145-bugfix-bug-024-index-compatibility.md) |
 | BUG-023 | P1 / 后端 | 同一已完成操作重试可能返回替换后的代次、后续 revision 或已删除 Resource，冒充原操作结果；删除重试未核对原删除事件 | 已证实 `write()` 只按 `resource_id` 读取当前投影，未核对提交事件、revision 与目标代次；`projector` 删除后保留 Resource 主体。新增回归复现替换、改元数据、删除三类错误返回 | 重试核对提交事件、请求身份、提交 revision 与目标代次；状态变化返回 `operation-result-stale`，删除后返回 `resource-unavailable`，删除重试不重复副作用；定向、本机完整及当前 head CI 通过 | [133：修复与验证](133-bugfix-bug-023-replayed-operation-result.md) |
 | BUG-021 | P2 / 后端测试 | Host 跨进程续接测试在 CI 达到 20 秒上限；失败 Turn 未使测试失败 | 成功 run 17.969 秒、失败 run 20012 ms；阶段计时显示第二次 Host 的 `continue-node` 约 14.956 秒；默认 `completed` mock 只排一个响应，第二个 Turn 触发 `script-exhausted` → `stream-failed` 重试退避 | 续接 Turn 真实以 `turn-completed` 结束；定向回归、本机完整及当前 head CI 通过 | [132：复盘与修复](132-bugfix-bug-021-022-ci-timeouts.md) |

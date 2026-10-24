@@ -19,6 +19,7 @@ import { MainSessionService } from "./project/session.js";
 import { ContentProcessor } from "./resource/content.js";
 import { ResourceIndexProcessor } from "./resource/index.js";
 import { IndexSearch } from "./resource/search.js";
+import { ResourceRetrieval } from "./resource/retrieval.js";
 import type { EmbeddingProvider } from "./embedding/types.js";
 import { ResourceService, ResourceRecovery, type ResourceConfig } from "./resource/service.js";
 import { UserResourceService } from "./resource/user.js";
@@ -118,6 +119,7 @@ export async function NavoApp(
   await ctx.plugin(ResourceIndexProcessor, config.embedding === undefined ? {} : { provider: config.embedding });
   await ctx.plugin(IndexSearch, config.embedding === undefined ? {} : { provider: config.embedding });
   await ctx.plugin(ResourceGraph, config.graph);
+  await ctx.plugin(ResourceRetrieval);
   await ctx.plugin(UserResourceService);
   await ctx.plugin(ResourceToolsPlugin);
   await ctx.plugin(SendToMainTool);

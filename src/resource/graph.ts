@@ -56,7 +56,9 @@ export class ResourceGraph extends Service {
     return this.ctx.storage.atomic(tx => tx.listGraphBuilds()).filter(build => build.project_id === projectId && build.resource_id === resourceId).at(-1);
   }
 
-  read(projectId: ProjectId, viewer: ResourcePrincipal): GraphSnapshot { return readGraph(this.ctx, projectId, viewer); }
+  read(projectId: ProjectId, viewer: ResourcePrincipal, resourceIds?: readonly ResourceId[]): GraphSnapshot {
+    return readGraph(this.ctx, projectId, viewer, resourceIds);
+  }
 
   async idle(): Promise<void> {
     while (this.scheduled !== undefined || this.running !== undefined) {
