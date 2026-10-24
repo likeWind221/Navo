@@ -1,7 +1,7 @@
 # F13.3d：混合与图局部检索
 
 日期：2026-10-24
-状态：实现、专项与完整本地验证完成，PR CI 待完成。
+状态：✅ 实现、本机完整验证与 PR 当前代码 head CI 通过，PR #93 已 squash 合入 master（0c86f7e）。
 
 ## 做了什么
 
@@ -71,7 +71,7 @@ Query + Project + Viewer
 - 组合专项在新增最后一项前运行：`pnpm exec vitest run tests/resource/retrieval tests/resource/index tests/resource/graph --maxWorkers=4`，8 文件 / 53 项通过。
 - `pnpm typecheck` 与 `git diff --check` 通过。
 - 完整 `pnpm test --maxWorkers=4`：首次 152 文件 / 980 项中 979 项通过，原有 Fetch 本机连接测试超过默认 5 秒，记录为 [BUG-025](148-bugfix-bug-025-fetch-timeout.md)；分支与 master 定向均通过，未确认根因、不改超时。第二轮相同完整命令 152 文件 / 980 项全部通过，用时 279.98 秒，未设置 NAVO_TEST_MODE，包含完整 Host 进程恢复场景。
-- PR 当前 head CI 和合并信息待追加。
+- [PR #93](https://github.com/likeWind221/Navo/pull/93) 代码 head `6898b88` 的 [CI run 40102211673](https://github.com/likeWind221/Navo/actions/runs/40102211673) 成功，typecheck、normal tests 与 crash recovery tests 均成功。PR 已 squash 合入 master（`0c86f7e`），远端及本地开发分支已删除，临时 master 对照 worktree 已清理；保留主仓库和既有其他 worktree。本次最终回复交付模块地图、代码导读与验证边界。
 - 全部检索输入与模型输出为确定性测试数据和 mock；没有真实 Embedding / LLM API 调用，没有 GPU 作业，不宣称真实中文质量、GraphRAG 优势或大规模性能已验收。
 
 ## 下一步

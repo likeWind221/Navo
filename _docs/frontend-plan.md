@@ -257,7 +257,7 @@ Final answer (outside collapse)
 - F13.0 产品规则、交接和六组验收场景已于 2026-10-19 经用户整体确认并收口，设计与新会话交接见 [125](125-devlog-f13-0-design.md)。F13.1c 提供用户资料补充与管理 RPC；后端公共能力仍通过正式 Bridge 交付，F13.2b（管理）、F13.3b（搜索）、F13.5b（引用）负责相应桌面接入。契约须明确版本、运行时校验、错误和取消语义；Renderer 不直接依赖后端内部模块。
 - F13.1b 后端正文提取与恢复已随 PR #87 合并至 master，见 [135](135-devlog-f13-1b-content.md)；内部正文状态与读取能力已实现，未提供重处理公共 RPC。F13.1c 用户导入与内部管理服务已实现，见 [137](137-devlog-f13-1c-user-intake.md)。F13.2a 目录浏览与资料整理后端能力已随 PR #89 合入，见 [139](139-devlog-f13-2a-library-organization.md)；F13.2b 已交付资料浏览、文件夹管理、资料更新 / 替换 / 删除、流式导入及状态跟随的版本化 RPC 与 `window.desktop.resource` Electron Bridge，并通过实际调用验收，见 [140](140-devlog-f13-2b-desktop-resource-management.md)。正式 Renderer 页面与交互仍未实施，前端当前下一步仍为 F5.4。2026-10-22 用户确认后端主线继续进入 F13.3a；不新增 F13.2c，F13.2 的 Renderer 页面独立登记在本计划，不阻塞后端检索开发。
 - F5.4–F5.8 状态与顺序不变。F5.7 仍只承担消息记录和基础 Resource 元数据查看，不增加资料正文、搜索或管理范围；F13 项目资料库的信息面板与 F5.7 使用同一资料信息。
-- 2026-10-24：F13.3d 内部混合与图局部检索已实现（交由 `backend-plan.md` 实施），本机 typecheck、17 项新增回归与完整 980 项通过，PR CI 待完成，见 [147](147-devlog-f13-3d-retrieval.md)。该能力返回按资料归并的片段与有界关系来源路径，未新增搜索公共 RPC 或 Electron Bridge；正式 Renderer 搜索与资料定位仍未实施，不改变前端下一步 F5.4。
+- 2026-10-24：F13.3d 内部混合与图局部检索已实现（交由 `backend-plan.md` 实施），本机 typecheck、17 项新增回归与完整 980 项通过，PR #93 代码 head CI 成功并已合入 master（0c86f7e），见 [147](147-devlog-f13-3d-retrieval.md)。该能力返回按资料归并的片段与有界关系来源路径，未新增搜索公共 RPC 或 Electron Bridge；正式 Renderer 搜索与资料定位仍未实施，不改变前端下一步 F5.4。
 - Node 对话、成果与引用的正式 UI 验收依赖对应 F5 页面交付，不能把后端 F13 完成视为前端依赖已满足。F13.0 仅完成产品设计，后续 UI 实施顺序按已确认依赖推进。
 - 首版限定项目内；不新增跨项目知识库、Session 历史召回、外部同步或复杂扫描件体验。任何资料变化不得隐式启动 Agent 回合。本次登记不授权开始或连续实施任何步骤。
 
