@@ -30,11 +30,11 @@ Windows PowerShell，Node `v24.19.0`：
 
 ## 后续
 
-修复已通过独立提交并入 `phase13-f13.3c-graph`，随 PR #92 推送；保留人工审核，不自动合并。
+修复已通过独立提交并入 `phase13-f13.3c-graph`，随 PR #92 推送；2026-10-24 用户明确授权合并，PR #92 已合入 master（de2bb17）。
 
 ## 2026-10-24 组合验证
 
 - `pnpm exec vitest run tests/resource/index tests/resource/graph tests/storage/indexing.spec.ts --maxWorkers=4`：7 文件、39 项通过。
 - `pnpm typecheck`：通过。
 - `pnpm test --maxWorkers=4`：150 文件、963 项全部通过，用时 352.98 秒。
-- `git diff --check`：通过。新 PR head CI 待远端验证，不自动合并。
+- `git diff --check`：通过。PR #92 head `bc5bd11` 的 CI run `40060389161` 成功；已按用户授权 squash 合入 master（`de2bb17`），BUG-024 关闭。

@@ -1,7 +1,7 @@
 # F13.3c：实体关系抽取与图谱持久化
 
 日期：2026-10-24；基线：master `1b61b68`；分支：`phase13-f13.3c-graph`。
-状态：实现及本机验证完成，待 PR CI 与人工审核。用户已授权实现、测试、提交、推送和创建 PR；不得自动合并，不开始 F13.3d。
+状态：✅ 实现、本机验证与 PR #92 最新 head CI 通过；2026-10-24 用户追加授权合并，已合入 master（de2bb17）。不开始 F13.3d。
 
 ## 冻结设计
 
@@ -42,7 +42,7 @@
 
 ## 下一步
 
-提交并推送 `phase13-f13.3c-graph`，创建指向 master 的 PR；CI 结果待远端运行，等待人工审核，不自动合并。
+PR #92 已按用户明确授权合并。F13.3d 尚未授权，不提前实施。
 
 ## 工作区与代码审查说明
 
@@ -60,4 +60,4 @@
 
 ## BUG-024 合入后的验证
 
-2026-10-24：按用户要求将 [BUG-024](145-bugfix-bug-024-index-compatibility.md) 纳入 [PR #92](https://github.com/likeWind221/Navo/pull/92)。索引与图谱组合专项 7 文件 / 39 项、typecheck、完整 150 文件 / 963 项（352.98 秒）及 diff 检查通过。原 head `060a5ae` 的 CI run `40059416429` 成功；该结果不覆盖后加入的修复，新的 PR head CI 仍待验证。继续等待人工审核，不自动合并。
+2026-10-24：按用户要求将 [BUG-024](145-bugfix-bug-024-index-compatibility.md) 纳入 [PR #92](https://github.com/likeWind221/Navo/pull/92)。索引与图谱组合专项 7 文件 / 39 项、typecheck、完整 150 文件 / 963 项（352.98 秒）及 diff 检查通过。原 head `060a5ae` 的 CI run `40059416429` 成功；该结果不覆盖后加入的修复，最新 head `bc5bd11` 的 CI run `40060389161` 已成功。用户随后明确授权合并，PR #92 已 squash 合入 master（`de2bb17`）。
