@@ -2,7 +2,7 @@
 
 > 后端交接补充：F13.3d 的双路检索与全局 Chunk 数量语义已随 PR #94 完成修复（交由 `backend-plan.md` 实施，本机与代码 head CI 均通过），见 [149](149-bugfix-bug-026-retrieval.md)。搜索公共接口、Bridge 与正式页面仍未交付，不改变前端当前步骤。
 
-> 后端交接补充：BUG-027–029 正修复内部检索的事务、名称匹配与融合分数字段（交由 `backend-plan.md` 实施），见 [150](150-bugfix-bug-027-029-retrieval.md)；搜索公共契约和前端仍未交付。
+> 后端交接补充：BUG-027–029 已完成内部检索的事务、名称匹配与 fusionScore 字段修复（交由 `backend-plan.md` 实施，PR #95 本机与代码 head CI 通过并合入），见 [150](150-bugfix-bug-027-029-retrieval.md)；搜索公共契约和前端仍未交付。
 
 ## 1. 当前范围
 

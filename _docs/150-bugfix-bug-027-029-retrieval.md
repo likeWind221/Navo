@@ -1,7 +1,7 @@
 # BUG-027–029：检索事务、实体名称与融合分数
 
 日期：2026-10-24
-状态：代码已实现，专项 24 项与 typecheck 通过，完整本机已通过，当前 head CI 待完成。
+状态：✅ 三项修复、本机完整验证和当前代码 head CI 通过；PR #95 已合入 master（83c54fa）。
 
 ## 现象与复现
 
@@ -89,8 +89,8 @@ pnpm exec tsx scripts/retrieval/benchmark.ts src/resource/baseline.ts
 Remove-Item -LiteralPath src/resource/baseline.ts
 ```
 
-baseline.ts 是保持原相对导入的临时旧源码，脚本只通过旧类 prototype.search 调用当前服务实例，不重复注册 Cordis 服务；完成后删除再运行 typecheck。整理后的最终脚本已按上述命令实际运行成功：中位数 13.8381→12.3286 ms，P95 16.7267→15.4687 ms，事务调用仍为 38→2；所选 Chunk ID / rank 顺序相同。中位数约减少 10.9%，P95 约减少 7.5%，与首次变化幅度不同，保留两轮原始统计，不择优替换。两轮测量均没有与完整测试并发，临时 baseline.ts 已删除。当前 head CI 待完成。
+baseline.ts 是保持原相对导入的临时旧源码，脚本只通过旧类 prototype.search 调用当前服务实例，不重复注册 Cordis 服务；完成后删除再运行 typecheck。整理后的最终脚本已按上述命令实际运行成功：中位数 13.8381→12.3286 ms，P95 16.7267→15.4687 ms，事务调用仍为 38→2；所选 Chunk ID / rank 顺序相同。中位数约减少 10.9%，P95 约减少 7.5%，与首次变化幅度不同，保留两轮原始统计，不择优替换。两轮测量均没有与完整测试并发，临时 baseline.ts 已删除。代码 head `cdcf0c4` 的 [CI run 40105911443](https://github.com/likeWind221/Navo/actions/runs/40105911443) 已通过 typecheck、normal tests 与 crash recovery tests。
 
 ## 后续
 
-当前修改文件为 retrieval.ts、retrieval/graph.ts、retrieval/types.ts、两个检索 spec、本地对比脚本及本修复记录/计划/索引。没有修改 StorageService、存储 SQL、数据库 Schema、依赖或前端代码。未交付公共 RPC/Bridge 或 F13.4。PR、当前代码 head CI 与合并收尾待完成，最终交付需附模块地图、代码导读与实际边界。
+当前修改文件为 retrieval.ts、retrieval/graph.ts、retrieval/types.ts、两个检索 spec、本地对比脚本及本修复记录/计划/索引。没有修改 StorageService、存储 SQL、数据库 Schema、依赖或前端代码。未交付公共 RPC/Bridge 或 F13.4。[PR #95](https://github.com/likeWind221/Navo/pull/95) 已 squash 合入 master（`83c54fa`）。BUG-027、BUG-028、BUG-029 分别满足关闭条件；BUG-025 未修复。开发分支本地与远端均删除，无本次专用 worktree 或开发文件夹，保留主仓库与其他既有 worktree；临时 baseline 已清理。最终回复交付模块地图、代码导读与实际边界。

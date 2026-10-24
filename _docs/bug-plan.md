@@ -4,9 +4,9 @@
 
 ## 当前状态
 
-- [ ] BUG-027：候选有效性查询逐个开启事务，已合并为一次 atomic，待完整本机与 CI 验证；本地耗时对比已执行，见 [150](150-bugfix-bug-027-029-retrieval.md)。
-- [ ] BUG-028：中文子串直接命中短实体且种子截断依赖读取顺序；已改完整词边界匹配、最长重叠优先与稳定排序，待完整验证，见 [150](150-bugfix-bug-027-029-retrieval.md)。
-- [ ] BUG-029：融合结果继承向量结果但 score 语义不同；已独立定义结果并命名 fusionScore，待完整验证，见 [150](150-bugfix-bug-027-029-retrieval.md)。
+- [x] BUG-027：候选校验已合并为一次事务，本地耗时对比、完整 987 项及 PR #95 当前代码 head CI 通过，已合入（83c54fa），关闭；见 [150](150-bugfix-bug-027-029-retrieval.md)。
+- [x] BUG-028：已采用完整词边界、最长重叠优先和稳定种子选择；相关回归、完整 987 项及 PR #95 代码 head CI 通过，已合入（83c54fa），规则修复关闭，中文真实质量未验收，见 [150](150-bugfix-bug-027-029-retrieval.md)。
+- [x] BUG-029：已独立定义融合结果并使用 fusionScore；类型检查、相关回归、完整 987 项及 PR #95 代码 head CI 通过，已合入（83c54fa），关闭，见 [150](150-bugfix-bug-027-029-retrieval.md)。
 
 - [x] BUG-026：已恢复向量与图谱双路，最终按 Chunk Top-K、每资料最多 3 个并保留全局排名；本机 typecheck、985 项完整测试及 PR #94 当前代码 head CI 通过，已合入 master（408a83c），关闭，见 [149](149-bugfix-bug-026-retrieval.md)。
 
@@ -58,9 +58,9 @@
 
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
-| BUG-027 | P2 / 后端 | 每个候选单独 atomic，存在不必要事务开销；不是已测出的性能故障 | 已核实 atomic 无外层时逐次提交，本机对比候选阶段 37→1 次 | 单次事务完成候选校验，结果排名与权限/代次规则保留；耗时对比、完整本机与当前 head CI 通过 | [150：验证中](150-bugfix-bug-027-029-retrieval.md) |
-| BUG-028 | P2 / 后端 | 中文短实体可被子串误命中，截断种子受图读取顺序影响 | 已确认 includes 与先截断的规则 | 完整词边界、最长重叠与稳定截断回归、完整本机与当前 head CI 通过；注明分词边界 | [150：验证中](150-bugfix-bug-027-029-retrieval.md) |
-| BUG-029 | P2 / 后端契约 | RetrievalChunk 继承 IndexSearchResult，score 的余弦/RRF 含义混淆 | 类型继承与赋值已核实 | 独立结果类型与明确融合分数字段，调用更新及完整本机与当前 head CI 通过 | [150：验证中](150-bugfix-bug-027-029-retrieval.md) |
+| BUG-027 | P2 / 后端 | 每个候选单独 atomic，存在不必要事务开销；不是已测出的性能故障 | 已核实 atomic 无外层时逐次提交，本机对比候选阶段 37→1 次 | 单次事务完成候选校验，结果排名与权限/代次规则保留；耗时对比、完整本机与当前 head CI 通过 | [150：已修复并合入 PR #95](150-bugfix-bug-027-029-retrieval.md) |
+| BUG-028 | P2 / 后端 | 中文短实体可被子串误命中，截断种子受图读取顺序影响 | 已确认 includes 与先截断的规则 | 完整词边界、最长重叠与稳定截断回归、完整本机与当前 head CI 通过；注明分词边界 | [150：已修复并合入 PR #95](150-bugfix-bug-027-029-retrieval.md) |
+| BUG-029 | P2 / 后端契约 | RetrievalChunk 继承 IndexSearchResult，score 的余弦/RRF 含义混淆 | 类型继承与赋值已核实 | 独立结果类型与明确融合分数字段，调用更新及完整本机与当前 head CI 通过 | [150：已修复并合入 PR #95](150-bugfix-bug-027-029-retrieval.md) |
 | BUG-026 | P2 / 后端 | 独立关键词召回偏离双路方案，默认最多 50 个 Chunk 超出上下文预期 | PR #93 的 lexical 分支、Resource 分组后截断和每组 5 个已核实 | 删除独立关键词通道；全局 Chunk Top-K、每资料最多 3 个、排名可恢复；相关回归、完整本机及当前 head CI 通过 | [149：已修复并合入 PR #94](149-bugfix-bug-026-retrieval.md) |
 | BUG-025 | P2 / 后端测试 | 固定地址 HTTP 连接测试在首轮完整套件超过默认 5 秒 | 本轮未改动测试或 Fetch 网络代码；定向 7 项通过；并发负载或调度仅为假设，未确认根因 | 定位原因并完成必要修复；相关回归、本机完整与当前 head CI 通过 | [148：排查记录](148-bugfix-bug-025-fetch-timeout.md) |
 | BUG-024 | P2 / 后端 | 旧 Chunker / 向量编码索引可能被错误复用，旧 Chunker 的 building 可能恢复发布 | 已证实 needsBuild 手写条件遗漏两项版本；recoverable 仅比较 Provider，遗漏 Chunker 且未废弃不兼容记录 | 两入口复用完整兼容判断；不兼容 building 先 superseded 再重建；两版本的 active / building 回归、typecheck 与 diff 检查通过 | [145：修复与验证](145-bugfix-bug-024-index-compatibility.md) |
