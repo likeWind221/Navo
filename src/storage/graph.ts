@@ -51,4 +51,8 @@ export interface GraphEvidenceRecord {
   readonly source_id: string | null;
   readonly target_id: string | null;
   readonly relation_type: string | null;
+  readonly source_name: string | null;
+  readonly source_type: string | null;
+  readonly target_name: string | null;
+  readonly target_type: string | null;
 }

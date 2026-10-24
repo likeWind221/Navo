@@ -58,12 +58,15 @@ export function graphTransaction(db: DatabaseSync): GraphTransaction {
     readGraphEvidence(projectId, resourceIds) {
       if (resourceIds.length === 0) return [];
       return db.prepare(`SELECT b.resource_id, b.source_asset_generation, e.chunk_id, e.entity_id, e.relation_id,
-        n.name, n.type AS entity_type, r.source_id, r.target_id, r.type AS relation_type
+        n.name, n.type AS entity_type, r.source_id, r.target_id, r.type AS relation_type,
+        s.name AS source_name, s.type AS source_type, t.name AS target_name, t.type AS target_type
         FROM graph_evidence e JOIN graph_builds b ON b.build_id = e.build_id
         JOIN resource_index_builds i ON i.build_id = b.source_build_id
         JOIN resource_content c ON c.project_id = b.project_id AND c.resource_id = b.resource_id
         LEFT JOIN graph_entities n ON n.entity_id = e.entity_id
         LEFT JOIN graph_relations r ON r.relation_id = e.relation_id
+        LEFT JOIN graph_entities s ON s.entity_id = r.source_id
+        LEFT JOIN graph_entities t ON t.entity_id = r.target_id
         WHERE b.project_id = ? AND b.resource_id IN (${resourceIds.map(() => "?").join(",")}) AND b.status = 'active'
         AND i.status = 'active' AND c.status = 'ready' AND c.source_asset_generation = b.source_asset_generation
         ORDER BY e.rowid`).all(projectId, ...resourceIds) as unknown as GraphEvidenceRecord[];

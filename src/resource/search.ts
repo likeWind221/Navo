@@ -5,6 +5,7 @@ import type { ResourcePrincipal } from "./model.js";
 import type { ActiveChunkRecord } from "../storage/indexing.js";
 import { ResourceIndexError } from "./index/errors.js";
 import { decodeVector, dot, encodeVector, VECTOR_ENCODING_VERSION } from "./index/vector.js";
+import { chunkMetadata } from "./index/metadata.js";
 
 export interface IndexSearchRequest {
   readonly projectId: ProjectId;
@@ -81,7 +82,7 @@ export class IndexSearch extends Service {
       if (resource?.assetGeneration !== row.source_asset_generation) return [];
       return [{ resourceId: resource.id, chunkId: row.chunk_id, ordinal: row.ordinal, text: row.text,
         startOffsetUtf16: row.start_offset_utf16, endOffsetUtf16: row.end_offset_utf16,
-        headingPath: stringArray(row.heading_path_json), pages: numberArray(row.page_map_json), score }];
+        ...chunkMetadata(row), score }];
     });
     return Object.freeze(results.map(result => Object.freeze(result)));
   }
@@ -94,18 +95,6 @@ function insertTop(values: Scored[], value: Scored, limit: number): void {
   values.sort((left, right) => right.score - left.score || left.row.resource_id.localeCompare(right.row.resource_id)
     || left.row.ordinal - right.row.ordinal || left.row.chunk_id.localeCompare(right.row.chunk_id));
   if (values.length > limit) values.pop();
-}
-
-function stringArray(value: string): readonly string[] {
-  const parsed: unknown = JSON.parse(value);
-  if (!Array.isArray(parsed) || parsed.some(item => typeof item !== "string")) throw new ResourceIndexError("index-failed", "Stored Chunk heading path is invalid.");
-  return Object.freeze(parsed);
-}
-
-function numberArray(value: string): readonly number[] {
-  const parsed: unknown = JSON.parse(value);
-  if (!Array.isArray(parsed) || parsed.some(item => !Number.isSafeInteger(item) || item < 1)) throw new ResourceIndexError("index-failed", "Stored Chunk page map is invalid.");
-  return Object.freeze(parsed);
 }
 
 declare module "cordis" { interface Context { indexSearch: IndexSearch } }
