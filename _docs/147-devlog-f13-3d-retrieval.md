@@ -1,6 +1,8 @@
 # F13.3d：混合与图局部检索
 
 日期：2026-10-24
+
+> 本文保留 PR #93 首次交付事实。后续按用户建议移除独立 FTS5/BM25、收紧候选并改为全局 Chunk Top-K；当前行为见 [BUG-026 修复记录](149-bugfix-bug-026-retrieval.md)。
 状态：✅ 实现、本机完整验证与 PR 当前代码 head CI 通过，PR #93 已 squash 合入 master（0c86f7e）。
 
 ## 做了什么

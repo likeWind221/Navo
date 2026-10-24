@@ -8,17 +8,21 @@ import { contexts } from "../graph/fixture.js";
 afterEach(cleanup);
 
 describe("Scoped hybrid retrieval", () => {
-  it("finds English words, Chinese substrings and single Han characters without interpreting MATCH operators", async () => {
-    const { ctx, project, workspace } = await fixture();
-    const english = await publish(ctx, project.id, workspace, "english.md", "Transformer attention evidence.");
-    const chinese = await publish(ctx, project.id, workspace, "chinese.md", "研究知识图谱检索以及中文资料。");
-    const search = (query: string) => ctx.retrieval.search({ projectId: project.id, viewer: { kind: "main" }, mode: "keyword", query });
-    expect((await search("ATTENTION")).map(hit => hit.resourceId)).toEqual([english.id]);
-    expect((await search("图谱")).map(hit => hit.resourceId)).toEqual([chinese.id]);
-    expect((await search("谱")).map(hit => hit.resourceId)).toEqual([chinese.id]);
-    expect((await search('"attention" OR unknown:*')).map(hit => hit.resourceId)).toEqual([english.id]);
+  it("matches exact graph entity names without keyword or vector hits", async () => {
+    const { ctx, project, workspace } = await fixture(chunks => ({ entities: [
+      { id: "a", name: "Navo", type: "Project", chunkIds: [chunks[0]!.id] },
+      { id: "b", name: "知识图谱", type: "Topic", chunkIds: [chunks[0]!.id] },
+    ], relations: [] }));
+    const resource = await publish(ctx, project.id, workspace, "entities.md", "Navo uses 知识图谱.");
+    vi.spyOn(ctx.indexSearch, "search").mockResolvedValue([]);
+    const search = (query: string) => ctx.retrieval.search({ projectId: project.id, viewer: { kind: "main" }, query });
+    for (const query of ["What is NAVO?", "知识图谱如何使用？"]) {
+      const hits = await search(query);
+      expect(hits.map(hit => hit.resourceId)).toEqual([resource.id]);
+      expect(hits[0]!.chunks[0]!.matches).toEqual(["entity"]);
+    }
+    expect(await search("Navos")).toEqual([]);
     expect(await search("nonexistent")).toEqual([]);
-    expect(await search("!!!")).toEqual([]);
   });
 
   it("groups repeated matching chunks by Resource and honors descendant folders and explicit Resource scope", async () => {
@@ -29,12 +33,12 @@ describe("Scoped hybrid retrieval", () => {
     ctx.resources.createUserFolder(project.id, "Papers");
     ctx.resources.createUserFolder(project.id, "Papers/Sub");
     ctx.resources.organizeUserResource({ projectId: project.id, resourceId: resource.id, expectedRevision: resource.revision, folder: "Papers/Sub" });
-    const request = { projectId: project.id, viewer: { kind: "main" } as const, query: "apple", mode: "keyword" as const };
+    const request = { projectId: project.id, viewer: { kind: "main" } as const, query: "apple", mode: "vector" as const };
     const results = await ctx.retrieval.search({ ...request, folder: "papers" });
     expect(results).toHaveLength(1);
     expect(results[0]).toMatchObject({ resourceId: resource.id, libraryPath: "Papers/Sub/long.md" });
     expect(results[0]!.chunks.length).toBeGreaterThan(1);
-    expect(results[0]!.chunks.length).toBeLessThanOrEqual(5);
+    expect(results[0]!.chunks.length).toBeLessThanOrEqual(3);
     expect(new Set(results[0]!.chunks.map(chunk => chunk.chunkId)).size).toBe(results[0]!.chunks.length);
     const body = ctx.content.read(project.id, resource.id)!.body!;
     expect(results[0]!.chunks.every(chunk => body.slice(chunk.startOffsetUtf16, chunk.endOffsetUtf16) === chunk.text)).toBe(true);
@@ -43,13 +47,13 @@ describe("Scoped hybrid retrieval", () => {
     expect(await ctx.retrieval.search({ ...request, folder: "Paper" })).toEqual([]);
   });
 
-  it("keeps keyword scores and results independent of private and other-project corpora", async () => {
+  it("keeps vector and graph results independent of private and other-project corpora", async () => {
     const { ctx, project, workspace, root } = await fixture();
     const node = ctx.nodes.create({ projectId: project.id, objective: { title: "Reader", description: "Read", acceptanceCriteria: ["Read"] } });
     const shared = await publish(ctx, project.id, workspace, "shared.md", "apple evidence");
     ctx.resources.setAccess({ projectId: project.id, resourceId: shared.id, actor: { kind: "main" },
       expectedRevision: shared.revision, access: { kind: "public" } });
-    const request = { projectId: project.id, viewer: { kind: "node", nodeId: node.node.id } as const, query: "apple", mode: "keyword" as const };
+    const request = { projectId: project.id, viewer: { kind: "node", nodeId: node.node.id } as const, query: "apple", mode: "vector" as const };
     const before = await ctx.retrieval.search(request);
     await publish(ctx, project.id, workspace, "secret.md", "apple apple secret evidence");
     const other = ctx.projects.create({ name: "Other", goal: null });
@@ -76,7 +80,7 @@ describe("Scoped hybrid retrieval", () => {
     const result = await ctx.retrieval.search(request);
     expect(JSON.stringify(result)).not.toContain("old apple");
     const current = ctx.resources.get(project.id, resource.id)!;
-    const banana = await ctx.retrieval.search({ ...request, query: "banana", mode: "keyword" });
+    const banana = await ctx.retrieval.search({ ...request, query: "banana", mode: "vector" });
     expect(banana[0]).toMatchObject({ assetGeneration: current.assetGeneration });
     expect(banana[0]!.chunks[0]!.text).toBe("new banana evidence");
     await ctx.resources.delete({ projectId: project.id, resourceId: resource.id, actor: { kind: "main" }, expectedRevision: current.revision });
@@ -115,10 +119,10 @@ describe("Scoped hybrid retrieval", () => {
     expect(spy).toHaveBeenCalledOnce();
   });
 
-  it("rebuilds scoped keyword search from persisted chunks after reopening", async () => {
+  it("retrieves the same evidence from persisted chunks after reopening", async () => {
     const { ctx, project, workspace, path } = await fixture(undefined, { persistent: true });
     await publish(ctx, project.id, workspace, "persist.md", "persistent apple evidence");
-    const request = { projectId: project.id, viewer: { kind: "main" } as const, query: "apple", mode: "keyword" as const };
+    const request = { projectId: project.id, viewer: { kind: "main" } as const, query: "apple", mode: "vector" as const };
     const before = await ctx.retrieval.search(request);
     await close(ctx);
     const reopened = await open(path, adapter());
@@ -126,18 +130,45 @@ describe("Scoped hybrid retrieval", () => {
     expect(await reopened.retrieval.search(request)).toEqual(before);
   });
 
-  it("supports persisted keyword retrieval without an embedding provider and explicitly rejects hybrid retrieval", async () => {
+  it("requires the embedding provider for both supported modes", async () => {
     const { ctx, project, workspace, path } = await fixture(undefined, { persistent: true });
-    const resource = await publish(ctx, project.id, workspace, "persist.md", "persistent apple evidence");
+    await publish(ctx, project.id, workspace, "persist.md", "persistent apple evidence");
     await close(ctx);
     const reopened = await createApp({ storage: { path }, node: { session: { model: { provider: "mock", model: "test" } } } });
     contexts.push(reopened);
     const request = { projectId: project.id, viewer: { kind: "main" } as const, query: "apple" };
-    expect((await reopened.retrieval.search({ ...request, mode: "keyword" }))[0]!.resourceId).toBe(resource.id);
     await expect(reopened.retrieval.search(request)).rejects.toMatchObject({ code: "embedding-unconfigured" });
+    await expect(reopened.retrieval.search({ ...request, mode: "vector" })).rejects.toMatchObject({ code: "embedding-unconfigured" });
   });
 
-  it.each([{ query: " " }, { query: "x".repeat(4097) }, { topK: 0 }, { maxHops: 4 }])("rejects invalid query options %j", async options => {
+  it("selects a global Chunk budget before grouping and preserves ranks across Resources", async () => {
+    const { ctx, project, workspace } = await fixture();
+    for (let index = 0; index < 5; index++) await publish(ctx, project.id, workspace, `long${index}.md`,
+      Array.from({ length: 10 }, (_, section) => `Section ${section}: ${"evidence context ".repeat(35)}`).join("\n\n"));
+    const request = { projectId: project.id, viewer: { kind: "main" } as const, query: "evidence", mode: "vector" as const };
+    const candidates = await ctx.indexSearch.search({ ...request, topK: 100 });
+    const byResource = new Map<string, typeof candidates[number][]>();
+    for (const hit of candidates) {
+      const group = byResource.get(hit.resourceId) ?? [];
+      group.push(hit);
+      byResource.set(hit.resourceId, group);
+    }
+    const interleaved = Array.from({ length: 10 }, (_, index) => [...byResource.values()].flatMap(group => group[index] ?? [])).flat();
+    const spy = vi.spyOn(ctx.indexSearch, "search").mockImplementation(async input => interleaved.slice(0, input.topK));
+    const result = await ctx.retrieval.search(request);
+    const chunks = result.flatMap(group => group.chunks).sort((a, b) => a.rank - b.rank);
+    expect(chunks).toHaveLength(10);
+    expect(chunks.map(chunk => chunk.chunkId)).toEqual(interleaved.slice(0, 10).map(chunk => chunk.chunkId));
+    expect(chunks.map(chunk => chunk.rank)).toEqual(Array.from({ length: 10 }, (_, index) => index + 1));
+    expect(spy).toHaveBeenLastCalledWith(expect.objectContaining({ topK: 30 }));
+    const capped = await ctx.retrieval.search({ ...request, topK: 20, vectorTopK: 50 });
+    expect(capped.flatMap(group => group.chunks)).toHaveLength(15);
+    expect(capped.every(group => group.chunks.length === 3)).toBe(true);
+    expect(spy).toHaveBeenLastCalledWith(expect.objectContaining({ topK: 50 }));
+    expect((await ctx.retrieval.search({ ...request, topK: 1 })).flatMap(group => group.chunks)).toHaveLength(1);
+  });
+
+  it.each([{ query: " " }, { query: "x".repeat(4097) }, { topK: 0 }, { maxHops: 3 }, { vectorTopK: 0 }, { vectorTopK: 101 }, { mode: "keyword" as never }])("rejects invalid query options %j", async options => {
     const { ctx, project } = await fixture();
     await expect(ctx.retrieval.search({ projectId: project.id, viewer: { kind: "main" }, query: "Alice", ...options }))
       .rejects.toMatchObject({ code: "invalid-query" });
