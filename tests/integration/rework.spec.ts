@@ -110,11 +110,11 @@ it("completes a Project through submission, Main rework, replanning and two rest
   await quiet(27);
 
   const synthesis = await run("synthesis");
-  expect(synthesis.turn).toMatchObject({ status: "completed", steps: 3 });
+  expect(synthesis.turn).toMatchObject({ status: "completed", steps: 4 });
   expect(node("synthesis").status).toBe("submitted");
   const finished = await review("synthesis");
   expect(finished.turn).toMatchObject({ status: "completed", steps: 3 });
-  await quiet(33);
+  await quiet(34);
   expect(world.remaining()).toBe(0);
 
   const turns = [planned, draft, returned, sourced, completed, refused, validation, validated, synthesis, finished];
@@ -123,7 +123,7 @@ it("completes a Project through submission, Main rework, replanning and two rest
   const beforeSecond = await state(app, project.id, allSessions);
   app = await world.restart(app);
   expect(await state(app, project.id, allSessions)).toEqual(beforeSecond);
-  await quiet(33);
+  await quiet(34);
 
   expect(app.nodes.getByProject(project.id).map(value => [value.status, value.confirmation?.confirmedBy]))
     .toEqual([["completing", "main"], ["completing", "main"], ["completing", "main"]]);

@@ -46,11 +46,11 @@ it("completes a Human-controlled long-term Project through planning, handoff, bl
   await quiet(9);
 
   const blocked = await start("synthesis");
-  expect(blocked.turn).toMatchObject({ status: "completed", steps: 4 });
+  expect(blocked.turn).toMatchObject({ status: "completed", steps: 5 });
   expect(app.nodes.get(nodeId("synthesis"))?.status).toBe("idle");
   expect(app.roadmaps.get(project.id)?.revision).toBe(1);
   expect(app.mailbox.getHistory(project.id).at(-1)?.body).toContain("BLOCKER");
-  await quiet(13);
+  await quiet(14);
 
   const replanned = await main();
   expect(replanned.turn).toMatchObject({ status: "completed", steps: 7 });
@@ -66,29 +66,29 @@ it("completes a Human-controlled long-term Project through planning, handoff, bl
     { from: nodeId("evidence"), to: nodeId("validation") },
     { from: nodeId("validation"), to: nodeId("synthesis") },
   ]));
-  await quiet(20);
+  await quiet(21);
 
   const validation = await start("validation");
   expect(validation.turn).toMatchObject({ status: "completed", steps: 4 });
   expect(app.nodes.get(nodeId("validation"))?.status).toBe("idle");
   expect(app.nodes.get(nodeId("synthesis"))?.status).toBe("locked");
   expect(app.resources.listByProject(project.id)).toHaveLength(2);
-  await quiet(24);
+  await quiet(25);
   const coordinated = await main();
   expect(coordinated.turn).toMatchObject({ status: "completed", steps: 3 });
   expect(app.nodes.get(nodeId("synthesis"))?.status).toBe("locked");
   expect(() => next()).toThrow();
-  await quiet(27);
+  await quiet(28);
   confirm(app, project.id, nodeId("validation"));
   expect(app.nodes.get(nodeId("synthesis"))?.status).toBe("idle");
-  await quiet(27);
+  await quiet(28);
 
   const finished = await next();
   expect(finished.turn).toMatchObject({ status: "completed", steps: 2 });
   expect(finished.sessionId).toBe(blocked.sessionId);
   expect(app.nodes.get(nodeId("synthesis"))?.status).toBe("idle");
   confirm(app, project.id, nodeId("synthesis"));
-  await quiet(29);
+  await quiet(30);
   expect(adapter.remainingEntries).toBe(0);
   expect(app.nodes.getByProject(project.id).map(node => node.status)).toEqual(["completing", "completing", "completing"]);
   expect(app.projects.get(project.id)?.status).toBe("active");

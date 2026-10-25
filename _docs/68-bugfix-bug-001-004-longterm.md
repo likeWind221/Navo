@@ -80,7 +80,7 @@
     - 这一做法取代了上一版“名称当 ID 时在错误中给出 ID”的提示：名称误用这一类错误直接被消除。
   - 逐步 `resource_id` 枚举：
     - `ToolDefinition` 新增可选的 `parametersFor(sessionId)`；`ToolService.schemas` 在每次模型请求时用它生成该 Session 的参数 schema，`src/agent/request.ts` 传入 sessionId。
-    - 四个 Resource 工具借助 `withVisibleResourceRefs`，把当前可见 Resource 的 ID 与唯一名称写入 `resource_id` 的 `enum`。
+    - 当时四个 Resource 工具借助 `withVisibleResourceRefs`，把可见 Resource 的 ID 与唯一名称写入 `resource_id` 的 `enum`。该过渡机制已由 [F13.4c](153-devlog-f13-4c-resource-discovery.md) 的按需目录 / 搜索替代，执行阶段的名称解析、ACL 与所有权检查保留。
     - 没有可见 Resource、Session 未绑定或生成失败时，回退为静态 schema。
     - 执行期仍按静态 schema 校验，引用解析统一由 `resolveResourceRef` 负责，避免两处规则不一致。
 - BUG-003（状态陈述）：

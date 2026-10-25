@@ -127,7 +127,7 @@ describe("Resource access and Project reporting capabilities", () => {
     expect(resourceResultText(privateName)).not.toContain(hidden);
   });
 
-  it("presents visible Resource IDs and unique names as the per-session resource_id enum", async () => {
+  it("keeps Resource schemas static strings even after grants and for unbound sessions", async () => {
     const { app, project, root } = await resourceToolFixture();
     await writeFile(join(root, "validation.txt"), "independent repeat\n", "utf8");
     await writeFile(join(root, "private.txt"), "owner only\n", "utf8");
@@ -155,8 +155,14 @@ describe("Resource access and Project reporting capabilities", () => {
       access: { kind: "shared", nodeIds: [reader.node.node.id] },
     });
 
-    expect(resourceIdEnum(reader.sessionId)).toEqual([shared, "supplied-validation"]);
-    expect(resourceIdEnum(owner.sessionId)).toEqual([shared, hidden, "supplied-validation", "private-note"]);
+    expect(resourceIdEnum(reader.sessionId)).toBeUndefined();
+    expect(resourceIdEnum(owner.sessionId)).toBeUndefined();
+    for (const tool of app.tools.schemas([FETCH_RESOURCE_TOOL_NAME, UPDATE_RESOURCE_TOOL_NAME, DELETE_RESOURCE_TOOL_NAME, "set_resource_access"], owner.sessionId)) {
+      expect((tool.parameters.properties as Record<string, unknown>).resource_id).toMatchObject({ type: "string" });
+      expect(JSON.stringify(tool.parameters)).not.toContain(shared);
+      expect(JSON.stringify(tool.parameters)).not.toContain(hidden);
+      expect((tool.parameters.properties as Record<string, Record<string, unknown>>).resource_id!.enum).toBeUndefined();
+    }
     expect(resourceIdEnum()).toBeUndefined();
     expect(resourceIdEnum(createSessionId("unbound-session"))).toBeUndefined();
   });

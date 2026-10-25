@@ -13,7 +13,7 @@ import {
   messagesText,
   sessionEvents,
 } from "./helpers.js";
-import { NODE_COMPACTING, UNBOUNDED } from "./models.js";
+import { MAIN_COMPACTING, UNBOUNDED } from "./models.js";
 import {
   gatedTextReply,
   reviewReplies,
@@ -33,9 +33,9 @@ describe("F12.7 restart acceptance", () => {
   it("keeps a committed checkpoint across restart and completes only after an explicit start", async () => {
     const gated = gatedTextReply("pause-c1");
     const world = await createWorld({
-      model: NODE_COMPACTING,
+      model: MAIN_COMPACTING,
       tasks: [
-        toolReply("pause-a1", "pause-call-1"), textReply("pause-a2"), textReply("pause-b1"),
+        toolReply("pause-a1", "pause-call-1", 16_000), textReply("pause-a2", 16_000), textReply("pause-b1", 16_000),
         gated.entry,
         submitReply("pause-submit"),
         ...reviewReplies("pause-review", "complete"),
@@ -79,6 +79,7 @@ describe("F12.7 restart acceptance", () => {
     expect(world.requests()).toBe(requestsBefore);
 
     const resumed = await app.autoRun.start(project.id);
+    expect(app.sessions.getEvents(project.mainSessionId).filter(event => event.type === "error")).toEqual([]);
 
     expect(resumed).toMatchObject({ status: "completed", reason: "roadmap-complete", nodeTurns: 1, mainTurns: 1 });
     expect(messageText(world.taskRequests()[0]!.request)).toContain("PAUSE_CHECKPOINT_SUMMARY");

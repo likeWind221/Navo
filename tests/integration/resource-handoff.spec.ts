@@ -129,13 +129,15 @@ describe("F9.7 ProjectRuntime Resource handoff recovery", () => {
         },
       },
       modelResponse([{ type: "text", text: "Resource handed off to Node B." }]),
+      call("list_resources", {}, "node-b-discover"),
       {
         kind: "handler",
         handle(request) {
           const prompt = JSON.stringify(request.turnContext);
-          if (!resourceId || !prompt.includes(resourceId)) {
-            throw new Error("Node B Turn context did not include the handed-off Resource.");
+          if (!resourceId || !messageText(request).includes(resourceId)) {
+            throw new Error("Node B directory result did not include the handed-off Resource.");
           }
+          expect(prompt).not.toContain(resourceId);
           if (prompt.includes("handoff payload from Node A")) {
             throw new Error("Resource body leaked into Node B Turn context.");
           }
@@ -220,7 +222,7 @@ describe("F9.7 ProjectRuntime Resource handoff recovery", () => {
       nodeId: nodeB.node.id,
       text: "Use the Resource Main made available.",
     });
-    expect(nodeBTurn.turn).toMatchObject({ status: "completed", steps: 2 });
+    expect(nodeBTurn.turn).toMatchObject({ status: "completed", steps: 3 });
     expect(app.nodes.get(nodeB.node.id)?.status).toBe("idle");
     expect(adapter.remainingEntries).toBe(0);
 

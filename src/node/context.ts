@@ -1,7 +1,5 @@
 import type { Context } from "cordis";
 
-import { visibleResourceContext } from "../resource/context.js";
-
 import type { ResourceId } from "../brand/ids.js";
 import { changedFacts } from "../session/reminder.js";
 import type { ContextFact } from "../session/types.js";
@@ -13,18 +11,13 @@ export interface NodeTurnContext {
   readonly objective: NodeObjective;
   readonly status: NodeStatus;
   readonly reworkFeedback?: NodeFeedback;
-  readonly resources: readonly NodeTurnResourceContext[];
-  readonly addedResources: readonly NodeTurnResourceContext[];
+  readonly addedResources: readonly NodeResourceNotice[];
   readonly facts: readonly ContextFact[];
 }
 
-export interface NodeTurnResourceContext {
+export interface NodeResourceNotice {
   readonly id: ResourceId;
   readonly name: string;
-  readonly description: string;
-  readonly type: string;
-  readonly revision: number;
-  readonly ownedByCurrentAgent: boolean;
 }
 
 export class NodeTurnContextBuilder {
@@ -43,10 +36,11 @@ export class NodeTurnContextBuilder {
       );
     }
 
-    const resources = visibleResourceContext(this.ctx, project.id, { kind: "node", nodeId: snapshot.node.id });
+    const resources = this.ctx.resources.listVisible(project.id, { kind: "node", nodeId: snapshot.node.id })
+      .filter(resource => resource.owner.kind !== "node" || resource.owner.nodeId !== snapshot.node.id)
+      .map(resource => Object.freeze({ id: resource.id, name: resource.name }));
 
     const facts = resources
-      .filter(resource => !resource.ownedByCurrentAgent)
       .map(resource => Object.freeze({ kind: "resource", id: String(resource.id), label: resource.name }));
     const added = new Set(changedFacts(observed, facts)
       .filter(change => change.previous === undefined)
@@ -61,7 +55,6 @@ export class NodeTurnContextBuilder {
       projectGoal: project.goal,
       objective: Object.freeze(structuredClone(snapshot.node.objective)),
       status: snapshot.status,
-      resources: Object.freeze(resources),
       addedResources: Object.freeze(resources.filter(resource => added.has(String(resource.id)))),
       facts: Object.freeze(facts),
     });

@@ -52,7 +52,7 @@ describe("desktop Host tool availability", () => {
         "web_search", "web_fetch",
         "read", "shell", "edit", "write",
         READ_ROADMAP_TOOL_NAME, READ_NODE_TOOL_NAME, CREATE_ROADMAP_TOOL_NAME, ...ROADMAP_MUTATION_TOOL_NAMES,
-        REGISTER_RESOURCE_TOOL_NAME, FETCH_RESOURCE_TOOL_NAME,
+        REGISTER_RESOURCE_TOOL_NAME, "list_resources", "search_resources", FETCH_RESOURCE_TOOL_NAME,
         UPDATE_RESOURCE_TOOL_NAME, DELETE_RESOURCE_TOOL_NAME,
         SET_RESOURCE_ACCESS_TOOL_NAME,
         READ_MAILBOX_TOOL_NAME,

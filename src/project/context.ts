@@ -1,6 +1,5 @@
 import type { Context } from "cordis";
 
-import { visibleResourceContext } from "../resource/context.js";
 import type { NodeId, SessionId } from "../brand/ids.js";
 import { TurnContextBuilder } from "../context/turn.js";
 import type { TurnContextSection } from "../context/turn.js";
@@ -19,7 +18,6 @@ export function createProjectTurnContext(
   sessionId: SessionId,
   options: ProjectTurnContextOptions = {},
 ): TurnContextBuilder {
-  let catalog: ReturnType<typeof visibleResourceContext> = [];
   let facts: readonly ContextFact[] = [];
   let addedResources: ReturnType<NodeTurnContextBuilder["build"]>["addedResources"] = [];
   return new TurnContextBuilder([
@@ -40,7 +38,6 @@ export function createProjectTurnContext(
       }
       const node = ctx.nodes.getBySession(sessionId)!;
       const context = new NodeTurnContextBuilder(ctx).build(node, lastObservedFacts(ctx.sessions, sessionId));
-      catalog = [...context.resources];
       facts = context.facts;
       addedResources = context.addedResources;
       return [{ kind: "runtime-state", data: {
@@ -49,11 +46,6 @@ export function createProjectTurnContext(
         status: context.status,
         ...(context.reworkFeedback === undefined ? {} : { reworkFeedback: { ...context.reworkFeedback } }),
       } }];
-    },
-    () => {
-      const binding = requireAgentBinding(ctx, sessionId);
-      if (binding.kind === "main") catalog = visibleResourceContext(ctx, binding.projectId, { kind: "main" });
-      return [{ kind: "resource-catalog", data: catalog.map(resource => ({ ...resource })) }];
     },
     () => {
       const previous = lastObservedFacts(ctx.sessions, sessionId);
