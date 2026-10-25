@@ -72,7 +72,7 @@ describe("Node completion signal and Human review", () => {
     expect(adapter.requests).toHaveLength(1);
 
     await ctx.projectRuntime.continueNode({ projectId: project.id, nodeId: first, text: "Continue" });
-    const userMessage = JSON.stringify(adapter.requests[1]?.messages.at(-1));
+    const userMessage = JSON.stringify(adapter.requests[1]?.turnContext);
     expect(userMessage).toContain("returned for rework");
     expect(userMessage).toContain("Add the 2024 data");
     const resubmitted = ctx.nodes.get(first)!;

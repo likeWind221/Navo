@@ -20,7 +20,7 @@ import { ToolExecutionError } from "../../errors.js";
 
 export const RESOURCE_ID_PARAMETER: JsonObject = {
   type: "string",
-  description: "Resource ID as listed in available-resources or returned by a Resource tool. A Resource name is accepted only when exactly one visible Resource has it.",
+  description: "Resource ID as listed in resource-catalog or returned by a Resource tool. A Resource name is accepted only when exactly one visible Resource has it.",
 };
 
 export interface ResourceToolCaller {

@@ -1,15 +1,18 @@
 import type { Context } from "cordis";
 
+import { visibleResourceContext } from "../resource/context.js";
+
 import type { ResourceId } from "../brand/ids.js";
 import { changedFacts } from "../session/reminder.js";
 import type { ContextFact } from "../session/types.js";
-import type { NodeObjective, NodeSnapshot, NodeStatus } from "./model.js";
+import type { NodeFeedback, NodeObjective, NodeSnapshot, NodeStatus } from "./model.js";
 import { NodeError } from "./errors.js";
 
 export interface NodeTurnContext {
   readonly projectGoal: string | null;
   readonly objective: NodeObjective;
   readonly status: NodeStatus;
+  readonly reworkFeedback?: NodeFeedback;
   readonly resources: readonly NodeTurnResourceContext[];
   readonly addedResources: readonly NodeTurnResourceContext[];
   readonly facts: readonly ContextFact[];
@@ -40,18 +43,7 @@ export class NodeTurnContextBuilder {
       );
     }
 
-    const resources = this.ctx.resources.listVisible(
-      project.id,
-      { kind: "node", nodeId: snapshot.node.id },
-    ).map(resource => Object.freeze({
-      id: resource.id,
-      name: resource.name,
-      description: resource.description,
-      type: resource.type,
-      revision: resource.revision,
-      ownedByCurrentAgent: resource.owner.kind === "node"
-        && resource.owner.nodeId === snapshot.node.id,
-    }));
+    const resources = visibleResourceContext(this.ctx, project.id, { kind: "node", nodeId: snapshot.node.id });
 
     const facts = resources
       .filter(resource => !resource.ownedByCurrentAgent)
@@ -60,7 +52,12 @@ export class NodeTurnContextBuilder {
       .filter(change => change.previous === undefined)
       .map(change => change.fact.id));
 
+    const rework = this.ctx.nodes.getEvents(snapshot.node.id).findLast(event =>
+      event.type === "rework-requested" || event.type === "completion-signaled"
+      || event.type === "completion-confirmed" || event.type === "node-skipped");
     return Object.freeze({
+      ...(rework?.type === "rework-requested"
+        ? { reworkFeedback: { ...rework.data, requestedAt: rework.timestamp } } : {}),
       projectGoal: project.goal,
       objective: Object.freeze(structuredClone(snapshot.node.objective)),
       status: snapshot.status,

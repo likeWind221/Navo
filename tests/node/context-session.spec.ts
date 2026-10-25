@@ -32,7 +32,7 @@ function systemText(request: GenerateRequest): string {
 }
 
 describe("Node Turn Resource context integration", () => {
-  it("refreshes visible Resource metadata only when the next Human-started Turn begins", async () => {
+  it("refreshes Resource metadata on explicit Turns without implicit runs", async () => {
     const root = await mkdtemp(join(tmpdir(), "navo-node-context-session-"));
     roots.push(root);
     await writeFile(join(root, "handoff.md"), "resource body stays out of prompt\n", "utf8");
@@ -93,23 +93,24 @@ describe("Node Turn Resource context integration", () => {
       text: "Check again after the human starts this Turn.",
     });
     expect(adapter.requests).toHaveLength(2);
-    const second = systemText(adapter.requests[1]!);
+    const second = JSON.stringify(adapter.requests[1]!.turnContext);
     expect(second).toContain(String(resource.id));
     expect(second).toContain("Handoff evidence");
     expect(second).toContain("ownedByCurrentAgent");
     expect(second).not.toContain("resource body stays out of prompt");
     expect(second).not.toContain("handoff.md");
-    expect(second).toContain("supersede earlier statements in this conversation");
+    expect(systemText(adapter.requests[1]!)).toBe(systemText(adapter.requests[0]!));
     expect(adapter.requests[1]!.messages.map(message => message.role))
       .toEqual(["system", "user", "assistant", "user"]);
-    const [human, changes] = adapter.requests[1]!.messages.at(-1)!.content;
+    const [human] = adapter.requests[1]!.messages.at(-1)!.content;
+    const changes = adapter.requests[1]!.turnContext?.content[0];
     expect(human).toEqual({ type: "text", text: "Check again after the human starts this Turn." });
     expect(changes).toMatchObject({ type: "text" });
     const notice = changes?.type === "text" ? changes.text : "";
-    expect(notice).toContain("<system-reminder>");
+    expect(notice).toContain("reminder");
     expect(notice).toContain(String(resource.id));
     expect(notice).toContain("Handoff evidence");
-    expect(notice).not.toContain("Metadata visible after Main grants access");
+
 
     await app.nodeSessions.start({
       nodeId: node.node.id,

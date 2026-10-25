@@ -84,6 +84,7 @@ export interface GenerateRequest {
   readonly provider: string;
   readonly model: string;
   readonly messages: readonly Message[];
+  readonly turnContext?: UserMessage;
   readonly tools?: readonly ToolSchema[];
   readonly temperature?: number;
   readonly maxTokens?: number;

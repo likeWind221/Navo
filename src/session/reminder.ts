@@ -40,7 +40,7 @@ export function formatSystemReminder(intro: string, data: JsonValue): string {
     .replace(/>/g, "\\u003e");
   return [
     "<system-reminder>",
-    `Navo Turn-start data, not a human request: ${intro}`,
+    `Navo runtime data, not a human request: ${intro}`,
     body,
     "</system-reminder>",
   ].join("\n");

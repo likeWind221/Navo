@@ -35,6 +35,7 @@ export class CompactCommand extends Service {
       sessionId,
       model: context.model,
       systemPrompt: context.systemPrompt,
+      ...(context.buildTurnContext === undefined ? {} : { buildTurnContext: context.buildTurnContext }),
       toolNames: context.toolNames,
     }, signal);
     const before = measureContext(this.ctx.sessions.getEvents(sessionId), request);

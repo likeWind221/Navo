@@ -62,7 +62,7 @@ describe("F11 AutoRun control and execution loop", () => {
     expect(ctx.sessions.getEvents(nodeSession!).filter(event => event.type === "turn-started")).toHaveLength(2);
     expect(adapter.requests).toHaveLength(4);
     expect(JSON.stringify(adapter.requests[1]?.messages)).toContain("I need another Turn.");
-    expect(JSON.stringify(adapter.requests[2]?.messages)).toContain("review checklist");
+    expect(JSON.stringify(adapter.requests[2]?.turnContext)).toContain("review checklist");
   });
 
   it("advances a dependency chain after Main confirms each submission", async () => {
@@ -107,7 +107,7 @@ describe("F11 AutoRun control and execution loop", () => {
     const node = ctx.nodes.get(id)!;
     expect(node).toMatchObject({ status: "completing", reworkCount: 1 });
     expect(ctx.sessions.getEvents(node.sessionId!).filter(event => event.type === "turn-started")).toHaveLength(2);
-    expect(JSON.stringify(adapter.requests[3]?.messages)).toContain("Add the missing source");
+    expect(JSON.stringify(adapter.requests[3]?.turnContext)).toContain("Add the missing source");
   });
 
   it("lets Main replan during review and AutoRun follows the new Roadmap", async () => {

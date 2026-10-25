@@ -26,12 +26,12 @@ import {
 describe("F12.7 pressure compaction acceptance", () => {
   it("pressure-compacts one Node Session repeatedly and still completes dependent reviews", async () => {
     const world = await createWorld({
-      model: NODE_COMPACTING,
+      model: MAIN_COMPACTING,
       summary: () => summaryReply(),
       tasks: [
-        toolReply("a1", "a-call-1"), textReply("a2"),
-        toolReply("b1", "b-call-1"), textReply("b2"),
-        textReply("c1"), textReply("d1"), submitReply("submit-a"),
+        toolReply("a1", "a-call-1", 16_000), textReply("a2", 16_000),
+        toolReply("b1", "b-call-1", 16_000), textReply("b2", 16_000),
+        textReply("c1", 16_000), textReply("d1", 16_000), submitReply("submit-a"),
         ...reviewReplies("review-a", "complete"),
         submitReply("submit-b"),
         ...reviewReplies("review-b", "complete"),

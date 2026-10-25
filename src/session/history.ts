@@ -78,7 +78,8 @@ function payload(type: unknown, data: Record<string, unknown>): boolean {
         && optional(data.tools, value => Array.isArray(value) && value.every(tool => record(tool)
           && text(tool.name) && record(tool.parameters)
           && optional(tool.description, item => typeof item === "string")))
-        && optional(data.temperature, finite) && optional(data.maxTokens, integer);
+        && optional(data.temperature, finite) && optional(data.maxTokens, integer)
+        && optional(data.contextTokens, integer);
     case "assistant-message":
       return message(data.message, "assistant") && finish(data.finishReason)
         && optional(data.usage, usage);

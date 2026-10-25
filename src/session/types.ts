@@ -157,6 +157,7 @@ export type LlmRequestedEvent = EventRecord<
     readonly provider: string;
     readonly model: string;
     readonly messages: readonly Message[];
+    readonly contextTokens?: number;
     readonly tools?: readonly ToolSchema[];
     readonly temperature?: number;
     readonly maxTokens?: number;

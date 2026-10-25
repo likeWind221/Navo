@@ -6,11 +6,11 @@ import type { Context } from "cordis";
 import type { RunTurnInput, SessionAgentContext, TurnModelConfig, TurnResult } from "../agent/types.js";
 import { createMessageId } from "../brand/ids.js";
 import type { NodeId, ProjectId, SessionId } from "../brand/ids.js";
-import { changedFacts, lastObservedFacts } from "../session/reminder.js";
+import { createProjectTurnContext } from "./context.js";
 import { requireMainBinding } from "./binding.js";
 import { ProjectError } from "./errors.js";
 import type { ProjectSnapshot } from "./model.js";
-import { createMainAgentProfile, formatNodeChanges } from "./profile.js";
+import { createMainAgentProfile } from "./profile.js";
 
 export interface MainSessionServiceConfig {
   readonly model: TurnModelConfig;
@@ -38,7 +38,7 @@ declare module "cordis" {
 }
 
 export class MainSessionService extends Service {
-  static inject = ["projects", "nodes", "agentRuntime", "sessions"];
+  static inject = ["projects", "nodes", "resources", "agentRuntime", "sessions"];
 
   private readonly model: TurnModelConfig;
 
@@ -51,12 +51,10 @@ export class MainSessionService extends Service {
     const text = requireMessageText(input.text);
     const project = this.requireProject(input.projectId);
     const binding = requireMainBinding(this.ctx, project.mainSessionId, project.id);
-    const profile = createMainAgentProfile(project, input.review !== undefined);
-    const facts = this.ctx.nodes.getByProject(project.id).map(value => (
-      { kind: "node", id: String(value.node.id), label: value.node.objective.title, state: value.status }
-    ));
-    const changes = changedFacts(lastObservedFacts(this.ctx.sessions, binding.sessionId), facts);
-    this.ctx.sessions.append({ type: "context-observed", sessionId: binding.sessionId, data: { facts } });
+    const profile = createMainAgentProfile(input.review !== undefined);
+    const context = createProjectTurnContext(this.ctx, binding.sessionId, {
+      ...(input.review === undefined ? {} : { reminders: [input.review.checklist], reviewNodeId: input.review.nodeId }),
+    });
     const turn = await this.ctx.agentRuntime.runTurn({
       sessionId: binding.sessionId,
       userMessage: {
@@ -64,12 +62,11 @@ export class MainSessionService extends Service {
         role: "user",
         content: [
           { type: "text", text },
-          ...(changes.length === 0 ? [] : [{ type: "text" as const, text: formatNodeChanges(changes) }]),
-          ...(input.review === undefined ? [] : [{ type: "text" as const, text: input.review.checklist }]),
         ],
       },
       model: this.model,
       systemPrompt: profile.systemPrompt,
+      buildTurnContext: () => context.build(),
       toolNames: profile.toolNames,
       ...(input.signal === undefined ? {} : { signal: input.signal }),
       ...(input.requestId === undefined ? {} : { requestId: input.requestId }),
@@ -84,11 +81,13 @@ export class MainSessionService extends Service {
 
   resolveContext(sessionId: SessionId): SessionAgentContext {
     const binding = requireMainBinding(this.ctx, sessionId);
-    const project = this.requireProject(binding.projectId);
-    const profile = createMainAgentProfile(project, false);
+    this.requireProject(binding.projectId);
+    const profile = createMainAgentProfile();
+    const context = createProjectTurnContext(this.ctx, sessionId, { observe: false });
     return Object.freeze({
       model: this.model,
       systemPrompt: profile.systemPrompt,
+      buildTurnContext: () => context.build(),
       toolNames: profile.toolNames,
     });
   }

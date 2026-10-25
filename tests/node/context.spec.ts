@@ -11,6 +11,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { NodeId, ProjectId } from "../../src/brand/ids.js";
 import { NodeTurnContextBuilder } from "../../src/node/context.js";
+import { turnContextMessage } from "../../src/context/turn.js";
+import { createSessionId } from "../../src/brand/ids.js";
 import { createNodeAgentProfile } from "../../src/node/profile.js";
 import { NodeStore } from "../../src/node/store.js";
 import { ProjectStore } from "../../src/project/store.js";
@@ -197,13 +199,14 @@ describe("NodeTurnContextBuilder", () => {
 
     const context = new NodeTurnContextBuilder(ctx)
       .build(ctx.nodes.get(nodeB.node.id)!);
-    const profile = createNodeAgentProfile(context);
+    const profile = createNodeAgentProfile();
 
-    expect(profile.systemPrompt).toContain("<available-resources>");
+    const message = turnContextMessage({ sections: [{ kind: "resource-catalog", data: context.resources.map(resource => ({ ...resource })) }] }, createSessionId("test"));
+    const text = (message.content[0] as { text: string }).text;
     expect(profile.systemPrompt).toContain("When the Human explicitly asks you to submit your work for review, call submit_completion even if some acceptance criteria are not met");
-    expect(profile.systemPrompt).toContain(String(resource.id));
-    expect(profile.systemPrompt).toContain("\\u003c/available-resources\\u003e");
-    expect(profile.systemPrompt).toContain("\\u003cnode-context\\u003e");
+    expect(text).toContain(String(resource.id));
+    expect(text).toContain("\\u003c/available-resources\\u003e");
+    expect(text).toContain("\\u003cnode-context\\u003e");
     expect(profile.systemPrompt).not.toContain("secret body");
     expect(profile.systemPrompt).not.toContain("prompt.md");
     expect(profile.systemPrompt).not.toContain("nodeIds");
