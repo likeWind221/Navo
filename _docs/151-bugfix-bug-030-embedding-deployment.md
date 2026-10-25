@@ -1,7 +1,7 @@
 # BUG-030：Embedding 与实际部署模型对齐
 
 日期：2026-10-25
-状态：本地完整验证与真实 smoke test 通过，等待 PR CI 与合并。
+状态：✅ 本地完整验证、真实 smoke test 与代码 head CI 通过，PR #96 已 squash 合入 master（c6b6ef9）。
 
 ## 现象与复现
 
@@ -29,10 +29,11 @@ F13.3 真实验收准备期间发现客户端默认使用 Qwen3-Embedding-0.6B �
 - `pnpm typecheck` 通过。smoke 脚本额外以 `pnpm exec tsc --ignoreConfig --noEmit --target ES2024 --module ESNext --moduleResolution Bundler --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes --skipLibCheck scripts/retrieval/smoke.ts src/tools/builtins/fetch/output/gfm.d.ts` 通过类型检查。首次命令缺少 TS7 要求的 `--ignoreConfig`，第二次发现脚本数组需显式类型并需加载已有 gfm 声明；修正后检查通过，这两次均未发模型请求。
 - `pnpm exec tsx scripts/retrieval/smoke.ts`：一次执行通过，模型 `Qwen3-Embedding-4B`、2560 维，9 次 HTTP 请求全部 200。3 篇资料均产生 active 索引；两次 vector 与两次 hybrid 查询 Top-1 全部符合预期，包含英文问题召回中文正文。Node 不返回私有资料及其预算内容；返回 Chunk 的 UTF-16 偏移精确对应正文；重开后 active build ID 保持一致且不重新调用文档 Embedding，重开后的查询仍通过。
 - 原始 JSON 与临时数据库保留在 `C:\Users\likeW\AppData\Local\Temp\navo-retrieval-smoke-G3b35A\`，结果文件为 `result.json`。流程耗时 2054 ms，4 个带排名断言的查询端到端耗时 166–209 ms；HTTP 工具计时为收到响应头的时间，不当作完整响应读取耗时。样本极小、无并发，不代表吞吐或质量评测。Top-K 会包含不相关的低排名资料，本轮不验证无答案拒答或相似度阈值。
-- 完整 `pnpm test --maxWorkers=4`：152 文件 / 988 项全部通过，288.28 秒；未设置 NAVO_TEST_MODE，保留完整进程恢复测试。`git diff --check` 通过。PR CI 待填写。
+- 完整 `pnpm test --maxWorkers=4`：152 文件 / 988 项全部通过，288.28 秒；未设置 NAVO_TEST_MODE，保留完整进程恢复测试。`git diff --check` 通过。
+- [PR #96](https://github.com/likeWind221/Navo/pull/96) 代码 head `3bbcfa0` 的 [CI run 40171318164](https://github.com/likeWind221/Navo/actions/runs/40171318164) 成功，类型检查、普通测试与进程恢复测试全部通过，已 squash 合入 master（`c6b6ef9`）。
 
 真实测试仅覆盖 Embedding、索引与检索；未调用生成模型，未验证真实实体关系抽取或多跳图谱效果。未改动 server 配置或业务库，不启动后续 Step。
 
 ## 后续
 
-验证通过后按仓库规则提交 PR，当前 head CI 通过后合并；不启动后续 Step。
+BUG-030 按关闭条件完成并关闭。开发分支本地与远端已删除，本轮未创建专用 worktree，保留主仓库及其他既有 worktree。原始结果和临时 smoke 数据库保留，未落实真实生成模型的图谱验收；不启动后续 Step。最终回复交付模块地图、实现机制与实际边界。

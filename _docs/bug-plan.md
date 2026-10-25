@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-- [ ] BUG-030：Provider / Host 已对齐 Qwen3-Embedding-4B / 2560 维，真实 9 请求 smoke、专项 52 项与完整 988 项通过，等待 PR CI 与合并，见 [151](151-bugfix-bug-030-embedding-deployment.md)。
+- [x] BUG-030：Provider / Host 已对齐 Qwen3-Embedding-4B / 2560 维，真实 9 请求 smoke、专项 52 项、完整 988 项及代码 head CI 通过，PR #96 已合入（c6b6ef9），见 [151](151-bugfix-bug-030-embedding-deployment.md)。
 
 - [x] BUG-027：候选校验已合并为一次事务，本地耗时对比、完整 987 项及 PR #95 当前代码 head CI 通过，已合入（83c54fa），关闭；见 [150](150-bugfix-bug-027-029-retrieval.md)。
 - [x] BUG-028：已采用完整词边界、最长重叠优先和稳定种子选择；相关回归、完整 987 项及 PR #95 代码 head CI 通过，已合入（83c54fa），规则修复关闭，中文真实质量未验收，见 [150](150-bugfix-bug-027-029-retrieval.md)。
@@ -60,7 +60,7 @@
 
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
-| BUG-030 | P1 / 后端 | 默认 0.6B / 1024 维与已部署的 4B 不一致，阻断真实索引验收 | 已适配；真实 9 请求 smoke 与完整 988 项通过，待 CI | Provider / Host 对齐部署，维度及响应校验、本地完整验证、真实 smoke test 与当前 PR head CI 通过 | [151：待 CI](151-bugfix-bug-030-embedding-deployment.md) |
+| BUG-030 | P1 / 后端 | 默认 0.6B / 1024 维与已部署的 4B 不一致，阻断真实索引验收 | 已适配；真实 9 请求 smoke、完整 988 项及代码 head CI 通过 | Provider / Host 对齐部署，维度及响应校验、本地完整验证、真实 smoke test 与当前 PR head CI 通过 | [151：已修复并合入 PR #96](151-bugfix-bug-030-embedding-deployment.md) |
 | BUG-027 | P2 / 后端 | 每个候选单独 atomic，存在不必要事务开销；不是已测出的性能故障 | 已核实 atomic 无外层时逐次提交，本机对比候选阶段 37→1 次 | 单次事务完成候选校验，结果排名与权限/代次规则保留；耗时对比、完整本机与当前 head CI 通过 | [150：已修复并合入 PR #95](150-bugfix-bug-027-029-retrieval.md) |
 | BUG-028 | P2 / 后端 | 中文短实体可被子串误命中，截断种子受图读取顺序影响 | 已确认 includes 与先截断的规则 | 完整词边界、最长重叠与稳定截断回归、完整本机与当前 head CI 通过；注明分词边界 | [150：已修复并合入 PR #95](150-bugfix-bug-027-029-retrieval.md) |
 | BUG-029 | P2 / 后端契约 | RetrievalChunk 继承 IndexSearchResult，score 的余弦/RRF 含义混淆 | 类型继承与赋值已核实 | 独立结果类型与明确融合分数字段，调用更新及完整本机与当前 head CI 通过 | [150：已修复并合入 PR #95](150-bugfix-bug-027-029-retrieval.md) |
