@@ -204,6 +204,8 @@
 
 ## 调研与归档
 
+- [BUG-030：Embedding 部署适配与真实 smoke test](151-bugfix-bug-030-embedding-deployment.md)：默认模型名与 2560 维响应校验对齐 server:8081，验证索引与检索链路。
+
 - [BUG-024：索引版本兼容性](145-bugfix-bug-024-index-compatibility.md)：统一复用与恢复条件，废弃旧版本 building 并重新构建。
 - [BUG-027–029：检索事务、名称匹配与融合分数](150-bugfix-bug-027-029-retrieval.md)：单次事务校验、完整名称匹配、独立融合结果与本地耗时对比。
 - [BUG-026：双路检索精简与 Chunk Top-K](149-bugfix-bug-026-retrieval.md)：移除独立关键词通道、收紧候选并保留全局片段排名。

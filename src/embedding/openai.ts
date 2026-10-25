@@ -12,14 +12,14 @@ export interface OpenAIEmbeddingConfig {
   readonly random?: () => number;
 }
 
-const DEFAULT_MODEL = "Qwen/Qwen3-Embedding-0.6B";
+const DEFAULT_MODEL = "Qwen3-Embedding-4B";
 const QUERY_TASK = "Given a user question, retrieve relevant passages that answer the question";
 
 export class OpenAIEmbeddingProvider implements EmbeddingProvider {
   readonly id = "openai-compatible";
   readonly model: string;
   readonly revision: string | null;
-  readonly dimension = 1024;
+  readonly dimension = 2560;
   readonly documentTemplateVersion = "qwen3-document-v1";
   readonly queryTemplateVersion = "qwen3-query-v1";
   readonly policy: EmbeddingBatchPolicy;
