@@ -1,6 +1,6 @@
 # 153：F13.4c 资源目录与按需检索
 
-日期：2026-10-25。范围：仅后端 Resource Tools、Agent Profile、Turn Context 与相关测试 / 文档。已完成本机验证，等待 PR head CI 后收口。
+日期：2026-10-25。范围：仅后端 Resource Tools、Agent Profile、Turn Context 与相关测试 / 文档。状态：✅ 已完成。本机完整验证与 PR #98 代码 head CI 通过，已 squash 合入 master（4de60fe）。
 
 ## 做了什么
 
@@ -65,7 +65,7 @@ Agent 从当前 Profile 调用资源工具，工具从可信 Session 解析 Proj
 - 首轮 `pnpm test`：158 文件，150 通过 / 8 失败；1032 项，1021 通过 / 11 失败，317.24 秒。失败包括旧工具列表 / 全量目录断言、两项小窗口 Main review 固定成本问题、交接超时和 Host 首次启动超时。修正相关离线脚本后 7 文件 / 12 项中剩两项窗口问题；窗口与样本调整后 2 文件 / 4 项通过；Host 首次启动专项 1 项通过（25 项因名称筛选跳过）。
 - `pnpm test --maxWorkers=4`：158 文件 / 1032 项全部通过，退出码 0，314.36 秒；包含默认 all 模式的进程中断恢复。
 - `git diff --check` 与 staged diff 检查：通过；文档相对链接存在性检查通过，src / scripts 中旧目录类型与 helper 引用无残留。
-- 当前 PR head CI：待验证；本机通过不替代 CI。
+- [PR #98](https://github.com/likeWind221/Navo/pull/98)：最终代码 head `4fe8f71068ecab1cfcc50e78fed56537be46e3f1` 的 verify 成功；[CI run 40202581775](https://github.com/likeWind221/Navo/actions/runs/40202581775) 成功，包含 typecheck、normal tests 与 crash recovery tests。2026-10-25 squash 合入 master（`4de60fe04c6b7b5939f2ff27ee8997c16a6d9a09`）。本地 / 远端开发分支已删除，没有创建本 Step 专用 worktree；主仓库与其他任务目录保留。
 
 新增工具单元测试和真实 SQLite / 离线 Embedding / 图谱集成覆盖可信 Main / Node 身份、名称与描述 / 后代目录筛选、分页边界、非法及伪造参数、空结果 / 检索错误、私有资料及关系证据隔离、异步撤权、已知 ID 直接读取、取消、Session Binding 重启恢复与删除后的不可见性。现有资源 CRUD、访问控制、压缩和进程中断恢复由相关回归及完整后端套件验证。
 
@@ -73,4 +73,4 @@ Agent 从当前 Profile 调用资源工具，工具从可信 Session 解析 Proj
 
 ## 下一步
 
-仅完成当前 F13.4c 的本机检查、PR、当前 head CI 与按仓库规则的 squash 合并及开发分支清理。后续阶段等待单独授权。
+F13.4c 已完成，本次修改清单与模块导读随交付回复提供。按需工具已实际接入 Main / Node / Main Review，不存在仅声明而未接入的新增协议。F13.4 父项的后续产品验收、检索 RPC、前端与 F13.5 均等待单独授权，本轮停止。
