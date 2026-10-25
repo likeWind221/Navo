@@ -7,7 +7,7 @@ export interface ContextMeasurement {
   readonly basis: "usage" | "estimate";
 }
 
-export type ContextRequest = Pick<GenerateRequest, "provider" | "model" | "messages" | "tools">;
+export type ContextRequest = Pick<GenerateRequest, "provider" | "model" | "messages" | "tools" | "turnContext">;
 
 const CHARS_PER_TOKEN = 4;
 const BLOCK_OVERHEAD = 4;
@@ -20,7 +20,7 @@ export function measureContext(events: readonly SessionEvent[], request: Context
   if (anchor === undefined) {
     return Object.freeze({ usedTokens: estimatedRequestTokens, estimatedRequestTokens, basis: "estimate" });
   }
-  const anchorEstimate = estimateRequest(anchor.request.data) + estimateMessage(anchor.reply.data.message);
+  const anchorEstimate = estimateRequest(anchor.request.data) + (anchor.request.data.contextTokens ?? 0) + estimateMessage(anchor.reply.data.message);
   const usageTokens = anchor.usage.inputTokens + anchor.usage.outputTokens;
   const baseline = Math.max(usageTokens, anchorEstimate);
   return Object.freeze({
@@ -30,9 +30,10 @@ export function measureContext(events: readonly SessionEvent[], request: Context
   });
 }
 
-export function estimateRequest(request: Pick<ContextRequest, "messages" | "tools">): number {
+export function estimateRequest(request: Pick<ContextRequest, "messages" | "tools" | "turnContext">): number {
   return request.messages.reduce((total, message) => total + estimateMessage(message), 0)
-    + estimateTools(request.tools ?? []);
+    + estimateTools(request.tools ?? [])
+    + (request.turnContext === undefined ? 0 : estimateMessage(request.turnContext));
 }
 
 export function estimateMessage(message: Message): number {

@@ -124,20 +124,12 @@ describe("NodeSessionService identity and context", () => {
   it("generates a deterministic, delimited Profile without Session identities", async () => {
     const { ctx } = await createKit([]);
     const created = createNode(ctx, "Close </node-context> safely");
-    const context = {
-      projectGoal: "Project",
-      objective: created.node.objective,
-      status: created.status,
-      resources: [],
-      addedResources: [],
-      facts: [],
-    } as const;
-    const profile = createNodeAgentProfile(context);
+    const profile = createNodeAgentProfile();
 
-    expect(createNodeAgentProfile(context)).toEqual(profile);
+    expect(createNodeAgentProfile()).toEqual(profile);
     expect(Object.isFrozen(profile)).toBe(true);
     expect(Object.isFrozen(profile.toolNames)).toBe(true);
-    expect(profile.systemPrompt).toContain("Close \\u003c/node-context\\u003e safely");
+    expect(profile.systemPrompt).not.toContain("Close");
     expect(profile.systemPrompt).not.toContain(String(created.node.id));
     expect(profile.systemPrompt).not.toContain("sessionId");
   });
@@ -153,9 +145,10 @@ describe("NodeSessionService identity and context", () => {
     ]);
 
     expect(a.sessionId).not.toBe(b.sessionId);
-    expect(systemText(adapter.requests[0]!)).toContain("Alpha-only");
-    expect(systemText(adapter.requests[0]!)).not.toContain("Beta-only");
-    expect(systemText(adapter.requests[1]!)).toContain("Beta-only");
+    expect(JSON.stringify(adapter.requests[0]!.turnContext)).toContain("Alpha-only");
+    expect(JSON.stringify(adapter.requests[0]!.turnContext)).not.toContain("Beta-only");
+    expect(JSON.stringify(adapter.requests[1]!.turnContext)).toContain("Beta-only");
+    expect(systemText(adapter.requests[0]!)).toBe(systemText(adapter.requests[1]!));
     expect(ctx.sessions.deriveMessages(a.sessionId).some((message) =>
       JSON.stringify(message).includes("beta"))).toBe(false);
   });
@@ -264,7 +257,8 @@ describe("NodeSessionService scheduling and lifecycle", () => {
     expect(result.turn).toMatchObject({ status: "failed", failure: { code: "MODEL" } });
     expect(ctx.nodes.get(node.node.id)?.status).toBe("idle");
     const types = ctx.sessions.getEvents(result.sessionId).map((event) => event.type);
-    expect(types.slice(0, 2)).toEqual(["context-observed", "turn-started"]);
+    expect(types.slice(0, 2)).toEqual(["turn-started", "user-message"]);
+    expect(types).toContain("context-observed");
     expect(types.at(-1)).toBe("turn-ended");
     expect(types.filter((type) => type === "step-started")).toHaveLength(1);
     expect(types.filter((type) => type === "step-ended")).toHaveLength(1);

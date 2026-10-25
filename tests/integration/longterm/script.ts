@@ -33,7 +33,7 @@ export function scenario(): Scenario {
   const share = (key: string) => ({ resource_id: id(key), expected_revision: 1, access: { kind: "shared", node_ids: [id("synthesis")] } });
   return { ids, entries: [
     step(request => {
-      expect(JSON.stringify(request.messages)).toContain("Deliver an evidence-backed recommendation");
+      expect(JSON.stringify(request.turnContext)).toContain("Deliver an evidence-backed recommendation");
       return call("plan-read", "read_roadmap", {});
     }),
     step(request => {
@@ -61,8 +61,8 @@ export function scenario(): Scenario {
     answer("Evidence shared; Human may start synthesis"),
 
     step(request => {
-      expect(JSON.stringify(request.messages[0])).toContain(id("evidenceResource"));
-      expect(JSON.stringify(request.messages[0])).not.toContain("EVIDENCE_BODY");
+      expect(JSON.stringify(request.turnContext)).toContain(id("evidenceResource"));
+      expect(JSON.stringify(request.turnContext)).not.toContain("EVIDENCE_BODY");
       return call("consume-evidence", "fetch_resource", { resource_id: id("evidenceResource") });
     }),
     step(request => {
@@ -99,7 +99,7 @@ export function scenario(): Scenario {
     answer("Validation inserted; synthesis must wait"),
 
     step(request => {
-      expect(JSON.stringify(request.messages[0])).not.toContain(id("evidenceResource"));
+      expect(JSON.stringify(request.turnContext)).not.toContain(id("evidenceResource"));
       return call("private-fetch", "fetch_resource", { resource_id: id("evidenceResource") });
     }),
     step(request => {
@@ -121,8 +121,8 @@ export function scenario(): Scenario {
 
     step(request => {
       expect(JSON.stringify(request.messages)).toContain("Waiting for independent validation");
-      expect(JSON.stringify(request.messages[0])).toContain(id("validationResource"));
-      expect(JSON.stringify(request.messages[0])).not.toContain("VALIDATION_BODY");
+      expect(JSON.stringify(request.turnContext)).toContain(id("validationResource"));
+      expect(JSON.stringify(request.turnContext)).not.toContain("VALIDATION_BODY");
       return call("consume-validation", "fetch_resource", { resource_id: id("validationResource") });
     }),
     step(request => {

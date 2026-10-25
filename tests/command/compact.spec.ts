@@ -167,7 +167,7 @@ describe("manual compaction command", () => {
 
     const result = await executeCompact(kit, sessionId);
 
-    expect(result.map(event => event.type)).toEqual(["command-started", "command-completed"]);
+    expect(result.map(event => event.type), JSON.stringify(result)).toEqual(["command-started", "command-completed"]);
     expect(result[1]).toMatchObject({ type: "command-completed", summary: expect.stringContaining("Compacted context") });
     expect(result[1]?.type === "command-completed" ? result[1].summary : "")
       .toContain("mock/test");
@@ -404,8 +404,8 @@ describe("manual compaction context resolution", () => {
 
     const result = await executeCompact(kit, project.mainSessionId);
 
-    expect(result.map(event => event.type)).toEqual(["command-started", "command-completed"]);
-    const profile = createMainAgentProfile(kit.ctx.projects.get(project.id)!, false);
+    expect(result.map(event => event.type), JSON.stringify(result)).toEqual(["command-started", "command-completed"]);
+    const profile = createMainAgentProfile();
     expect(systemText(kit.adapter.requests[0]!)).toBe(profile.systemPrompt);
     const events = kit.ctx.sessions.getEvents(project.mainSessionId).map(event => event.type);
     expect(events).not.toContain("turn-started");
@@ -434,10 +434,10 @@ describe("manual compaction context resolution", () => {
 
     const result = await executeCompact(kit, sessionId);
 
-    expect(result.map(event => event.type)).toEqual(["command-started", "command-completed"]);
+    expect(result.map(event => event.type), JSON.stringify(result)).toEqual(["command-started", "command-completed"]);
     const prompt = systemText(kit.adapter.requests[0]!);
     expect(prompt).toContain("Navo's Node Agent");
-    expect(prompt).toContain("Compact safely");
+    expect(prompt).not.toContain("Compact safely");
     expect(kit.ctx.nodes.get(created.node.id)!.status).toBe(status);
     expect(kit.ctx.nodes.getEvents(created.node.id)).toHaveLength(nodeEvents);
     expect(kit.ctx.sessions.getEvents(sessionId).map(event => event.type))

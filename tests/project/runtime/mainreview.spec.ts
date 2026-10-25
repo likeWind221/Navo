@@ -70,7 +70,7 @@ describe("Main review of a Node", () => {
     expect(reviewRequest.tools?.map(tool => tool.name)).toEqual(expect.arrayContaining([
       SUBMIT_REVIEW_TOOL_NAME, READ_NODE_TURN_TOOL_NAME, "add_node", "edit_node", "remove_node", "set_dependency", "reorder_nodes", "fetch_resource",
     ]));
-    const prompt = JSON.stringify(reviewRequest.messages);
+    const prompt = JSON.stringify(reviewRequest.turnContext);
     expect(prompt).toContain("review checklist");
     expect(prompt).toContain("not a verified fact");
     expect(prompt).toContain("validated-node-submission");
@@ -98,7 +98,7 @@ describe("Main review of a Node", () => {
     expect(ctx.nodes.get(next)?.status).toBe("locked");
 
     await ctx.projectRuntime.continueNode({ projectId: project.id, nodeId: first, text: "Continue" });
-    expect(JSON.stringify(adapter.requests.at(-1)?.messages.at(-1))).toContain("Cite the primary source");
+    expect(JSON.stringify(adapter.requests.at(-1)?.turnContext)).toContain("Cite the primary source");
     expect(ctx.reviews.isPending(ctx.nodes.get(first)!)).toBe(true);
   });
 
@@ -141,7 +141,7 @@ describe("Main review of a Node", () => {
     expect(JSON.stringify(adapter.requests[1]?.messages)).toContain("never ran");
     expect(ctx.nodes.get(first)).toMatchObject({ status: "idle", lastReview: { decision: "escalate" } });
     expect(ctx.nodes.get(first)?.lastReview?.turnId).toBeUndefined();
-    expect(JSON.stringify(adapter.requests[0]?.messages)).toMatch(/neverExecuted[\\"]+: true/);
+    expect(JSON.stringify(adapter.requests[0]?.turnContext)).toMatch(/neverExecuted[\\"]+: true/);
 
     ctx.nodes.bindSession(first, createSessionId("session-never-ran"));
     for (let round = 0; round < 2; round += 1) {
@@ -198,7 +198,7 @@ describe("Main review of a Node", () => {
     ]);
     await run();
     await review();
-    const checklist = JSON.stringify(adapter.requests[1]?.messages);
+    const checklist = JSON.stringify(adapter.requests[1]?.turnContext);
     expect(checklist).toContain("truncated 3500 chars");
     expect(checklist).not.toContain("x".repeat(1_600));
     expect(() => ctx.projectRuntime.startReview({ projectId: project.id, nodeId: next, text: "Review" }))

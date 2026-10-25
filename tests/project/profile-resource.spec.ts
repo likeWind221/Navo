@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { createProjectId, createSessionId } from "../../src/brand/ids.js";
 import { createMainAgentProfile } from "../../src/project/profile.js";
 import { SEND_TO_MAIN_TOOL_NAME } from "../../src/tools/builtins/mailbox/send.js";
 import { DELETE_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/delete.js";
@@ -11,15 +10,7 @@ import { SET_RESOURCE_ACCESS_TOOL_NAME } from "../../src/tools/builtins/resource
 
 describe("Main Agent Resource profile", () => {
   it("exposes owner Resource CRUD but not Node-to-Main messaging", () => {
-    const profile = createMainAgentProfile({
-      id: createProjectId("project"),
-      name: "Project",
-      goal: "Coordinate the Project",
-      mainSessionId: createSessionId("main"),
-      status: "active",
-      revision: 1,
-      createdAt: "2026-10-07T00:00:00.000Z",
-    });
+    const profile = createMainAgentProfile();
 
     expect(profile.toolNames).toEqual(expect.arrayContaining([
       REGISTER_RESOURCE_TOOL_NAME,

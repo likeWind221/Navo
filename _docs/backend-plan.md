@@ -102,7 +102,7 @@ Resource Service
   +--> SQLite metadata (F10.1c)
 ```
 
-Main 负责把 Resource 从 private 定向共享给指定 Node，或提升为本 Project 内 public。Node 启动时只需要持续知道自己可见的 Resource metadata，正文按需读取；Resource 到位仍不会自动启动 Node。通用 Context Builder、动态 reload 与 RAG 尚未实现。
+Main 负责把 Resource 从 private 定向共享给指定 Node，或提升为本 Project 内 public。Main / Node 在每次模型请求前获得权限内的当前任务状态与必要提醒。Resource metadata 在目录工具可用前暂时保留自动注入，正文按需读取；Resource 到位仍不会自动启动 Node。F13.4a 的统一上下文与验证进度见 [152](152-devlog-f13-4a-turn-context.md)；按需目录工具、Working Board 与后续资料使用流程仍待单独实施。
 
 ### Human 是 Project Agent Turn 的最终 Gate
 
@@ -327,7 +327,7 @@ Host restart -> unmatched compaction marked interrupted -> replay committed chec
 - 首版正文检索支持 Markdown、TXT 与可提取文本的 PDF，不承诺复杂表格、公式、图片或扫描件理解。所有文件均可保存；状态区分处理中、正文可检索、仅文件信息可搜索、处理失败，失败保留文件并可重新处理。
 - 采用文件夹与子文件夹组织，按格式、路径与状态查找，不使用标签；描述用户选填，不自动生成。支持整目录导入，Agent 发布默认根目录，标注创建者。不自动将每次回答纳入资料库。
 - F13 不替代 F12 压缩；跨项目知识库、Session / 被压缩历史召回、任意 Workspace 全量检索、外部知识库同步和团队协作留待后续。用户于 2026-10-22 确认 F13 采用 GraphRAG；首期包括图谱构建、关系 / 多跳检索，社区摘要与全局检索作为后续扩展。
-- 不提前锁定检索算法、Embedding、重排模型、向量库或服务商；后续技术设计前按仓库规则只读核对 DeepSeek Harness。真实模型验收另报耗时、额度与影响范围，取得授权后执行。
+- 不提前锁定检索算法、Embedding、重排模型、向量库或服务商。真实模型验收另报耗时、额度与影响范围，取得授权后执行。
 - 用户已决定首版不增加独立证据评估环节、不接入 Jev 类决策模型；由 Main / Node 继续负责按需搜索、阅读与补查，相关调研留存于 125，不作为本阶段实施依赖。
 - 用户可管理项目全部资料，用户导入默认项目内全部 Node 可用；Node / Main 沿用既有 Resource 工具能力与权限，不新增 Agent 文件夹管理、目录导入、内容替换或移动能力。首版不做权限编辑、正文历史版本恢复或独立停用功能。
 
@@ -352,7 +352,8 @@ Host restart -> unmatched compaction marked interrupted -> replay committed chec
 | ✅ | F13.3b Chunk 与 Embedding 索引 | 文本切分、向量化与语义检索 | 将当前正文转换为可追溯 Chunk，批量生成并持久化 Embedding，建立语义检索基础 | Schema v6、确定性 Chunker、独立 Qwen3-compatible Provider、可恢复原子构建与权限内有界 Top-K 已实现；Node 24 typecheck、仓库全部 146 个 spec 文件 / 933 项及 PR #91 代码 head CI 通过。冻结设计见 [143](143-devlog-f13-3b-chunk-embedding-design.md)，实施见 [144](144-devlog-f13-3b-chunk-embedding.md)；后续 4B / 2560 维真实 Embedding 小规模 smoke test 已通过，见 [151](151-bugfix-bug-030-embedding-deployment.md)；PR #91 已合入 master。FTS5 / BM25、图谱、公共 RPC 和 UI 均未提前实现 |
 | ✅ | F13.3c 实体关系抽取与图谱持久化 | 项目内图谱与来源证据 | 从当前资料批量抽取实体关系，保留独立来源，支持权限隔离、替换删除与失败恢复 | 按冻结设计完成实现，专项 40 项、typecheck 与完整 963 项（含 BUG-024）通过，PR #92 最新 head CI 通过，已按用户授权合入 master（de2bb17），见 [146](146-devlog-f13-3c-graph.md)；不做混合检索、多跳、社区或公共 RPC |
 | ✅ | F13.3d 混合与图局部检索 | 权限内资料召回与来源路径 | 用户问题可匹配语义与实体关系，获得全局限量且按资料归并的原文片段和最多两跳来源路径 | BUG-026 双路精简与全局 Chunk Top-K 已随 PR #94 合入，本机完整 985 项与代码 head CI 通过，见 [149](149-bugfix-bug-026-retrieval.md)。首次交付：内部混合入口、权限与目录隔离、当前来源定位已实现；本机 typecheck、新增 17 项及完整 980 项通过，PR #93 当前代码 head CI 成功并已合入 master（0c86f7e），见 [147](147-devlog-f13-3d-retrieval.md)。不包含公共 RPC、Electron Bridge、Renderer 或真实模型质量评测 |
-| ⬜ | F13.4 Agent 按需使用资料 | Main / Node 任务资料使用与过程可见性 | Main / Node 能围绕信息缺口自主选择搜索、阅读与补充查找，已有证据可直接使用，明确要求查阅时不得跳过 | Main / Node 各自在可见范围内使用资料；实际使用过程可追溯；证据不足与来源冲突明确呈现；资料中的指令不扩大任务授权；不因资料变化隐式启动回合 |
+| 🔄 | F13.4 Agent 按需使用资料 | Main / Node 任务资料使用与过程可见性 | Main / Node 能围绕信息缺口自主选择搜索、阅读与补充查找，已有证据可直接使用，明确要求查阅时不得跳过 | Main / Node 各自在可见范围内使用资料；实际使用过程可追溯；证据不足与来源冲突明确呈现；资料中的指令不扩大任务授权；不因资料变化隐式启动回合 |
+| 🔄 | F13.4a 统一 Turn Context | Main / Node 当前任务上下文 | 每次模型请求都能看到当前权威任务状态和必要提醒，长期历史保持可压缩与可恢复 | 固定角色规则与动态状态分离；Turn 内变化下一请求可见，提醒不重复写入历史；Main / Node 可见范围隔离；现有资料可发现性暂保留。本机 typecheck、完整 996 项与 diff 检查通过；PR 进度见 [152](152-devlog-f13-4a-turn-context.md)，Working Board 与资源目录工具未实现 |
 | ⬜ | F13.5 成果引用与来源核验 | 资料依据、引用与变化提示 | 用户能定位回答和任务成果使用的资料，并自行核对内容 | 用户侧引用仅显示资料名称并按 Resource ID 定位资料库，不展示页码或行号；移动后关联保留，替换 / 删除明确提示；不设置独立模型证据评估；正式交互由前端承接 |
 | ⬜ | F13.5a 成果资料关联 | 引用关联与来源变化 | 成果能保留已使用资料的关联，并识别来源更新或删除 | 重命名、移动不破坏关联；更新和删除不静默换成新依据，不撤回已经进入对话的内容；不声称文件级引用证明结论正确 |
 | ⬜ | F13.5b 桌面引用交接 | Host / RPC / Electron 公共能力 | 桌面能解析资料引用、定位资料并显示来源变化 | 版本化契约、运行时校验与 Bridge 实际调用通过，错误 / 取消 / 兼容明确；正式引用点击与提示仍需前端验收 |
@@ -371,7 +372,9 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不恢复�
 
 **Phase 10、M1、Phase 11 与 Phase 12（F12.0–F12.7）均已完成对应后端验收。
 
-**当前后端下一步（2026-10-24）：BUG-027–029 候选事务、名称匹配与融合分数修复已完成，专项 24 项、类型检查、完整 987 项及 PR #95 代码 head CI 通过，已合入 master（83c54fa），见 [150](150-bugfix-bug-027-029-retrieval.md)。BUG-026 双路检索与全局 Chunk Top-K 修复已随 PR #94 合入 master（408a83c），本机 typecheck、985 项完整测试与代码 head CI 通过，见 [149](149-bugfix-bug-026-retrieval.md)；后续 Step 等待单独授权。F13.3d 混合与图局部检索已完成，新增 17 项回归、typecheck 与完整 980 项通过，PR #93 代码 head 6898b88 的 CI run 40102211673 成功，已 squash 合入 master（0c86f7e），见 [147](147-devlog-f13-3d-retrieval.md)。F13.3b/c 已合入；后续检索公共接口与 Electron Bridge 等步骤仍需单独授权，本轮不启动。真实 Embedding 小规模 smoke test 已通过（4B / 2560 维，见 [151](151-bugfix-bug-030-embedding-deployment.md)），真实图谱抽取、规模与检索质量评测未运行；首轮 Fetch 超时留在 BUG-025 继续跟踪，未定位、未修复，不声称关闭。**F12.7 最新 gpt-6-luna 真实 28 请求 / 3 次压缩、暂停交接 / 同库重启及两 Node / Main 完整通过，本机 793 项与代码 CI 通过，见 [117](117-devlog-f12-7-acceptance.md)。BUG-014 / 015 / 016 / 017 关闭，BUG-018 已随 PR #79 合入关闭。BUG-019 通用传输诊断缺口仅排查、未修复；本轮成功不证明网络持续稳定。F13.0 产品设计已收口，见 [125](125-devlog-f13-0-design.md)；F13.1a 已完成并合入 master，F13.1b 已随 PR #87 合并（提交 `845b864`），CI run `39542644391` 成功，本机 typecheck 与 891 项完整测试通过，见 [135](135-devlog-f13-1b-content.md)。F13.1c 后端能力已实现，本机 typecheck 与 897 项完整测试、PR #88 代码 head CI 通过，见 [137](137-devlog-f13-1c-user-intake.md)；F13.2a 后端实现已随 PR #89 合入，见 [139](139-devlog-f13-2a-library-organization.md)；F13.2b 公共 RPC、Electron Bridge、本机 912 项完整测试与真实 Bridge 调用验收已完成，见 [140](140-devlog-f13-2b-desktop-resource-management.md)。F13.1 与 F13.2 父项仍待正式 Renderer 入口和交互验收。BUG-019 保持仅排查，不阻断产品设计。前端 F5.4–F5.8、正式页面 AutoRun / 上下文 UI 不因此视为完成。**
+**当前后端下一步（2026-10-25）：F13.4a 统一 Turn Context 正在本机验证与 PR 收口，见 [152](152-devlog-f13-4a-turn-context.md)。本轮仅授权 F13.4a；F13.4b Working Board 与 F13.4c 资源工具尚未实施，后续等待单独授权。**
+
+**此前完成状态（2026-10-24）：BUG-027–029 候选事务、名称匹配与融合分数修复已完成，专项 24 项、类型检查、完整 987 项及 PR #95 代码 head CI 通过，已合入 master（83c54fa），见 [150](150-bugfix-bug-027-029-retrieval.md)。BUG-026 双路检索与全局 Chunk Top-K 修复已随 PR #94 合入 master（408a83c），本机 typecheck、985 项完整测试与代码 head CI 通过，见 [149](149-bugfix-bug-026-retrieval.md)；后续 Step 等待单独授权。F13.3d 混合与图局部检索已完成，新增 17 项回归、typecheck 与完整 980 项通过，PR #93 代码 head 6898b88 的 CI run 40102211673 成功，已 squash 合入 master（0c86f7e），见 [147](147-devlog-f13-3d-retrieval.md)。F13.3b/c 已合入；后续检索公共接口与 Electron Bridge 等步骤仍需单独授权，本轮不启动。真实 Embedding 小规模 smoke test 已通过（4B / 2560 维，见 [151](151-bugfix-bug-030-embedding-deployment.md)），真实图谱抽取、规模与检索质量评测未运行；首轮 Fetch 超时留在 BUG-025 继续跟踪，未定位、未修复，不声称关闭。**F12.7 最新 gpt-6-luna 真实 28 请求 / 3 次压缩、暂停交接 / 同库重启及两 Node / Main 完整通过，本机 793 项与代码 CI 通过，见 [117](117-devlog-f12-7-acceptance.md)。BUG-014 / 015 / 016 / 017 关闭，BUG-018 已随 PR #79 合入关闭。BUG-019 通用传输诊断缺口仅排查、未修复；本轮成功不证明网络持续稳定。F13.0 产品设计已收口，见 [125](125-devlog-f13-0-design.md)；F13.1a 已完成并合入 master，F13.1b 已随 PR #87 合并（提交 `845b864`），CI run `39542644391` 成功，本机 typecheck 与 891 项完整测试通过，见 [135](135-devlog-f13-1b-content.md)。F13.1c 后端能力已实现，本机 typecheck 与 897 项完整测试、PR #88 代码 head CI 通过，见 [137](137-devlog-f13-1c-user-intake.md)；F13.2a 后端实现已随 PR #89 合入，见 [139](139-devlog-f13-2a-library-organization.md)；F13.2b 公共 RPC、Electron Bridge、本机 912 项完整测试与真实 Bridge 调用验收已完成，见 [140](140-devlog-f13-2b-desktop-resource-management.md)。F13.1 与 F13.2 父项仍待正式 Renderer 入口和交互验收。BUG-019 保持仅排查，不阻断产品设计。前端 F5.4–F5.8、正式页面 AutoRun / 上下文 UI 不因此视为完成。**
 
 - 免除记录：F10.4b 真实模型五场景验收与 F10.5 第 7–11 回合真实验收均经用户决定免除，相应能力只由离线测试覆盖，见第 7 节。
 - 未关闭 Bug（以 [Bug 跟踪表](bug-plan.md) 为准）：BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 仅排查，BUG-025 固定地址 HTTP 测试偶发超时待定位。

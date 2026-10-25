@@ -3,7 +3,9 @@ import { randomUUID } from "node:crypto";
 
 import type { Context } from "cordis";
 
-import { createMessageId } from "../../src/brand/ids.js";
+import { turnContextMessage } from "../../src/context/turn.js";
+import { createProjectTurnContext } from "../../src/project/context.js";
+import { createMessageId, createSessionId } from "../../src/brand/ids.js";
 import type { NodeId, ProjectId } from "../../src/brand/ids.js";
 import { resolveContextBudget } from "../../src/context/budget.js";
 import { estimateRequest } from "../../src/context/meter.js";
@@ -76,14 +78,20 @@ export function runPreflight(
   assert(nodeA !== undefined, "Node A is missing during preflight.");
   const nodeB = app.nodes.get(nodeBId);
   assert(nodeB !== undefined, "Node B is missing during preflight.");
-  const nodeAProfile = createNodeAgentProfile(new NodeTurnContextBuilder(app).build(nodeA), { allowFileRead: true });
-  const nodeBProfile = createNodeAgentProfile(new NodeTurnContextBuilder(app).build(nodeB), { allowFileRead: true });
+  const nodeAProfile = createNodeAgentProfile({ allowFileRead: true });
+  const nodeBProfile = createNodeAgentProfile({ allowFileRead: true });
   const allSchemas = app.tools.schemas();
   const nodeASchemas = allSchemas.filter(schema => nodeAProfile.toolNames.includes(schema.name));
   const nodeBSchemas = allSchemas.filter(schema => nodeBProfile.toolNames.includes(schema.name));
   const nodeACapabilities = capabilityCheck(NODE_REQUIRED, nodeAProfile.toolNames, nodeASchemas);
   const nodeBCapabilities = capabilityCheck(NODE_REQUIRED, nodeBProfile.toolNames, nodeBSchemas);
+  const nodeContext = new NodeTurnContextBuilder(app).build(nodeA);
   const nodeBaseline = estimateRequest({
+    turnContext: turnContextMessage({ sections: [
+      { kind: "runtime-state", data: { projectGoal: nodeContext.projectGoal, status: nodeContext.status,
+        objective: { ...nodeContext.objective, acceptanceCriteria: [...nodeContext.objective.acceptanceCriteria] } } },
+      { kind: "resource-catalog", data: nodeContext.resources.map(resource => ({ ...resource })) },
+    ] }, createSessionId("preflight")),
     messages: [
       message("system", nodeAProfile.systemPrompt),
       message("user", "Start working on this Node objective and its acceptance criteria."),
@@ -92,7 +100,7 @@ export function runPreflight(
   });
   const project = app.projects.get(projectId);
   assert(project !== undefined, "Project is missing during preflight.");
-  const mainProfile = createMainAgentProfile(project, true);
+  const mainProfile = createMainAgentProfile(true);
   const mainSchemas = allSchemas.filter(schema => mainProfile.toolNames.includes(schema.name));
   const mainCapabilities = capabilityCheck(
     MAIN_REVIEW_REQUIRED,
@@ -100,6 +108,7 @@ export function runPreflight(
     mainSchemas,
   );
   const mainBaseline = estimateRequest({
+    turnContext: turnContextMessage(createProjectTurnContext(app, project.mainSessionId, { observe: false }).build(), project.mainSessionId),
     messages: [
       message("system", mainProfile.systemPrompt),
       message("user", "Automatically review this Node submission against its acceptance criteria."),

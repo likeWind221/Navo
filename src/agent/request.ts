@@ -9,7 +9,9 @@ import type { RetryableAttempt } from "./limits.js";
 import type { ModelCompletion, TurnModelConfig, TurnScope } from "./types.js";
 import { inspectContextPressure, publishContextPressure } from "../context/pressure.js";
 import { compactSession } from "../context/compaction/compact.js";
-import { measureContext } from "../context/meter.js";
+import { estimateMessage, measureContext } from "../context/meter.js";
+import { turnContextMessage } from "../context/turn.js";
+import type { TurnContextSnapshot } from "../context/turn.js";
 
 export async function requestModel(
   ctx: Context,
@@ -190,6 +192,7 @@ export interface GenerateRequestInput {
   readonly sessionId: SessionId;
   readonly model: TurnModelConfig;
   readonly systemPrompt?: string;
+  readonly buildTurnContext?: () => TurnContextSnapshot;
   readonly toolNames?: readonly string[];
 }
 
@@ -199,7 +202,10 @@ export function createGenerateRequest(
   input: GenerateRequestInput,
   signal: AbortSignal,
 ): GenerateRequest {
+  signal.throwIfAborted();
+  const context = input.buildTurnContext?.();
   return {
+    ...(context === undefined ? {} : { turnContext: turnContextMessage(context, input.sessionId) }),
     provider: input.model.provider,
     model: input.model.model,
     messages: ctx.sessions.deriveMessages(input.sessionId, input.systemPrompt),
@@ -219,10 +225,12 @@ function appendRequest(
   stepId: StepId,
   request: GenerateRequest,
 ): void {
-  const { signal: _signal, ...snapshot } = request;
+  const { signal: _signal, turnContext, ...snapshot } = request;
   ctx.sessions.append({
     type: "llm-requested",
     sessionId,
-    data: { turnId, stepId, ...snapshot },
+    data: { turnId, stepId, ...snapshot,
+      ...(turnContext === undefined ? {} : { contextTokens: estimateMessage(turnContext) }),
+    },
   });
 }

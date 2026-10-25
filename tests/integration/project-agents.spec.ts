@@ -43,9 +43,9 @@ describe("Project Agent application wiring", () => {
     expect(app.agentRuntime).toBeDefined();
     expect(adapter.requests).toHaveLength(2);
     expect(JSON.stringify(adapter.requests[0]?.messages[0])).toContain("Main Agent");
-    expect(JSON.stringify(adapter.requests[0]?.messages[0])).toContain("Ship the Project");
+    expect(JSON.stringify(adapter.requests[0]?.turnContext)).toContain("Ship the Project");
     expect(JSON.stringify(adapter.requests[1]?.messages[0])).toContain("Node Agent");
-    expect(JSON.stringify(adapter.requests[1]?.messages[0])).toContain("Implement the Node");
-    expect(JSON.stringify(adapter.requests[1]?.messages[0])).toContain("Ship the Project");
+    expect(JSON.stringify(adapter.requests[1]?.turnContext)).toContain("Implement the Node");
+    expect(JSON.stringify(adapter.requests[1]?.turnContext)).toContain("Ship the Project");
   });
 });

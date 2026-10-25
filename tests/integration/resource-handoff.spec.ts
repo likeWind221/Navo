@@ -132,7 +132,7 @@ describe("F9.7 ProjectRuntime Resource handoff recovery", () => {
       {
         kind: "handler",
         handle(request) {
-          const prompt = systemText(request);
+          const prompt = JSON.stringify(request.turnContext);
           if (!resourceId || !prompt.includes(resourceId)) {
             throw new Error("Node B Turn context did not include the handed-off Resource.");
           }

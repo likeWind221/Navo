@@ -47,7 +47,7 @@ describe("Kernel Host Project goal confirmation", () => {
     }));
     expect(first.at(-1)?.type).toBe("turn-completed");
     expect(JSON.stringify(adapter.requests[1]?.messages)).toContain("goal is not confirmed yet");
-    expect(JSON.stringify(adapter.requests[0]?.messages)).toContain("not yet confirmed");
+    expect(JSON.stringify(adapter.requests[0]?.turnContext)).toContain("not yet confirmed");
 
     let frame = await next();
     while (frame.detail.project.goal === null) frame = await next();

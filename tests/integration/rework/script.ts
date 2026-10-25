@@ -33,7 +33,7 @@ export function scenario(): Scenario {
     summary: note, resource_ids: resources.map(id), criteria: [{ criterion_index: 1, satisfied: true, note }], remaining: [],
   });
   const share = (key: string) => ({ resource_id: id(key), expected_revision: 1, access: { kind: "shared", node_ids: [id("synthesis")] } });
-  const checklist = (request: GenerateRequest) => JSON.stringify(request.messages.at(-1));
+  const checklist = (request: GenerateRequest) => JSON.stringify(request.turnContext);
 
   return { ids, entries: [
     call("plan-read", "read_roadmap", {}),
@@ -68,7 +68,7 @@ export function scenario(): Scenario {
 
     step(request => {
       expect(JSON.stringify(request.messages)).toContain(id("draft"));
-      expect(JSON.stringify(request.messages.at(-1))).toContain("REWORK_FEEDBACK");
+      expect(JSON.stringify(request.turnContext)).toContain("REWORK_FEEDBACK");
       return call("publish-sourced", "register_resource", register("sourced.txt", "sourced"));
     }),
     step(request => {
@@ -130,8 +130,8 @@ export function scenario(): Scenario {
     answer("Validation complete; resources shared with synthesis"),
 
     step(request => {
-      expect(JSON.stringify(request.messages[0])).toContain(id("sourced"));
-      expect(JSON.stringify(request.messages[0])).toContain(id("validationResource"));
+      expect(JSON.stringify(request.turnContext)).toContain(id("sourced"));
+      expect(JSON.stringify(request.turnContext)).toContain(id("validationResource"));
       return call("read-sourced", "fetch_resource", { resource_id: id("sourced") });
     }),
     step(() => call("read-validation", "fetch_resource", { resource_id: id("validationResource") })),

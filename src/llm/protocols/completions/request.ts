@@ -16,7 +16,7 @@ export function serializeChatCompletionsRequest(
 ): Readonly<Record<string, JsonValue>> {
   return {
     model: request.model,
-    messages: request.messages.map((message) => serializeMessage(message, options)) as JsonValue[],
+    messages: [...request.messages, ...(request.turnContext === undefined ? [] : [request.turnContext])].map((message) => serializeMessage(message, options)) as JsonValue[],
     stream: true,
     stream_options: { include_usage: true },
     ...(request.tools === undefined || request.tools.length === 0

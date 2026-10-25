@@ -10,12 +10,11 @@ import {
 } from "../brand/ids.js";
 import type { NodeId, SessionId } from "../brand/ids.js";
 import { requireNodeProjectBinding } from "../project/binding.js";
-import { lastObservedFacts } from "../session/reminder.js";
+import { createProjectTurnContext } from "../project/context.js";
 import { FILE_TOOL_SCHEMAS } from "../tools/builtins/file/types.js";
-import { NodeTurnContextBuilder } from "./context.js";
 import { NodeError } from "./errors.js";
 import type { NodeSnapshot } from "./model.js";
-import { createNodeAgentProfile, formatResourceChanges, formatReworkFeedback } from "./profile.js";
+import { createNodeAgentProfile } from "./profile.js";
 
 export interface NodeSessionServiceConfig {
   readonly model: TurnModelConfig;
@@ -58,7 +57,7 @@ export class NodeSessionService extends Service {
 
   private readonly controllers = new Set<AbortController>();
 
-  private contextBuilder: NodeTurnContextBuilder | undefined;
+  private contextScope: Context | undefined;
 
   private unavailable = false;
 
@@ -66,10 +65,9 @@ export class NodeSessionService extends Service {
     super(ctx, "nodeSessions");
     this.model = snapshotModel(config?.model);
     this.ctx.inject(["projects", "nodes", "resources"], (scope) => {
-      const builder = new NodeTurnContextBuilder(scope);
-      this.contextBuilder = builder;
+      this.contextScope = scope;
       return () => {
-        if (this.contextBuilder === builder) this.contextBuilder = undefined;
+        if (this.contextScope === scope) this.contextScope = undefined;
       };
     });
     this.ctx.effect(() => () => {
@@ -102,15 +100,15 @@ export class NodeSessionService extends Service {
       throw new NodeError("node-session-required", `Session '${sessionId}' is not bound to a Node.`);
     }
     requireNodeProjectBinding(this.ctx, sessionId, node.node.projectId);
-    const builder = this.contextBuilder;
-    if (builder === undefined) {
+    const scope = this.contextScope;
+    if (scope === undefined) {
       throw new NodeError(
         "node-context-unavailable",
         "Node Turn context is unavailable for the current Project.",
       );
     }
-    const context = builder.build(node);
-    const profile = createNodeAgentProfile(context, {
+    const context = createProjectTurnContext(scope, sessionId, { observe: false });
+    const profile = createNodeAgentProfile({
       allowFileRead: this.ctx.tools.schemas().some(
         (tool) => tool.name === FILE_TOOL_SCHEMAS.read.name,
       ),
@@ -118,6 +116,7 @@ export class NodeSessionService extends Service {
     return Object.freeze({
       model: this.model,
       systemPrompt: profile.systemPrompt,
+      buildTurnContext: () => context.build(),
       toolNames: profile.toolNames,
     });
   }
@@ -177,20 +176,21 @@ export class NodeSessionService extends Service {
         node.node.projectId,
         pending.nodeId,
       );
-      const current = this.ctx.nodes.beginWork(pending.nodeId);
+      this.ctx.nodes.beginWork(pending.nodeId);
       working = true;
       this.active.set(sessionId, pending);
       pending.signal.throwIfAborted();
-      const builder = this.contextBuilder;
-      if (builder === undefined) {
+      const scope = this.contextScope;
+      if (scope === undefined) {
         throw new NodeError(
           "node-context-unavailable",
           "Node Turn context is unavailable for the current Project.",
         );
       }
-      const context = builder.build(current, lastObservedFacts(this.ctx.sessions, sessionId));
-      this.ctx.sessions.append({ type: "context-observed", sessionId, data: { facts: context.facts } });
-      const profile = createNodeAgentProfile(context, {
+      const context = createProjectTurnContext(scope, sessionId, {
+        ...(node.pendingFeedback === undefined ? {} : { feedback: node.pendingFeedback }),
+      });
+      const profile = createNodeAgentProfile({
         allowFileRead: this.ctx.tools.schemas().some(
           (tool) => tool.name === FILE_TOOL_SCHEMAS.read.name,
         ),
@@ -200,18 +200,11 @@ export class NodeSessionService extends Service {
         userMessage: {
           id: createMessageId(randomUUID()),
           role: "user",
-          content: [
-            { type: "text", text },
-            ...(context.addedResources.length === 0
-              ? []
-              : [{ type: "text" as const, text: formatResourceChanges(context.addedResources) }]),
-            ...(node.pendingFeedback === undefined
-              ? []
-              : [{ type: "text" as const, text: formatReworkFeedback(node.pendingFeedback) }]),
-          ],
+          content: [{ type: "text", text }],
         },
         model: this.model,
         systemPrompt: profile.systemPrompt,
+        buildTurnContext: () => context.build(),
         toolNames: profile.toolNames,
         signal: pending.signal,
         ...(input.requestId === undefined ? {} : { requestId: input.requestId }),

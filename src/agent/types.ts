@@ -1,3 +1,4 @@
+import type { TurnContextSnapshot } from "../context/turn.js";
 import type { SessionId, TurnId } from "../brand/ids.js";
 import type { TurnEvent } from "../../shared/content.js";
 import type { TurnOutput } from "./output.js";
@@ -16,6 +17,7 @@ export interface RunTurnInput {
   readonly userMessage: UserMessage;
   readonly model: TurnModelConfig;
   readonly systemPrompt?: string;
+  readonly buildTurnContext?: () => TurnContextSnapshot;
   readonly toolNames?: readonly string[];
   readonly signal?: AbortSignal;
   readonly limits?: Partial<AgentRuntimeLimits>;
@@ -30,6 +32,7 @@ export type ResolvedRunTurnInput = Omit<RunTurnInput, "toolNames"> & {
 export interface SessionAgentContext {
   readonly model: TurnModelConfig;
   readonly systemPrompt: string;
+  readonly buildTurnContext?: () => TurnContextSnapshot;
   readonly toolNames: readonly string[];
 }
 

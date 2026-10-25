@@ -19,7 +19,7 @@ export function serializeResponsesRequest(
   options: ResponsesRequestOptions,
 ): Readonly<Record<string, JsonValue>> {
   const callIds = new Map<string, FunctionCallReference>();
-  const input = request.messages.flatMap((message) =>
+  const input = [...request.messages, ...(request.turnContext === undefined ? [] : [request.turnContext])].flatMap((message) =>
     serializeMessage(message, request, options, callIds));
   return {
     model: request.model,

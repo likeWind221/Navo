@@ -18,6 +18,7 @@ export function createSessionContextSnapshot(
     sessionId,
     model: context.model,
     systemPrompt: context.systemPrompt,
+      ...(context.buildTurnContext === undefined ? {} : { buildTurnContext: context.buildTurnContext }),
     toolNames: context.toolNames,
   }, QUERY_SIGNAL);
   const events = ctx.sessions.getEvents(sessionId);

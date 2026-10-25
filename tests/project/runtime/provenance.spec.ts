@@ -12,8 +12,9 @@ function call(name: string, arguments_: unknown) {
 }
 
 function checklist(request: GenerateRequest) {
-  const text = request.messages.at(-1)!.content
-    .flatMap(block => block.type === "text" ? [block.text] : []).join("\n");
+  const body = (request.turnContext!.content[0] as { text: string }).text;
+  const snapshot = JSON.parse(body.slice(body.indexOf("\n{") + 1, body.lastIndexOf("\n</turn-context>")));
+  const text = snapshot.sections.find((section: { kind: string; text?: string }) => section.kind === "reminder" && section.text?.includes("completionSignal")).text;
   return JSON.parse(text.slice(text.indexOf("\n{") + 1, text.lastIndexOf("\n</system-reminder>")));
 }
 
