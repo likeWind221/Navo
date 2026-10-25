@@ -10,6 +10,7 @@ import {
   AgentBindingError,
   requireAgentBinding,
 } from "../../../project/binding.js";
+import { normalizeLibraryPath } from "../../../resource/library.js";
 import { ResourceError } from "../../../resource/errors.js";
 import { FileError } from "../file/errors.js";
 import type {
@@ -20,7 +21,7 @@ import { ToolExecutionError } from "../../errors.js";
 
 export const RESOURCE_ID_PARAMETER: JsonObject = {
   type: "string",
-  description: "Resource ID as listed in resource-catalog or returned by a Resource tool. A Resource name is accepted only when exactly one visible Resource has it.",
+  description: "Known Resource ID or an ID returned by list_resources, search_resources, or another Resource tool. A Resource name is accepted only when exactly one visible Resource has it.",
 };
 
 export interface ResourceToolCaller {
@@ -59,32 +60,6 @@ export function resolveResourceRef(
     );
   }
   return createResourceId(value);
-}
-
-export function withVisibleResourceRefs(
-  ctx: Context,
-  parameters: JsonObject,
-  sessionId: SessionId,
-): JsonObject {
-  const caller = requireResourceToolCaller(ctx, sessionId);
-  const visible = ctx.resources.listVisible(caller.projectId, caller.principal);
-  const counts = new Map<string, number>();
-  for (const resource of visible) {
-    counts.set(nameKey(resource.name), (counts.get(nameKey(resource.name)) ?? 0) + 1);
-  }
-  const refs = [...new Set([
-    ...visible.map(resource => String(resource.id)),
-    ...visible.filter(resource => counts.get(nameKey(resource.name)) === 1).map(resource => resource.name),
-  ])];
-  if (refs.length === 0) return parameters;
-  const properties = parameters.properties as JsonObject;
-  return {
-    ...parameters,
-    properties: {
-      ...properties,
-      resource_id: { ...(properties.resource_id as JsonObject), enum: refs },
-    },
-  };
 }
 
 function nameKey(value: string): string {
@@ -195,4 +170,17 @@ function resourceErrorMessage(error: ResourceError): string {
     default:
       return "The Resource operation was rejected by the Project Resource domain.";
   }
+}
+
+export function resourceToolLimit(value: JsonValue | undefined, fallback: number, field: string): number {
+  if (value === undefined) return fallback;
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1 || value > 100) {
+    throw invalidResourceTool(`${field} must be an integer from 1 through 100.`);
+  }
+  return value;
+}
+
+export function resourceToolFolder(value: JsonValue | undefined): string | undefined {
+  if (value === undefined || value === "") return value;
+  return normalizeLibraryPath(value);
 }

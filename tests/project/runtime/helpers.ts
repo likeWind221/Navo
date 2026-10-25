@@ -1,3 +1,7 @@
+import { ContentProcessor } from "../../../src/resource/content.js";
+import { ResourceGraph } from "../../../src/resource/graph.js";
+import { IndexSearch } from "../../../src/resource/search.js";
+import { ResourceRetrieval } from "../../../src/resource/retrieval.js";
 import { Context } from "cordis";
 import { afterEach } from "vitest";
 
@@ -60,6 +64,10 @@ export async function createKit(
   await ctx.plugin(NodeStore);
   await ctx.plugin(ProjectWorkspaceStore);
   await ctx.plugin(ResourceService);
+  await ctx.plugin(ContentProcessor);
+  await ctx.plugin(IndexSearch);
+  await ctx.plugin(ResourceGraph);
+  await ctx.plugin(ResourceRetrieval);
   await ctx.plugin(MailboxStore);
   await ctx.plugin(ResourceToolsPlugin);
   await ctx.plugin(SendToMainTool);

@@ -129,9 +129,10 @@ export function scenario(): Scenario {
     step(() => call("share-validation", "set_resource_access", share("validationResource"))),
     answer("Validation complete; resources shared with synthesis"),
 
+    call("discover-synthesis", "list_resources", {}),
     step(request => {
-      expect(JSON.stringify(request.turnContext)).toContain(id("sourced"));
-      expect(JSON.stringify(request.turnContext)).toContain(id("validationResource"));
+      expect(resultText(request, "discover-synthesis")).toContain(id("sourced"));
+      expect(resultText(request, "discover-synthesis")).toContain(id("validationResource"));
       return call("read-sourced", "fetch_resource", { resource_id: id("sourced") });
     }),
     step(() => call("read-validation", "fetch_resource", { resource_id: id("validationResource") })),

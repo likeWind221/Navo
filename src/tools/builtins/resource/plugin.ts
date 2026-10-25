@@ -5,9 +5,13 @@ import { FetchResourceTool } from "./fetch.js";
 import { RegisterResourceTool } from "./register.js";
 import { UpdateResourceTool } from "./update.js";
 import { SetResourceAccessTool } from "./access.js";
+import { ListResourcesTool } from "./list.js";
+import { SearchResourcesTool } from "./search.js";
 
 export async function ResourceToolsPlugin(ctx: Context): Promise<void> {
   await ctx.plugin(RegisterResourceTool);
+  await ctx.plugin(ListResourcesTool);
+  await ctx.plugin(SearchResourcesTool);
   await ctx.plugin(FetchResourceTool);
   await ctx.plugin(UpdateResourceTool);
   await ctx.plugin(DeleteResourceTool);

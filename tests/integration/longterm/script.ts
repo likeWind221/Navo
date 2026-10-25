@@ -61,8 +61,12 @@ export function scenario(): Scenario {
     answer("Evidence shared; Human may start synthesis"),
 
     step(request => {
-      expect(JSON.stringify(request.turnContext)).toContain(id("evidenceResource"));
-      expect(JSON.stringify(request.turnContext)).not.toContain("EVIDENCE_BODY");
+      expect(JSON.stringify(request.turnContext)).not.toContain(id("evidenceResource"));
+      return call("discover-evidence", "list_resources", {});
+    }),
+    step(request => {
+      expect(resultText(request, "discover-evidence")).toContain(id("evidenceResource"));
+      expect(resultText(request, "discover-evidence")).not.toContain("EVIDENCE_BODY");
       return call("consume-evidence", "fetch_resource", { resource_id: id("evidenceResource") });
     }),
     step(request => {

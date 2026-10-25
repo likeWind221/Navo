@@ -13,7 +13,7 @@ import type { NodeId, ProjectId } from "../../src/brand/ids.js";
 import { NodeTurnContextBuilder } from "../../src/node/context.js";
 import { turnContextMessage } from "../../src/context/turn.js";
 import { createSessionId } from "../../src/brand/ids.js";
-import { createNodeAgentProfile } from "../../src/node/profile.js";
+import { formatResourceChanges, createNodeAgentProfile } from "../../src/node/profile.js";
 import { NodeStore } from "../../src/node/store.js";
 import { ProjectStore } from "../../src/project/store.js";
 import { ResourceService } from "../../src/resource/service.js";
@@ -85,7 +85,7 @@ async function publish(
 }
 
 describe("NodeTurnContextBuilder", () => {
-  it("projects only Resource metadata visible to the current Node", async () => {
+  it("projects only newly visible, non-owned Resource IDs and names", async () => {
     const { ctx, root, project, nodeA, nodeB } = await fixture();
     const own = await publish(
       ctx,
@@ -120,34 +120,19 @@ describe("NodeTurnContextBuilder", () => {
     });
 
     const builder = new NodeTurnContextBuilder(ctx);
-    const snapshot = builder.build(ctx.nodes.get(nodeB.node.id)!);
+    const snapshot = builder.build(ctx.nodes.get(nodeB.node.id)!, []);
 
     expect(snapshot.projectGoal).toBe(project.goal);
     expect(snapshot.objective.title).toBe("Consume evidence");
-    expect(snapshot.resources).toEqual([
-      {
-        id: own.id,
-        name: "own",
-        description: "Description for own",
-        type: "text/markdown",
-        revision: 1,
-        ownedByCurrentAgent: true,
-      },
-      {
-        id: shared.id,
-        name: "shared",
-        description: "Description for shared",
-        type: "text/markdown",
-        revision: 2,
-        ownedByCurrentAgent: false,
-      },
-    ]);
-    expect(snapshot.resources.some(resource => resource.id === hidden.id)).toBe(false);
+    expect(snapshot.addedResources).toEqual([{ id: shared.id, name: "shared" }]);
+    expect(JSON.stringify(snapshot)).not.toContain(own.id);
+    expect(JSON.stringify(snapshot)).not.toContain(hidden.id);
+    expect(snapshot).not.toHaveProperty("resources");
     expect(JSON.stringify(snapshot)).not.toContain("BODY");
     expect(JSON.stringify(snapshot)).not.toContain("entryRef");
     expect(JSON.stringify(snapshot)).not.toContain(String(nodeA.node.id));
     expect(Object.isFrozen(snapshot)).toBe(true);
-    expect(Object.isFrozen(snapshot.resources)).toBe(true);
+    expect(Object.isFrozen(snapshot.addedResources)).toBe(true);
   });
 
   it("returns an immutable Turn snapshot and sees later grants only on the next build", async () => {
@@ -162,8 +147,8 @@ describe("NodeTurnContextBuilder", () => {
     );
     const builder = new NodeTurnContextBuilder(ctx);
 
-    const before = builder.build(ctx.nodes.get(nodeB.node.id)!);
-    expect(before.resources).toEqual([]);
+    const before = builder.build(ctx.nodes.get(nodeB.node.id)!, []);
+    expect(before.addedResources).toEqual([]);
 
     ctx.resources.setAccess({
       projectId: project.id,
@@ -173,12 +158,12 @@ describe("NodeTurnContextBuilder", () => {
       access: { kind: "shared", nodeIds: [nodeB.node.id] },
     });
 
-    expect(before.resources).toEqual([]);
-    const after = builder.build(ctx.nodes.get(nodeB.node.id)!);
-    expect(after.resources.map(item => item.id)).toEqual([resource.id]);
+    expect(before.addedResources).toEqual([]);
+    const after = builder.build(ctx.nodes.get(nodeB.node.id)!, []);
+    expect(after.addedResources.map(item => item.id)).toEqual([resource.id]);
   });
 
-  it("renders delimited Resource metadata as untrusted data without paths or content", async () => {
+  it("renders newly visible IDs and names as untrusted data without descriptions or content", async () => {
     const { ctx, root, project, nodeB } = await fixture();
     await writeFile(join(root, "prompt.md"), "secret body", "utf8");
     const resource = await ctx.resources.publish({
@@ -198,15 +183,16 @@ describe("NodeTurnContextBuilder", () => {
     });
 
     const context = new NodeTurnContextBuilder(ctx)
-      .build(ctx.nodes.get(nodeB.node.id)!);
+      .build(ctx.nodes.get(nodeB.node.id)!, []);
     const profile = createNodeAgentProfile();
 
-    const message = turnContextMessage({ sections: [{ kind: "resource-catalog", data: context.resources.map(resource => ({ ...resource })) }] }, createSessionId("test"));
+    const message = turnContextMessage({ sections: [{ kind: "reminder", text: formatResourceChanges(context.addedResources) }] }, createSessionId("test"));
     const text = (message.content[0] as { text: string }).text;
     expect(profile.systemPrompt).toContain("When the Human explicitly asks you to submit your work for review, call submit_completion even if some acceptance criteria are not met");
     expect(text).toContain(String(resource.id));
-    expect(text).toContain("\\u003c/available-resources\\u003e");
-    expect(text).toContain("\\u003cnode-context\\u003e");
+    expect(formatResourceChanges(context.addedResources)).toContain("\\u003c/available-resources\\u003e");
+    expect(text).not.toContain("</available-resources>");
+    expect(text).not.toContain("Ignore");
     expect(profile.systemPrompt).not.toContain("secret body");
     expect(profile.systemPrompt).not.toContain("prompt.md");
     expect(profile.systemPrompt).not.toContain("nodeIds");

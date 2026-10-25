@@ -2,6 +2,8 @@
 
 日期：2026-10-25。范围：仅后端统一上下文构建与请求注入。状态：✅ 已完成。PR #97 的代码 head CI 通过，已 squash 合入 master（5bdf3f3）。
 
+2026-10-25 F13.4c 更新：以下正文保留 F13.4a 当时的交付事实。当前已移除过渡 `resource-catalog`、全量 ID enum 与 Working Board section 占位；资源按需使用改由目录、混合检索与原文工具承担，详见 [153](153-devlog-f13-4c-resource-discovery.md)。不再单独实施 F13.4b Working Board。
+
 ## 做了什么
 
 - `src/context/turn.ts` 定义 `TurnContextSnapshot`、按 kind 区分的 section、同步 Provider 与 Builder。每次 build 重读数据，只在当前 Builder 内保留去重 Reminder；每个 Turn 创建独立 Builder。Working Board 目前只有 section 扩展位置，没有 Store 或实现。
@@ -57,4 +59,4 @@ Node 的 `work-started` 会清除 `pendingFeedback`。为避免临时注入后�
 
 ## 下一步
 
-F13.4a 已完成并停止，本次代码模块导读随交付回复提供。F13.4b 需要定义 Session Working Board 的内容、更新 / 取消 / 持久化与恢复语义，再通过 working-board Provider 提供摘要；F13.4c 需要提供权限内 list_resources 等目录 / 检索工具并完成 discoverability 验收，随后移除临时 resource-catalog Provider 及 Schema 中的全目录 enum 注入。两者均待单独授权。
+F13.4a 已提供统一 Turn Context。2026-10-25 按用户冻结设计，不再单独实施 F13.4b Working Board；F13.4c 接入 list_resources / search_resources / fetch_resource，移除过渡目录和动态 Schema 枚举，详见 [153](153-devlog-f13-4c-resource-discovery.md)。

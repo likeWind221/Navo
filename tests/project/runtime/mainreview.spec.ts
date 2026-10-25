@@ -68,7 +68,7 @@ describe("Main review of a Node", () => {
 
     const reviewRequest = adapter.requests[1]!;
     expect(reviewRequest.tools?.map(tool => tool.name)).toEqual(expect.arrayContaining([
-      SUBMIT_REVIEW_TOOL_NAME, READ_NODE_TURN_TOOL_NAME, "add_node", "edit_node", "remove_node", "set_dependency", "reorder_nodes", "fetch_resource",
+      SUBMIT_REVIEW_TOOL_NAME, READ_NODE_TURN_TOOL_NAME, "add_node", "edit_node", "remove_node", "set_dependency", "reorder_nodes", "list_resources", "search_resources", "fetch_resource",
     ]));
     const prompt = JSON.stringify(reviewRequest.turnContext);
     expect(prompt).toContain("review checklist");

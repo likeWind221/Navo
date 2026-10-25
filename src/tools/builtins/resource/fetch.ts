@@ -11,7 +11,6 @@ import {
   resourceArtifact,
   RESOURCE_ID_PARAMETER,
   resourceToolFailure,
-  withVisibleResourceRefs,
 } from "./common.js";
 
 export const FETCH_RESOURCE_TOOL_NAME = "fetch_resource";
@@ -36,9 +35,8 @@ const schema: JsonObject = {
 export function createFetchResourceTool(ctx: Context): ToolDefinition {
   return {
     name: FETCH_RESOURCE_TOOL_NAME,
-    description: "Read the main text entry of a Resource visible to the current Main or Node Agent. Shared and public Resources are read-only unless the current Agent is the owner.",
+    description: "Read original text of a visible Resource using an ID returned by search_resources or list_resources, or fetch a known valid ID directly without discovery first. Use start_line and max_lines to page through evidence or read more context as needed. Shared and public Resources are read-only unless the current Agent is the owner.",
     parameters: schema,
-    parametersFor: sessionId => withVisibleResourceRefs(ctx, schema, sessionId),
     async execute(arguments_, execution) {
       try {
         execution.signal.throwIfAborted();

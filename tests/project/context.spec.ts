@@ -94,12 +94,13 @@ describe("F13.4a request context", () => {
     expect(state(after!)).toMatchObject({ data: { projectGoal: "Latest goal", status: "working" } });
     expect(JSON.stringify(turnSnapshot(after!))).toContain(resource.id);
     expect(JSON.stringify(turnSnapshot(after!))).not.toContain("PRIVATE BODY");
+    expect(JSON.stringify(turnSnapshot(after!))).not.toContain("resource-catalog");
     expect(reminderTexts(after!)).toHaveLength(1);
     expect(reminderTexts(later!)).toEqual(reminderTexts(after!));
     expect(before!.messages[0]).toEqual(after!.messages[0]);
     await app.nodeSessions.sendMessage({ nodeId: node.node.id, text: "Continue" });
     expect(reminderTexts(adapter.requests[3]!)).toEqual([]);
-    expect(JSON.stringify(adapter.requests[3]!.turnContext)).toContain(resource.id);
+    expect(JSON.stringify(adapter.requests[3]!.turnContext)).not.toContain(resource.id);
     const events = app.sessions.getEvents(first.sessionId);
     expect(JSON.stringify(events)).not.toContain("<turn-context>");
     expect(JSON.stringify(events)).not.toContain("<system-reminder>");
@@ -134,7 +135,8 @@ describe("F13.4a request context", () => {
     expect(reminderTexts(adapter.requests[1]!).join()).toContain(resource.id);
     adapter.enqueue(done());
     await app.mainSessions.sendMessage({ projectId: project.id, text: "Inspect project" });
-    expect(JSON.stringify(adapter.requests[2]!.turnContext)).toContain(resource.id);
+    expect(JSON.stringify(adapter.requests[2]!.turnContext)).not.toContain(resource.id);
+    expect(JSON.stringify(adapter.requests[2]!.turnContext)).not.toContain("resource-catalog");
     expect(JSON.stringify(adapter.requests[2]!.turnContext)).not.toContain("OTHER NODE SECRET");
   });
 });

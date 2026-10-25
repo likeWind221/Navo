@@ -163,7 +163,8 @@
 
 ## Phase 13 规划
 
-- [F13.4a：统一 Turn Context](152-devlog-f13-4a-turn-context.md)：逐请求读取权威状态、临时上下文注入、Reminder 生命周期、Resource 过渡目录与 F12 恢复。
+- [F13.4c：资源目录与按需检索](153-devlog-f13-4c-resource-discovery.md)：权限内目录筛选分页、复用混合检索、直接原文阅读；移除全量目录与动态 ID 枚举，取消独立 Working Board。
+- [F13.4a：统一 Turn Context](152-devlog-f13-4a-turn-context.md)：逐请求读取权威状态、临时上下文注入、Reminder 生命周期与 F12 恢复；过渡目录已由 F13.4c 按需资源工具替代。
 
 - [F13 项目资料库与任务检索规划](124-devlog-f13-plan.md)：登记 F13.0–F13.6 功能目标、前后端分工、首版边界与验收要求；F13.1c、F13.2a、F13.2b 后端能力均已交付；F13.2 Renderer 页面仍待前端，2026-10-22 已确认不新增 F13.2c，后端下一步转入 F13.3a 只读审计与技术设计，见 [141](141-devlog-f13-2-handoff-f13-3.md)。
 - [F13.0 产品设计（已完成）](125-devlog-f13-0-design.md)：用户已确认资料管理、页面操作、异常恢复、搜索变化、Agent 按需检索、文件级引用及六组验收场景；含前后端交接、调研取舍与新会话开发交接，F13.1–F13.6 未实施。

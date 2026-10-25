@@ -66,7 +66,7 @@ describe("generic Node research loop", () => {
         "web_fetch", "web_search",
         READ_ROADMAP_TOOL_NAME, READ_NODE_TOOL_NAME,
         CREATE_ROADMAP_TOOL_NAME, ...ROADMAP_MUTATION_TOOL_NAMES,
-        REGISTER_RESOURCE_TOOL_NAME, FETCH_RESOURCE_TOOL_NAME,
+        REGISTER_RESOURCE_TOOL_NAME, "list_resources", "search_resources", FETCH_RESOURCE_TOOL_NAME,
         UPDATE_RESOURCE_TOOL_NAME, DELETE_RESOURCE_TOOL_NAME,
         SET_RESOURCE_ACCESS_TOOL_NAME,
         READ_MAILBOX_TOOL_NAME,
@@ -78,7 +78,7 @@ describe("generic Node research loop", () => {
     expect(adapter.requests[0]?.tools?.map(tool => tool.name).sort())
       .toEqual([
         "web_fetch", "web_search",
-        REGISTER_RESOURCE_TOOL_NAME, FETCH_RESOURCE_TOOL_NAME,
+        REGISTER_RESOURCE_TOOL_NAME, "list_resources", "search_resources", FETCH_RESOURCE_TOOL_NAME,
         UPDATE_RESOURCE_TOOL_NAME, DELETE_RESOURCE_TOOL_NAME,
         SEND_TO_MAIN_TOOL_NAME,
         SUBMIT_COMPLETION_TOOL_NAME,

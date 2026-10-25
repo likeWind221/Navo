@@ -96,7 +96,8 @@ describe("Node Turn Resource context integration", () => {
     const second = JSON.stringify(adapter.requests[1]!.turnContext);
     expect(second).toContain(String(resource.id));
     expect(second).toContain("Handoff evidence");
-    expect(second).toContain("ownedByCurrentAgent");
+    expect(second).not.toContain("ownedByCurrentAgent");
+    expect(second).not.toContain("resource-catalog");
     expect(second).not.toContain("resource body stays out of prompt");
     expect(second).not.toContain("handoff.md");
     expect(systemText(adapter.requests[1]!)).toBe(systemText(adapter.requests[0]!));
@@ -117,5 +118,6 @@ describe("Node Turn Resource context integration", () => {
       text: "Continue without new Resources.",
     });
     expect(adapter.requests[2]!.messages.at(-1)!.content).toHaveLength(1);
+    expect(JSON.stringify(adapter.requests[2]!.turnContext)).not.toContain(resource.id);
   });
 });

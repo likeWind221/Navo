@@ -90,7 +90,6 @@ export function runPreflight(
     turnContext: turnContextMessage({ sections: [
       { kind: "runtime-state", data: { projectGoal: nodeContext.projectGoal, status: nodeContext.status,
         objective: { ...nodeContext.objective, acceptanceCriteria: [...nodeContext.objective.acceptanceCriteria] } } },
-      { kind: "resource-catalog", data: nodeContext.resources.map(resource => ({ ...resource })) },
     ] }, createSessionId("preflight")),
     messages: [
       message("system", nodeAProfile.systemPrompt),

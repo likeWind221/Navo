@@ -6,7 +6,7 @@ import { materializeHandoff } from "../../../scripts/compaction/handoff.js";
 import { assertRestart, captureRestartState } from "../../../scripts/compaction/state.js";
 import { watchSecondCompaction } from "../../../scripts/compaction/watch.js";
 import { createProject, createWorld, sessionEvents } from "./helpers.js";
-import { NODE_COMPACTING } from "./models.js";
+import { MAIN_COMPACTING } from "./models.js";
 import {
   reviewReplies,
   submitReply,
@@ -37,7 +37,7 @@ describe("F12.7 pause observer", () => {
     const dataset = createDataset();
     const summary = summaryText(dataset);
     const world = await createWorld({
-      model: NODE_COMPACTING,
+      model: MAIN_COMPACTING,
       summary: () => summaryReply(),
       tasks: [
         toolReply("watch-a1", "watch-call-1"),
@@ -89,6 +89,7 @@ describe("F12.7 pause observer", () => {
     assertRestart(before, captureRestartState(app, project.id));
 
     const resumed = await app.autoRun.start(project.id);
+    expect(app.sessions.getEvents(project.mainSessionId).filter(event => event.type === "error")).toEqual([]);
     expect(resumed).toMatchObject({ status: "completed", reason: "roadmap-complete", mainTurns: 1 });
     expect(app.nodes.get(nodeA)?.status).toBe("completing");
     expect(app.nodes.get(nodeA)?.lastReview?.decision).toBe("complete");
