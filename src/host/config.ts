@@ -96,7 +96,7 @@ export function resolveKernelHostConfig(
     throw new TypeError("EMBEDDING_BASE_URL is required when other Embedding settings are provided.");
   }
   const embedding = embeddingEndpoint === undefined ? undefined : Object.freeze({ endpoint: embeddingEndpoint,
-    model: env.EMBEDDING_MODEL?.trim() || "Qwen/Qwen3-Embedding-0.6B",
+    model: env.EMBEDDING_MODEL?.trim() || "Qwen3-Embedding-4B",
     ...(embeddingApiKey === undefined ? {} : { apiKey: embeddingApiKey }),
     ...(env.EMBEDDING_REVISION?.trim() ? { revision: env.EMBEDDING_REVISION.trim() } : {}) });
   const fileCwd = env.NAVO_FILE_CWD;
