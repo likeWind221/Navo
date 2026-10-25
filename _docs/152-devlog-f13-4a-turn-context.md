@@ -1,6 +1,6 @@
 # 152：F13.4a 统一 Turn Context
 
-日期：2026-10-25。范围：仅后端统一上下文构建与请求注入。状态：本机验证通过，PR / CI 待收口。
+日期：2026-10-25。范围：仅后端统一上下文构建与请求注入。状态：✅ 已完成。PR #97 的代码 head CI 通过，已 squash 合入 master（5bdf3f3）。
 
 ## 做了什么
 
@@ -51,10 +51,10 @@ Node 的 `work-started` 会清除 `pendingFeedback`。为避免临时注入后�
 - 首轮完整后端测试：155 文件中 154 通过，996 项中 995 通过；唯一失败是 Host Goal 测试仍从固定消息查找动态 goalStatus。已改为检查临时上下文，完整复验 155 文件 / 996 项全部通过（含默认 all 模式下的进程恢复测试，退出码 0，294.36 秒）。
 - Resource 参数描述同步后定向复验：5 文件 / 19 项通过。
 - `git diff --check`：通过。
-- PR 与最新 head CI：待创建 / 验证。
+- [PR #97](https://github.com/likeWind221/Navo/pull/97)：最终代码 head `35bfd764b3a55843ce209ebbedfdc8ee8b05069e` 的必需 verify 检查成功；[CI run 40188715759](https://github.com/likeWind221/Navo/actions/runs/40188715759) 的 typecheck、normal tests、crash recovery tests 全部成功。2026-10-25 squash 合入 master（`5bdf3f3b2cfcc108b69ffa239e6855367c58775b`）；本地 / 远端开发分支已删除，没有创建本 Step 专用 worktree，保留主仓库及其他任务目录。
 
 仅离线模型和磁盘重启测试；没有发起真实模型、GPU 或新实验，不把离线通过称为真实服务端验收。历史库里已有旧 Reminder 不迁移或删除，当前状态明确覆盖历史状态。过渡目录仍完整注入，资料很多时存在不可压缩的固定成本，F13.4c 通过按需查询解决，不在本阶段静默裁剪造成不可发现。
 
 ## 下一步
 
-F13.4a 完成后停止。F13.4b 需要定义 Session Working Board 的内容、更新 / 取消 / 持久化与恢复语义，再通过 working-board Provider 提供摘要；F13.4c 需要提供权限内 list_resources 等目录 / 检索工具并完成 discoverability 验收，随后移除临时 resource-catalog Provider 及 Schema 中的全目录 enum 注入。两者均待单独授权。
+F13.4a 已完成并停止，本次代码模块导读随交付回复提供。F13.4b 需要定义 Session Working Board 的内容、更新 / 取消 / 持久化与恢复语义，再通过 working-board Provider 提供摘要；F13.4c 需要提供权限内 list_resources 等目录 / 检索工具并完成 discoverability 验收，随后移除临时 resource-catalog Provider 及 Schema 中的全目录 enum 注入。两者均待单独授权。
