@@ -1,6 +1,6 @@
 # 169：BUG-037 窄屏项目会话面板极窄
 
-日期：2026-10-27。状态：已登记，待独立 master 对照与修复，尚未关闭。
+日期：2026-10-27。状态：已在独立 master 分支复现并修复，本机与实际 Renderer 验证通过，待当前 head CI 与合并，尚未关闭。
 
 ## 现象与复现
 
@@ -8,15 +8,21 @@ F5.4 实际 Electron 几何验收发现，547px 窗口的项目会话面板宽�
 
 ## 已证实事实与根因假设
 
-分支已实测窄屏绝对定位 aside 仍指定 grid-column:2，而父布局已变为单列。当前 master 保留同一定位规则，但独立 master 运行对照尚未完成，不能只依据分支测量宣称主线已经实机复现。DOM 提交与绘制命中树的短暂不同步另属 QA 观察时机，不通过增加生产 z-index 或 pointer-events 补丁掩盖。
+分支已实测窄屏绝对定位 aside 仍指定 grid-column:2，而父布局已变为单列。当前 master 保留同一定位规则，独立 master 运行对照现已复现，具体数据见下节；初始登记时尚未完成的证据边界保留在本次推进事实中。DOM 提交与绘制命中树的短暂不同步另属 QA 观察时机，不通过增加生产 z-index 或 pointer-events 补丁掩盖。
 
 ## 修复内容
 
-仅登记，独立修复分支将从最新 master 复现后作最小布局修复，不接入 Main 新回合、Node 执行或其他 F5.4 功能。
+独立分支 `fix/bug-037-panel` 从最新 master 建立，首先在未修改 CSS 的原布局实际复现。唯一生产改动为 `frontend/src/workspace/project/workspace.module.css` 的 <=820px 媒体查询：将 panel 的 grid-column 设为 1，保留 grid-row:1/4。单列布局下绝对定位面板改以实际第一列作为包含块，不再定位到不存在的第二列。宽屏仍保持原第二列并排布局；未改 z-index、pointer-events、isolation 或 F5.4 功能。
+
+新增 `frontend/scripts/qa/bug037.cjs` 管理单个 Electron QA 窗口，等待两帧绘制稳定后测量 geometry / hit-test，再用 sendInputEvent 实际鼠标操作验证收起、恢复、完全展开、Node 选择及草稿保持。before 模式只采集基线失败，after 模式验证实际交互；不把 DOM 存在或页面无横溢出当成控件可用。
 
 ## 验证结果与边界
 
-需实际 Electron 宽 / 窄屏、展开 / 收起 / 恢复、会话控件可见与原生点击通过；只作本次相关验证及仓库合并所需完整检查，当前 head CI 成功后再关闭。F5.4 的真实认证门禁仍由 BUG-036 跟踪，不能用本项修复替代。
+Node24.22.1 / Windows PowerShell。主线独立对照中窗口外宽547px、Renderer viewport531px：修复前 panel x517/width2、textarea width4，gridColumn=2；修复后 panel x169/width350、textarea width294，gridColumn=1，scrollWidth=531。完全展开宽495px，宽屏viewport1304px下 panel宽400px。Node选择、原生收起 / 恢复及跨收起重开的草稿保持通过，主编排已查看截图和结果 JSON。
+
+前端 node/web 类型检查、生产构建、28 文件 / 165 项测试通过。首次缺根 tsx 依赖造成3项失败，按冻结锁补齐依赖后使用明确 Node24 完整复验通过，未修改清单或锁文件。主编排根包类型检查、完整 all 模式171文件 / 1080项通过（255.71秒），含进程恢复。`git diff --check` 通过。
+
+证据在本会话 `bug037/before` / `after`（含 narrow / expanded / restored / wide PNG及results.json），根完整日志为 `bug037/root-full.log`。当前 head CI 与合并完成后再关闭。F5.4 的真实认证门禁仍由 BUG-036 跟踪，不能用本项修复替代。
 
 ## 后续
 
