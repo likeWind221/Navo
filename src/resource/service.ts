@@ -33,6 +33,7 @@ import {
   resolveResourceEntry,
 } from "./path.js";
 import { ResourceLifecycle } from "./lifecycle.js";
+import { copyResourceView, type ResourceViewCopy } from "./view.js";
 import { ASSET_LIMITS } from "./assets.js";
 import { publishResource, replaceResource } from "./publication.js";
 import { activeResources } from "./projector.js";
@@ -172,6 +173,17 @@ export class ResourceService extends Service {
     work: (resource: ProjectResource, target: ResourceEntryTarget) => Promise<T>): Promise<T> {
     requireResourceProject(this.ctx, projectId);
     return this.lifecycle.read(projectId, resourceId, viewer, work);
+  }
+
+  createUserViewCopy(projectId: ProjectId, resourceId: ResourceId, expectedRevision: number,
+    signal: AbortSignal): Promise<ResourceViewCopy> {
+    requireResourceProject(this.ctx, projectId);
+    return this.lifecycle.read(projectId, resourceId, undefined, async (resource, target) => {
+      if (resource.revision !== expectedRevision) {
+        throw new ResourceError("stale-revision", "Read the current Resource before opening a view copy.");
+      }
+      return copyResourceView(resource, target, signal);
+    });
   }
 
   update(input: UpdateResourceInput): ProjectResource {

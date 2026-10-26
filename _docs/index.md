@@ -233,3 +233,5 @@
 - [图标库选型调研](46-devlog-icon-library-research.md)：reicon 与 lucide 的许可、体量、绘图一致性实测对比，结论为本阶段继续使用自绘图标。
 
 - [F14.1 项目原会话与中断事实公共交接](165-devlog-f14-1-session-recovery.md)：原 Session 身份、最近已结束回合与可信中断原因的只读查询；正式 Host 零推理重启查询通过，前端 F6 消费另行验收。
+
+- [F14.2a 当前资料查看副本](166-devlog-f14-2a-view.md)：版本化权限内快照复制，外部编辑不回写，正式 Host 零推理通过；默认应用打开由前端 F7.3 接入。

@@ -1,13 +1,14 @@
 import { lstat, readdir } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, sep } from "node:path";
 import { Service, type Context } from "cordis";
-import type { ProjectId } from "../brand/ids.js";
+import type { ProjectId, ResourceId } from "../brand/ids.js";
 import type { ResourceContentRecord } from "../storage/content.js";
 import type { DeleteResourceInput, ReplaceResourceInput, UpdateResourceInput } from "./model.js";
 import { ASSET_LIMITS } from "./assets.js";
 import { ResourceError } from "./errors.js";
 import { normalizeLibraryPath } from "./library.js";
 import { requireActiveResourceProject } from "./validation.js";
+import type { ResourceViewCopy } from "./view.js";
 
 export interface UserImportInput {
   readonly projectId: ProjectId;
@@ -52,6 +53,10 @@ export class UserResourceService extends Service {
     return this.ctx.resources.replaceUser({ ...input,
       sourceRef: `user-replace/${input.resourceId}/${input.expectedRevision}/${basename(sourcePath)}` },
       { filename: basename(sourcePath), receive: async () => ({ path: sourcePath }) }, signal);
+  }
+
+  createViewCopy(input: { projectId: ProjectId; resourceId: ResourceId; expectedRevision: number }, signal: AbortSignal): Promise<ResourceViewCopy> {
+    return this.ctx.resources.createUserViewCopy(input.projectId, input.resourceId, input.expectedRevision, signal);
   }
 
   delete(input: Omit<DeleteResourceInput, "actor">) {

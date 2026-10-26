@@ -1,7 +1,11 @@
 import type { Context } from "cordis";
+import { RpcError } from "../../../rpc/errors.js";
 import type { ResourceLibraryItemV1, ResourceLibrarySnapshotV1 } from "../../../rpc/resource.js";
-import type { ProjectId } from "../../brand/ids.js";
+import type { ResourceViewCopyInputV1, ResourceViewCopyV1 } from "../../../rpc/resource/view.js";
+import type { RpcStreamHandler } from "../../../rpc/stream.js";
+import { createProjectId, createResourceId, type ProjectId } from "../../brand/ids.js";
 import type { ProjectResource } from "../../resource/model.js";
+import { toResourceFailure } from "./failure.js";
 
 export function describeLibrarySnapshot(
   ctx: Context,
@@ -39,5 +43,23 @@ export function describeLibraryItem(ctx: Context, resource: ProjectResource): Re
       errorMessage: content.error_message,
       updatedAt: content.updated_at,
     },
+  };
+}
+
+export function createResourceViewCopyHandler(
+  ctx: Context,
+): RpcStreamHandler<ResourceViewCopyInputV1, ResourceViewCopyV1> {
+  return async function* (input, signal) {
+    signal.throwIfAborted();
+    try {
+      yield await ctx.userResources.createViewCopy({
+        projectId: createProjectId(input.projectId),
+        resourceId: createResourceId(input.resourceId),
+        expectedRevision: input.expectedRevision,
+      }, signal);
+    } catch (error: unknown) {
+      if (error instanceof RpcError) throw error;
+      throw toResourceFailure(error);
+    }
   };
 }
