@@ -6,6 +6,7 @@ import type { QwenChatAdapterConfig } from "../llm/adapters/qwen.js";
 import { WEB_SEARCH_TOOL_NAME } from "../tools/builtins/search/tool.js";
 import { WEB_FETCH_TOOL_NAME } from "../tools/builtins/fetch/tool.js";
 import { FILE_TOOL_SCHEMAS } from "../tools/builtins/file/types.js";
+import { resolveEmbeddingConfig, type EmbeddingConfig } from "../embedding/provider.js";
 
 export interface KernelHostSearchConfig {
   readonly apiKey: string;
@@ -20,12 +21,7 @@ export interface KernelHostStorageConfig {
   readonly path: string;
 }
 
-export interface KernelHostEmbeddingConfig {
-  readonly endpoint: string;
-  readonly apiKey?: string;
-  readonly model: string;
-  readonly revision?: string;
-}
+export type KernelHostEmbeddingConfig = EmbeddingConfig;
 
 export type KernelHostConfig = KernelHostCommonConfig & (
   | { readonly provider: "qwen"; readonly adapter: QwenChatAdapterConfig }
@@ -84,21 +80,7 @@ export function resolveKernelHostConfig(
     throw new TypeError("EXA_API_KEY must be non-empty printable ASCII.");
   }
   const search = exaApiKey === undefined ? undefined : Object.freeze({ apiKey: exaApiKey });
-  const embeddingEndpoint = env.EMBEDDING_BASE_URL?.trim();
-  if (env.EMBEDDING_BASE_URL !== undefined && !embeddingEndpoint) {
-    throw new TypeError("EMBEDDING_BASE_URL must be a non-empty URL when provided.");
-  }
-  const embeddingApiKey = env.EMBEDDING_API_KEY;
-  if (embeddingApiKey !== undefined && (!embeddingApiKey || /[\r\n]/.test(embeddingApiKey))) {
-    throw new TypeError("EMBEDDING_API_KEY must be non-empty and must not contain newlines.");
-  }
-  if (embeddingEndpoint === undefined && [env.EMBEDDING_API_KEY, env.EMBEDDING_MODEL, env.EMBEDDING_REVISION].some(value => value !== undefined)) {
-    throw new TypeError("EMBEDDING_BASE_URL is required when other Embedding settings are provided.");
-  }
-  const embedding = embeddingEndpoint === undefined ? undefined : Object.freeze({ endpoint: embeddingEndpoint,
-    model: env.EMBEDDING_MODEL?.trim() || "Qwen3-Embedding-4B",
-    ...(embeddingApiKey === undefined ? {} : { apiKey: embeddingApiKey }),
-    ...(env.EMBEDDING_REVISION?.trim() ? { revision: env.EMBEDDING_REVISION.trim() } : {}) });
+  const embedding = resolveEmbeddingConfig(env);
   const fileCwd = env.NAVO_FILE_CWD;
   if (fileCwd !== undefined && !fileCwd.trim()) {
     throw new TypeError("NAVO_FILE_CWD must be a non-empty path when provided.");

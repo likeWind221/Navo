@@ -2,7 +2,7 @@ import { mkdir, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "../../src/app.js";
-import { OpenAIEmbeddingProvider } from "../../src/embedding/openai.js";
+import { QwenEmbeddingAdapter } from "../../src/embedding/adapters/qwen.js";
 import { createAcceptanceAdapter, resolveAcceptanceHostConfig } from "../acceptance.js";
 import { createGuardedAdapter, RequestLedger } from "../compaction/request.js";
 
@@ -21,7 +21,7 @@ export async function createRuntime(preflight: boolean) {
     event: "model-request", index: entry.index, used, status: entry.status,
   })}\n`));
   const model = config?.agent.model ?? { provider: "unused", model: "preflight" };
-  const embedding = config === undefined ? undefined : new OpenAIEmbeddingProvider({
+  const embedding = config === undefined ? undefined : new QwenEmbeddingAdapter({
     endpoint: process.env.EMBEDDING_BASE_URL?.trim() || "http://192.168.99.2:8081/v1",
     model: process.env.EMBEDDING_MODEL?.trim() || "Qwen3-Embedding-4B",
     ...(process.env.EMBEDDING_API_KEY ? { apiKey: process.env.EMBEDDING_API_KEY } : {}),

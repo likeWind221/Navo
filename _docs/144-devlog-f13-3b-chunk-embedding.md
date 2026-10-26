@@ -1,5 +1,7 @@
 # F13.3b：Chunk 与 Embedding 索引实施
 
+当前代码组织见 [159](159-devlog-embedding-openrouter.md)：模型适配器在 `src/embedding/adapters/`，共用请求在 `src/embedding/protocols/openai.ts`，由 `src/embedding/provider.ts` 统一创建；下文保留初次交付事实。
+
 日期：2026-10-23
 状态：✅ 生产实现、本机验证与 PR #91 代码 head CI 已通过；等待人工审核，不自动合并
 基线：`master` 提交 `53b2428`，开发分支 `phase13-f13.3b-chunk-embedding`

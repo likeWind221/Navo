@@ -1,5 +1,5 @@
-import { EmbeddingError } from "./errors.js";
-import { EMBEDDING_BATCH_POLICY, type EmbeddingBatchPolicy, type EmbeddingProvider, type EmbeddingRequest } from "./types.js";
+import { EmbeddingError } from "../errors.js";
+import { EMBEDDING_BATCH_POLICY, type EmbeddingBatchPolicy, type EmbeddingProvider, type EmbeddingRequest } from "../types.js";
 
 export interface OpenAIEmbeddingConfig {
   readonly endpoint: string;
@@ -12,16 +12,23 @@ export interface OpenAIEmbeddingConfig {
   readonly random?: () => number;
 }
 
-const DEFAULT_MODEL = "Qwen3-Embedding-4B";
-const QUERY_TASK = "Given a user question, retrieve relevant passages that answer the question";
+export interface EmbeddingProfile {
+  readonly id: string;
+  readonly model: string;
+  readonly dimension: number;
+  readonly documentTemplateVersion: string;
+  readonly queryTemplateVersion: string;
+  readonly format: (kind: EmbeddingRequest["kind"], input: string) => string;
+  readonly parameters: (kind: EmbeddingRequest["kind"]) => Readonly<Record<string, unknown>>;
+}
 
 export class OpenAIEmbeddingProvider implements EmbeddingProvider {
-  readonly id = "openai-compatible";
+  readonly id: string;
   readonly model: string;
   readonly revision: string | null;
-  readonly dimension = 2560;
-  readonly documentTemplateVersion = "qwen3-document-v1";
-  readonly queryTemplateVersion = "qwen3-query-v1";
+  readonly dimension: number;
+  readonly documentTemplateVersion: string;
+  readonly queryTemplateVersion: string;
   readonly policy: EmbeddingBatchPolicy;
   private readonly endpoint: string;
   private readonly apiKey: string | undefined;
@@ -29,13 +36,17 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
   private readonly sleep: (milliseconds: number, signal?: AbortSignal) => Promise<void>;
   private readonly random: () => number;
 
-  constructor(config: OpenAIEmbeddingConfig) {
+  constructor(config: OpenAIEmbeddingConfig, private readonly profile: EmbeddingProfile) {
     this.endpoint = endpoint(config.endpoint);
     if (config.apiKey !== undefined && (!config.apiKey || /[\r\n]/.test(config.apiKey))) {
       throw new EmbeddingError("invalid-config", "Embedding API key must be non-empty and contain no newlines.");
     }
     this.apiKey = config.apiKey;
-    this.model = config.model?.trim() || DEFAULT_MODEL;
+    this.id = profile.id;
+    this.model = config.model?.trim() || profile.model;
+    this.dimension = profile.dimension;
+    this.documentTemplateVersion = profile.documentTemplateVersion;
+    this.queryTemplateVersion = profile.queryTemplateVersion;
     this.revision = config.revision?.trim() || null;
     this.policy = policy(config.policy);
     this.request = config.fetch ?? fetch;
@@ -47,40 +58,36 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
     if (inputs.length < 1 || inputs.length > this.policy.maxBatchSize) {
       throw new EmbeddingError("invalid-input", `Embedding batch size must be from 1 through ${this.policy.maxBatchSize}.`);
     }
-    const formatted = inputs.map(input => this.format(kind, input));
+    const formatted = inputs.map(input => this.profile.format(kind, input));
     for (const input of formatted) {
       if (!input || [...input].length > this.policy.maxInputCodePoints) {
         throw new EmbeddingError("input-too-large", "Embedding input exceeds the configured character limit.");
       }
     }
-    return this.sendSplit(formatted, signal);
+    return this.sendSplit(formatted, this.profile.parameters(kind), signal);
   }
 
-  private format(kind: EmbeddingRequest["kind"], input: string): string {
-    return kind === "query" ? `Instruct: ${QUERY_TASK}\nQuery: ${input}` : input;
-  }
-
-  private async sendSplit(inputs: readonly string[], signal?: AbortSignal): Promise<readonly (readonly number[])[]> {
-    const body = JSON.stringify({ model: this.model, input: inputs });
+  private async sendSplit(inputs: readonly string[], parameters: Readonly<Record<string, unknown>>, signal?: AbortSignal): Promise<readonly (readonly number[])[]> {
+    const body = JSON.stringify({ ...parameters, model: this.model, input: inputs });
     if (Buffer.byteLength(body) > this.policy.maxRequestBytes) {
       if (inputs.length === 1) throw new EmbeddingError("input-too-large", "Embedding request exceeds the configured body limit.");
-      return this.split(inputs, signal);
+      return this.split(inputs, parameters, signal);
     }
     try {
       return await this.send(body, inputs.length, signal);
     } catch (error) {
       if (error instanceof BatchTooLarge) {
         if (inputs.length === 1) throw new EmbeddingError("input-too-large", "Embedding service rejected a single input as too large.");
-        return this.split(inputs, signal);
+        return this.split(inputs, parameters, signal);
       }
       throw error;
     }
   }
 
-  private async split(inputs: readonly string[], signal?: AbortSignal): Promise<readonly (readonly number[])[]> {
+  private async split(inputs: readonly string[], parameters: Readonly<Record<string, unknown>>, signal?: AbortSignal): Promise<readonly (readonly number[])[]> {
     const middle = Math.ceil(inputs.length / 2);
-    const left = await this.sendSplit(inputs.slice(0, middle), signal);
-    const right = await this.sendSplit(inputs.slice(middle), signal);
+    const left = await this.sendSplit(inputs.slice(0, middle), parameters, signal);
+    const right = await this.sendSplit(inputs.slice(middle), parameters, signal);
     return [...left, ...right];
   }
 

@@ -212,6 +212,8 @@
 
 ## 调研与归档
 
+- [Embedding 模块化与 OpenRouter Nemotron 接入](159-devlog-embedding-openrouter.md)：独立适配器、统一配置；完整 1045 项与真实 10 次请求通过，索引 / 检索 / 权限 / 重启复用通过。
+
 - [BUG-030：Embedding 部署适配与真实 smoke test](151-bugfix-bug-030-embedding-deployment.md)：默认模型名与 2560 维响应校验对齐 server:8081，验证索引与检索链路。
 
 - [BUG-024：索引版本兼容性](145-bugfix-bug-024-index-compatibility.md)：统一复用与恢复条件，废弃旧版本 building 并重新构建。

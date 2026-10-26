@@ -102,3 +102,10 @@
 - 新现场 `C:\Users\likeW\AppData\Local\Temp\navo-f136-real-Quk7AE`，日志 `C:\Users\likeW\AppData\Local\Temp\navo-f136-retest-20261026`；旧现场原样保留。
 
 当前下一步为定位 Embedding 端点连通性，再按单独授权复验；F13.6 保持进行中，PR #100 保持 Draft。
+
+
+## 2026-10-26：按明确边界授权合并
+
+用户在合并各分支时明确回复“允许按上述边界合并 #100”：仅合并已验证的离线测试、验收脚本及失败记录；F13.6 保持进行中，BUG-031 / BUG-032 不关闭，不执行新的真实模型任务。此前保持 Draft 的决定保留为历史，本次授权取代该合并限制。
+
+同步最新 master 时保留 OpenRouter 的独立验收结论，验收脚本改用迁移后的 QwenEmbeddingAdapter，保持原有 Qwen 模型、维度、预算和失败即停行为，不自动切换真实验收服务。真实图谱、多 Node、Main Review 和正式 Renderer 仍待分别验收。

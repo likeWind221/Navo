@@ -1,32 +1,32 @@
 import * as THREE from "three";
+import { createRandom, hexPosition } from "./model";
+import type { HexTile } from "./model";
 
 type Tree = { x: number; z: number; y: number; scale: number };
 
-export function createVegetation(heightAt: (x: number, z: number) => number): THREE.Group {
+export function createVegetation(tiles: readonly HexTile[], seed: number): THREE.Group {
   const group = new THREE.Group();
   const pines: Tree[] = [];
   const crowns: Tree[] = [];
   const grass: Tree[] = [];
-  let seed = 2026;
-  const sample = (): number => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-  for (let index = 0; index < 5200; index++) {
-    const x = sample() * 30 - 15;
-    const z = sample() * 24 - 12;
-    const y = heightAt(x, z);
-    if (y < .24 || y > 3.05) continue;
-    const grove = Math.sin(x * .7 + z * .3) + Math.cos(z * .8);
-    const tree = { x, z, y, scale: .65 + sample() * .65 };
-    if (index > 1300 || grove < .1 || (z > -3 && z < 5.6 && x > -11.4 && x < 11.6 && sample() > .16)) {
-      if (index % 2) grass.push({ ...tree, scale: .55 + sample() * .6 });
-    } else if (index % 3 === 0) crowns.push(tree);
+  const random = createRandom(seed + 83);
+  tiles.forEach(tile => {
+    if (tile.kind !== "grass" || (tile.q === 0 && tile.r === 0)) return;
+    const position = hexPosition(tile);
+    for (let index = 0; index < 2; index++) {
+      grass.push({ x: position.x + (random() - .5) * .6, z: position.z + (random() - .5) * .6, y: tile.height + .12, scale: .42 + random() * .32 });
+    }
+    const distance = Math.max(Math.abs(tile.q), Math.abs(tile.r), Math.abs(tile.q + tile.r));
+    if (distance <= 1 || random() > .58) return;
+    const tree = { x: position.x, z: position.z, y: tile.height + .12, scale: .48 + random() * .32 };
+    if (random() > .4) crowns.push(tree);
     else pines.push(tree);
-  }
+  });
   addPines(group, pines);
   addCrowns(group, crowns);
   addGrass(group, grass);
   return group;
 }
-
 function addPines(group: THREE.Group, trees: readonly Tree[]): void {
   const material = new THREE.MeshToonMaterial({ color: "#ffffff" });
   const foliage = new THREE.InstancedMesh(new THREE.ConeGeometry(.36, 1, 8), material, trees.length * 3);
