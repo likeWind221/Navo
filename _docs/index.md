@@ -120,6 +120,8 @@
 
 ## 前端记录
 
+- [前端 F9–F11 后续排期与目标模式交接](164-devlog-frontend-roadmap.md)：沿用 PR #106 的 F5–F8，保留多会话 / 原始历史、模型设置和项目归档；正文预览、图谱浏览与独立引用管理已按用户要求取消。
+
 - [F0.1：桌面前端骨架](11-devlog-step-f0-1-frontend-scaffold.md)
 - [阶段 F1：前端信息架构与静态工作区收口](13-devlog-phase-f1-frontend.md)：合并记录信息架构、视觉探索、最小样板、对话工作区、Qwen 可行性核实和 Electron 交互验收。
 - [阶段 F2：Electron 接入 Agent 与真实流式对话](15-devlog-phase-f2-agent-integration.md)：整合规划、公共 RPC、Main 生命周期、Preload 安全桥、Renderer 状态、流式 UI、桌面验收与 F3 承接边界；链接保留的 F2.2 后端记录。
