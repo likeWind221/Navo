@@ -4,6 +4,8 @@
 
 ## 当前状态
 
+- [ ] BUG-031：F13.6 真实验收中 GraphExtractor 固定发送 maxTokens / temperature，被 ChatGPT 订阅适配器在联网前拒绝；三份图谱构建失败，Main / Node 任务未开始。仅排查、未修复，现场和关闭条件见 [157](157-bugfix-bug-031-graph-subscription.md)。
+
 - [x] BUG-030：Provider / Host 已对齐 Qwen3-Embedding-4B / 2560 维，真实 9 请求 smoke、专项 52 项、完整 988 项及代码 head CI 通过，PR #96 已合入（c6b6ef9），见 [151](151-bugfix-bug-030-embedding-deployment.md)。
 
 - [x] BUG-027：候选校验已合并为一次事务，本地耗时对比、完整 987 项及 PR #95 当前代码 head CI 通过，已合入（83c54fa），关闭；见 [150](150-bugfix-bug-027-029-retrieval.md)。
@@ -40,7 +42,7 @@
 
 - [x] BUG-012：F11.4 真实验收脚本未调用入口且未提供下游所需材料；已修正，本机完整检查、gpt-6-sol 双节点真实完成及代码 head CI 通过（PR #70，收口提交仍遵循当前 head CI 门禁）。笔记：[106](106-bugfix-bug-012-autorun-acceptance.md)。
 
-未关闭：BUG-002、BUG-007、BUG-010、BUG-019。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 仅排查、未修复；BUG-014～018 已随 PR #79 合入关闭，BUG-021 / 022 与 BUG-023 均已满足各自关闭条件。
+未关闭：BUG-002、BUG-007、BUG-010、BUG-019、BUG-025、BUG-031。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 / BUG-025 仅排查，BUG-031 已复现图谱与订阅参数不兼容、未修复；BUG-014～018 已随 PR #79 合入关闭，BUG-021 / 022 与 BUG-023 均已满足各自关闭条件。
 
 - [x] BUG-001：Node 续接时未读取已共享的新验证资源（已修复：续接资源变化通知 + Resource ID 语义）
 - [ ] BUG-002：验证节点发布文件时出现来源不可用错误（诊断已补齐，未复现；2026-10-07 用户决定保持未关闭，等待复现后依证据定性）
@@ -60,6 +62,7 @@
 
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
+| BUG-031 | P1 / 后端 | 图谱请求含 maxTokens / temperature，当前订阅 Provider 在联网前拒绝，阻断 F13.6 真实后端链路 | 3 次本地适配器失败、SQLite 三份 graph_builds failed，GraphExtractor 与 OpenAIAdapter 源码配对已核实；非网络或额度归因 | 参数兼容修复、离线回归、完整本地与当前 head CI，并重新授权后真实图谱 / 多 Node / Main Review 通过 | [157：仅排查、未修复](157-bugfix-bug-031-graph-subscription.md) |
 | BUG-030 | P1 / 后端 | 默认 0.6B / 1024 维与已部署的 4B 不一致，阻断真实索引验收 | 已适配；真实 9 请求 smoke、完整 988 项及代码 head CI 通过 | Provider / Host 对齐部署，维度及响应校验、本地完整验证、真实 smoke test 与当前 PR head CI 通过 | [151：已修复并合入 PR #96](151-bugfix-bug-030-embedding-deployment.md) |
 | BUG-027 | P2 / 后端 | 每个候选单独 atomic，存在不必要事务开销；不是已测出的性能故障 | 已核实 atomic 无外层时逐次提交，本机对比候选阶段 37→1 次 | 单次事务完成候选校验，结果排名与权限/代次规则保留；耗时对比、完整本机与当前 head CI 通过 | [150：已修复并合入 PR #95](150-bugfix-bug-027-029-retrieval.md) |
 | BUG-028 | P2 / 后端 | 中文短实体可被子串误命中，截断种子受图读取顺序影响 | 已确认 includes 与先截断的规则 | 完整词边界、最长重叠与稳定截断回归、完整本机与当前 head CI 通过；注明分词边界 | [150：已修复并合入 PR #95](150-bugfix-bug-027-029-retrieval.md) |

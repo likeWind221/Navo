@@ -165,6 +165,9 @@
 
 - [F13.4c：资源目录与按需检索](153-devlog-f13-4c-resource-discovery.md)：权限内目录筛选分页、复用混合检索、直接原文阅读；移除全量目录与动态 ID 枚举，取消独立 Working Board。
 - [F13.6：完整任务验收计划](154-devlog-f13-6-acceptance-plan.md)：取消独立 F13.5 引用追踪后，冻结端到端验收目标、范围、场景与验收证据分层。
+- [F13.6：验收准备与缺口盘点](155-devlog-f13-6-preparation.md)：复用测试清单、后端 / Bridge / Renderer 实际边界、最小任务流程、分步通过标准与预算；尚未执行验收。
+- [F13.6：后端完整链路验收](156-devlog-f13-6-backend-acceptance.md)：跨资料多 Node、Main Review、返工、权限 / 失败 / 取消和恢复的组合验证，以及真实入口、预算与证据边界。
+- [BUG-031：图谱抽取与订阅模型参数不兼容](157-bugfix-bug-031-graph-subscription.md)：真实后端验收在生成 HTTP 前被参数校验阻断；仅排查、未修复，保留现场与预算记录。
 - [F13.4a：统一 Turn Context](152-devlog-f13-4a-turn-context.md)：逐请求读取权威状态、临时上下文注入、Reminder 生命周期与 F12 恢复；过渡目录已由 F13.4c 按需资源工具替代。
 
 - [F13 项目资料库与任务检索规划](124-devlog-f13-plan.md)：原始产品路线与决策记录；当前阶段状态以 [backend-plan.md](backend-plan.md) 为准。2026-10-26 取消独立 F13.5，后端当前进入 F13.6 完整任务验收。
