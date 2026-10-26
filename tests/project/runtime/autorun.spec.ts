@@ -33,6 +33,68 @@ function review(id: string, decision: "complete" | "rework" | "skip" | "escalate
 const text = (value = "Done.") => modelResponse([{ type: "text", text: value }]);
 
 describe("F11 AutoRun control and execution loop", () => {
+  it("publishes a baseline, target, public turn events and terminal snapshots", async () => {
+    const { ctx } = await createKit([submit("submit"), review("approve", "complete"), text("Observed turn")]);
+    const project = ctx.projects.create({ name: "Project", goal: "Observe" });
+    const id = createWorkNode(ctx, project.id, "Collect").node.id;
+    ctx.roadmaps.create({ definition: { projectId: project.id, nodes: [id], edges: [] }, reason: "Approved" });
+    const events: import("../../../src/project/autorun/observation.js").AutoRunObservationEvent[] = [];
+    const lateEvents: import("../../../src/project/autorun/observation.js").AutoRunObservationEvent[] = [];
+    let disposeLate: (() => void) | undefined;
+    const dispose = ctx.autoRun.observe(project.id, event => {
+      events.push(event);
+      if (disposeLate === undefined && event.type === "turn-event"
+        && ["turn-completed", "turn-cancelled", "turn-failed", "turn-truncated"].includes(event.event.type)) {
+        disposeLate = ctx.autoRun.observe(project.id, lateEvent => lateEvents.push(lateEvent));
+      }
+    });
+    const result = await ctx.autoRun.start(project.id);
+    dispose();
+    disposeLate?.();
+    expect(events[0]).toEqual({ type: "snapshot", snapshot: null });
+    expect(events.some(event => event.type === "run-started")).toBe(true);
+    expect(events.some(event => event.type === "target-started" && event.target.kind === "node")).toBe(true);
+    expect(events.some(event => event.type === "turn-event" && event.event.type === "turn-started")).toBe(true);
+    expect(events.some(event => event.type === "turn-event" && event.event.type === "turn-completed")).toBe(true);
+    expect(events.at(-1)).toMatchObject({ type: "snapshot", snapshot: { status: "completed", runId: result.runId } });
+    expect(lateEvents.some(event => event.type === "turn-baseline")).toBe(false);
+  });
+
+  it("gives late subscribers a current turn baseline without fabricating its start", async () => {
+    const { ctx, adapter } = await createKit([{ kind: "hang" }]);
+    const project = ctx.projects.create({ name: "Project", goal: "Observe late" });
+    const id = createWorkNode(ctx, project.id, "Collect").node.id;
+    ctx.roadmaps.create({ definition: { projectId: project.id, nodes: [id], edges: [] }, reason: "Approved" });
+    const running = ctx.autoRun.start(project.id);
+    await flushUntil(() => adapter.requests.length === 1);
+    const pauseSnapshot = ctx.autoRun.pause(project.id);
+    const events: import("../../../src/project/autorun/observation.js").AutoRunObservationEvent[] = [];
+    const dispose = ctx.autoRun.observe(project.id, event => events.push(event));
+    expect(events[0]).toMatchObject({ type: "snapshot", snapshot: { status: "running", currentTarget: { kind: "node" } } });
+    expect(events[1]).toEqual({ type: "pause-requested", runId: pauseSnapshot.runId });
+    expect(events[2]).toMatchObject({ type: "turn-baseline", turn: { target: { kind: "node" } } });
+    expect(events.some(event => event.type === "turn-event" && event.event.type === "turn-started")).toBe(false);
+    dispose();
+    expect(ctx.projectRuntime.stopNode(project.id, id)).toBe(true);
+    await expect(running).resolves.toMatchObject({ status: "paused", reason: "turn-cancelled" });
+  });
+
+  it("unbinds an observer without stopping the AutoRun", async () => {
+    const { ctx, adapter } = await createKit([{ kind: "hang" }]);
+    const project = ctx.projects.create({ name: "Project", goal: "Observe cancellation" });
+    const id = createWorkNode(ctx, project.id, "Collect").node.id;
+    ctx.roadmaps.create({ definition: { projectId: project.id, nodes: [id], edges: [] }, reason: "Approved" });
+    const events: unknown[] = [];
+    const dispose = ctx.autoRun.observe(project.id, event => events.push(event));
+    const running = ctx.autoRun.start(project.id);
+    await flushUntil(() => adapter.requests.length === 1);
+    dispose();
+    expect(ctx.autoRun.get(project.id)).toMatchObject({ status: "running" });
+    expect(ctx.projectRuntime.stopNode(project.id, id)).toBe(true);
+    await running;
+    expect(events.length).toBeGreaterThan(0);
+  });
+
   it("runs one Node through multiple Turns in the same Session before automatic Main review", async () => {
     const { ctx, adapter } = await createKit([
       text("I need another Turn."),
