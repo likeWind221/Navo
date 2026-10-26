@@ -5,6 +5,7 @@ import type { DesktopProjectApi, DesktopProjectFailure } from "../../../shared/p
 import { projectFailureMessage } from "./failure";
 import { missingBridge } from "./hook";
 import { ProjectWorkspace } from "./Workspace";
+import type { ProjectRuntime } from "./runtime.js";
 import styles from "./style.module.css";
 
 export type ProjectDetailState =
@@ -12,9 +13,10 @@ export type ProjectDetailState =
   | { readonly status: "ready"; readonly detail: ProjectDetailV1 }
   | { readonly status: "failed"; readonly failure: DesktopProjectFailure };
 
-export function ProjectDetail({ api, projectId }: {
+export function ProjectDetail({ api, projectId, runtime }: {
   readonly api: DesktopProjectApi | undefined;
   readonly projectId: string;
+  readonly runtime?: ProjectRuntime | undefined;
 }): React.JSX.Element {
   const [state, setState] = useState<ProjectDetailState>({ status: "loading" });
   const generation = useRef(0);
@@ -38,11 +40,13 @@ export function ProjectDetail({ api, projectId }: {
     };
   }, [load]);
 
-  return <ProjectDetailView state={state} onRetry={() => void load()} />;
+  return <ProjectDetailView state={state} api={api} runtime={runtime} onRetry={() => void load()} />;
 }
 
-export function ProjectDetailView({ state, onRetry }: {
+export function ProjectDetailView({ state, api, runtime, onRetry }: {
   readonly state: ProjectDetailState;
+  readonly api?: DesktopProjectApi | undefined;
+  readonly runtime?: ProjectRuntime | undefined;
   readonly onRetry: () => void;
 }): React.JSX.Element {
   if (state.status === "loading") return <div className={styles.detail}><p role="status">正在读取项目……</p></div>;
@@ -52,5 +56,5 @@ export function ProjectDetailView({ state, onRetry }: {
       <button type="button" className={styles.secondary} onClick={onRetry}>重试</button>
     </div>;
   }
-  return <ProjectWorkspace key={state.detail.project.projectId} detail={state.detail} />;
+  return <ProjectWorkspace key={state.detail.project.projectId} detail={state.detail} api={api} runtime={runtime} />;
 }

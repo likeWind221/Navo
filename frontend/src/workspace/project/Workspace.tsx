@@ -1,15 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { NodeStatusV1, ProjectDetailV1 } from "../../../../rpc/project.js";
+import type { DesktopProjectApi } from "../../../shared/project.js";
 import { Icon } from "../../ui/Icon";
 import { RoadmapMap } from "./Map";
 import type { MapGraph } from "./map/model";
 import styles from "./workspace.module.css";
+import { ProjectConversation } from "./Conversation";
+import { ProjectRuntime } from "./runtime.js";
 
 type Message = { role: "user" | "assistant"; text: string };
 const statusLabels: Record<NodeStatusV1, string> = { locked: "待解锁", idle: "可执行", working: "进行中", submitted: "待验收", completing: "已完成", skipped: "已跳过" };
 
-export function ProjectWorkspace({ detail, demo, previewControls }: { readonly detail: ProjectDetailV1; readonly demo?: MapGraph; readonly previewControls?: ReactNode }): React.JSX.Element {
+export function ProjectWorkspace({ detail: initialDetail, api, runtime, demo, previewControls }: { readonly detail: ProjectDetailV1; readonly api?: DesktopProjectApi | undefined; readonly runtime?: ProjectRuntime | undefined; readonly demo?: MapGraph; readonly previewControls?: ReactNode }): React.JSX.Element {
+  const projectRuntime = useMemo(() => runtime ?? new ProjectRuntime(api), [runtime, api]);
+  const [detail, setDetail] = useState(initialDetail);
+  useEffect(() => runtime === undefined ? () => projectRuntime.disconnect() : undefined, [projectRuntime, runtime]);
+  useEffect(() => {
+    return projectRuntime.subscribe(initialDetail.project.projectId, initialDetail, () => {
+      const next = projectRuntime.snapshot(initialDetail.project.projectId, initialDetail).detail;
+      if (next !== null) setDetail(next);
+    });
+  }, [projectRuntime, initialDetail]);
   const graph = useMemo<MapGraph>(() => demo ?? {
     nodes: detail.roadmap?.nodes.map(node => ({ id: node.nodeId, title: node.title, note: node.description, status: statusLabels[node.status] })) ?? [],
     edges: detail.roadmap?.edges ?? [],
@@ -103,21 +115,24 @@ export function ProjectWorkspace({ detail, demo, previewControls }: { readonly d
           </dl></details>
           <button disabled title="消息查看即将开放">消息</button><button disabled title="资源查看即将开放">资源</button>
         </nav>
-        <div className={styles.messages}>
+        {(demo || node) && <div className={styles.messages}>
           <div className={styles.nodeHeading}><span className={styles.nodeBadge} data-node={Boolean(node)}>{node ? nodeNumber : <Icon name="guide" />}</span><div><small>{node ? "NODE WORKSPACE" : "MAIN AGENT"}</small><h2>{node ? title : "一起探索下一步"}</h2></div></div>
           <div className={styles.context}><span>{node ? "当前节点" : "项目目标"}</span><p>{node?.note ?? project.goal ?? "目标待确定"}</p>{node && demo && <small>验收条件：提供可检查的结果与来源证据。</small>}</div>
           {demo ? <div className={styles.assistant}><div className={styles.author}><span>N</span><strong>{node ? "Node" : "Main"}</strong><small>工作会话</small></div><div>
             <p>{node ? `我们将围绕「${node.title}」展开工作。你可以补充要求，或明确发起这一步的执行。` : "我们先确认这项研究的目标与边界，再把它拆成可以逐步执行和验证的路线。"}</p>
             <p>{node ? "切回 Main 可以讨论整体路线。关闭这个会话入口后，草稿与内容仍会保留。" : "规划完成后，点击路线上的任意节点，就能在这里切换到它的工作会话。"}</p>
-          </div></div> : <div className={styles.assistant}><p>项目对话即将开放。你可以先在下方准备草稿，切换项目后草稿仍会保留。</p>{detail.main.turnActive && <p>后端 Main 回合正在运行，对话过程展示尚未接入。</p>}</div>}
+          </div></div> : node ? <div className={styles.assistant}><p>节点工作会话将在 F5.6 接入。</p></div> : null}
           {(messages[active] ?? []).map((message, index) => <div key={index} className={message.role === "user" ? styles.user : styles.reply}>{message.text}</div>)}
           {demo && nodes.length > 0 && !node && !planned && <button className={styles.planButton} onClick={() => setShowDemo(true)}>生成示例路线 <Icon name="arrow" /></button>}
           {node && <div className={styles.nodeHint}>{demo ? "原型仅展示交互，不启动 Agent 或修改节点状态。" : "节点工作会话尚未接入，当前只展示路线与保留草稿。"}</div>}
-        </div>
-        <div className={styles.composer}>
+        </div>}
+        {!demo && <div className={styles.liveConversation} hidden={node !== undefined}><ProjectConversation runtime={projectRuntime} projectId={project.projectId} detail={detail}>
+          {!node && <><div className={styles.nodeHeading}><span className={styles.nodeBadge}><Icon name="guide" /></span><div><small>MAIN AGENT</small><h2>一起探索下一步</h2></div></div><div className={styles.context}><span>项目目标</span><p>{project.goal ?? "目标待确定"}</p></div></>}
+        </ProjectConversation></div>}
+        {(!demo && !node) ? null : <div className={styles.composer}>
           <textarea aria-label={`${title} 草稿`} placeholder={node ? "补充这个节点的要求…" : "与 Main 讨论目标与路线…"} value={drafts[active] ?? ""} onChange={event => setDrafts(previous => ({ ...previous, [active]: event.target.value }))} />
           <div><span>{demo ? "原型演示 · 不调用模型" : "草稿 · 对话发送即将开放"}</span><button aria-label={demo ? "发送示例消息" : "发送消息"} disabled={!demo || !drafts[active]?.trim()} onClick={send}><Icon name="arrow" /></button></div>
-        </div>
+        </div>}
       </div>
     </aside>}
   </article>;

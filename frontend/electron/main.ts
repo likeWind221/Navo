@@ -8,6 +8,7 @@ import { AgentTurnV2Controller } from "./ipc/agent/v2.js";
 import { cancelAgentSessionOwner, registerAgentSessionIpc } from "./ipc/session.js";
 import { registerSessionContextIpc, SessionContextController } from "./ipc/session-context.js";
 import { registerProjectIpc } from "./ipc/project.js";
+import { ProjectController } from "./ipc/project/controller.js";
 import { registerResourceIpc } from "./ipc/resource.js";
 import { ResourceController } from "./ipc/resource/controller.js";
 
@@ -18,6 +19,7 @@ let agentTurns: AgentTurnV2Controller | undefined;
 let agentCommands: AgentCommandController | undefined;
 let sessionContext: SessionContextController | undefined;
 let resources: ResourceController | undefined;
+let projects: ProjectController | undefined;
 let unregisterAgentSessionIpc: (() => void) | undefined;
 let unregisterProjectIpc: (() => void) | undefined;
 let unregisterSessionContextIpc: (() => void) | undefined;
@@ -53,6 +55,7 @@ function createWindow(): void {
     }
     sessionContext?.cancelOwner(ownerId);
     resources?.cancelOwner(ownerId);
+    projects?.cancelOwner(ownerId);
   });
 
   const rendererUrl = process.env.ELECTRON_RENDERER_URL;
@@ -79,8 +82,9 @@ if (!hasSingleInstanceLock) {
     agentCommands = new AgentCommandController(kernelHost);
     sessionContext = new SessionContextController(kernelHost);
     resources = new ResourceController(kernelHost);
+    projects = new ProjectController(kernelHost);
     unregisterAgentSessionIpc = registerAgentSessionIpc(agentTurns, agentCommands);
-    unregisterProjectIpc = registerProjectIpc(kernelHost);
+    unregisterProjectIpc = registerProjectIpc(kernelHost, undefined, projects);
     unregisterSessionContextIpc = registerSessionContextIpc(sessionContext);
     unregisterResourceIpc = registerResourceIpc(resources);
     void kernelHost.start().catch((error: unknown) => {
@@ -105,6 +109,7 @@ if (!hasSingleInstanceLock) {
     agentCommands?.dispose();
     sessionContext?.dispose();
     resources?.dispose();
+    projects?.dispose();
     void kernelHost.close().finally(() => app.quit());
   });
 

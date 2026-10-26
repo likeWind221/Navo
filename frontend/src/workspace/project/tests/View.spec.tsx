@@ -33,7 +33,7 @@ describe("ProjectDetailView", () => {
     expect(markup).toContain("1 座岛屿");
     expect(markup).not.toContain("新增岛屿");
     expect(markup).not.toContain("生成示例路线");
-    expect(markup).toContain("草稿 · 对话发送即将开放");
+    expect(markup).toContain("输入你想探索的问题");
   });
 
   it("shows the project facts and a pending workspace binding", () => {
@@ -49,7 +49,7 @@ describe("ProjectDetailView", () => {
     expect(markup).toContain("dateTime=\"2026-10-08T00:00:00.000Z\"");
     expect(markup).toContain("项目会话面板");
     expect(markup).toContain("回到工作节点");
-    expect(markup).toContain("草稿 · 对话发送即将开放");
+    expect(markup).toContain("输入你想探索的问题");
     expect(markup).not.toContain("生成示例路线");
     expect(markup).not.toContain("检索与整理文献");
   });
@@ -68,7 +68,7 @@ describe("ProjectDetailView", () => {
       status: "failed", failure: { code: "project-not-found", message: "missing" },
     }} />);
 
-    expect(markup).toContain("Host 重启已被清空");
+    expect(markup).toContain("项目不存在或当前不可用");
     expect(markup).toContain("重试");
   });
 
@@ -81,14 +81,14 @@ describe("ProjectDetailView", () => {
     expect(markup).toContain("项目路线已创建");
     expect(markup).not.toContain("尚未规划");
     expect(markup).not.toContain("5 个节点");
-    expect(markup).toContain("后端 Main 回合正在运行");
+    expect(markup).toContain("输入你想探索的问题");
   });
 });
 
 describe("ProjectNotice", () => {
   it("explains the empty in-memory list and hides itself once projects exist", () => {
     expect(renderToStaticMarkup(<ProjectNotice onRetry={vi.fn()} state={{ status: "ready", projects: [], failure: null }} />))
-      .toContain("Host 重启后会清空");
+      .toContain("Host 重启后恢复");
     expect(renderToStaticMarkup(<ProjectNotice onRetry={vi.fn()} state={{ status: "ready", projects: [project], failure: null }} />))
       .toBe("");
     expect(renderToStaticMarkup(<ProjectNotice onRetry={vi.fn()} state={{
