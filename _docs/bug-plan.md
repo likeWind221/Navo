@@ -4,6 +4,8 @@
 
 ## 当前状态
 
+- [ ] BUG-037：F5.4 窄屏实测项目会话面板约 2px，master 保留同一列定位规则，正在独立主线对照与最小修复；未关闭，见 [169](169-bugfix-bug-037-panel.md)。
+
 - [ ] BUG-036：F5.4 真实 Main 两回合在凭据刷新阶段 AUTH 失败；零生成诊断确认 token 端点 HTTP 403 / application/json，具体拒绝原因未确认，仅排查未修复，见 [168](168-bugfix-bug-036-auth.md)。
 
 - [x] BUG-035：已按方案 A 修复验收来源契约：直读由成功 fetch 轨迹证明，`source_ids` 只要求可追溯的支持来源并拒绝本回合未出现的 ID；新增三项回归，完整本地 1056 项与 CI run `40334741718` 通过。第四轮真实运行 `%TEMP%/navo-f136-real-R8uzdx` 的 Node B 来源声明与 fetch 轨迹一致，最终 Main Review 与完整任务通过，关闭，见 [163](163-bugfix-bug-035-node-source-evidence.md)。
@@ -68,6 +70,7 @@
 
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
+| BUG-037 | P1 / 前端布局 | 547px 窗口的项目会话面板极窄，无法阅读或输入 | F5.4 分支实测 2px；master 同 CSS 规则，独立运行对照待完成，主因对照中 | 主线复现后最小修复，宽 / 窄屏实际可见与点击通过，本机及当前 head CI 成功并合并 | [169：定位与修复中](169-bugfix-bug-037-panel.md) |
 | BUG-036 | P1 / 后端认证与外部依赖 | 既有 ChatGPT 凭据刷新被拒绝，阻断 F5.4 真实 Main 规划 | 已证实两个 AUTH 失败 Turn 与 token 端点 HTTP 403；本地 connected 不等于服务端可用；拒绝原因未确认 | 明确可用认证链后，在新隔离库通过预填 / 空目标真实 Main 确认规划；涉及代码时须完整本机与当前 head CI | [168：仅排查，未修复](168-bugfix-bug-036-auth.md) |
 | BUG-035 | P1 / 后端验收脚本 | Node B 将搜索 / 上游来源混入本回合直接读取声明 | 已确认判据（至少两份真实 fetch）与检查（source_ids 只能列 fetch）不同义；按方案 A 改为轨迹证明直读、source_ids 只校验可追溯性，并补三项回归 | 必读来源实际 fetch、来源声明可追溯，并完成最终 Main Review 和完整任务；第四轮真实运行通过 | [163：已修复并真实复验通过](163-bugfix-bug-035-node-source-evidence.md) |
 | BUG-034 | P1 / 后端验收脚本 | 脚本未经历目标确认就断言两个 Node | 已补齐两回合；第四轮真实确认 / 规划、两 Node、Review 与同库重开通过，本地 1056 项与 head `a3fb032` CI 通过 | 修正后真实目标确认 / 规划及后续任务、本地完整检查与当前 head CI 通过 | [162：真实复验通过，关闭](162-bugfix-bug-034-acceptance-confirmation.md) |
