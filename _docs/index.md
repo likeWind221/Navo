@@ -167,8 +167,10 @@
 - [F13.6：完整任务验收计划](154-devlog-f13-6-acceptance-plan.md)：取消独立 F13.5 引用追踪后，冻结端到端验收目标、范围、场景与验收证据分层。
 - [F13.6：验收准备与缺口盘点](155-devlog-f13-6-preparation.md)：历史验收准备、复用清单与分层边界。
 - [F13.6：后端完整链路验收](156-devlog-f13-6-backend-acceptance.md)：Draft PR #100 中的离线验收与真实失败记录，验收代码尚未随本次修复合入。
-- [BUG-031：图谱抽取与订阅模型参数不兼容](157-bugfix-bug-031-graph-subscription.md)：保留首次真实失败；追加图谱专用参数修复、离线验证与真实复验边界。
-- [BUG-032：真实验收 Embedding 端点连接失败](158-bugfix-bug-032-embedding-connectivity.md)：修复后复验在向量构建阶段失败，生成调用为 0；保留新现场，TCP 检查超时，未修复或重跑。
+- [BUG-031：图谱抽取与订阅模型参数不兼容](157-bugfix-bug-031-graph-subscription.md)：参数修复已合入，两份真实图谱 active；完整任务被 BUG-033 阻断，保持待验。
+- [BUG-032：真实验收 Embedding 端点连接失败](158-bugfix-bug-032-embedding-connectivity.md)：原 Qwen 端点未修复，用户决定搁置，后续使用 OpenRouter；保留原失败现场。
+- [F13.6：OpenRouter 后端完整验收复验](160-devlog-f13-6-openrouter-acceptance.md)：统一配置已接入，真实两份索引与图谱成功，单项 Embedding 超时，完整任务未通过。
+- [BUG-033：OpenRouter Embedding 真实验收请求超时](161-bugfix-bug-033-openrouter-timeout.md)：一次请求触及 15 秒预算，保留现场；仅排查、未修复。
 - [F13.4a：统一 Turn Context](152-devlog-f13-4a-turn-context.md)：逐请求读取权威状态、临时上下文注入、Reminder 生命周期与 F12 恢复；过渡目录已由 F13.4c 按需资源工具替代。
 
 - [F13 项目资料库与任务检索规划](124-devlog-f13-plan.md)：原始产品路线与决策记录；当前阶段状态以 [backend-plan.md](backend-plan.md) 为准。2026-10-26 取消独立 F13.5，后端当前进入 F13.6 完整任务验收。

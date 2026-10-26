@@ -113,3 +113,7 @@
 合并复核时将脚本单独纳入严格类型检查，发现 runtime 的 app 变量未声明类型；补充为 open 的实际返回类型后，脚本和传递依赖均通过。零推理预检再次通过（0 请求），现场 `C:/Users/likeW/AppData/Local/Temp/navo-f136-real-ENorlD`。本次仅补齐验收入口类型，不改变 App 生命周期。
 
 合并后的本地验证：bundled Node 24.22.1 / Windows PowerShell；根包 `tsc --noEmit`、验收脚本单独严格类型检查与 `git diff --check` 通过；完整 `vitest run --maxWorkers=4` 为 165 文件 / 1054 项全部通过（361.17 秒，包含完整进程恢复组）。日志 `%TEMP%/navo-merge-100-tests.log`，零推理日志 `%TEMP%/navo-merge-100-preflight.log`。真实失败现场原样保留，本轮未调用真实模型。
+
+## 2026-10-26：OpenRouter 完整复验
+
+用户决定搁置 BUG-032 原 Qwen 端点，授权改用 OpenRouter 完整验收。验收入口改为统一 Provider 配置；真实执行在 48757ms 后因单项 Embedding 15 秒超时停止，2 份向量索引和真实图谱 active，Main / Node / Review 未开始。BUG-031 已有真实图谱成功证据，完整任务仍待验；新阻塞登记 BUG-033，未自动重跑。当前事实、代码与验证记录见 [160](160-devlog-f13-6-openrouter-acceptance.md)；本文此前“待授权”均为历史记录。

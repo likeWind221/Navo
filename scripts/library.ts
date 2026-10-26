@@ -60,7 +60,7 @@ async function main(): Promise<void> {
     assert.equal(resources.length, 3);
     assert(resources.every(resource => resource.owner.kind === "user" && resource.access.kind === "public"));
     assert(resources.every(resource => runtime.app.content.status(projectId!, resource.id)?.status === "ready"));
-    await writeEvidence(runtime.evidence, "intake", { imported, resources, model: runtime.model });
+    await writeEvidence(runtime.evidence, "intake", { imported, resources, model: runtime.model, embedding: runtime.embedding });
     if (preflight) {
       assert.equal(runtime.ledger.used, 0);
       assert.equal(runtime.embeddingCalls.length, 0);
