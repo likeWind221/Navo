@@ -72,6 +72,14 @@ export class ContentProcessor extends Service {
     this.active?.controller.abort();
   }
 
+  cancelCurrent(projectId: ProjectId, resourceId: ResourceId, assetGeneration: number): "requested" | "not-active" {
+    const active = this.active;
+    if (active === undefined || active.row.project_id !== projectId || active.row.resource_id !== resourceId
+      || active.row.source_asset_generation !== assetGeneration) return "not-active";
+    active.controller.abort();
+    return "requested";
+  }
+
   async idle(): Promise<void> {
     while (this.scheduled !== undefined || this.running !== undefined) {
       if (this.running !== undefined) await this.running;

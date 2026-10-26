@@ -1,5 +1,10 @@
 import { RpcError } from "../../errors.js";
-import type { ResourceContentRetryInputV1, ResourceContentRetryResultV1 } from "../content.js";
+import type {
+  ResourceContentCancelInputV1,
+  ResourceContentCancelResultV1,
+  ResourceContentRetryInputV1,
+  ResourceContentRetryResultV1,
+} from "../content.js";
 import { exactKeys, requireBoundedString, requireRecord } from "../../validation.js";
 
 const ID_MAX = 128;
@@ -24,6 +29,27 @@ export function parseContentRetryResult(value: unknown): ResourceContentRetryRes
     assetGeneration: positive(result.assetGeneration, "assetGeneration"),
     status: "accepted",
     contentStatus: "pending",
+  };
+}
+
+export function parseContentCancelInput(value: unknown): ResourceContentCancelInputV1 {
+  const input = shape(value, ["projectId", "resourceId", "expectedRevision"], "resource content cancel input");
+  return {
+    projectId: id(input.projectId, "projectId"),
+    resourceId: id(input.resourceId, "resourceId"),
+    expectedRevision: positive(input.expectedRevision, "expectedRevision"),
+  };
+}
+
+export function parseContentCancelResult(value: unknown): ResourceContentCancelResultV1 {
+  const result = shape(value, ["projectId", "resourceId", "revision", "assetGeneration", "status"], "resource content cancel result");
+  if (result.status !== "requested" && result.status !== "not-active") invalid("Unknown resource content cancel status");
+  return {
+    projectId: id(result.projectId, "projectId"),
+    resourceId: id(result.resourceId, "resourceId"),
+    revision: positive(result.revision, "revision"),
+    assetGeneration: positive(result.assetGeneration, "assetGeneration"),
+    status: result.status,
   };
 }
 

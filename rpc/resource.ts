@@ -3,7 +3,13 @@ import type { RpcMethod, RpcOutputValidator } from "./protocol.js";
 export { resourceViewCopyMethod } from "./resource/view.js";
 export type { ResourceViewCopyInputV1, ResourceViewCopyV1 } from "./resource/view.js";
 export { resourceContentRetryMethod } from "./resource/content.js";
-export type { ResourceContentRetryInputV1, ResourceContentRetryResultV1 } from "./resource/content.js";
+export { resourceContentCancelMethod } from "./resource/content.js";
+export type {
+  ResourceContentCancelInputV1,
+  ResourceContentCancelResultV1,
+  ResourceContentRetryInputV1,
+  ResourceContentRetryResultV1,
+} from "./resource/content.js";
 import type { ProjectResourceAccessV1, ProjectResourceOwnerV1 } from "./project.js";
 import {
   parseFolderCreateInput,
