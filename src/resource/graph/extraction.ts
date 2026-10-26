@@ -9,6 +9,7 @@ import { GRAPH_TOOL, validateGraph } from "./validation.js";
 
 export interface GraphConfig {
   readonly model: Pick<GenerateRequest, "provider" | "model" | "maxTokens" | "temperature">;
+  readonly compatibilityProvider?: string;
   readonly inputTokenBudget?: number;
   readonly outputTokenLimit?: number;
 }
@@ -32,7 +33,7 @@ export class GraphExtractor {
       || (config.model.temperature !== undefined && !Number.isFinite(config.model.temperature))) {
       throw new TypeError("Graph generation parameters are invalid.");
     }
-    this.pipelineVersion = JSON.stringify([GRAPH_PIPELINE_VERSION, config.model.provider, config.model.model,
+    this.pipelineVersion = JSON.stringify([GRAPH_PIPELINE_VERSION, config.compatibilityProvider ?? config.model.provider, config.model.model,
       this.inputBudget, this.outputLimit, config.model.maxTokens ?? null, config.model.temperature ?? null]);
   }
 

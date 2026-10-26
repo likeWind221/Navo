@@ -54,6 +54,18 @@ describe("batched graph extraction", () => {
       .toBe(baseline.pipelineVersion);
   });
 
+  it("keeps the Graph pipeline identity independent from its Host dispatch alias", async () => {
+    const ctx = await context();
+    const baseline = new GraphExtractor(ctx.llm, { ...config, model: { provider: "qwen", model: "graph-model" } });
+    const aliased = new GraphExtractor(ctx.llm, {
+      ...config, model: { provider: "graph:qwen", model: "graph-model" }, compatibilityProvider: "qwen",
+    });
+    expect(aliased.pipelineVersion).toBe(baseline.pipelineVersion);
+    expect(new GraphExtractor(ctx.llm, {
+      ...config, model: { provider: "graph:qwen", model: "changed-model" }, compatibilityProvider: "qwen",
+    }).pipelineVersion).not.toBe(baseline.pipelineVersion);
+  });
+
   it.each([{ maxTokens: 0 }, { maxTokens: 1.5 }, { temperature: Number.NaN }])("rejects invalid generation settings %j", async parameters => {
     const ctx = await context();
     expect(() => new GraphExtractor(ctx.llm, { ...config, model: { ...config.model, ...parameters } }))
