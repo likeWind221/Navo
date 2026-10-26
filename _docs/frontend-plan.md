@@ -422,6 +422,6 @@ F11.3 后端公共契约的前端独立验收已通过：前端 typecheck/test/b
 
 - 2026-10-26 后端 F14.2a 当前资料查看副本已随 [PR #108](https://github.com/likeWind221/Navo/pull/108) 合入，见 [166](166-devlog-f14-2a-view.md)：当前版本的权限内独立副本可由可信主进程消费，原件不受外部编辑影响；交由 `backend-plan.md` 实施的此项依赖已交付。F7.3 的 Electron 默认应用打开、Renderer 结果与取消仍未接入，正文重处理另待 F14.2b/c，前端状态不提前完成。
 
-- 当前目标执行进度：F5.4 子 Agent 已交付 Main 回合 / follow 桥接及当前运行期间的项目会话所有者，主编排已审查并要求修正关闭重开、早到事件和 StrictMode 生命周期问题；受控桌面流程已运行，但截图发现窄屏 Main 面板不可见，实际视觉 / 交互验收尚未通过，不能标记完成。真实模型验收尚未运行，F5.5–F11 仍待实施。
+- 当前目标执行进度：F5.4 子 Agent 已交付 Main 回合 / follow 桥接及当前运行期间的项目会话所有者，主编排已审查并要求修正关闭重开、早到事件和 StrictMode 生命周期问题；窄屏 2px 面板定位已修复，受控宽/窄屏实际鼠标与StrictMode验收通过；正式 Host 真实验收在凭据刷新时 AUTH / HTTP 403 失败，见 [BUG-036](168-bugfix-bug-036-auth.md)。真实门禁未通过，不能标记完成；F5.5–F11 仍待实施。
 
 - 2026-10-27 后端 F14.2b 失败正文显式重处理已随 [PR #109](https://github.com/likeWind221/Navo/pull/109) 合入，见 [167](167-devlog-f14-2b-content.md)：按当前版本接受 failed 资料重新排队，accepted / pending 与最终正文结果分开；交由 `backend-plan.md` 实施的此依赖已交付。F7.3 页面与按钮尚未消费，目标处理取消仍待 F14.2c，不标记前端完成。
