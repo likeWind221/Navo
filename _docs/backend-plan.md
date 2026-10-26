@@ -369,7 +369,7 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不恢复�
 
 ## 12. 当前下一步
 
-2026-10-26 最新复验：用户决定搁置 BUG-032，改用 OpenRouter；分别授权三轮真实任务。验收单次时限按授权改为 60 秒，并修正遗漏 Main 目标确认回合的 BUG-034。第三轮 6 次 Embedding 全 200，三份原文与成果图谱 active，BUG-031 旧参数错误未复现；Main 规划、Node A、Main Review、定向共享、同库重开通过。Node B 虽读取交接与约束，却额外声明两份未直接 fetch 的原文为来源，严格判据拒绝，登记 BUG-035；最终 Main Review 尚未执行，F13.6 保持进行中。当前下一步是定位来源声明不一致，真实复验另行授权；正式 Renderer 状态不变。记录见 [160](160-devlog-f13-6-openrouter-acceptance.md)、[163](163-bugfix-bug-035-node-source-evidence.md)。下述独立 smoke 与此前失败均保留为历史，不表示完整任务通过。
+2026-10-26 最新复验：用户决定搁置 BUG-032，改用 OpenRouter；分别授权三轮真实任务。验收单次时限按授权改为 60 秒，并修正遗漏 Main 目标确认回合的 BUG-034。第三轮 6 次 Embedding 全 200，三份原文与成果图谱 active，BUG-031 旧参数错误未复现；Main 规划、Node A、Main Review、定向共享、同库重开通过。Node B 虽读取交接与约束，却额外声明两份未直接 fetch 的原文为来源，严格判据拒绝，登记 BUG-035；最终 Main Review 尚未执行，F13.6 保持进行中。该失败已确认为验收脚本来源契约缺陷，现按方案 A 修复：直读由成功 fetch 轨迹证明，source_ids 只要求包含必读来源并可追溯；完整本地 / CI 与真实复验另行确认，正式 Renderer 状态不变。记录见 [160](160-devlog-f13-6-openrouter-acceptance.md)、[163](163-bugfix-bug-035-node-source-evidence.md)。下述独立 smoke 与此前失败均保留为历史，不表示完整任务通过。
 
 2026-10-26 新增能力已验收：可显式选择 OpenRouter Nemotron 3.5 Embed 1B 免费模型，保留原 Qwen 能力。本机完整 1045 项、最终 head CI 与授权真实 Embedding 链路均通过：10 次 HTTP 200、2048 维、索引 / 中英文检索 / 权限 / 重启复用通过，耗时 6.99 秒，生成调用为 0；PR #104 已合入 master（4db37c6），见 [159](159-devlog-embedding-openrouter.md)。本次授权仅限 Embedding，不继续图谱 / 两 Node / Main Review；F13.6 仍为进行中，后续等待单独授权。BUG-032 的原端点问题与 BUG-031 的真实图谱复验保持原状态。
 

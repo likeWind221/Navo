@@ -172,7 +172,7 @@
 - [F13.6：OpenRouter 后端完整验收复验](160-devlog-f13-6-openrouter-acceptance.md)：三轮按分别授权执行；最新图谱、Node A、Main Review 与重开通过，Node B 来源声明失败，完整任务未通过。
 - [BUG-033：OpenRouter Embedding 真实验收请求超时](161-bugfix-bug-033-openrouter-timeout.md)：按授权将验收时限调为 60 秒，后两轮 Embedding 全部 200；完整任务待验。
 - [BUG-034：完整验收脚本缺少 Main 目标确认回合](162-bugfix-bug-034-acceptance-confirmation.md)：补齐两回合，真实确认 / 规划及后续任务通过，待当前 head CI。
-- [BUG-035：第二 Node 的来源声明与实际原文读取不一致](163-bugfix-bug-035-node-source-evidence.md)：Node B 列出两份未直接 fetch 的原文，最终 Review 未执行；仅排查、未修复。
+- [BUG-035：第二 Node 的来源声明与实际原文读取不一致](163-bugfix-bug-035-node-source-evidence.md)：已确认验收判据与检查不同义，按方案 A 改为轨迹证明直读、`source_ids` 只校验可追溯性，并补三项回归；待真实复验。
 - [F13.4a：统一 Turn Context](152-devlog-f13-4a-turn-context.md)：逐请求读取权威状态、临时上下文注入、Reminder 生命周期与 F12 恢复；过渡目录已由 F13.4c 按需资源工具替代。
 
 - [F13 项目资料库与任务检索规划](124-devlog-f13-plan.md)：原始产品路线与决策记录；当前阶段状态以 [backend-plan.md](backend-plan.md) 为准。2026-10-26 取消独立 F13.5，后端当前进入 F13.6 完整任务验收。

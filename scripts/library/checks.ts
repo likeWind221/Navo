@@ -16,12 +16,22 @@ export function validateAnswer(app: Context, nodeId: NodeId, evidence: TurnEvide
   assert.equal(answer.conflict, "unresolved");
   assert(typeof answer.recommendation === "string" && answer.recommendation.trim().length > 0);
   assert(Array.isArray(answer.source_ids));
+  const sourceIds: string[] = [];
+  for (const id of answer.source_ids as unknown[]) {
+    assert(typeof id === "string" && id.trim().length > 0, "Source IDs must be non-empty strings");
+    sourceIds.push(id);
+  }
+  assert(new Set(sourceIds).size === sourceIds.length, "Source IDs must be unique");
+  assert(sourceIds.length >= 2, "Answer must cite at least two source Resources");
   const fetched = evidence.succeeded.filter(call => call.name === "fetch_resource")
     .map(call => (JSON.parse(call.arguments) as { resource_id: string }).resource_id);
   assert(new Set(fetched).size >= 2, "Node did not actually fetch two different Resources");
   for (const id of requiredSources) assert(fetched.includes(id), `Required source was not fetched: ${id}`);
-  assert(answer.source_ids.length >= 2 && answer.source_ids.every((id: unknown) => typeof id === "string" && fetched.includes(id)),
-    "Source IDs must identify actually fetched Resources");
+  for (const id of requiredSources) assert(sourceIds.includes(id), `Required source was not cited: ${id}`);
+  const received = evidence.succeeded
+    .filter(call => call.name === "fetch_resource" || call.name === "search_resources")
+    .map(call => call.result).join("\n");
+  for (const id of sourceIds) assert(received.includes(id), `Source ID was not observed in this Turn: ${id}`);
   assert(submission.criteria.every(item => item.satisfied));
   assert.deepEqual(submission.remaining, []);
   assert.equal(evidence.unrecovered.length, 0);
