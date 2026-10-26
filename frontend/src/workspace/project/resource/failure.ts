@@ -9,6 +9,8 @@ const messages: Record<DesktopResourceFailure["code"], string> = {
   "revision-conflict": "资料版本已变化，请重新打开当前目录。",
   "operation-conflict": "资料库正在处理其他操作，请稍后重试。",
   "query-changed": "资料库内容已变化，请重新打开当前目录。",
+  "search-expired": "资料库内容已变化，请重新打开当前目录。",
+  "search-changed": "资料库内容已变化，请重新打开当前目录。",
   internal: "资料库服务暂时不可用，请稍后重试。",
   cancelled: "资料库订阅已停止，请重新打开目录。",
   "host-unavailable": "资料库服务未连接，请确认桌面服务后重试。",

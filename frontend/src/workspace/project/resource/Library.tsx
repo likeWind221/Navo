@@ -34,9 +34,7 @@ export function ResourceLibrary({ api, projectId, onClose }: {
     onClose();
   }
 
-  return <dialog ref={dialog} open className={styles.library} aria-label="资料库" onCancel={cancel} onKeyDown={event => {
-    if (event.key === "Escape") { event.preventDefault(); onClose(); }
-  }}>
+  return <dialog ref={dialog} open className={styles.library} aria-label="资料库" onCancel={cancel}>
     <header className={styles.header}>
       <div><span className={styles.eyebrow}>PROJECT LIBRARY</span><h2>资料库</h2></div>
       <button ref={closeButton} type="button" className={styles.close} aria-label="关闭资料库" onClick={onClose}><Icon name="close" /></button>
