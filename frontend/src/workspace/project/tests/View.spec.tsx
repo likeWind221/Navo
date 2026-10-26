@@ -16,6 +16,26 @@ const project = {
 };
 
 describe("ProjectDetailView", () => {
+  it("renders islands from the existing roadmap snapshot without enabling demo controls", () => {
+    const markup = renderToStaticMarkup(<ProjectDetailView onRetry={vi.fn()} state={{
+      status: "ready",
+      detail: { project, main: { sessionId: "s-1", turnActive: false }, roadmap: {
+        revision: 1, edges: [], nodes: [{
+          nodeId: "real-node", revision: 1, requirement: "required", status: "idle", title: "真实任务", description: "现有快照中的节点",
+          acceptanceCriteria: [], hasSession: false, turnActive: false,
+          actions: { run: true, complete: false, skip: false, rework: false, review: false },
+          confirmation: null, submission: null, pendingFeedback: null, review: null, reworkCount: 0, reviewPending: false,
+        }],
+      } },
+    }} />);
+    expect(markup).toContain('data-node-id="real-node"');
+    expect(markup).toContain("真实任务");
+    expect(markup).toContain("1 座岛屿");
+    expect(markup).not.toContain("新增岛屿");
+    expect(markup).not.toContain("生成示例路线");
+    expect(markup).toContain("草稿 · 对话发送即将开放");
+  });
+
   it("shows the project facts and a pending workspace binding", () => {
     const markup = renderToStaticMarkup(<ProjectDetailView onRetry={vi.fn()} state={{
       status: "ready",

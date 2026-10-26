@@ -1,25 +1,23 @@
-import { useState } from "react";
-import type { ProjectDetailV1 } from "../../../../rpc/project.js";
+import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import type { NodeStatusV1, ProjectDetailV1 } from "../../../../rpc/project.js";
 import { Icon } from "../../ui/Icon";
 import { RoadmapMap } from "./Map";
+import type { MapGraph } from "./map/model";
 import styles from "./workspace.module.css";
 
-export interface WorkspaceNode {
-  readonly id: string;
-  readonly title: string;
-  readonly note: string;
-  readonly status: string;
-  readonly x: number;
-  readonly y: number;
-}
-
 type Message = { role: "user" | "assistant"; text: string };
-const noNodes: readonly WorkspaceNode[] = [];
+const statusLabels: Record<NodeStatusV1, string> = { locked: "待解锁", idle: "可执行", working: "进行中", submitted: "待验收", completing: "已完成", skipped: "已跳过" };
 
-export function ProjectWorkspace({ detail, demo }: { readonly detail: ProjectDetailV1; readonly demo?: readonly WorkspaceNode[] }): React.JSX.Element {
-  const nodes = demo ?? noNodes;
+export function ProjectWorkspace({ detail, demo, previewControls }: { readonly detail: ProjectDetailV1; readonly demo?: MapGraph; readonly previewControls?: ReactNode }): React.JSX.Element {
+  const graph = useMemo<MapGraph>(() => demo ?? {
+    nodes: detail.roadmap?.nodes.map(node => ({ id: node.nodeId, title: node.title, note: node.description, status: statusLabels[node.status] })) ?? [],
+    edges: detail.roadmap?.edges ?? [],
+  }, [demo, detail.roadmap]);
+  const nodes = graph.nodes;
   const project = detail.project;
-  const [planned, setPlanned] = useState(false);
+  const [showDemo, setShowDemo] = useState(Boolean(demo));
+  const planned = nodes.length > 0 && (demo ? showDemo : true);
   const [active, setActive] = useState("main");
   const [opened, setOpened] = useState<string[]>([]);
   const [visible, setVisible] = useState(true);
@@ -29,6 +27,12 @@ export function ProjectWorkspace({ detail, demo }: { readonly detail: ProjectDet
   const node = nodes.find(item => item.id === active);
   const title = node?.title ?? "Main";
   const nodeNumber = String(nodes.findIndex(item => item.id === active) + 1).padStart(2, "0");
+
+  useEffect(() => {
+    const ids = new Set(nodes.map(item => item.id));
+    setOpened(previous => previous.filter(id => ids.has(id)));
+    setActive(previous => previous === "main" || ids.has(previous) ? previous : "main");
+  }, [nodes]);
 
   function openNode(id: string): void {
     setOpened(previous => previous.includes(id) ? previous : [...previous, id]);
@@ -57,20 +61,21 @@ export function ProjectWorkspace({ detail, demo }: { readonly detail: ProjectDet
       <h1>{project.name}</h1>
       <p>{project.goal ?? "目标待确定"}</p>
       <div className={styles.mapTools}><span><Icon name="map" />Roadmap <small>执行路线</small></span>
-        <span>{planned ? "5 个节点 · 1 个已完成" : detail.roadmap === null ? "尚未规划" : "路线已创建"}</span></div>
+        <span>{planned ? `${nodes.length} 座岛屿 · ${nodes.filter(item => item.status === "已完成").length} 个已完成` : detail.roadmap === null ? "尚未规划" : "路线已创建"}</span></div>
+      {previewControls && <div className={styles.previewTools}>{previewControls}</div>}
     </header>
-    <RoadmapMap nodes={nodes} active={active} planned={planned} onOpen={openNode}>
+    <RoadmapMap graph={graph} active={active} planned={planned} onOpen={openNode}>
       <div className={styles.empty}>
         <span className={styles.emptyIcon}><Icon name="guide" /></span>
         <span className={styles.eyebrow}>YOUR NEXT EXPLORATION</span>
-        <h2>{detail.roadmap === null ? "从一个目标，走向一条路线" : "项目路线已创建"}</h2>
-        <p>{detail.roadmap === null ? "规划完成后，你的任务、依赖与进度会在这里展开。" : "路线地图展示即将开放，已有路线数据会继续保留。"}</p>
-        {demo && <button onClick={() => setPlanned(true)}>查看示例路线 <Icon name="arrow" /></button>}
+        <h2>{demo && nodes.length === 0 ? "还没有节点岛屿" : detail.roadmap === null ? "从一个目标，走向一条路线" : "项目路线已创建"}</h2>
+        <p>{demo && nodes.length === 0 ? "点击上方「新增岛屿」，看看路线如何生长。" : detail.roadmap === null ? "规划完成后，你的任务、依赖与进度会在这里展开。" : "路线地图展示即将开放，已有路线数据会继续保留。"}</p>
+        {demo && nodes.length > 0 && <button onClick={() => setShowDemo(true)}>查看示例路线 <Icon name="arrow" /></button>}
       </div>
     </RoadmapMap>
     <footer className={styles.mapFoot}>
       <span><i />{demo ? "示例数据" : project.status === "active" ? "进行中" : "已归档"}</span>
-      {demo && <button onClick={() => setPlanned(value => !value)}>{planned ? "查看规划前空态" : "显示示例路线"}</button>}
+      {demo && <button onClick={() => setShowDemo(value => !value)}>{planned ? "查看规划前空态" : "显示示例路线"}</button>}
       <span className={styles.dragHint}>左键旋转 · 滚轮缩放 · 右键平移</span>
     </footer>
     {!visible && <button className={styles.restore} aria-label="展开会话面板" onClick={() => setVisible(true)}><Icon name="chat" /><span>{title}</span><Icon name="chevron" /></button>}
@@ -100,14 +105,14 @@ export function ProjectWorkspace({ detail, demo }: { readonly detail: ProjectDet
         </nav>
         <div className={styles.messages}>
           <div className={styles.nodeHeading}><span className={styles.nodeBadge} data-node={Boolean(node)}>{node ? nodeNumber : <Icon name="guide" />}</span><div><small>{node ? "NODE WORKSPACE" : "MAIN AGENT"}</small><h2>{node ? title : "一起探索下一步"}</h2></div></div>
-          <div className={styles.context}><span>{node ? "当前节点" : "项目目标"}</span><p>{node?.note ?? project.goal ?? "目标待确定"}</p>{node && <small>验收条件：提供可检查的结果与来源证据。</small>}</div>
+          <div className={styles.context}><span>{node ? "当前节点" : "项目目标"}</span><p>{node?.note ?? project.goal ?? "目标待确定"}</p>{node && demo && <small>验收条件：提供可检查的结果与来源证据。</small>}</div>
           {demo ? <div className={styles.assistant}><div className={styles.author}><span>N</span><strong>{node ? "Node" : "Main"}</strong><small>工作会话</small></div><div>
             <p>{node ? `我们将围绕「${node.title}」展开工作。你可以补充要求，或明确发起这一步的执行。` : "我们先确认这项研究的目标与边界，再把它拆成可以逐步执行和验证的路线。"}</p>
             <p>{node ? "切回 Main 可以讨论整体路线。关闭这个会话入口后，草稿与内容仍会保留。" : "规划完成后，点击路线上的任意节点，就能在这里切换到它的工作会话。"}</p>
           </div></div> : <div className={styles.assistant}><p>项目对话即将开放。你可以先在下方准备草稿，切换项目后草稿仍会保留。</p>{detail.main.turnActive && <p>后端 Main 回合正在运行，对话过程展示尚未接入。</p>}</div>}
           {(messages[active] ?? []).map((message, index) => <div key={index} className={message.role === "user" ? styles.user : styles.reply}>{message.text}</div>)}
-          {demo && !node && !planned && <button className={styles.planButton} onClick={() => setPlanned(true)}>生成示例路线 <Icon name="arrow" /></button>}
-          {node && <div className={styles.nodeHint}>原型仅展示交互，不启动 Agent 或修改节点状态。</div>}
+          {demo && nodes.length > 0 && !node && !planned && <button className={styles.planButton} onClick={() => setShowDemo(true)}>生成示例路线 <Icon name="arrow" /></button>}
+          {node && <div className={styles.nodeHint}>{demo ? "原型仅展示交互，不启动 Agent 或修改节点状态。" : "节点工作会话尚未接入，当前只展示路线与保留草稿。"}</div>}
         </div>
         <div className={styles.composer}>
           <textarea aria-label={`${title} 草稿`} placeholder={node ? "补充这个节点的要求…" : "与 Main 讨论目标与路线…"} value={drafts[active] ?? ""} onChange={event => setDrafts(previous => ({ ...previous, [active]: event.target.value }))} />
