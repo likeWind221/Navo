@@ -262,6 +262,8 @@ Final answer (outside collapse)
 | ⬜ | Agent 资料使用过程（对应 F13.4） | F13.4a 已提供统一动态上下文，F13.4c 提供权限内目录、检索及原文工具，不单独实现 Working Board；正式 Renderer 尚未验收。用户可查看 Agent 实际调用的资料工具及结果，明确资料不足、来源冲突和检索失败；不建设独立成果引用关联、来源版本追踪或变化通知 |
 | ⬜ | 桌面完整任务验收（对应 F13.6） | 在正式页面完成资料导入、组织、搜索、Agent 按需使用、成果交付与 Main 审查；覆盖资料不足、权限隔离、检索失败、取消与重启恢复。F13.5 独立引用与来源追踪已取消，不作为验收前置条件；Bridge 实际调用不得代替 Renderer 交互或用户验收 |
 
+- 2026-10-26 后端 F13.6 OpenRouter 最新复验：真实图谱、Main 规划、Node A / Main Review、定向共享和同库重开通过；Node B 来源声明与直接读取轨迹不一致，最终 Main Review 未执行，详见 [160](160-devlog-f13-6-openrouter-acceptance.md)。后端继续由 `backend-plan.md` 实施；本轮没有新增公共契约或正式 Renderer 验收，前端步骤状态和下一步不变。
+
 - F13.0 产品规则、交接和六组验收场景已于 2026-10-19 经用户整体确认并收口，设计与新会话交接见 [125](125-devlog-f13-0-design.md)。F13.1c 提供用户资料补充与管理后端能力；F13.2b 已交付管理 RPC / Bridge。Agent 侧目录与检索工具不等于用户侧搜索页面；F13.5b 已取消。F13.6 需分别记录现有公共 Bridge 与正式 Renderer 的实际验收状态。契约须明确版本、运行时校验、错误和取消语义；Renderer 不直接依赖后端内部模块。
 - F13.1b 后端正文提取与恢复已随 PR #87 合并至 master，见 [135](135-devlog-f13-1b-content.md)；内部正文状态与读取能力已实现，未提供重处理公共 RPC。F13.1c 用户导入与内部管理服务已实现，见 [137](137-devlog-f13-1c-user-intake.md)。F13.2a 目录浏览与资料整理后端能力已随 PR #89 合入，见 [139](139-devlog-f13-2a-library-organization.md)；F13.2b 已交付资料浏览、文件夹管理、资料更新 / 替换 / 删除、流式导入及状态跟随的版本化 RPC 与 `window.desktop.resource` Electron Bridge，并通过实际调用验收，见 [140](140-devlog-f13-2b-desktop-resource-management.md)。正式 Renderer 页面与交互仍未实施，前端当前下一步仍为 F5.4。2026-10-22 用户确认后端主线继续进入 F13.3a；不新增 F13.2c，F13.2 的 Renderer 页面独立登记在本计划，不阻塞后端检索开发。
 - F5.4–F5.8 状态与顺序不变。F5.7 仍只承担消息记录和基础 Resource 元数据查看，不增加资料正文、搜索或管理范围；F13 项目资料库的信息面板与 F5.7 使用同一资料信息。

@@ -4,9 +4,11 @@
 
 ## 当前状态
 
-- [ ] BUG-032：修复后的真实复验中，3 次 Embedding 尝试均未收到 HTTP 响应，向量构建失败；`192.168.99.2:8081` 的只读 TCP 检查超时。仅排查、未修复，生成模型尚未调用，见 [158](158-bugfix-bug-032-embedding-connectivity.md)。
-
-- [ ] BUG-031：图谱专用参数修复已随 PR #102 合入（289f4ce）；类型检查、专项 37 项、完整 1037 项及当前代码 head CI 通过。默认不再注入参数，显式配置独立传递；原真实失败保留，待单独授权真实复验，尚未关闭，见 [157](157-bugfix-bug-031-graph-subscription.md)。
+- [x] BUG-035：已按方案 A 修复验收来源契约：直读由成功 fetch 轨迹证明，`source_ids` 只要求可追溯的支持来源并拒绝本回合未出现的 ID；新增三项回归，完整本地 1056 项与 CI run `40334741718` 通过。第四轮真实运行 `%TEMP%/navo-f136-real-R8uzdx` 的 Node B 来源声明与 fetch 轨迹一致，最终 Main Review 与完整任务通过，关闭，见 [163](163-bugfix-bug-035-node-source-evidence.md)。
+- [x] BUG-034：验收脚本已补齐 Main 目标确认两回合；第四轮真实确认 / 规划、两 Node、Review 与同库重开通过，完整本地 1056 项与 head `a3fb032` 的 CI run `40335277583` 通过，关闭，见 [162](162-bugfix-bug-034-acceptance-confirmation.md)。
+- [x] BUG-033：首轮 OpenRouter 单次 Embedding 触及 15 秒预算；按用户授权改为 60 秒后，第四轮 7 次请求全部 200，完整图谱 / 两 Node / Main Review 通过，关闭；前次超时根因仍未定位，见 [161](161-bugfix-bug-033-openrouter-timeout.md)。
+- [ ] BUG-032：2026-10-26 用户决定搁置原 Qwen 端点排查，后续使用 OpenRouter；保留原连接失败事实，不标记已修复，见 [158](158-bugfix-bug-032-embedding-connectivity.md)。
+- [x] BUG-031：参数修复已合入；第四轮三份原文及成果图谱全部真实 active，完整两 Node / Main Review 通过，旧错误未复现，关闭，见 [157](157-bugfix-bug-031-graph-subscription.md)。
 
 - [x] BUG-030：Provider / Host 已对齐 Qwen3-Embedding-4B / 2560 维，真实 9 请求 smoke、专项 52 项、完整 988 项及代码 head CI 通过，PR #96 已合入（c6b6ef9），见 [151](151-bugfix-bug-030-embedding-deployment.md)。
 
@@ -44,7 +46,7 @@
 
 - [x] BUG-012：F11.4 真实验收脚本未调用入口且未提供下游所需材料；已修正，本机完整检查、gpt-6-sol 双节点真实完成及代码 head CI 通过（PR #70，收口提交仍遵循当前 head CI 门禁）。笔记：[106](106-bugfix-bug-012-autorun-acceptance.md)。
 
-未关闭：BUG-002、BUG-007、BUG-010、BUG-019、BUG-025、BUG-031、BUG-032。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 / BUG-025 仅排查、未修复，BUG-031 代码已修复、待真实复验；BUG-014～018 已随 PR #79 合入关闭，BUG-021 / 022 与 BUG-023 均已满足各自关闭条件。
+未关闭：BUG-002、BUG-007、BUG-010、BUG-019、BUG-025、BUG-032。BUG-002 等待复现，BUG-007 / BUG-032 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 / BUG-025 仅排查、未修复；BUG-031、BUG-033、BUG-034、BUG-035 已因第四轮真实完整任务通过而关闭；BUG-014～018 已随 PR #79 合入关闭，BUG-021 / 022 与 BUG-023 均已满足各自关闭条件。
 
 - [x] BUG-001：Node 续接时未读取已共享的新验证资源（已修复：续接资源变化通知 + Resource ID 语义）
 - [ ] BUG-002：验证节点发布文件时出现来源不可用错误（诊断已补齐，未复现；2026-10-07 用户决定保持未关闭，等待复现后依证据定性）
@@ -64,8 +66,11 @@
 
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
-| BUG-032 | P1 / 后端验收依赖 | Embedding 未收到 HTTP 响应，阻断真实图谱 / Main / Node 验收 | 三份正文 ready，向量索引 failed / request-failed，三次 status=0；端口 TCP 超时，原因未定位 | 定位并恢复端点可用性，重新授权后实际 Embedding 与完整任务通过 | [158：仅排查、未修复](158-bugfix-bug-032-embedding-connectivity.md) |
-| BUG-031 | P1 / 后端 | 图谱固定参数被订阅适配器在联网前拒绝，阻断 F13.6 真实链路 | 图谱专用可选参数与组合回归已随 PR #102 合入；专项 37 项、完整 1037 项与代码 CI 通过；未重跑真实模型 | 参数修复、完整本地与当前 head CI，以及重新授权后的真实图谱 / 多 Node / Main Review 通过 | [157：已合入，待真实复验](157-bugfix-bug-031-graph-subscription.md) |
+| BUG-035 | P1 / 后端验收脚本 | Node B 将搜索 / 上游来源混入本回合直接读取声明 | 已确认判据（至少两份真实 fetch）与检查（source_ids 只能列 fetch）不同义；按方案 A 改为轨迹证明直读、source_ids 只校验可追溯性，并补三项回归 | 必读来源实际 fetch、来源声明可追溯，并完成最终 Main Review 和完整任务；第四轮真实运行通过 | [163：已修复并真实复验通过](163-bugfix-bug-035-node-source-evidence.md) |
+| BUG-034 | P1 / 后端验收脚本 | 脚本未经历目标确认就断言两个 Node | 已补齐两回合；第四轮真实确认 / 规划、两 Node、Review 与同库重开通过，本地 1056 项与 head `a3fb032` CI 通过 | 修正后真实目标确认 / 规划及后续任务、本地完整检查与当前 head CI 通过 | [162：真实复验通过，关闭](162-bugfix-bug-034-acceptance-confirmation.md) |
+| BUG-033 | P1 / 后端验收依赖 | OpenRouter 单项 Embedding 曾触及验收 15 秒预算 | 改为 60 秒后，第四轮 7 次请求全部 200；完整任务通过；前次 15 秒超时根因未定位 | 实际 Embedding 与完整图谱 / 两 Node / Main Review 任务通过 | [161：调整时限后完整通过，关闭](161-bugfix-bug-033-openrouter-timeout.md) |
+| BUG-032 | P1 / 后端验收依赖 | 原 Qwen 端点未收到 HTTP 响应 | 2026-10-26 用户决定搁置排查，后续使用 OpenRouter；原端点未修复 | 若恢复使用原端点，另行定位并完成真实验收 | [158：用户决定搁置](158-bugfix-bug-032-embedding-connectivity.md) |
+| BUG-031 | P1 / 后端 | 图谱固定参数曾被订阅适配器在联网前拒绝 | 参数修复已合入；第四轮 5 次图谱请求、全部成果图谱 active，完整两 Node / Main Review 通过，旧错误未复现 | 参数修复、完整本地与当前 head CI，以及重新授权后的真实图谱 / 多 Node / Main Review 通过 | [157：完整真实任务通过，关闭](157-bugfix-bug-031-graph-subscription.md) |
 | BUG-030 | P1 / 后端 | 默认 0.6B / 1024 维与已部署的 4B 不一致，阻断真实索引验收 | 已适配；真实 9 请求 smoke、完整 988 项及代码 head CI 通过 | Provider / Host 对齐部署，维度及响应校验、本地完整验证、真实 smoke test 与当前 PR head CI 通过 | [151：已修复并合入 PR #96](151-bugfix-bug-030-embedding-deployment.md) |
 | BUG-027 | P2 / 后端 | 每个候选单独 atomic，存在不必要事务开销；不是已测出的性能故障 | 已核实 atomic 无外层时逐次提交，本机对比候选阶段 37→1 次 | 单次事务完成候选校验，结果排名与权限/代次规则保留；耗时对比、完整本机与当前 head CI 通过 | [150：已修复并合入 PR #95](150-bugfix-bug-027-029-retrieval.md) |
 | BUG-028 | P2 / 后端 | 中文短实体可被子串误命中，截断种子受图读取顺序影响 | 已确认 includes 与先截断的规则 | 完整词边界、最长重叠与稳定截断回归、完整本机与当前 head CI 通过；注明分词边界 | [150：已修复并合入 PR #95](150-bugfix-bug-027-029-retrieval.md) |
@@ -134,6 +139,10 @@
 2026-10-15：BUG-010 同根因扩展到 `modify_roadmap`：该工具用 `action` 承载 6 个动作并公布扁平 Schema，非当前动作的字段只在运行时拒绝；gpt-6-sol 在 F10.5 第 6 回合为 `edit_node` 填满所有字段的占位值，连续 13 次被拒。已拆为 `add_node`、`edit_node`、`remove_node`、`set_dependency`、`reorder_nodes` 五个参数全部必填的工具；复验中 sol 首次 `edit_node` 即成功。同时修正 Node 拒绝 Human 明确提交请求的问题。仍待本机 Qwen 对照与 F5.4 Electron 验收，保持未勾选。详见 [95](95-bugfix-bug-010-roadmap-schema.md)。
 
 2026-10-19：F13.1a 代码 head `c345950` 的 CI 851 项通过后，仅文档收尾的 `333f094` 在 CI 39270330070 出现两项超时，登记 BUG-021、BUG-022。BUG-021 定位为默认 `completed` mock 只排一个响应，第二个 Turn 耗尽脚本并进入约 15 秒重试退避，且原测试未断言续接 Turn 成功；BUG-022 定位为重的进程内 evidence 测试沿用默认 5 秒预算。二者均与 BUG-020 无关。修复仅改测试夹具、断言与单项预算，本机完整 851 项通过；随后代码 head `5858f28` 的 CI 39274751429 为 851 项全部通过，两项关闭。详见 [131](131-devlog-f13-1a-ci-timeouts.md)、[132](132-bugfix-bug-021-022-ci-timeouts.md)。
+
+2026-10-26：按方案 A 修复 BUG-035 的验收来源契约。确认失败点是验收脚本而非产品内核：判据要求“至少两份真实 fetch”，检查却要求 `source_ids` 全部对应当回合 fetch，且任务还鼓励搜索补充。现改为直读由成功 fetch 轨迹证明，`source_ids` 只要求包含必读来源并对每项可追溯，拒绝本回合未出现的 ID；同步明确任务说明并补三项回归。代码与回归已过类型检查、专项及完整本地 1056 项，CI run `40334741718` 通过，真实复验见下条。详见 [163](163-bugfix-bug-035-node-source-evidence.md)。
+
+2026-10-26：BUG-035 修复后的第四轮真实完整任务通过。现场 `%TEMP%/navo-f136-real-R8uzdx`，282093ms，`outcome=passed`；生成 22 次（图谱 5）、Embedding 7 次全部 HTTP 200。Main 确认 / 规划、Node A 三份原文、Review A、同库重开、Node B、最终 Review B 全部通过，两 Node `lastReview=complete`，`unrecovered=0`。Node B 的 `source_ids` 仅列本回合实际 fetch 的 comparison 与 constraints，来源声明与轨迹一致。BUG-031、BUG-033、BUG-034、BUG-035 的完整关闭条件均满足并关闭；F13.6 后端完整链路通过，父项仍待正式 Renderer 验收，见 [160](160-devlog-f13-6-openrouter-acceptance.md)、[163](163-bugfix-bug-035-node-source-evidence.md)。
 
 2026-10-26 合并授权：用户明确允许 PR #100 仅合并离线验收测试、脚本与失败记录；F13.6 保持进行中，BUG-031 / BUG-032 保持未勾选。本次不重跑真实模型，不把 OpenRouter 检索通过视为原 Qwen 端点恢复或完整任务通过，详见 [156](156-devlog-f13-6-backend-acceptance.md)。
 

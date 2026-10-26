@@ -2,11 +2,13 @@ import { mkdir, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "../../src/app.js";
-import { QwenEmbeddingAdapter } from "../../src/embedding/adapters/qwen.js";
+import { createEmbeddingProvider, resolveEmbeddingConfig } from "../../src/embedding/provider.js";
 import { createAcceptanceAdapter, resolveAcceptanceHostConfig } from "../acceptance.js";
 import { createGuardedAdapter, RequestLedger } from "../compaction/request.js";
 
 export async function createRuntime(preflight: boolean) {
+  const embeddingConfig = preflight ? undefined : resolveEmbeddingConfig();
+  if (!preflight && embeddingConfig === undefined) throw new Error("Configure Embedding before real acceptance.");
   const root = await mkdtemp(join(tmpdir(), "navo-f136-real-"));
   const workspace = join(root, "workspace");
   const intake = join(root, "intake");
@@ -21,11 +23,8 @@ export async function createRuntime(preflight: boolean) {
     event: "model-request", index: entry.index, used, status: entry.status,
   })}\n`));
   const model = config?.agent.model ?? { provider: "unused", model: "preflight" };
-  const embedding = config === undefined ? undefined : new QwenEmbeddingAdapter({
-    endpoint: process.env.EMBEDDING_BASE_URL?.trim() || "http://192.168.99.2:8081/v1",
-    model: process.env.EMBEDDING_MODEL?.trim() || "Qwen3-Embedding-4B",
-    ...(process.env.EMBEDDING_API_KEY ? { apiKey: process.env.EMBEDDING_API_KEY } : {}),
-    policy: { maxAttempts: 1, timeoutMs: 15_000 },
+  const embedding = embeddingConfig === undefined ? undefined : createEmbeddingProvider(embeddingConfig, {
+    policy: { maxAttempts: 1, timeoutMs: 60_000 },
     fetch: async (url, init) => {
       assertBudget(embeddingCalls.length < 20, controller);
       const call = { inputs: (JSON.parse(String(init?.body)) as { input: string[] }).input.length, status: 0, elapsedMs: 0 };
@@ -65,6 +64,7 @@ export async function createRuntime(preflight: boolean) {
   catch (error) { clearTimeout(deadline); controller.abort(); throw error; }
   return {
     root, workspace, intake, evidence, model, ledger, graphRequests, embeddingCalls, signal: controller.signal,
+    embedding: embedding === undefined ? undefined : { id: embedding.id, model: embedding.model, dimension: embedding.dimension },
     get app() { return app; },
     async settle() {
       await app.content.idle();

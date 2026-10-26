@@ -60,7 +60,7 @@ async function main(): Promise<void> {
     assert.equal(resources.length, 3);
     assert(resources.every(resource => resource.owner.kind === "user" && resource.access.kind === "public"));
     assert(resources.every(resource => runtime.app.content.status(projectId!, resource.id)?.status === "ready"));
-    await writeEvidence(runtime.evidence, "intake", { imported, resources, model: runtime.model });
+    await writeEvidence(runtime.evidence, "intake", { imported, resources, model: runtime.model, embedding: runtime.embedding });
     if (preflight) {
       assert.equal(runtime.ledger.used, 0);
       assert.equal(runtime.embeddingCalls.length, 0);
@@ -71,9 +71,15 @@ async function main(): Promise<void> {
     }
     for (const resource of resources) assertIndex(runtime.app, projectId, resource.id);
     const originalIds = resources.map(resource => resource.id);
-    const schema = 'Return submit_completion.summary as ONLY JSON: {"atlas":{"scores":[82,88],"price":40},"boreal":{"score":78,"price":35},"budget":45,"deployment_cost":null,"conflict":"unresolved","source_ids":["actually fetched Resource IDs"],"recommendation":"your supported recommendation"}. Read and verify the values from sources, do not infer that supplied schema values prove the facts. Do not use write, shell or the internet. Answers are deliverables; use resource_ids=[] and satisfy each criterion only after checking sources.';
+    const schema = 'Return submit_completion.summary as ONLY JSON: {"atlas":{"scores":[82,88],"price":40},"boreal":{"score":78,"price":35},"budget":45,"deployment_cost":null,"conflict":"unresolved","source_ids":["supporting Resource IDs"],"recommendation":"your supported recommendation"}. source_ids lists Resources that support the answer and must include the ones you read in full for this task; IDs seen only in search snippets or in another Resource citation may also be listed, but do not claim you fetched them. Read and verify the values from sources, do not infer that supplied schema values prove the facts. Do not use write, shell or the internet. Answers are deliverables; use resource_ids=[] and satisfy each criterion only after checking sources.';
+    const planRequest = `Create exactly two required dependent work Nodes titled Compare and Recommend, in that order. Compare must search Atlas and fetch all three source Resources, compare facts and report conflict and missing costs. Recommend must consume a reviewed comparison shared by Main, fetch that comparison plus constraints.md, and provide a recommendation. Each Node has exactly these two acceptance criteria: ${JSON.stringify(criteria)}. Do not start the Nodes or do their work.`;
+    await run("confirm", () => runtime.app.projectRuntime.startMain({ projectId: projectId!, signal: runtime.signal, text: planRequest }));
+    assert.equal(runtime.app.roadmaps.get(projectId), undefined, "Main planned before Human agreement");
+    assert.equal(runtime.app.nodes.getByProject(projectId).length, 0);
+    assert.equal(runtime.app.projects.get(projectId)?.goal, goal);
     await run("plan", () => runtime.app.projectRuntime.startMain({ projectId: projectId!, signal: runtime.signal,
-      text: `Create exactly two required dependent work Nodes titled Compare and Recommend, in that order. Compare must search Atlas and fetch all three source Resources, compare facts and report conflict and missing costs. Recommend must consume a reviewed comparison shared by Main, fetch that comparison plus constraints.md, and provide a recommendation. Each Node has exactly these two acceptance criteria: ${JSON.stringify(criteria)}. Do not start the Nodes or do their work.` }));
+      text: `I agree: plan with the recorded goal exactly as you restated it, and create the two Nodes as requested above. ${planRequest}` }));
+    assert.equal(runtime.app.projects.get(projectId)?.goal, goal);
     const nodes = runtime.app.nodes.getByProject(projectId);
     assert.equal(nodes.length, 2);
     const a = nodes.find(node => node.node.objective.title === "Compare")!;
