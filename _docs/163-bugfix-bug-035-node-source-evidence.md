@@ -72,5 +72,5 @@
 - `pnpm typecheck` 通过（本机 Node v22.23.1；仓库基线为 Node ≥24，完整测试改用 bundled Node v24.21.0）；bundled Node 24 下另行执行 `tsc --noEmit` 亦通过。
 - `tests/integration/library`：3 文件 / 11 项通过，包含新增 3 项。
 - 完整本地：165 文件 / 1056 项全部通过，366.95 秒（bundled Node v24.21.0，`NAVO_TEST_MODE=all`，`--maxWorkers=4`）；日志 `%TEMP%/navo-bug035-full.log`。
-- 本地提交已完成；2026-10-26 21:50 尝试推送 `origin/phase13-f13.6-openrouter-acceptance` 失败（github.com:443 连接超时），当前 head CI 与远端 PR #105 尚未更新。
+- 本地提交 `35042b6` 已推送；CI run `40334741718` 通过（2m49s，含 typecheck、normal tests、crash recovery tests）。
 - 未执行真实推理、未重跑真实验收、未修改产品代码。BUG-035 仍保持未勾选，需真实运行中 Node B 来源校验通过并完成最终 Main Review 后再关闭。
