@@ -142,7 +142,7 @@
 
 2026-10-26：按方案 A 修复 BUG-035 的验收来源契约。确认失败点是验收脚本而非产品内核：判据要求“至少两份真实 fetch”，检查却要求 `source_ids` 全部对应当回合 fetch，且任务还鼓励搜索补充。现改为直读由成功 fetch 轨迹证明，`source_ids` 只要求包含必读来源并对每项可追溯，拒绝本回合未出现的 ID；同步明确任务说明并补三项回归。代码与回归已过类型检查、专项及完整本地 1056 项，CI run `40334741718` 通过，真实复验见下条。详见 [163](163-bugfix-bug-035-node-source-evidence.md)。
 
-2026-10-26：BUG-035 修复后的第四轮真实完整任务通过。现场 `%TEMP%/navo-f136-real-R8uzdx`，282093ms，`outcome=passed`；生成 22 次（图谱 5）、Embedding 7 次全部 HTTP 200。Main 确认 / 规划、Node A 三份原文、Review A、同库重开、Node B、最终 Review B 全部通过，两 Node `lastReview=complete`，`unrecovered=0`。Node B 的 `source_ids` 仅列本回合实际 fetch 的 comparison 与 constraints，来源声明与轨迹一致。BUG-031、BUG-033、BUG-034、BUG-035 的完整关闭条件均满足并关闭；F13.6 后端完整链路通过，父项仍待正式 Renderer 验收，见 [160](160-devlog-f13-6-openrouter-acceptance.md)、[163](163-bugfix-bug-035-node-source-evidence.md)。
+2026-10-26：BUG-035 修复后的第四轮真实完整任务通过。现场 `%TEMP%/navo-f136-real-R8uzdx`，282093ms，`outcome=passed`；生成 22 次（图谱 5）、Embedding 7 次全部 HTTP 200。Main 确认 / 规划、Node A 三份原文、Review A、同库重开、Node B、最终 Review B 全部通过，两 Node `lastReview=complete`，`unrecovered=0`。Node B 的 `source_ids` 仅列本回合实际 fetch 的 comparison 与 constraints，来源声明与轨迹一致。BUG-031、BUG-033、BUG-034、BUG-035 的完整关闭条件均满足并关闭；F13.6 后端完整链路通过，父项仍待正式 Renderer 验收，见 [160](160-devlog-f13-6-openrouter-acceptance.md)、[163](163-bugfix-bug-035-node-source-evidence.md)。PR #105 已 squash 合入 master（`9f3514e`），最终 head `9bb94a4` 的 CI run `40337394723` 通过。
 
 2026-10-26 合并授权：用户明确允许 PR #100 仅合并离线验收测试、脚本与失败记录；F13.6 保持进行中，BUG-031 / BUG-032 保持未勾选。本次不重跑真实模型，不把 OpenRouter 检索通过视为原 Qwen 端点恢复或完整任务通过，详见 [156](156-devlog-f13-6-backend-acceptance.md)。
 

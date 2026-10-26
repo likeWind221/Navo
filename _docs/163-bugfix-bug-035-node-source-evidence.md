@@ -83,4 +83,4 @@
 - 三份源资料与 comparison.md、recommendation.md 的索引 / 图谱 active；Main 确认与规划、Node A 读取三份原文、Review A 定向共享、同库重开、Node B、最终 Review B 全部通过；两 Node 均为 `completing`，`lastReview=complete`。
 - Node B 实际 fetch comparison `7c32c164-0b89-4d11-84b0-60c14b51df8e` 与 constraints `d35c8c52-cacc-41d5-ada0-4c8b792ab6c9`，提交的 `source_ids` 恰好是这两项；`criteria.note` 与工具轨迹一致。最终 Review B 实际 fetch 物化成果 `2ddcd94c-fc5f-4a5d-b7bd-77b43ed0867d`，确认两份原文与答案数值；`unrecovered=0`。
 - 本轮真实输出没有再次列入搜索 / 上游来源，因此未触发“额外支持来源”分支；该分支由新增离线回归覆盖。真实输出满足判据，不能替代离线回归对另一分支的证明。
-- 关闭条件满足：必读来源实际 fetch、来源声明可追溯、最终 Main Review 与完整任务通过。BUG-035 关闭；不把 Bridge / Renderer、原 Qwen 端点或规模质量评测视为已验证。
+- 关闭条件满足：必读来源实际 fetch、来源声明可追溯、最终 Main Review 与完整任务通过。BUG-035 关闭；PR #105 已 squash 合入 master（`9f3514e`），最终 head `9bb94a4` 的 CI run `40337394723` 通过（4m6s）。不把 Bridge / Renderer、原 Qwen 端点或规模质量评测视为已验证。

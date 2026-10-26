@@ -54,7 +54,7 @@ F13.6 保持进行中，前端状态不变。保留本轮失败现场与 Draft P
 - 首次提交 `3368638` 的 CI run `40324804820` 普通测试有 5 项超时（shell/execution、library/flow、library/failure），没有修改相应测试或生产实现，不断言根因已确认；原日志 ci-first-failed.log 保留。后续当前提交门禁另核对，不修改超时或绕过 CI。
 - 最终相关回归 `tests/integration/library`、`tests/tools/shell/execution.spec.ts`、`tests/tools/project/goal.spec.ts`、`tests/host/project/goal.spec.ts`：6 文件 / 24 项通过，11.22 秒；日志 final-related.log。包含首轮 CI 超时所在文件；与 master 的对应生产 / 测试代码无差异，但本轮没有运行独立 master 对照，不能据此确认 CI 环境根因。
 
-最新下一步：BUG-035 已确认为验收脚本来源契约缺陷并按方案 A 修复（直读由 fetch 轨迹证明，`source_ids` 只校验可追溯性），完整本地 1056 项与 CI run `40334741718` 已通过；第四轮真实复验见下节。F13.6 后端链路随后通过，父项仍待正式 Renderer；PR #105 保持 Draft，不自动开始下一阶段。前端 / Bridge / Renderer 与原 Qwen 端点不在本轮验收范围。代码导读随本轮最终交付提供。
+最新下一步：BUG-035 已确认为验收脚本来源契约缺陷并按方案 A 修复（直读由 fetch 轨迹证明，`source_ids` 只校验可追溯性），完整本地 1056 项与 CI run `40334741718` 已通过；第四轮真实复验见下节。F13.6 后端链路随后通过，父项仍待正式 Renderer；PR #105 已 squash 合入 master（`9f3514e`），最终 head `9bb94a4` 的 CI run `40337394723` 通过（4m6s）。前端 / Bridge / Renderer 与原 Qwen 端点不在本轮验收范围。代码导读随本轮最终交付提供。
 
 ## 第四轮：来源契约修复后的完整真实任务
 
