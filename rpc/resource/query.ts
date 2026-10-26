@@ -53,4 +53,3 @@ function singleOutput<T>(parse: (value: unknown) => T): RpcOutputValidator<T> {
     },
   };
 }
-
