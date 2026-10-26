@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-- [ ] BUG-031：图谱专用 model 现可显式配置 maxTokens / temperature，默认不再注入订阅适配器拒绝的参数；代码修复和 37 项专项通过，完整验证 / CI 与真实复验状态见 [157](157-bugfix-bug-031-graph-subscription.md)。原真实失败保留，尚未关闭。
+- [ ] BUG-031：图谱专用参数修复已随 PR #102 合入（289f4ce）；类型检查、专项 37 项、完整 1037 项及当前代码 head CI 通过。默认不再注入参数，显式配置独立传递；原真实失败保留，待单独授权真实复验，尚未关闭，见 [157](157-bugfix-bug-031-graph-subscription.md)。
 
 - [x] BUG-030：Provider / Host 已对齐 Qwen3-Embedding-4B / 2560 维，真实 9 请求 smoke、专项 52 项、完整 988 项及代码 head CI 通过，PR #96 已合入（c6b6ef9），见 [151](151-bugfix-bug-030-embedding-deployment.md)。
 
@@ -62,7 +62,7 @@
 
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
-| BUG-031 | P1 / 后端 | 图谱固定参数被订阅适配器在联网前拒绝，阻断 F13.6 真实链路 | 原 3 次本地失败已复现；现已改为图谱专用可选参数并补真实适配器 / 模拟 HTTP / SQLite 组合验证；待真实复验 | 参数修复、完整本地与当前 head CI，以及重新授权后的真实图谱 / 多 Node / Main Review 通过 | [157：代码修复，待真实复验](157-bugfix-bug-031-graph-subscription.md) |
+| BUG-031 | P1 / 后端 | 图谱固定参数被订阅适配器在联网前拒绝，阻断 F13.6 真实链路 | 图谱专用可选参数与组合回归已随 PR #102 合入；专项 37 项、完整 1037 项与代码 CI 通过；未重跑真实模型 | 参数修复、完整本地与当前 head CI，以及重新授权后的真实图谱 / 多 Node / Main Review 通过 | [157：已合入，待真实复验](157-bugfix-bug-031-graph-subscription.md) |
 | BUG-030 | P1 / 后端 | 默认 0.6B / 1024 维与已部署的 4B 不一致，阻断真实索引验收 | 已适配；真实 9 请求 smoke、完整 988 项及代码 head CI 通过 | Provider / Host 对齐部署，维度及响应校验、本地完整验证、真实 smoke test 与当前 PR head CI 通过 | [151：已修复并合入 PR #96](151-bugfix-bug-030-embedding-deployment.md) |
 | BUG-027 | P2 / 后端 | 每个候选单独 atomic，存在不必要事务开销；不是已测出的性能故障 | 已核实 atomic 无外层时逐次提交，本机对比候选阶段 37→1 次 | 单次事务完成候选校验，结果排名与权限/代次规则保留；耗时对比、完整本机与当前 head CI 通过 | [150：已修复并合入 PR #95](150-bugfix-bug-027-029-retrieval.md) |
 | BUG-028 | P2 / 后端 | 中文短实体可被子串误命中，截断种子受图读取顺序影响 | 已确认 includes 与先截断的规则 | 完整词边界、最长重叠与稳定截断回归、完整本机与当前 head CI 通过；注明分词边界 | [150：已修复并合入 PR #95](150-bugfix-bug-027-029-retrieval.md) |

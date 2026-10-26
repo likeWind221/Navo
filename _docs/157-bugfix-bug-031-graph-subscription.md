@@ -1,6 +1,6 @@
 # 157：BUG-031 图谱抽取与订阅模型参数不兼容
 
-日期：2026-10-26。所属：后端；优先级 P1（阻断所选模型路径）。当前状态：**参数组装代码已修复，待真实复验**。跟踪项见 [Bug 表](bug-plan.md)。首次失败与当时未修复的事实保留如下，本次修复追加在后文。
+日期：2026-10-26。所属：后端；优先级 P1（阻断所选模型路径）。当前状态：**参数组装修复已合入 PR #102，待真实复验**。跟踪项见 [Bug 表](bug-plan.md)。首次失败与当时未修复的事实保留如下，本次修复追加在后文。
 
 ## 现象与复现
 
@@ -95,7 +95,9 @@ graph: {
 - `pnpm test tests/resource/graph tests/llm/adapters/openai.spec.ts --maxWorkers=4`：6 文件 / 37 项通过，4.49 秒。
 - 初轮新测试有 TypeScript exactOptionalPropertyTypes 用法错误和模拟响应输入格式错误，均只修正测试；没有改生产协议来迁就测试。
 - 完整 `NAVO_TEST_MODE=all pnpm test --maxWorkers=4`：159 文件 / 1037 项全部通过，343.61 秒，包含完整 D1–D8 和正文中断恢复。日志目录 `C:\Users\likeW\AppData\Local\Temp\navo-bug031-20261026`。
+- [PR #102](https://github.com/likeWind221/Navo/pull/102) 代码 head `ce3fa89d1bc8826ec9697b7b078929760a72b0bb` 的 [CI run 40296557374](https://github.com/likeWind221/Navo/actions/runs/40296557374) 第二次执行成功，typecheck、normal tests 与 crash-pr 组全部通过；于 2026-10-26 squash 合入 master（`289f4cecc60b4a0aa0661b72a58bbab929401e62`）。本地 / 远端修复分支已删除，无本 Step 专用 worktree，主目录及 PR #100 分支保留。
+- CI 首轮普通组 4 文件 / 5 项超时，另有一次 SQLite 清理 EBUSY；日志保留为 `ci-failed.log`，没有改超时或相邻模块。对应 4 文件 / 23 项在同代码修复分支和基线 master `ae5445b` 上分别通过，5.59 / 4.54 秒，日志为 `ci-cases-branch.log` / `ci-cases-master.log`。仅对同一代码 head 重跑失败 CI 一次后通过；原因未确认，不把复跑通过写成已定位或修复了 CI 环境。
 - 真实模型 / Embedding / GPU 调用为 0；本地组合验证不能替代真实服务器兼容验证，BUG-031 暂不关闭，F13.6 保持进行中。
 - 本修复从 master 独立开发，未引入 Draft PR #100 的验收脚本 / 测试。为保留已发生的验收证据和连续编号，将该 PR 中 155–157 三份历史记录一并登记；156 所述验收代码仍在 PR #100，不能视为本修复已合入这些代码。
 
-下一步：本地检查已完成，修复代码按 PR / 当前 head CI 门禁收口；需要真实复验时重新报告预算并获得授权，不复用此前一次性运行授权。BUG-031 的真实关闭条件不因代码合入而免除。
+下一步：代码修复已按本地 / 当前 head CI 门禁合入并完成分支清理；需要真实复验时重新报告预算并获得授权，不复用此前一次性运行授权。BUG-031 的真实关闭条件不因代码合入而免除。本次代码导读随交付回复提供。
