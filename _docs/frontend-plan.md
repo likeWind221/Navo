@@ -284,7 +284,7 @@ Final answer (outside collapse)
 | 重启后查看和续接会话 | 后端会话恢复；已知 Session ID 可经 session Bridge 分页读取有效历史 | 没有历史加载；Node 公共快照只有 hasSession，没有既有 Session ID；历史结果不含完整 Turn 终态 | F6.1、F6.2；缺失部分交由 `backend-plan.md` 实施 |
 | 理解上下文压力并主动压缩 | context 查询 / follow / history Bridge 与 `/compact` 已有 | 缺正式上下文展示与项目 Session 路由；普通会话命令入口已能转发命令，不能称 `/compact` 完全没有入口 | F6.3 |
 | 导入、浏览和整理资料 | 管理 RPC、文件 / 目录选择、流式导入与状态跟随 Bridge 已有 | 缺正式页面；当前公开 ready 仅表示正文就绪，不能直接宣称向量 / 图谱检索已就绪 | F7.1、F7.2 |
-| 拖拽、重处理与默认应用打开 | 正文重处理有内部能力；现有公共资料接口没有重处理或获取查看副本能力，也没有可信拖拽入口 | 部分需后端公共交付，部分需桌面能力，不能只加按钮即宣告可用 | F7.3；后端依赖交由 `backend-plan.md` 实施 |
+| 拖拽、重处理与默认应用打开 | 查看副本、失败正文重处理与目标处理取消公共 RPC 已随 PR #108–110 交付；可信拖拽、桌面打开及对应 Bridge / Renderer 仍待 F7.3 | 后端此组公共交接已完成；桌面能力与真实页面消费仍未完成 | F7.3；后端依赖交由 `backend-plan.md` 实施 |
 | 用户搜索与定位资料 | 内部混合检索和 Agent 工具已有 | 缺用户搜索 RPC / Bridge、文件信息搜索与分页的公共语义、索引可用状态；正式 Host 未传入图谱抽取配置 | F7.4；后端依赖交由 `backend-plan.md` 实施 |
 | 查看 Agent 如何使用资料 | Main / Node 已可调用 list_resources、search_resources、fetch_resource，现有内容事件可展示结果 | 需先接真实项目会话，再核验资料过程、失败和不足信息；没有独立引用体系 | F7.5 |
 | 开启自动推进并接管 | AutoRun start / pause / resume / get RPC 与 Bridge 已有 | 缺正式控件；get 是查询，project.follow 不含 AutoRun 状态，也不提供自动回合内容流 | F8.1–F8.3；持续观察所缺能力交由 `backend-plan.md` 实施 |
@@ -425,3 +425,5 @@ F11.3 后端公共契约的前端独立验收已通过：前端 typecheck/test/b
 - 当前目标执行进度：F5.4 子 Agent 已交付 Main 回合 / follow 桥接及当前运行期间的项目会话所有者，主编排已审查并要求修正关闭重开、早到事件和 StrictMode 生命周期问题；窄屏 2px 面板定位已修复，受控宽/窄屏实际鼠标与StrictMode验收通过；正式 Host 真实验收在凭据刷新时 AUTH / HTTP 403 失败，见 [BUG-036](168-bugfix-bug-036-auth.md)。真实门禁未通过，不能标记完成；F5.5–F11 仍待实施。
 
 - 2026-10-27 后端 F14.2b 失败正文显式重处理已随 [PR #109](https://github.com/likeWind221/Navo/pull/109) 合入，见 [167](167-devlog-f14-2b-content.md)：按当前版本接受 failed 资料重新排队，accepted / pending 与最终正文结果分开；交由 `backend-plan.md` 实施的此依赖已交付。F7.3 页面与按钮尚未消费，目标处理取消仍待 F14.2c，不标记前端完成。
+
+- 2026-10-27 后端 F14.2c 定向正文取消已随 [PR #110](https://github.com/likeWind221/Navo/pull/110) 合入，见 [171](171-devlog-f14-2c-cancel.md)：当前版本 / 代次匹配才请求取消，requested 与最终 failed/cancelled 分开。至此查看副本、失败重处理和定向取消 Root 公共能力已交付（交由 `backend-plan.md` 实施）；F7.3 的 Bridge、可信拖拽、默认应用打开及页面消费未完成。当前 F5.4 保留为 [Draft PR #111](https://github.com/likeWind221/Navo/pull/111)，受控与离线验收通过，BUG-036 真实认证门禁未通过，不因 CI 成功自动合并。
