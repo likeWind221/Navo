@@ -285,7 +285,7 @@ Final answer (outside collapse)
 | 理解上下文压力并主动压缩 | context 查询 / follow / history Bridge 与 `/compact` 已有 | 缺正式上下文展示与项目 Session 路由；普通会话命令入口已能转发命令，不能称 `/compact` 完全没有入口 | F6.3 |
 | 导入、浏览和整理资料 | 管理 RPC、文件 / 目录选择、流式导入与状态跟随 Bridge 已有 | 缺正式页面；当前公开 ready 仅表示正文就绪，不能直接宣称向量 / 图谱检索已就绪 | F7.1、F7.2 |
 | 拖拽、重处理与默认应用打开 | 查看副本、失败正文重处理与目标处理取消公共 RPC 已随 PR #108–110 交付；可信拖拽、桌面打开及对应 Bridge / Renderer 仍待 F7.3 | 后端此组公共交接已完成；桌面能力与真实页面消费仍未完成 | F7.3；后端依赖交由 `backend-plan.md` 实施 |
-| 用户搜索与定位资料 | 内部混合检索和 Agent 工具已有 | 缺用户搜索 RPC / Bridge、文件信息搜索与分页的公共语义、索引可用状态；正式 Host 未传入图谱抽取配置 | F7.4；后端依赖交由 `backend-plan.md` 实施 |
+| 用户搜索与定位资料 | 内部混合检索和 Agent 工具已有；F14.3a 已交付用户元信息查询、目录后代分页与当前索引状态 RPC | 问题语义检索、正式 Host 显式图谱配置及用户搜索 Bridge / 页面仍待交付 | F7.4；后端依赖交由 `backend-plan.md` 实施 |
 | 查看 Agent 如何使用资料 | Main / Node 已可调用 list_resources、search_resources、fetch_resource，现有内容事件可展示结果 | 需先接真实项目会话，再核验资料过程、失败和不足信息；没有独立引用体系 | F7.5 |
 | 开启自动推进并接管 | AutoRun start / pause / resume / get RPC 与 Bridge 已有 | 缺正式控件；get 是查询，project.follow 不含 AutoRun 状态，也不提供自动回合内容流 | F8.1–F8.3；持续观察所缺能力交由 `backend-plan.md` 实施 |
 
@@ -429,3 +429,7 @@ F11.3 后端公共契约的前端独立验收已通过：前端 typecheck/test/b
 - 2026-10-27 后端 F14.2c 定向正文取消已随 [PR #110](https://github.com/likeWind221/Navo/pull/110) 合入，见 [171](171-devlog-f14-2c-cancel.md)：当前版本 / 代次匹配才请求取消，requested 与最终 failed/cancelled 分开。至此查看副本、失败重处理和定向取消 Root 公共能力已交付（交由 `backend-plan.md` 实施）；F7.3 的 Bridge、可信拖拽、默认应用打开及页面消费未完成。当前 F5.4 保留为 [Draft PR #111](https://github.com/likeWind221/Navo/pull/111)，受控与离线验收通过，BUG-036 真实认证门禁未通过，不因 CI 成功自动合并。
 
 - BUG-037 独立主线复现并完成最小窄屏定位修复：窗口外宽547px / Renderer531px时会话面板由2px恢复为350px，原生鼠标交互、前端165项、根1080项与当前 head CI 均通过，PR #112已合入（ec14333），见 [169](169-bugfix-bug-037-panel.md)。此项恢复已有F5.3布局，不接入F5.4 Main新回合，不替代BUG-036真实认证门禁。
+
+- 2026-10-27 后端 F14.3a 已随 [PR #113](https://github.com/likeWind221/Navo/pull/113) 合入（11984aa），见 [172](172-devlog-f14-3a-query.md)：用户可按名称/描述及目录后代查找资料，稳定分页、识别变化并查看当前兼容索引状态；本机1089项、正式Host零推理与重启检查、当前head CI通过。交由 `backend-plan.md` 实施的此部分已交付；F7.4 的语义搜索、Bridge和正式页面未完成，前端步骤不提前勾选。
+
+- F5.4 Draft PR #111 最新 head b3ab928 已删除未使用的独立follow取消通道，统一沿用已接入的operation取消；类型检查、前端176项、构建与CI 40368700048通过。真实Main的AUTH403门禁仍未通过，不合并，不自动开始F5.5。
