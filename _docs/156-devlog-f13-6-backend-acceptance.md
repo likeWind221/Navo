@@ -91,3 +91,14 @@
 验收资产已推送 [Draft PR #100](https://github.com/likeWind221/Navo/pull/100)，代码提交 `c386ab7244f2b507e04f90ad39910c0baa9ba281`。因真实任务门槛未通过，保持 Draft，不合并，不删除本地分支或失败现场。
 
 后续：用户已另行授权 BUG-031 的图谱专用参数修复，见 [157](157-bugfix-bug-031-graph-subscription.md) 追加记录。代码修复及离线通过不改变本次真实失败事实；重新真实验收仍待授权。本记录随修复分支补入 master 以保存历史证据，本文所述验收脚本 / 测试仍属于 Draft PR #100，不在该修复中重复合入。
+
+## 2026-10-26：修复后的真实复验
+
+用户已单独授权一次，仍为最多 48 次生成、20 次 Embedding、20 分钟，失败停止。验收分支以 `2835a23` 同步 master `21fec9a`；文档冲突采用 master 的最新修复事实，没有改前端或生产逻辑。
+
+- 类型检查通过；相关 9 文件 / 46 项专项通过，15.71 秒；零推理预检通过。
+- 唯一一次真实复验在 intake 阶段用时 32.42 秒后失败。三份正文全部 ready，三次 Embedding 尝试均未收到 HTTP 响应，三份向量索引均 failed / request-failed；图谱尚未开始。
+- 生成调用数为 0；Main / Node / Review 未运行。没有重跑或修改服务。新阻塞登记为 [BUG-032](158-bugfix-bug-032-embedding-connectivity.md)，不能据此判断 BUG-031 的真实修复已通过或失败。
+- 新现场 `C:\Users\likeW\AppData\Local\Temp\navo-f136-real-Quk7AE`，日志 `C:\Users\likeW\AppData\Local\Temp\navo-f136-retest-20261026`；旧现场原样保留。
+
+当前下一步为定位 Embedding 端点连通性，再按单独授权复验；F13.6 保持进行中，PR #100 保持 Draft。
