@@ -24,6 +24,8 @@
     "qa:project": "electron out/main/project.js",
     "qa:session-context": "electron out/main/session.js",
     "qa:resource": "electron out/main/resource.js",
+    "qa:visual": "electron scripts/qa/visual.cjs",
+    "demo:visual": "node scripts/demo/visual.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
   },
   "dependencies": {
@@ -39,13 +41,15 @@
     "micromark-util-types": "2.0.2",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "reicon-react": "1.2.5"
+    "reicon-react": "1.2.5",
+    "three": "0.186.1"
   },
   "devDependencies": {
     "@types/mdast": "4.0.4",
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
+    "@types/three": "0.186.0",
     "@vitejs/plugin-react": "5.2.0",
     "electron": "44.2.0",
     "electron-vite": "5.0.0",

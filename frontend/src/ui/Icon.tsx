@@ -15,11 +15,16 @@ import { Plus } from "reicon-react/icons/Plus";
 import { Gear } from "reicon-react/icons/Gear";
 import { SidebarLeft } from "reicon-react/icons/SidebarLeft";
 import { Stop } from "reicon-react/icons/Stop";
+import { Minus } from "reicon-react/icons/Minus";
+import { Target } from "reicon-react/icons/Target";
+import { Maximize } from "reicon-react/icons/Maximize";
+import { Minimize } from "reicon-react/icons/Minimize";
+import { Map } from "reicon-react/icons/Map";
 import { Brain } from "./icon/Brain";
 import { Tool } from "./icon/Tool";
 import styles from "./icon/style.module.css";
 
-const shapes = { arrow: ArrowRight, book: BookOpen, guide: Compass, loader: Loader, check: Check, close: X, chevron: ChevronRight, globe: Globe, terminal: TerminalSquare, pen: Pen, folder: Folder, chat: Chat, plus: Plus, settings: Gear, sidebar: SidebarLeft, stop: Stop };
+const shapes = { arrow: ArrowRight, book: BookOpen, guide: Compass, loader: Loader, check: Check, close: X, chevron: ChevronRight, globe: Globe, terminal: TerminalSquare, pen: Pen, folder: Folder, chat: Chat, plus: Plus, minus: Minus, target: Target, maximize: Maximize, minimize: Minimize, map: Map, settings: Gear, sidebar: SidebarLeft, stop: Stop };
 export type IconName = keyof typeof shapes | "brain" | "tool";
 
 export function Icon({ name, active = false }: { readonly name: IconName; readonly active?: boolean }): React.JSX.Element {
@@ -36,9 +41,9 @@ export function Icon({ name, active = false }: { readonly name: IconName; readon
       {active && <>
         <defs>
           <linearGradient id={gradientId}>
-            <stop offset="30%" stopColor="#948a7e" />
-            <stop offset="48%" stopColor="#33291f" />
-            <stop offset="66%" stopColor="#948a7e" />
+            <stop offset="30%" stopColor="var(--text-tertiary)" />
+            <stop offset="48%" stopColor="var(--text)" />
+            <stop offset="66%" stopColor="var(--text-tertiary)" />
           </linearGradient>
           <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
             <g stroke="white" color="white">{shape}</g>

@@ -26,6 +26,13 @@ export function WorkspaceShell({ children, entries, create, notice, openRequest,
   const sectionNotice = notice?.[section];
 
   useEffect(() => {
+    const narrow = window.matchMedia("(max-width: 600px)");
+    const collapse = (event: MediaQueryListEvent): void => { if (event.matches) setExpanded(false); };
+    narrow.addEventListener("change", collapse);
+    return () => narrow.removeEventListener("change", collapse);
+  }, []);
+
+  useEffect(() => {
     if (openRequest) open(openRequest.id);
   }, [openRequest]);
 
@@ -102,5 +109,5 @@ export function WorkspaceShell({ children, entries, create, notice, openRequest,
 }
 
 function EntryIcon({ kind }: { kind: WorkspaceEntry["kind"] }): React.JSX.Element {
-  return <Icon name={kind === "project" ? "folder" : "chat"} />;
+  return <span className={styles.entryIcon} data-kind={kind}><Icon name={kind === "project" ? "map" : "chat"} /></span>;
 }
