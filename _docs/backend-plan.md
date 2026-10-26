@@ -369,7 +369,7 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不恢复�
 
 ## 12. 当前下一步
 
-2026-10-26 新增能力已验收：可显式选择 OpenRouter Nemotron 3.5 Embed 1B 免费模型，保留原 Qwen 能力。本机完整 1045 项、代码 head CI 与授权真实 Embedding 链路均通过：10 次 HTTP 200、2048 维、索引 / 中英文检索 / 权限 / 重启复用通过，耗时 6.99 秒，生成调用为 0；见 [159](159-devlog-embedding-openrouter.md)。PR #104 待最新文档 head CI 后收口。本次授权仅限 Embedding，不继续图谱 / 两 Node / Main Review；F13.6 仍为进行中，后续等待单独授权。BUG-032 的原端点问题与 BUG-031 的真实图谱复验保持原状态。
+2026-10-26 新增能力已验收：可显式选择 OpenRouter Nemotron 3.5 Embed 1B 免费模型，保留原 Qwen 能力。本机完整 1045 项、最终 head CI 与授权真实 Embedding 链路均通过：10 次 HTTP 200、2048 维、索引 / 中英文检索 / 权限 / 重启复用通过，耗时 6.99 秒，生成调用为 0；PR #104 已合入 master（4db37c6），见 [159](159-devlog-embedding-openrouter.md)。本次授权仅限 Embedding，不继续图谱 / 两 Node / Main Review；F13.6 仍为进行中，后续等待单独授权。BUG-032 的原端点问题与 BUG-031 的真实图谱复验保持原状态。
 
 **Phase 10、M1、Phase 11 与 Phase 12（F12.0–F12.7）均已完成对应后端验收。
 

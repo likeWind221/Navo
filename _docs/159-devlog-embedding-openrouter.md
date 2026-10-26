@@ -46,8 +46,9 @@ $env:EMBEDDING_PROVIDER = 'openrouter'
 - 四个 Main 排名断言全部通过：企鹅问题命中 penguin.md、英文与中文事务问题命中 database.md、合成私有项目问题命中 private.md。Node 查询不返回私有 Resource 或预算内容；返回片段的 UTF-16 原文位置与资料代次准确。重开同一 SQLite 库时 active build ID 保持一致，未重新向量化，重开查询仍通过。
 - 原始报告与临时 SQLite 保留在 `C:/Users/likeW/AppData/Local/Temp/navo-retrieval-smoke-24aMox/`，报告 `result.json`；终端日志为 `%TEMP%/navo-openrouter-20261026/real.log`。HTTP 单请求计时到收到响应头，整体耗时包括解析与本地断言；未额外查询账户账单或剩余额度。
 - [PR #104](https://github.com/likeWind221/Navo/pull/104) 代码 head `4c592fb` 的 [CI run 40307062851](https://github.com/likeWind221/Navo/actions/runs/40307062851) 成功；类型检查、普通测试和进程恢复门禁通过。
+- 补充真实记录后的最终 head `006aefa` 的 [CI run 40319722809](https://github.com/likeWind221/Navo/actions/runs/40319722809) 全部成功，3 分 27 秒；包含类型检查、普通测试与进程恢复。PR #104 已 squash 合入 master（`4db37c6`），本次本地与远端开发分支已清理，主仓库与其他 worktree 保留。
 - 本次是真实 Embedding / 索引 / 检索 smoke，不是规模质量评测；hybrid 查询仅有向量证据，未生成图谱。图片、真实生成模型、两 Node 与 Main Review 不在本次授权范围，BUG-031 / BUG-032 保持原状态。
 
 ## 下一步
 
-Embedding 接入及授权真实验收已完成。按仓库规则等待 PR #104 最新 head CI 成功后合并；本次后续仅收尾，不启动图谱或完整任务实验。保留 BUG-031 / BUG-032 原状态。最终交付包含模块导读、10 次真实请求结果与实际边界。
+Embedding 接入及授权真实验收已完成并合入。模块导读已在接入交付中提供，本轮交付真实结果与边界。后续 F13.6 图谱和完整任务等待另行授权，不自动继续；BUG-031 / BUG-032 保持原状态。
