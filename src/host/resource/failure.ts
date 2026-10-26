@@ -13,6 +13,7 @@ const codes: Partial<Record<ResourceErrorCode, ResourceFailureCode>> = {
   "resource-already-exists": "path-conflict",
   "stale-revision": "revision-conflict",
   "operation-result-stale": "operation-conflict",
+  "content-state-conflict": "operation-conflict",
   "invalid-resource": "invalid-request",
   "invalid-access": "invalid-request",
 };
