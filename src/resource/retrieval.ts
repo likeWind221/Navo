@@ -1,6 +1,7 @@
 import { Service, type Context } from "cordis";
 import type { ResourceId } from "../brand/ids.js";
 import type { ProjectResource } from "./model.js";
+import type { GraphSnapshot } from "./graph/read.js";
 import { ResourceIndexError } from "./index/errors.js";
 import { CHUNKER_VERSION } from "./index/chunker.js";
 import { chunkMetadata } from "./index/metadata.js";
@@ -15,6 +16,18 @@ export class ResourceRetrieval extends Service {
   constructor(ctx: Context) { super(ctx, "retrieval"); }
 
   async search(request: RetrievalRequest): Promise<readonly RetrievalResult[]> {
+    return this.searchScoped(request, () => this.ctx.resources.listVisible(request.projectId, request.viewer),
+      resources => this.ctx.resourceGraph.read(request.projectId, request.viewer, resources.map(resource => resource.id)));
+  }
+
+  async searchUser(request: Omit<RetrievalRequest, "viewer">,
+    userScope: () => readonly ProjectResource[]): Promise<readonly RetrievalResult[]> {
+    return this.searchScoped({ ...request, userScope }, userScope, resources => this.ctx.resourceGraph.readUser(
+      request.projectId, userScope, resources.map(resource => resource.id)));
+  }
+
+  private async searchScoped(request: RetrievalRequest | UserRetrievalRequest,
+    scope: () => readonly ProjectResource[], readGraph: (resources: readonly ProjectResource[]) => GraphSnapshot): Promise<readonly RetrievalResult[]> {
     const query = request.query.trim();
     const topK = request.topK ?? 10;
     const vectorTopK = request.vectorTopK ?? 30;
@@ -27,17 +40,20 @@ export class ResourceRetrieval extends Service {
     }
     if (request.folder !== undefined && request.folder !== "") normalizeLibraryPath(request.folder);
     request.signal?.throwIfAborted();
-    let resources = this.scope(request);
+    let resources = this.scope(request, scope);
     if (resources.length === 0) return [];
-    const vectors = await this.ctx.indexSearch.search({ ...request, query,
-      resourceIds: resources.map(resource => resource.id), topK: vectorTopK });
+    const vectors = "userScope" in request
+      ? await this.ctx.indexSearch.searchUser({ ...request, query, resourceIds: resources.map(resource => resource.id), topK: vectorTopK })
+      : await this.ctx.indexSearch.search({ ...request, query,
+        resourceIds: resources.map(resource => resource.id), topK: vectorTopK });
     request.signal?.throwIfAborted();
-    resources = this.scope(request);
+    resources = this.scope(request, scope);
     const ids = resources.map(resource => resource.id);
     const vectorHits: RankedChunk[] = vectors.map(hit => ({ chunkId: hit.chunkId, route: "vector", paths: [] }));
-    const graphHits = mode !== "hybrid" ? [] : graphSearch(this.ctx.resourceGraph.read(request.projectId, request.viewer, ids),
+    const graphHits = mode !== "hybrid" ? [] : graphSearch(readGraph(resources),
       query, new Set(vectorHits.map(hit => hit.chunkId)), maxHops, request.signal);
     request.signal?.throwIfAborted();
+    resources = this.scope(request, scope);
     const groups = new Map<ResourceId, { resource: ProjectResource; fusionScore: number; chunks: RetrievalChunk[] }>();
     const allowed = new Map(resources.map(resource => [resource.id, resource]));
     const fused = fuseRanks([vectorHits, graphHits]);
@@ -61,11 +77,15 @@ export class ResourceRetrieval extends Service {
       libraryPath: resource.libraryPath, assetGeneration: resource.assetGeneration, fusionScore, chunks }));
   }
 
-  private scope(request: RetrievalRequest): readonly ProjectResource[] {
+  private scope(request: RetrievalRequest | UserRetrievalRequest, scope: () => readonly ProjectResource[]): readonly ProjectResource[] {
     const ids = request.resourceIds === undefined ? undefined : new Set(request.resourceIds);
-    return this.ctx.resources.listVisible(request.projectId, request.viewer).filter(resource => (ids === undefined || ids.has(resource.id))
+    return scope().filter(resource => (ids === undefined || ids.has(resource.id))
       && (!request.folder || insideFolder(resource.libraryPath, request.folder)));
   }
 }
+
+type UserRetrievalRequest = Omit<RetrievalRequest, "viewer"> & {
+  readonly userScope: () => readonly ProjectResource[];
+};
 
 declare module "cordis" { interface Context { retrieval: ResourceRetrieval } }

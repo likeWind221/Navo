@@ -15,8 +15,13 @@ export interface GraphSource {
 }
 
 export function readGraph(ctx: Context, projectId: ProjectId, viewer: ResourcePrincipal, resourceIds?: readonly ResourceId[]): GraphSnapshot {
+  return readGraphForResources(ctx, projectId, ctx.resources.listVisible(projectId, viewer), resourceIds);
+}
+
+export function readGraphForResources(ctx: Context, projectId: ProjectId,
+  visible: readonly { readonly id: ResourceId; readonly assetGeneration: number }[], resourceIds?: readonly ResourceId[]): GraphSnapshot {
   const scope = resourceIds === undefined ? undefined : new Set(resourceIds);
-  const resources = ctx.resources.listVisible(projectId, viewer).filter(resource => scope === undefined || scope.has(resource.id));
+  const resources = visible.filter(resource => scope === undefined || scope.has(resource.id));
   const generations = new Map(resources.map(resource => [resource.id as string, resource.assetGeneration]));
   const entities = new Map<string, { id: string; name: string; type: string; evidence: GraphSource[] }>();
   const relations = new Map<string, { id: string; sourceId: string; targetId: string; type: string; evidence: GraphSource[] }>();

@@ -23,6 +23,7 @@ import { ResourceRetrieval } from "./resource/retrieval.js";
 import type { EmbeddingProvider } from "./embedding/types.js";
 import { ResourceService, ResourceRecovery, type ResourceConfig } from "./resource/service.js";
 import { UserResourceService } from "./resource/user.js";
+import { UserResourceSearch } from "./resource/user/search.js";
 import { SessionStore } from "./session/store.js";
 import { SessionError } from "./session/errors.js";
 import { StorageService } from "./storage/database.js";
@@ -121,6 +122,7 @@ export async function NavoApp(
   await ctx.plugin(ResourceGraph, config.graph);
   await ctx.plugin(ResourceRetrieval);
   await ctx.plugin(UserResourceService);
+  await ctx.plugin(UserResourceSearch);
   await ctx.plugin(ResourceToolsPlugin);
   await ctx.plugin(SendToMainTool);
   await ctx.plugin(SubmitCompletionTool);

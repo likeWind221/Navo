@@ -26,4 +26,6 @@ export type ResourceErrorCode =
   | "resource-content-unavailable"
   | "folder-unavailable"
   | "folder-conflict"
-  | "query-changed";
+  | "query-changed"
+  | "search-expired"
+  | "search-changed";

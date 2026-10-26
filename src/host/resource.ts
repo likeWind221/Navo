@@ -11,6 +11,7 @@ import {
   userImportMethod,
 } from "../../rpc/resource.js";
 import { resourceQueryMethod } from "../../rpc/resource/query.js";
+import { resourceSearchMethod } from "../../rpc/resource/search.js";
 import { resourceContentCancelMethod, resourceContentRetryMethod } from "../../rpc/resource/content.js";
 import { resourceViewCopyMethod } from "../../rpc/resource/view.js";
 import type { StreamRpcRouter } from "../../rpc/stream/router.js";
@@ -21,6 +22,7 @@ import { createResourceContentCancelHandler, createResourceContentRetryHandler }
 import { toResourceFailure } from "./resource/failure.js";
 import { createResourceViewCopyHandler, describeLibraryItem, describeLibrarySnapshot } from "./resource/view.js";
 import { createResourceQueryHandler } from "./resource/query.js";
+import { createResourceSearchHandler } from "./resource/search.js";
 
 export function registerResourceMethods(router: StreamRpcRouter, ctx: Context): () => void {
   const unregister = [
@@ -32,6 +34,7 @@ export function registerResourceMethods(router: StreamRpcRouter, ctx: Context): 
     router.register(resourceContentCancelMethod, createResourceContentCancelHandler(ctx)),
     router.register(resourceViewCopyMethod, createResourceViewCopyHandler(ctx)),
     router.register(resourceQueryMethod, createResourceQueryHandler(ctx)),
+    router.register(resourceSearchMethod, createResourceSearchHandler(ctx)),
     router.register(resourceFolderCreateMethod, unary(input => ctx.userResources.createFolder(
       createProjectId(input.projectId), input.path))),
     router.register(resourceFolderOrganizeMethod, unary(input => ctx.userResources.organizeFolder(
