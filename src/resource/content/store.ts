@@ -25,6 +25,7 @@ export class ResourceContentStore {
       const row = tx.getResourceContent(projectId, resourceId);
       if (row === undefined || row.source_asset_generation !== resource.assetGeneration
         || (retry && (row.status === "failed" || row.status === "metadata_only"))) {
+        tx.bumpCatalogVersion(projectId);
         tx.putResourceContent(pendingContent(projectId, resourceId, resource.assetGeneration));
         return true;
       }
@@ -44,13 +45,19 @@ export class ResourceContentStore {
         const resourceId = createResourceId(row.resource_id);
         if (this.projects.get(projectId) === undefined) {
           if (!this.storage.recovery.failures.some(failure => failure.kind === "project" && failure.projectId === projectId)) {
+            tx.bumpCatalogVersion(projectId);
             tx.deleteResourceContent(projectId, resourceId);
           }
           continue;
         }
         const resource = this.resources.get(projectId, resourceId);
-        if (resource === undefined) tx.deleteResourceContent(projectId, resourceId);
-        else if (row.status === "processing") tx.putResourceContent(pendingContent(projectId, resourceId, resource.assetGeneration));
+        if (resource === undefined) {
+          tx.bumpCatalogVersion(projectId);
+          tx.deleteResourceContent(projectId, resourceId);
+        } else if (row.status === "processing") {
+          tx.bumpCatalogVersion(projectId);
+          tx.putResourceContent(pendingContent(projectId, resourceId, resource.assetGeneration));
+        }
       }
     });
   }
@@ -60,7 +67,11 @@ export class ResourceContentStore {
   }
 
   claim(row: ResourceContentRecord, attemptId: string): boolean {
-    return this.storage.atomic(tx => tx.claimResourceContent(row.project_id, row.resource_id, row.source_asset_generation, attemptId));
+    return this.storage.atomic(tx => {
+      const changed = tx.claimResourceContent(row.project_id, row.resource_id, row.source_asset_generation, attemptId);
+      if (changed) tx.bumpCatalogVersion(row.project_id);
+      return changed;
+    });
   }
 
   finish(row: ResourceContentRecord, attemptId: string, result: ContentExtraction | ContentError | "shutdown"): boolean {
@@ -74,7 +85,9 @@ export class ResourceContentStore {
         : "code" in result ? { ...base, status: "failed", error_code: result.code, error_message: result.message.slice(0, 1000) }
           : result.status === "metadata_only" ? { ...base, status: "metadata_only" }
             : { ...base, status: "ready", body: result.body, page_map_json: JSON.stringify(result.pageMap), extractor_version: result.extractorVersion };
-      return tx.finishResourceContent(record, attemptId);
+      const changed = tx.finishResourceContent(record, attemptId);
+      if (changed) tx.bumpCatalogVersion(row.project_id);
+      return changed;
     });
   }
 }
