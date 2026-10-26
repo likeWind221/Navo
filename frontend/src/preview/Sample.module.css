@@ -18,7 +18,7 @@
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .primary, .secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 14px; border-radius: var(--radius-control); font-size: 13px; transition: background var(--duration), transform var(--duration); }
 .primary { background: var(--accent-strong); color: white; border: 1px solid var(--accent-strong); }
-.primary:hover:not(:disabled) { background: #694329; }
+.primary:hover:not(:disabled) { background: var(--accent-hover); }
 .secondary { color: var(--text); background: var(--surface); border: 1px solid var(--control-border); }
 .secondary:hover:not(:disabled) { background: var(--surface-muted); }
 .primary:active:not(:disabled), .secondary:active:not(:disabled) { transform: translateY(1px); }

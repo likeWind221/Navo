@@ -2,11 +2,12 @@ const { app, BrowserWindow } = require("electron");
 const assert = require("node:assert/strict");
 const { writeFile } = require("node:fs/promises");
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+const url = process.argv[2] ?? "http://127.0.0.1:4175";
 app.whenReady().then(async () => {
   const window = new BrowserWindow({ width: 1100, height: 800, show: false, webPreferences: { sandbox: true } });
   const run = source => window.webContents.executeJavaScript(source);
   try {
-    await window.loadURL("http://127.0.0.1:4175/?preview=workspace");
+    await window.loadURL(url + "/?preview=workspace");
     window.showInactive();
     for (let attempt = 0; attempt < 100; attempt++) {
       if (await run(`Boolean(document.querySelector("textarea"))`)) break;
@@ -40,7 +41,7 @@ app.whenReady().then(async () => {
     await writeFile("qa-output/workspace-narrow.png", (await window.webContents.capturePage()).toPNG());
     assert.equal(await run(`document.querySelector('button[title="设置功能尚未接入"]').textContent.trim()`), "设置");
     assert.equal(await run(`document.querySelector('button[title="将在后续项目与会话接入中开放"]').textContent.trim()`), "新增项目");
-    await window.loadURL("http://127.0.0.1:4175/");
+    await window.loadURL(url + "/");
     await pause(800);
     assert.equal(await run(`(() => { const input = document.querySelector('textarea'); input.focus(); return getComputedStyle(input).boxShadow; })()`), "none");
     assert.equal(await run(`getComputedStyle(document.querySelector('[aria-label="发送消息"] > svg > svg')).transform`), "none");

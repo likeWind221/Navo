@@ -1,22 +1,28 @@
 @import "./styles/tokens.css";
 
 * { box-sizing: border-box; }
+html, body, #root { height: 100%; }
 body {
   margin: 0;
   min-width: 320px;
   background: var(--canvas);
   color: var(--text);
   font-family: var(--font-ui);
+  font-size: 14px;
   font-synthesis: none;
-  line-height: 1.8;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
-button, textarea { font: inherit; }
-button { cursor: pointer; }
+button, textarea, input { font: inherit; }
+button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 button:disabled { cursor: not-allowed; }
-:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 4px; }
-::selection { background: #e9d7c6; }
+button, input, textarea, summary { transition: background-color var(--duration), border-color var(--duration), color var(--duration), box-shadow var(--duration); }
+:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 3px; }
+::selection { background: #cde3d7; color: #233c39; }
+* { scrollbar-width: thin; scrollbar-color: #bfcfc5 transparent; }
 .placeholder { max-width: 760px; padding: 32px; margin: 12vh auto; }
-.placeholder h1 { font-family: var(--font-heading); font-weight: 500; }
+.placeholder h1 { font-family: var(--font-heading); font-weight: 600; }
 @media (prefers-reduced-motion: reduce) {
   :root { --duration: 0ms; }
+  *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; scroll-behavior: auto !important; }
 }

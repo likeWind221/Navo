@@ -147,7 +147,7 @@
 - [F5.1 工作区布局与导航](57-devlog-f5-1-workspace.md)：侧栏双视图、顶部标签、状态保留与滑动过渡。
 - [F5.2 真实项目入口](75-devlog-f5-2-project-entry.md)：合并整理前的 58 号接入核对；公共项目接口缺口与后端交接，项目创建 / 列表 / 详情的桌面桥接、失败码中文提示、目标可选、标签栏隐藏滚动条与两端淡出，以及 Electron 自动验收与用户人工验收。
 - [F5.3–F5.8 Project 前端闭环规划](88-devlog-f5-project-plan.md)：当前运行期间的项目执行闭环与逐步接入边界。
-- [F5.3 Project 工作区布局与交互设计](90-devlog-f5-3-workspace.md)：Roadmap 主画布与覆盖式 Main/Node 面板，原型用户验收、正式 Electron 布局接入及本地/代码 CI 已通过，PR #53 已 squash 合入 master（e271d5b）。
+- [F5.3 Project 工作区布局与交互设计](90-devlog-f5-3-workspace.md)：原型与正式布局接入已随 PR #53 合入；追加 2026-10-26 全局视觉维护、可旋转三维沙盘、离线交互预览及自动验证，保留后续功能接入边界。
 
 ## 后端 Phase 12
 

@@ -9,6 +9,7 @@ import { ProcessRow } from "./process/Row.js";
 import { Activity } from "./process/Activity.js";
 import styles from "../style.module.css";
 import { Markdown } from "./Markdown.js";
+import { Icon } from "../../ui/Icon.js";
 
 export function MessageList({ messages, commands = [], timeline }: {
   readonly messages: readonly ConversationMessage[];
@@ -18,6 +19,7 @@ export function MessageList({ messages, commands = [], timeline }: {
   if (messages.length === 0 && commands.length === 0) {
     return (
       <div className={styles.welcome}>
+        <span className={styles.welcomeMark}><Icon name="guide" /></span>
         <p>从一个想法开始。</p>
         <h1>今天，想探索什么？</h1>
       </div>
