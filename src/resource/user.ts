@@ -84,6 +84,22 @@ export class UserResourceService extends Service {
     };
   }
 
+  cancelContent(input: { projectId: ProjectId; resourceId: ResourceId; expectedRevision: number }) {
+    requireActiveResourceProject(this.ctx, input.projectId);
+    const resource = this.ctx.resources.get(input.projectId, input.resourceId);
+    if (resource === undefined) throw new ResourceError("resource-unavailable", "Resource is unavailable.");
+    if (resource.revision !== input.expectedRevision) {
+      throw new ResourceError("stale-revision", "Read the current Resource before cancelling its content.");
+    }
+    return {
+      projectId: input.projectId,
+      resourceId: input.resourceId,
+      revision: resource.revision,
+      assetGeneration: resource.assetGeneration,
+      status: this.ctx.content.cancelCurrent(input.projectId, input.resourceId, resource.assetGeneration),
+    };
+  }
+
   delete(input: Omit<DeleteResourceInput, "actor">) {
     return this.ctx.resources.deleteUser(input);
   }
