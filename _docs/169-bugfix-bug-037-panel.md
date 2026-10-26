@@ -1,6 +1,6 @@
 # 169：BUG-037 窄屏项目会话面板极窄
 
-日期：2026-10-27。状态：已在独立 master 分支复现并修复，本机与实际 Renderer 验证通过，待当前 head CI 与合并，尚未关闭。
+日期：2026-10-27。状态：已在独立 master 分支复现并修复，本机、实际 Renderer 与当前 head CI 验证通过，PR #112 已合入，关闭。
 
 ## 现象与复现
 
@@ -22,8 +22,8 @@ Node24.22.1 / Windows PowerShell。主线独立对照中窗口外宽547px、Rend
 
 前端 node/web 类型检查、生产构建、28 文件 / 165 项测试通过。首次缺根 tsx 依赖造成3项失败，按冻结锁补齐依赖后使用明确 Node24 完整复验通过，未修改清单或锁文件。主编排根包类型检查、完整 all 模式171文件 / 1080项通过（255.71秒），含进程恢复。`git diff --check` 通过。
 
-证据在本会话 `bug037/before` / `after`（含 narrow / expanded / restored / wide PNG及results.json），根完整日志为 `bug037/root-full.log`。当前 head CI 与合并完成后再关闭。F5.4 的真实认证门禁仍由 BUG-036 跟踪，不能用本项修复替代。
+证据在本会话 `bug037/before` / `after`（含 narrow / expanded / restored / wide PNG及results.json），根完整日志为 `bug037/root-full.log`。[PR #112](https://github.com/likeWind221/Navo/pull/112) 最终 head `72da17c` 的 CI run `40367528661` 成功（verify 3m29s），已 squash 合入 master（`ec14333`）。rebase 只合并两段独立交接记录，前端生产与 QA 内容未变。F5.4 的真实认证门禁仍由 BUG-036 跟踪，不能用本项修复替代。
 
 ## 后续
 
-主编排为共享控制面唯一写入者，前端子 Agent 负责独立 fix/bug-037-panel 分支；实际修复、证据与合并结果追加本记录。跟踪入口：[Bug 计划](bug-plan.md)。
+确认工作树干净、PR 已合并后清理专用工作树及本地分支。继续 F14.3a 独立后端交接；F5.4 保留 Draft 和未通过的真实认证门禁。跟踪入口：[Bug 计划](bug-plan.md)。
