@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 import { createApp } from "../../src/app.js";
-import { OpenAIEmbeddingProvider } from "../../src/embedding/openai.js";
+import { createEmbeddingProvider, resolveEmbeddingConfig } from "../../src/embedding/provider.js";
 import type { ProjectId } from "../../src/brand/ids.js";
 import type { ProjectResource } from "../../src/resource/model.js";
 import type { RetrievalResult } from "../../src/resource/retrieval/types.js";
@@ -16,21 +16,22 @@ const started = performance.now();
 const signal = AbortSignal.timeout(180_000);
 const calls: { inputs: number; milliseconds: number; status: number }[] = [];
 const checks: { query: string; names: string[]; milliseconds: number }[] = [];
-const provider = new OpenAIEmbeddingProvider({
-  endpoint: process.env.EMBEDDING_BASE_URL ?? "http://192.168.99.2:8081/v1",
-  model: process.env.EMBEDDING_MODEL ?? "Qwen3-Embedding-4B",
+const embeddingConfig = resolveEmbeddingConfig(process.env);
+assert(embeddingConfig, "Configure EMBEDDING_PROVIDER / EMBEDDING_BASE_URL before the smoke test.");
+const provider = createEmbeddingProvider(embeddingConfig, {
   policy: { maxAttempts: 1, timeoutMs: 15_000 },
   fetch: async (url, init) => {
-    assert(calls.length < 10, "Embedding request budget exhausted");
+    assert(calls.length < 12, "Embedding request budget exhausted");
     const call = { inputs: (JSON.parse(String(init?.body)) as { input: string[] }).input.length,
       milliseconds: 0, status: 0 };
     calls.push(call);
     const before = performance.now();
-    const response = await fetch(url, { ...init,
-      signal: init?.signal ? AbortSignal.any([signal, init.signal]) : signal });
-    call.milliseconds = performance.now() - before;
-    call.status = response.status;
-    return response;
+    try {
+      const response = await fetch(url, { ...init,
+        signal: init?.signal ? AbortSignal.any([signal, init.signal]) : signal });
+      call.status = response.status;
+      return response;
+    } finally { call.milliseconds = performance.now() - before; }
   },
 });
 const config = { storage: { path: join(root, "navo.db") }, embedding: provider,
@@ -38,6 +39,9 @@ const config = { storage: { path: join(root, "navo.db") }, embedding: provider,
 let ctx = await createApp(config);
 let failure: unknown;
 try {
+  const batch = await provider.embedMany({ kind: "document", inputs: ["Synthetic penguin document", "Synthetic database document"], signal });
+  assert.equal(batch.length, 2);
+  assert(batch.every(vector => vector.length === provider.dimension && vector.every(Number.isFinite)));
   const project = ctx.projects.create({ name: "Embedding smoke", goal: null });
   await ctx.projectWorkspaces.create(project.id, workspace);
   const documents = [
@@ -58,7 +62,8 @@ try {
   }
   const builds = ctx.storage.atomic(tx => tx.listIndexBuilds("active"));
   assert.equal(builds.length, 3);
-  assert(builds.every(build => build.embedding_dimension === 2560 && build.embedding_model === provider.model));
+  assert(builds.every(build => build.embedding_dimension === provider.dimension && build.embedding_model === provider.model
+    && build.embedding_provider === provider.id));
   const queries = [
     { query: "哪种鸟不会飞却擅长在南极游泳？", expected: "penguin.md", mode: "vector" },
     { query: "How can a database undo changes in a transaction?", expected: "database.md", mode: "vector" },
@@ -96,7 +101,7 @@ try {
 } finally {
   await ctx.fiber.dispose();
   const report = { passed: failure === undefined, error: failure instanceof Error ? failure.message : String(failure ?? ""),
-    root, model: provider.model, dimension: provider.dimension, calls, checks,
+    root, provider: provider.id, model: provider.model, dimension: provider.dimension, calls, checks,
     milliseconds: performance.now() - started, boundary: "No generation model or extracted graph; hybrid has vector evidence only." };
   await writeFile(join(root, "result.json"), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));

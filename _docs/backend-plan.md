@@ -369,6 +369,8 @@ Coding 与 Learning 作为后续 Mode Adapter 验证 Core 通用性，不恢复�
 
 ## 12. 当前下一步
 
+2026-10-26 新增授权：用户要求可通过 OpenRouter 使用 Nemotron 3.5 Embed 1B 免费模型，并保留原 Qwen 能力。独立模块与离线验收进行中，真实实验须按另报预算授权执行；见 [159](159-devlog-embedding-openrouter.md)。此能力不关闭 BUG-032 的原服务连接问题，也不代表 F13.6 图谱与完整任务已通过。
+
 **Phase 10、M1、Phase 11 与 Phase 12（F12.0–F12.7）均已完成对应后端验收。
 
 **当前下一步（2026-10-26）：F13.6 修复后的真实复验已按新授权执行一次，类型检查、46 项相关专项及零推理预检通过；真实运行在 Embedding 连接阶段失败（32.42 秒，3 次未收到 HTTP 响应，生成调用为 0），新阻塞 BUG-032 见 [158](158-bugfix-bug-032-embedding-connectivity.md)。图谱 / Main / Node / Review 尚未运行，BUG-031 仍待真实复验，F13.6 保持进行中，PR #100 保持 Draft。下一步先定位现有 Embedding 端点连通性，不自动启动服务或重跑。BUG-031 参数修复已随 PR #102 合入，历史验收和修复事实见 [156](156-devlog-f13-6-backend-acceptance.md)、[157](157-bugfix-bug-031-graph-subscription.md)。前端由用户另行安排，本轮不改前端或 Bridge。**

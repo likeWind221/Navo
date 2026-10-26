@@ -19,13 +19,18 @@ describe("Kernel Host storage config", () => {
 });
 
 describe("Kernel Host Embedding configuration", () => {
+  it("exposes independently selected OpenRouter settings to the Host", () => {
+    expect(resolveKernelHostConfig({ EMBEDDING_PROVIDER: "openrouter", OPENROUTER_API_KEY: "key" }).embedding)
+      .toMatchObject({ provider: "openrouter", model: "nvidia/nemotron-3.5-embed-1b:free", apiKey: "key" });
+  });
+
   it("keeps Embedding optional and resolves a configured Qwen3-compatible endpoint", () => {
     expect(resolveKernelHostConfig({})).not.toHaveProperty("embedding");
     expect(resolveKernelHostConfig({ EMBEDDING_BASE_URL: "http://192.168.99.2:8081/v1" }).embedding)
-      .toEqual({ endpoint: "http://192.168.99.2:8081/v1", model: "Qwen3-Embedding-4B" });
+      .toEqual({ provider: "qwen", endpoint: "http://192.168.99.2:8081/v1", model: "Qwen3-Embedding-4B" });
     expect(resolveKernelHostConfig({ EMBEDDING_BASE_URL: " http://localhost:8000/v1 ",
       EMBEDDING_API_KEY: "secret", EMBEDDING_MODEL: " custom-model ", EMBEDDING_REVISION: " r1 " }).embedding)
-      .toEqual({ endpoint: "http://localhost:8000/v1", apiKey: "secret", model: "custom-model", revision: "r1" });
+      .toEqual({ provider: "qwen", endpoint: "http://localhost:8000/v1", apiKey: "secret", model: "custom-model", revision: "r1" });
   });
 
   it("rejects orphaned or unsafe Embedding settings", () => {
