@@ -162,4 +162,4 @@ Existing Roadmap snapshot / preview graph
 
 ### 下一步
 
-提交本轮 PR，核对最终 head CI 后按仓库约定合并。代码导读随最终回复交付；交互 HTML 与截图保存在本会话可视化目录。
+本轮 PR 为 [#103](https://github.com/likeWind221/Navo/pull/103)，代码提交 e373325、本地完整验证记录提交 c495ff2；后续提交只补记本段 PR 信息。核对最终 head CI 后按仓库约定合并，CI 结果以 PR 检查记录为准。代码导读随最终回复交付；交互 HTML 与截图保存在本会话可视化目录。
