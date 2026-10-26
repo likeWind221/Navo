@@ -5,7 +5,9 @@ import type { ResourceErrorCode } from "../../resource/errors.js";
 
 const codes: Partial<Record<ResourceErrorCode, ResourceFailureCode>> = {
   "project-unavailable": "project-unavailable",
+  "workspace-unavailable": "resource-unavailable",
   "resource-unavailable": "resource-unavailable",
+  "resource-content-unavailable": "resource-unavailable",
   "folder-unavailable": "folder-unavailable",
   "folder-conflict": "path-conflict",
   "resource-already-exists": "path-conflict",
