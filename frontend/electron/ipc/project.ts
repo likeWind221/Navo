@@ -13,7 +13,6 @@ import {
   PROJECT_TURN_START_CHANNEL,
   PROJECT_TURN_CANCEL_CHANNEL,
   PROJECT_FOLLOW_START_CHANNEL,
-  PROJECT_FOLLOW_CANCEL_CHANNEL,
   PROJECT_EVENT_CHANNEL,
 } from "../../shared/project/channels.js";
 import { chooseWorkspace, createProjectHandlers } from "./project/handler.js";
@@ -37,7 +36,6 @@ export function registerProjectIpc(
   ipcMain.handle(PROJECT_TURN_START_CHANNEL, (event, candidate: unknown) => controller.startTurn(target(event.sender), candidate));
   ipcMain.handle(PROJECT_TURN_CANCEL_CHANNEL, (event, candidate: unknown) => controller.cancel(event.sender.id, String(candidate)));
   ipcMain.handle(PROJECT_FOLLOW_START_CHANNEL, (event, candidate: unknown) => controller.startFollow(target(event.sender), candidate));
-  ipcMain.handle(PROJECT_FOLLOW_CANCEL_CHANNEL, (event, candidate: unknown) => controller.cancel(event.sender.id, String(candidate)));
   return () => {
     ipcMain.removeHandler(PROJECT_LIST_CHANNEL);
     ipcMain.removeHandler(PROJECT_CREATE_CHANNEL);
@@ -50,7 +48,6 @@ export function registerProjectIpc(
     ipcMain.removeHandler(PROJECT_TURN_START_CHANNEL);
     ipcMain.removeHandler(PROJECT_TURN_CANCEL_CHANNEL);
     ipcMain.removeHandler(PROJECT_FOLLOW_START_CHANNEL);
-    ipcMain.removeHandler(PROJECT_FOLLOW_CANCEL_CHANNEL);
   };
 }
 
