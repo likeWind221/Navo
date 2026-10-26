@@ -3,6 +3,14 @@ import type { RpcMethod, RpcOutputValidator } from "./protocol.js";
 import { RpcError } from "./errors.js";
 import { agentTurnV2Method } from "./content/stream.js";
 import { createProjectTurnOutputValidator } from "./project/turn.js";
+export { projectSessionRecoveryMethod } from "./project/session.js";
+export type {
+  ProjectSessionOwnerV1,
+  ProjectSessionRecoveryV1,
+  ProjectSessionRecoveryEntryV1,
+  ProjectSessionRecoveryInputV1,
+  ProjectSessionTurnV1,
+} from "./project/session.js";
 import {
   parseProjectCreateInput,
   parseProjectDetail,

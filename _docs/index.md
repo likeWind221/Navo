@@ -231,3 +231,5 @@
 - [Codex 提交审查归档](30-codex-reviews-archive.md)：原 `codex-reviews/` 目录的 10 份 post-commit 审查报告（阶段 2–7、F3、F4）合并归档；审查钩子已移除，不再生成新报告。
 - [ChatGPT / Codex 式过程 UI 开源参考调研](43-devlog-chatgpt-codex-ui-research.md)：ai-elements、assistant-ui、lobehub、openai/codex 的思考/工具/过程折叠实现对比、许可证与可借鉴机制。
 - [图标库选型调研](46-devlog-icon-library-research.md)：reicon 与 lucide 的许可、体量、绘图一致性实测对比，结论为本阶段继续使用自绘图标。
+
+- [F14.1 项目原会话与中断事实公共交接](165-devlog-f14-1-session-recovery.md)：原 Session 身份、最近已结束回合与可信中断原因的只读查询；正式 Host 零推理重启查询通过，前端 F6 消费另行验收。
