@@ -21,6 +21,7 @@ export type ResourceErrorCode =
   | "invalid-history"
   | "stale-revision"
   | "operation-result-stale"
+  | "content-state-conflict"
   | "resource-not-owned"
   | "resource-content-unavailable"
   | "folder-unavailable"

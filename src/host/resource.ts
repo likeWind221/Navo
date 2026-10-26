@@ -10,11 +10,13 @@ import {
   resourceUpdateMethod,
   userImportMethod,
 } from "../../rpc/resource.js";
+import { resourceContentRetryMethod } from "../../rpc/resource/content.js";
 import { resourceViewCopyMethod } from "../../rpc/resource/view.js";
 import type { StreamRpcRouter } from "../../rpc/stream/router.js";
 import type { RpcStreamHandler } from "../../rpc/stream.js";
 import { createProjectId, createResourceId } from "../brand/ids.js";
 import { createResourceFollowHandler } from "./resource/follow.js";
+import { createResourceContentRetryHandler } from "./resource/content.js";
 import { toResourceFailure } from "./resource/failure.js";
 import { createResourceViewCopyHandler, describeLibraryItem, describeLibrarySnapshot } from "./resource/view.js";
 
@@ -24,6 +26,7 @@ export function registerResourceMethods(router: StreamRpcRouter, ctx: Context): 
     router.register(resourceLibraryBrowseMethod, unary(input => describeLibrarySnapshot(ctx,
       createProjectId(input.projectId), input.path))),
     router.register(resourceLibraryFollowMethod, createResourceFollowHandler(ctx)),
+    router.register(resourceContentRetryMethod, createResourceContentRetryHandler(ctx)),
     router.register(resourceViewCopyMethod, createResourceViewCopyHandler(ctx)),
     router.register(resourceFolderCreateMethod, unary(input => ctx.userResources.createFolder(
       createProjectId(input.projectId), input.path))),

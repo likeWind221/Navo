@@ -59,6 +59,31 @@ export class UserResourceService extends Service {
     return this.ctx.resources.createUserViewCopy(input.projectId, input.resourceId, input.expectedRevision, signal);
   }
 
+  retryContent(input: { projectId: ProjectId; resourceId: ResourceId; expectedRevision: number }) {
+    requireActiveResourceProject(this.ctx, input.projectId);
+    const resource = this.ctx.resources.get(input.projectId, input.resourceId);
+    if (resource === undefined) throw new ResourceError("resource-unavailable", "Resource is unavailable.");
+    if (resource.revision !== input.expectedRevision) {
+      throw new ResourceError("stale-revision", "Read the current Resource before retrying its content.");
+    }
+    const content = this.ctx.content.status(input.projectId, input.resourceId);
+    if (content === undefined || content.source_asset_generation !== resource.assetGeneration) {
+      throw new ResourceError("resource-content-unavailable", "The current Resource content is unavailable.");
+    }
+    if (content.status !== "failed") {
+      throw new ResourceError("content-state-conflict", `Content retry requires failed content; current status is '${content.status}'.`);
+    }
+    this.ctx.content.retry(input.projectId, input.resourceId);
+    return {
+      projectId: input.projectId,
+      resourceId: input.resourceId,
+      revision: resource.revision,
+      assetGeneration: resource.assetGeneration,
+      status: "accepted" as const,
+      contentStatus: "pending" as const,
+    };
+  }
+
   delete(input: Omit<DeleteResourceInput, "actor">) {
     return this.ctx.resources.deleteUser(input);
   }
