@@ -116,4 +116,4 @@ Existing project facts / preview nodes
 
 ### 下一步
 
-F5.4 仍需单独授权；本轮 PR/CI 收口信息后续追加。
+F5.4 仍需单独授权。本轮 PR 为 [#101](https://github.com/likeWind221/Navo/pull/101)，代码提交为 8a4cbbb；完整代码 CI [40292498130](https://github.com/likeWind221/Navo/actions/runs/40292498130) 已成功。其后的收尾提交只补记本文档，最终 head 的状态以 PR 检查记录为准；代码导读随本轮最终回复交付。交互预览与截图保存在本会话可视化目录，开发 worktree 清理不会删除它们。
