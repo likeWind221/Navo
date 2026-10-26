@@ -98,3 +98,8 @@
   .empty h2 { font-size: 19px; }
   .restore { top: auto; bottom: 12px; right: 20px; padding: 5px 9px; font-size: 11px; }
 }
+
+.previewTools { display: flex; align-items: center; gap: 8px; padding-top: 10px; color: var(--text-tertiary); font-size: 10px; }
+.previewTools button { padding: 4px 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-secondary); font-size: 11px; }
+.previewTools button:hover:not(:disabled) { background: var(--surface-hover); }
+.previewTools button:disabled { opacity: .45; }
