@@ -37,3 +37,5 @@
 ## PR 收口
 
 [PR #116](https://github.com/likeWind221/Navo/pull/116) head `45177a3c8bc5a0589915a9e9c193515686c7afc5` 的 CI `40384020305` verify成功（3分47秒），2026-10-27已squash合入 `d8b70c4`。专用Git worktree和分支已清理；外部验收现场保留。F7.1完成，后续F7.2单独实施，F5.4仍未通过真实认证门禁。
+
+清理边界：Git分支/worktree已移除，但 `D:/Program/Navo-f7.1` 的忽略依赖/构建目录仍在；自动审批审查以 blocked by policy 拒绝递归删除，因此保留并报告，未改用其他方式删除。

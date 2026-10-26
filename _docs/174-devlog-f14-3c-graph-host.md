@@ -33,3 +33,5 @@ F14.3a/b/c 的后端公共能力具备本机验收证据；当前步骤经 PR �
 ## PR 收口
 
 [PR #115](https://github.com/likeWind221/Navo/pull/115) head `74f256b9051d4ce730f717a2b776789f5af1bd19` 的 CI `40382364662` verify 成功（3分41秒），2026-10-27已squash合入 `784246a`。专用worktree与开发分支已由合并清理；外部验收证据保留。F14.3a/b/c及父项完成，F7.4页面尚未验收。
+
+清理边界：Git分支/worktree已移除，但 `D:/Program/Navo-f14.3c` 的忽略依赖/构建目录仍在；自动审批审查以 blocked by policy 拒绝递归删除，因此保留并报告，未改用其他方式删除。
