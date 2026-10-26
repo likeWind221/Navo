@@ -42,6 +42,8 @@ ChatGPT subscription requests do not support maxTokens or temperature.
 - 只读检查 SQLite graph_builds 与相关源码；没有触发额外推理请求。
 - 离线完整后端 161 文件 / 1041 项通过，新增 9 项组合测试通过；它们使用固定图谱模型响应，不覆盖这个真实 Provider 配对，因此不构成 BUG-031 修复证据。
 - 正式 Host 尚未接入 graph 配置是另一个已记录的交付边界，不是本次适配器拒绝的原因；不将两者合并归因。
+- 验收资产见 [Draft PR #100](https://github.com/likeWind221/Navo/pull/100)，代码提交 `c386ab7244f2b507e04f90ad39910c0baa9ba281`；此提交只增加验收脚本 / 测试与记录，没有修复 BUG-031。
+- 上述代码 head 的 [CI run 40287820719](https://github.com/likeWind221/Navo/actions/runs/40287820719) 成功；普通与中断恢复测试通过不改变本项真实失败或关闭状态。
 
 ## 后续与关闭条件
 

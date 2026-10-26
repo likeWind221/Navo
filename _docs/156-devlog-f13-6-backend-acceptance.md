@@ -74,6 +74,7 @@
 | 修正后主场景 | 1 项通过，6.45 秒；`flow-tests.log` |
 | 新增脚本类型检查及零推理预检 | 类型检查通过；含正文 ready 显式断言的最终 preflight 通过，0 生成 / 0 Embedding 请求，证据 `C:\Users\likeW\AppData\Local\Temp\navo-f136-real-ftyYmc\evidence`；`preflight.log` |
 | 最终完整类型检查 / 全套 | 类型检查通过；161 文件 / 1041 项全部通过，314.29 秒，含完整中断恢复；`final-typecheck.log`、`final-tests.log`。最后的请求计数调整及入口提示修改后再次 typecheck 通过，新增专项 3 文件 / 9 项通过，11.91 秒；`current-typecheck.log`、`library-final.log` |
+| 代码 head CI | `c386ab7244f2b507e04f90ad39910c0baa9ba281` 的 [CI run 40287820719](https://github.com/likeWind221/Navo/actions/runs/40287820719) verify 成功；typecheck、normal tests 和 crash-pr 中断恢复组均成功。CI 精简中断组不替代本机完整 D1–D8；CI 通过不关闭 BUG-031 |
 | 真实模型任务 | 用户明确授权后仅执行一次；资料导入、正文和 3 次 Embedding HTTP 200 成功，随后三份图谱构建因订阅参数不兼容失败。3 次本地生成适配器尝试在联网前拒绝，生成 HTTP 请求 0；821ms 后入口失败停止。Main / Node / Review 未运行。BUG-031 已登记，见 [157](157-bugfix-bug-031-graph-subscription.md)；未修复、未重跑 |
 | Bridge / Renderer | 按本次用户范围不运行、不修改；不影响前端单独安排 |
 
@@ -86,3 +87,5 @@
 ## 下一步
 
 后端离线链路已通过；真实链路受 BUG-031 阻断，等待用户单独决定修复。F13.6 父项保持进行中，不改变前端状态；验收资产可审查，但不能因 CI 或离线通过而把真实门槛记通过。脚本和测试机制随最终回复交付。
+
+验收资产已推送 [Draft PR #100](https://github.com/likeWind221/Navo/pull/100)，代码提交 `c386ab7244f2b507e04f90ad39910c0baa9ba281`。因真实任务门槛未通过，保持 Draft，不合并，不删除本地分支或失败现场。
