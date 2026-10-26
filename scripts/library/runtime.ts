@@ -60,7 +60,7 @@ export async function createRuntime(preflight: boolean) {
     }
     return app;
   };
-  let app;
+  let app: Awaited<ReturnType<typeof open>>;
   try { app = await open(); }
   catch (error) { clearTimeout(deadline); controller.abort(); throw error; }
   return {
