@@ -33,3 +33,7 @@
 ## 合入前复验
 
 更新到master `3803d84`（含F14.3c）后，前端两份类型检查及构建通过；根完整178文件1112项通过，266.29秒。随后再次执行正式Electron/Host集成：`evidence/f71-real/run-1793041650782/result.json`，8次取消确认、errors为空，进程正常退出，0模型/Embedding调用。当前等待PR的最终head CI。
+
+## PR 收口
+
+[PR #116](https://github.com/likeWind221/Navo/pull/116) head `45177a3c8bc5a0589915a9e9c193515686c7afc5` 的 CI `40384020305` verify成功（3分47秒），2026-10-27已squash合入 `d8b70c4`。专用Git worktree和分支已清理；外部验收现场保留。F7.1完成，后续F7.2单独实施，F5.4仍未通过真实认证门禁。
