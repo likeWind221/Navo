@@ -33,3 +33,25 @@
 ## 下一步
 
 F13.6 保持进行中，前端状态不变。保留本轮失败现场与 Draft PR；下一次真实运行需要先明确单次超时取值及预算并获得授权。代码导读将在本轮交付中说明统一配置、Provider 装配与证据记录。
+
+## 用户授权的 60 秒后续复验
+
+用户随后明确回复“做，改为 60 秒并再验收一次”。仅将验收入口 Embedding `timeoutMs` 从 15000 改为 60000，保持单次尝试、48 次生成 / 20 次 Embedding / 20 分钟、失败即停；使用新的临时库，前次现场不变。旧 Draft PR 为 [#105](https://github.com/likeWind221/Navo/pull/105)，当前真实结果与最终验证待完成后追加。
+
+本轮在 41993ms 后因规划阶段 `0 !== 2` 停止。三次 Embedding 全部 HTTP 200（1220 / 534 / 467ms），3 份索引和真实图谱全部 active；生成调用计数 4（3 图谱、1 Main）。Main 正确复述目标并询问是否规划，但旧验收入口没有发送确认回合，登记 [BUG-034](162-bugfix-bug-034-acceptance-confirmation.md)。现场 `%TEMP%/navo-f136-real-SDBHo0`，日志 `real-60s.log`；未在该库补跑。
+
+脚本已按既有 longterm 验收补齐请求、无计划 / 零 Node / 目标不变断言、Human 确认、实际规划。修正后严格类型检查和零推理预检通过；用户再次明确授权一次真实复验，仍保留 60 秒 / 单次尝试与原总预算。日志 `real-confirm.log`，结果待追加。
+
+## 修正确认流程后的第三轮真实结果
+
+- 用户明确回复“做，用修正脚本再验收一次”；独立现场 `%TEMP%/navo-f136-real-3yfalI`，175790ms 后停止。
+- 生成适配器调用计数 18，其中图谱 4；Embedding 6 次全部 HTTP 200，耗时分别 13166 / 14993 / 414 / 996 / 1764 / 1232ms。没有调用原 Qwen GPU 服务。
+- 三份源资料和 comparison.md 的索引 / 真实图谱均 active；Main 目标确认与两 Node 规划通过；Node A 实际检索得到图谱路径并读取三份原文，答案判据通过；Human 脚本原样物化成果，Main 实际读取、审查 complete 并定向共享。
+- 同库重开断言通过：权威持久状态相同，请求计数保持生成 15 / Embedding 5，无 AutoRun，未触发隐式推理。Node B 在显式动作后启动。
+- Node B 读取 comparison.md 与 constraints.md 并搜索，提交数值和冲突 / 缺项说明正确的答案，但 source_ids 多列两份未在本回合 fetch 的原文，严格判据拒绝，登记 [BUG-035](163-bugfix-bug-035-node-source-evidence.md)。最终 Main Review 与整体 passed 未执行到，不能宣布完整验收通过。
+- BUG-031 旧参数错误在三份原文和成果的真实图谱中均未复现；BUG-033 改为 60 秒后后两轮 Embedding 请求全部 200，但外部延迟原因未定位，完整任务关闭条件未满足。BUG-034 修正确认流程后真实两回合与后续任务已通过，仍待最终 PR head CI 门禁。
+- 60 秒设置下再次完整本地检查：根包类型检查通过，165 文件 / 1054 项全部通过，377.60 秒，含完整进程恢复；日志 typecheck-60s.log / full-60s.log。随后只修改验收脚本确认流程，脚本严格类型检查、零推理预检通过，零推理现场 `%TEMP%/navo-f136-real-oVoqF6`。
+- 首次提交 `3368638` 的 CI run `40324804820` 普通测试有 5 项超时（shell/execution、library/flow、library/failure），没有修改相应测试或生产实现，不断言根因已确认；原日志 ci-first-failed.log 保留。后续当前提交门禁另核对，不修改超时或绕过 CI。
+- 最终相关回归 `tests/integration/library`、`tests/tools/shell/execution.spec.ts`、`tests/tools/project/goal.spec.ts`、`tests/host/project/goal.spec.ts`：6 文件 / 24 项通过，11.22 秒；日志 final-related.log。包含首轮 CI 超时所在文件；与 master 的对应生产 / 测试代码无差异，但本轮没有运行独立 master 对照，不能据此确认 CI 环境根因。
+
+最新下一步：定位 BUG-035 的来源声明不一致，F13.6 保持进行中；PR #105 保持 Draft，不自动开始第四轮真实任务。前端 / Bridge / Renderer 与原 Qwen 端点不在本轮验收范围。代码导读随本轮最终交付提供。

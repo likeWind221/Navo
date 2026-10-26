@@ -24,7 +24,7 @@ export async function createRuntime(preflight: boolean) {
   })}\n`));
   const model = config?.agent.model ?? { provider: "unused", model: "preflight" };
   const embedding = embeddingConfig === undefined ? undefined : createEmbeddingProvider(embeddingConfig, {
-    policy: { maxAttempts: 1, timeoutMs: 15_000 },
+    policy: { maxAttempts: 1, timeoutMs: 60_000 },
     fetch: async (url, init) => {
       assertBudget(embeddingCalls.length < 20, controller);
       const call = { inputs: (JSON.parse(String(init?.body)) as { input: string[] }).input.length, status: 0, elapsedMs: 0 };

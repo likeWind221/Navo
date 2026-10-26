@@ -109,3 +109,5 @@ graph: {
 ### 使用 OpenRouter 的后续真实复验
 
 2026-10-26 用户授权切换 OpenRouter Embedding 完整验收，详见 [160](160-devlog-f13-6-openrouter-acceptance.md)。三份资料中，两份向量索引与对应真实图谱均 active，图谱 next_ordinal=1，pipeline 中 maxTokens / temperature 均 null，旧参数错误未复现。第三份 Embedding 触及 15 秒超时，完整任务在 Main 规划前停止，登记 [BUG-033](161-bugfix-bug-033-openrouter-timeout.md)。因此现已获得真实图谱成功证据，但完整两 Node / Main Review 关闭条件仍未满足，本项保持未勾选。原始现场 `%TEMP%/navo-f136-real-1c6qU9`；没有重跑。
+
+用户之后分别授权调整单次时限为 60 秒复验，以及修正确认流程后再次复验。最新第三轮三份原文及 comparison.md 的索引与真实图谱全部 active，Node A 搜索返回真实图谱来源路径，Main 首次 Review 与同库重开通过；原参数错误未复现。完整任务停在 Node B 来源声明校验，属于独立 [BUG-035](163-bugfix-bug-035-node-source-evidence.md)，最终 Main Review 未执行。BUG-031 的具体参数修复已获得真实成功证据，既有完整任务关闭条件仍未全部满足。

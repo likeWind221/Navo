@@ -4,11 +4,15 @@
 
 ## 当前状态
 
-- [ ] BUG-033：OpenRouter 完整复验中，3 次 Embedding 为 200 / 未收到响应 / 200，第二次触及 15 秒预算；两份图谱 active，完整任务尚未开始。仅排查、未修复，见 [161](161-bugfix-bug-033-openrouter-timeout.md)。
+- [ ] BUG-035：第三轮 Node B 读取交接与约束后提交，但 source_ids 另列两份未直接 fetch 的原文；数值正确，严格来源判据失败，最终 Main Review 未执行。仅排查、未修复，见 [163](163-bugfix-bug-035-node-source-evidence.md)。
+
+- [ ] BUG-034：验收脚本已补齐 Main 目标确认两回合，第三轮真实确认 / 规划及后续任务通过；完整任务被 BUG-035 阻断，待当前 head CI，见 [162](162-bugfix-bug-034-acceptance-confirmation.md)。
+
+- [ ] BUG-033：首轮 OpenRouter 单次 Embedding 触及 15 秒预算；按用户授权改为 60 秒，后两轮 3 / 6 次请求全部 200，本项未再阻断，完整任务仍待验，见 [161](161-bugfix-bug-033-openrouter-timeout.md)。
 
 - [ ] BUG-032：2026-10-26 用户决定搁置原 Qwen 端点排查，后续使用 OpenRouter；保留原连接失败事实，不标记已修复，见 [158](158-bugfix-bug-032-embedding-connectivity.md)。
 
-- [ ] BUG-031：图谱专用参数修复已随 PR #102 合入（289f4ce）；2026-10-26 OpenRouter 复验中两份真实图谱 active，旧参数错误未复现。完整任务被 BUG-033 阻断，尚未满足完整关闭条件，见 [157](157-bugfix-bug-031-graph-subscription.md)。
+- [ ] BUG-031：参数修复已合入；第三轮三份原文及成果图谱均真实 active，旧错误未复现。完整任务被 BUG-035 阻断，尚未满足完整关闭条件，见 [157](157-bugfix-bug-031-graph-subscription.md)。
 
 - [x] BUG-030：Provider / Host 已对齐 Qwen3-Embedding-4B / 2560 维，真实 9 请求 smoke、专项 52 项、完整 988 项及代码 head CI 通过，PR #96 已合入（c6b6ef9），见 [151](151-bugfix-bug-030-embedding-deployment.md)。
 
@@ -46,7 +50,7 @@
 
 - [x] BUG-012：F11.4 真实验收脚本未调用入口且未提供下游所需材料；已修正，本机完整检查、gpt-6-sol 双节点真实完成及代码 head CI 通过（PR #70，收口提交仍遵循当前 head CI 门禁）。笔记：[106](106-bugfix-bug-012-autorun-acceptance.md)。
 
-未关闭：BUG-002、BUG-007、BUG-010、BUG-019、BUG-025、BUG-031、BUG-032、BUG-033。BUG-002 等待复现，BUG-007 / BUG-032 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 / BUG-025 / BUG-033 仅排查、未修复，BUG-031 代码已修复且两份真实图谱成功，完整任务待验；BUG-014～018 已随 PR #79 合入关闭，BUG-021 / 022 与 BUG-023 均已满足各自关闭条件。
+未关闭：BUG-002、BUG-007、BUG-010、BUG-019、BUG-025、BUG-031、BUG-032、BUG-033、BUG-034、BUG-035。BUG-002 等待复现，BUG-007 / BUG-032 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 / BUG-025 / BUG-035 仅排查、未修复，BUG-031 真实图谱成功、BUG-033 调整时限后请求成功，但完整任务待验；BUG-034 脚本修复真实通过、待 PR 门禁及合入；BUG-014～018 已随 PR #79 合入关闭，BUG-021 / 022 与 BUG-023 均已满足各自关闭条件。
 
 - [x] BUG-001：Node 续接时未读取已共享的新验证资源（已修复：续接资源变化通知 + Resource ID 语义）
 - [ ] BUG-002：验证节点发布文件时出现来源不可用错误（诊断已补齐，未复现；2026-10-07 用户决定保持未关闭，等待复现后依证据定性）
@@ -66,9 +70,11 @@
 
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
-| BUG-033 | P1 / 后端验收依赖 | OpenRouter 单项 Embedding 触及验收 15 秒预算，完整任务被阻断 | 3 次请求 200 / status=0 / 200，2 份索引与图谱 active；具体外部延迟原因未定位 | 实际 Embedding 与完整图谱 / 两 Node / Main Review 任务通过 | [161：仅排查、未修复](161-bugfix-bug-033-openrouter-timeout.md) |
+| BUG-035 | P1 / 后端真实验收 | Node B 的来源声明包含未直接读取的原文 | 实际 fetch 交接与约束 2 份，source_ids 列 4 份；严格来源断言失败，未定位修复范围 | 来源声明与成功工具轨迹一致，并完成最终 Main Review 和完整任务 | [163：仅排查、未修复](163-bugfix-bug-035-node-source-evidence.md) |
+| BUG-034 | P1 / 后端验收脚本 | 脚本未经历目标确认就断言两个 Node | 已补齐两回合，真实确认 / 规划及后续任务通过，待当前 head CI | 修正后真实目标确认 / 规划及后续任务、本地完整检查与当前 head CI 通过 | [162：真实复验通过，待 CI](162-bugfix-bug-034-acceptance-confirmation.md) |
+| BUG-033 | P1 / 后端验收依赖 | OpenRouter 单项 Embedding 曾触及验收 15 秒预算 | 用户授权改为 60 秒，后两轮 3 / 6 次请求全 200；外部延迟原因未定位，完整任务待验 | 实际 Embedding 与完整图谱 / 两 Node / Main Review 任务通过 | [161：已调整验收时限，完整任务待验](161-bugfix-bug-033-openrouter-timeout.md) |
 | BUG-032 | P1 / 后端验收依赖 | 原 Qwen 端点未收到 HTTP 响应 | 2026-10-26 用户决定搁置排查，后续使用 OpenRouter；原端点未修复 | 若恢复使用原端点，另行定位并完成真实验收 | [158：用户决定搁置](158-bugfix-bug-032-embedding-connectivity.md) |
-| BUG-031 | P1 / 后端 | 图谱固定参数曾被订阅适配器在联网前拒绝 | PR #102 参数修复已合入；本轮两份真实图谱 active，旧错误未复现；完整任务被 BUG-033 阻断 | 参数修复、完整本地与当前 head CI，以及重新授权后的真实图谱 / 多 Node / Main Review 通过 | [157：真实图谱成功，完整任务待验](157-bugfix-bug-031-graph-subscription.md) |
+| BUG-031 | P1 / 后端 | 图谱固定参数曾被订阅适配器在联网前拒绝 | 参数修复已合入，最新三份原文及成果图谱 active；完整任务被 BUG-035 阻断 | 参数修复、完整本地与当前 head CI，以及重新授权后的真实图谱 / 多 Node / Main Review 通过 | [157：真实图谱成功，完整任务待验](157-bugfix-bug-031-graph-subscription.md) |
 | BUG-030 | P1 / 后端 | 默认 0.6B / 1024 维与已部署的 4B 不一致，阻断真实索引验收 | 已适配；真实 9 请求 smoke、完整 988 项及代码 head CI 通过 | Provider / Host 对齐部署，维度及响应校验、本地完整验证、真实 smoke test 与当前 PR head CI 通过 | [151：已修复并合入 PR #96](151-bugfix-bug-030-embedding-deployment.md) |
 | BUG-027 | P2 / 后端 | 每个候选单独 atomic，存在不必要事务开销；不是已测出的性能故障 | 已核实 atomic 无外层时逐次提交，本机对比候选阶段 37→1 次 | 单次事务完成候选校验，结果排名与权限/代次规则保留；耗时对比、完整本机与当前 head CI 通过 | [150：已修复并合入 PR #95](150-bugfix-bug-027-029-retrieval.md) |
 | BUG-028 | P2 / 后端 | 中文短实体可被子串误命中，截断种子受图读取顺序影响 | 已确认 includes 与先截断的规则 | 完整词边界、最长重叠与稳定截断回归、完整本机与当前 head CI 通过；注明分词边界 | [150：已修复并合入 PR #95](150-bugfix-bug-027-029-retrieval.md) |
