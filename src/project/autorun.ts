@@ -4,11 +4,12 @@ import { Service } from "cordis";
 import type { Context } from "cordis";
 
 import type { ProjectId } from "../brand/ids.js";
-import type { TurnResult } from "../agent/types.js";
+import type { TurnEvent, TurnResult } from "../agent/types.js";
 import type { NodeSnapshot } from "../node/model.js";
 import type { NodeSessionTurnResult } from "../node/session.js";
 import { ProjectError } from "./errors.js";
 import type { MainSessionTurnResult } from "./session.js";
+import { AutoRunObserver, type AutoRunObservedTurn, type AutoRunObservationListener } from "./autorun/observation.js";
 
 export const DEFAULT_NODE_TURN_LIMIT = 64;
 export const DEFAULT_MAIN_TURN_LIMIT = 32;
@@ -65,6 +66,7 @@ interface AutoRunRun {
   nodeTurns: number;
   mainTurns: number;
   done: Promise<void>;
+  activeTurn: AutoRunObservedTurn | undefined;
 }
 
 declare module "cordis" {
@@ -78,6 +80,7 @@ export class AutoRunService extends Service {
 
   private readonly runs = new Map<ProjectId, AutoRunRun>();
   private readonly limits: AutoRunLimits;
+  private readonly observer = new AutoRunObserver();
   private unavailable = false;
 
   constructor(ctx: Context, config: AutoRunServiceConfig = {}) {
@@ -89,6 +92,7 @@ export class AutoRunService extends Service {
       for (const run of runs) run.controller.abort();
       await Promise.all(runs.map(run => run.done));
       this.runs.clear();
+      this.observer.close();
     }, "autoRun.lifecycle");
   }
 
@@ -101,6 +105,7 @@ export class AutoRunService extends Service {
 
     const run = this.createRun();
     this.runs.set(projectId, run);
+    this.observer.emit(projectId, { type: "run-started", snapshot: this.snapshot(projectId, run) });
     return this.run(projectId, run);
   }
 
@@ -109,10 +114,12 @@ export class AutoRunService extends Service {
     if (run.status === "paused") return this.snapshot(projectId, run);
 
     run.pauseRequested = true;
+    this.observer.emit(projectId, { type: "pause-requested", runId: run.runId });
     if (!run.turnActive) {
       run.status = "paused";
       run.reason = "human-paused";
       run.pauseRequested = false;
+      this.observer.emit(projectId, { type: "snapshot", snapshot: this.snapshot(projectId, run) });
     }
     return this.snapshot(projectId, run);
   }
@@ -129,12 +136,19 @@ export class AutoRunService extends Service {
     // continuous run from the current Project state, so its budget is fresh.
     const run = this.createRun();
     this.runs.set(projectId, run);
+    this.observer.emit(projectId, { type: "run-started", snapshot: this.snapshot(projectId, run) });
     return this.run(projectId, run);
   }
 
   get(projectId: ProjectId): AutoRunSnapshot | undefined {
     const run = this.runs.get(projectId);
     return run === undefined ? undefined : this.snapshot(projectId, run);
+  }
+
+  observe(projectId: ProjectId, listener: AutoRunObservationListener): () => void {
+    const run = this.runs.get(projectId);
+    return this.observer.subscribe(projectId, run === undefined ? null : this.snapshot(projectId, run),
+      run?.activeTurn, run?.pauseRequested ?? false, listener);
   }
 
   private createRun(): AutoRunRun {
@@ -149,6 +163,7 @@ export class AutoRunService extends Service {
       nodeTurns: 0,
       mainTurns: 0,
       done: Promise.resolve(),
+      activeTurn: undefined,
     };
   }
 
@@ -185,7 +200,9 @@ export class AutoRunService extends Service {
       run.status = reason === "roadmap-complete" ? "completed" : "paused";
       run.reason = reason;
       run.pauseRequested = false;
-      return this.snapshot(projectId, run);
+      const snapshot = this.snapshot(projectId, run);
+      this.observer.emit(projectId, { type: "snapshot", snapshot });
+      return snapshot;
     };
 
     try {
@@ -213,6 +230,7 @@ export class AutoRunService extends Service {
           if (run.mainTurns >= run.limits.mainTurns) return stop("main-turn-limit");
 
           run.currentTarget = { kind: "main" };
+          this.observer.emit(projectId, { type: "target-started", runId: run.runId, target: run.currentTarget });
           run.turnActive = true;
           let reviewed: MainSessionTurnResult;
           try {
@@ -221,11 +239,14 @@ export class AutoRunService extends Service {
               nodeId: submitted.node.id,
               text: "Automatically review this Node submission against its acceptance criteria.",
               signal: run.controller.signal,
+              onEvent: this.observeTurn(projectId, run, run.currentTarget),
             });
           } finally {
             run.turnActive = false;
+            run.activeTurn = undefined;
           }
           run.mainTurns += 1;
+          this.observer.emit(projectId, { type: "snapshot", snapshot: this.snapshot(projectId, run) });
 
           const stopReason = this.turnStopReason(reviewed.turn);
           if (stopReason !== undefined) return stop(stopReason);
@@ -251,6 +272,7 @@ export class AutoRunService extends Service {
         if (run.nodeTurns >= run.limits.nodeTurns) return stop("node-turn-limit");
 
         run.currentTarget = { kind: "node", nodeId: eligible.node.id };
+        this.observer.emit(projectId, { type: "target-started", runId: run.runId, target: run.currentTarget });
         run.turnActive = true;
         let turn: NodeSessionTurnResult;
         try {
@@ -260,17 +282,21 @@ export class AutoRunService extends Service {
               nodeId: eligible.node.id,
               text: "Start working on this Node objective and its acceptance criteria.",
               signal: run.controller.signal,
+              onEvent: this.observeTurn(projectId, run, run.currentTarget),
             })
             : await this.ctx.projectRuntime.continueNode({
               projectId,
               nodeId: eligible.node.id,
               text: "Continue working on this Node until you are ready to submit_completion.",
               signal: run.controller.signal,
+              onEvent: this.observeTurn(projectId, run, run.currentTarget),
             });
         } finally {
           run.turnActive = false;
+          run.activeTurn = undefined;
         }
         run.nodeTurns += 1;
+        this.observer.emit(projectId, { type: "snapshot", snapshot: this.snapshot(projectId, run) });
 
         const stopReason = this.turnStopReason(turn.turn);
         if (stopReason !== undefined) return stop(stopReason);
@@ -294,6 +320,19 @@ export class AutoRunService extends Service {
       case "failed":
         return turn.failure.code === "interrupted" ? "turn-interrupted" : "turn-failed";
     }
+  }
+
+  private observeTurn(projectId: ProjectId, run: AutoRunRun, target: AutoRunTarget) {
+    return (event: TurnEvent): boolean => {
+      if (event.type === "turn-started") {
+        run.activeTurn = { runId: run.runId, target, sessionId: event.sessionId, turnId: event.turnId };
+      } else if (event.type === "turn-completed" || event.type === "turn-cancelled"
+        || event.type === "turn-failed" || event.type === "turn-truncated") {
+        run.activeTurn = undefined;
+      }
+      this.observer.emit(projectId, { type: "turn-event", runId: run.runId, target, event });
+      return true;
+    };
   }
 
   private snapshot(
