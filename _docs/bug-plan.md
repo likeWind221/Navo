@@ -4,6 +4,8 @@
 
 ## 当前状态
 
+- [ ] BUG-032：修复后的真实复验中，3 次 Embedding 尝试均未收到 HTTP 响应，向量构建失败；`192.168.99.2:8081` 的只读 TCP 检查超时。仅排查、未修复，生成模型尚未调用，见 [158](158-bugfix-bug-032-embedding-connectivity.md)。
+
 - [ ] BUG-031：图谱专用参数修复已随 PR #102 合入（289f4ce）；类型检查、专项 37 项、完整 1037 项及当前代码 head CI 通过。默认不再注入参数，显式配置独立传递；原真实失败保留，待单独授权真实复验，尚未关闭，见 [157](157-bugfix-bug-031-graph-subscription.md)。
 
 - [x] BUG-030：Provider / Host 已对齐 Qwen3-Embedding-4B / 2560 维，真实 9 请求 smoke、专项 52 项、完整 988 项及代码 head CI 通过，PR #96 已合入（c6b6ef9），见 [151](151-bugfix-bug-030-embedding-deployment.md)。
@@ -42,7 +44,7 @@
 
 - [x] BUG-012：F11.4 真实验收脚本未调用入口且未提供下游所需材料；已修正，本机完整检查、gpt-6-sol 双节点真实完成及代码 head CI 通过（PR #70，收口提交仍遵循当前 head CI 门禁）。笔记：[106](106-bugfix-bug-012-autorun-acceptance.md)。
 
-未关闭：BUG-002、BUG-007、BUG-010、BUG-019、BUG-025、BUG-031。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 / BUG-025 仅排查、未修复，BUG-031 代码已修复、待真实复验；BUG-014～018 已随 PR #79 合入关闭，BUG-021 / 022 与 BUG-023 均已满足各自关闭条件。
+未关闭：BUG-002、BUG-007、BUG-010、BUG-019、BUG-025、BUG-031、BUG-032。BUG-002 等待复现，BUG-007 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 / BUG-025 仅排查、未修复，BUG-031 代码已修复、待真实复验；BUG-014～018 已随 PR #79 合入关闭，BUG-021 / 022 与 BUG-023 均已满足各自关闭条件。
 
 - [x] BUG-001：Node 续接时未读取已共享的新验证资源（已修复：续接资源变化通知 + Resource ID 语义）
 - [ ] BUG-002：验证节点发布文件时出现来源不可用错误（诊断已补齐，未复现；2026-10-07 用户决定保持未关闭，等待复现后依证据定性）
@@ -62,6 +64,7 @@
 
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
+| BUG-032 | P1 / 后端验收依赖 | Embedding 未收到 HTTP 响应，阻断真实图谱 / Main / Node 验收 | 三份正文 ready，向量索引 failed / request-failed，三次 status=0；端口 TCP 超时，原因未定位 | 定位并恢复端点可用性，重新授权后实际 Embedding 与完整任务通过 | [158：仅排查、未修复](158-bugfix-bug-032-embedding-connectivity.md) |
 | BUG-031 | P1 / 后端 | 图谱固定参数被订阅适配器在联网前拒绝，阻断 F13.6 真实链路 | 图谱专用可选参数与组合回归已随 PR #102 合入；专项 37 项、完整 1037 项与代码 CI 通过；未重跑真实模型 | 参数修复、完整本地与当前 head CI，以及重新授权后的真实图谱 / 多 Node / Main Review 通过 | [157：已合入，待真实复验](157-bugfix-bug-031-graph-subscription.md) |
 | BUG-030 | P1 / 后端 | 默认 0.6B / 1024 维与已部署的 4B 不一致，阻断真实索引验收 | 已适配；真实 9 请求 smoke、完整 988 项及代码 head CI 通过 | Provider / Host 对齐部署，维度及响应校验、本地完整验证、真实 smoke test 与当前 PR head CI 通过 | [151：已修复并合入 PR #96](151-bugfix-bug-030-embedding-deployment.md) |
 | BUG-027 | P2 / 后端 | 每个候选单独 atomic，存在不必要事务开销；不是已测出的性能故障 | 已核实 atomic 无外层时逐次提交，本机对比候选阶段 37→1 次 | 单次事务完成候选校验，结果排名与权限/代次规则保留；耗时对比、完整本机与当前 head CI 通过 | [150：已修复并合入 PR #95](150-bugfix-bug-027-029-retrieval.md) |

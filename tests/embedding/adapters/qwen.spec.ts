@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { OpenAIEmbeddingProvider } from "../../src/embedding/openai.js";
+import { QwenEmbeddingAdapter } from "../../../src/embedding/adapters/qwen.js";
 
 const vector = (value: number) => Array.from({ length: 2560 }, (_item, index) => index === 0 ? value : 0);
 
@@ -66,7 +66,7 @@ describe("OpenAI-compatible Embedding provider", () => {
     const request = vi.fn<typeof fetch>(async (_url, init) => new Promise<Response>((_resolve, reject) => {
       init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
     }));
-    const provider = new OpenAIEmbeddingProvider({ endpoint: "http://embedding.test/v1/embeddings", apiKey: "top-secret",
+    const provider = new QwenEmbeddingAdapter({ endpoint: "http://embedding.test/v1/embeddings", apiKey: "top-secret",
       fetch: request, policy: { timeoutMs: 1, maxAttempts: 1 } });
     const error = await provider.embedMany({ kind: "document", inputs: ["one"] }).catch((value: unknown) => value);
     expect(error).toMatchObject({ code: "request-failed" });
@@ -76,6 +76,6 @@ describe("OpenAI-compatible Embedding provider", () => {
 });
 
 function create(request: typeof fetch) {
-  return new OpenAIEmbeddingProvider({ endpoint: "http://embedding.test", fetch: request,
+  return new QwenEmbeddingAdapter({ endpoint: "http://embedding.test", fetch: request,
     sleep: async () => undefined, random: () => 0 });
 }

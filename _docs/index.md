@@ -168,6 +168,7 @@
 - [F13.6：验收准备与缺口盘点](155-devlog-f13-6-preparation.md)：历史验收准备、复用清单与分层边界。
 - [F13.6：后端完整链路验收](156-devlog-f13-6-backend-acceptance.md)：Draft PR #100 中的离线验收与真实失败记录，验收代码尚未随本次修复合入。
 - [BUG-031：图谱抽取与订阅模型参数不兼容](157-bugfix-bug-031-graph-subscription.md)：保留首次真实失败；追加图谱专用参数修复、离线验证与真实复验边界。
+- [BUG-032：真实验收 Embedding 端点连接失败](158-bugfix-bug-032-embedding-connectivity.md)：修复后复验在向量构建阶段失败，生成调用为 0；保留新现场，TCP 检查超时，未修复或重跑。
 - [F13.4a：统一 Turn Context](152-devlog-f13-4a-turn-context.md)：逐请求读取权威状态、临时上下文注入、Reminder 生命周期与 F12 恢复；过渡目录已由 F13.4c 按需资源工具替代。
 
 - [F13 项目资料库与任务检索规划](124-devlog-f13-plan.md)：原始产品路线与决策记录；当前阶段状态以 [backend-plan.md](backend-plan.md) 为准。2026-10-26 取消独立 F13.5，后端当前进入 F13.6 完整任务验收。
@@ -210,6 +211,8 @@
 - [F11.3：桌面公共契约独立验收](108-devlog-f11-3-desktop-acceptance.md)：前端完整检查与真实 Electron bridge 的独立验收。
 
 ## 调研与归档
+
+- [Embedding 模块化与 OpenRouter Nemotron 接入](159-devlog-embedding-openrouter.md)：独立适配器、统一配置；完整 1045 项与真实 10 次请求通过，索引 / 检索 / 权限 / 重启复用通过。
 
 - [BUG-030：Embedding 部署适配与真实 smoke test](151-bugfix-bug-030-embedding-deployment.md)：默认模型名与 2560 维响应校验对齐 server:8081，验证索引与检索链路。
 
