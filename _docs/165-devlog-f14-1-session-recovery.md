@@ -1,6 +1,6 @@
 # 165：F14.1 项目原会话与中断事实公共交接
 
-日期：2026-10-26。状态：开发与验收进行中；未完成，未合并。
+日期：2026-10-26。状态：✅ 后端公共交接完成并合入；前端 F6 消费尚未开始。
 
 ## 做了什么
 
@@ -22,7 +22,7 @@ Windows PowerShell / bundled Node 24.22.1，System32 与 Node 24 位于本进程
 
 主编排独立启动正式 `src/host/main.ts`，经 NDJSON stdio 创建临时项目、读取新查询、关闭 Host 后重开同库再查：Project 与 Main Session 身份、available 状态和空 lastEndedTurn 完全一致，0 生成 / 0 Embedding。真实现场 `%TEMP%/navo-f141-host-s3aa78e3` 保留；证据位于本会话可视化目录 `f141/host.json`，完整日志 `f141/typecheck.log` / `f141/full.log`。
 
-真实 Host 检查只证明正式进程注册、传输和重启身份保持，不冒充 Renderer 恢复验收。Node 未建立 / 空绑定 / 不可读、跨项目归属、持久库中断修复和压缩中断分别由针对性测试覆盖；未调用真实模型。当前 PR / CI 仍待完成，不标记步骤全部完成。
+真实 Host 检查只证明正式进程注册、传输和重启身份保持，不冒充 Renderer 恢复验收。Node 未建立 / 空绑定 / 不可读、跨项目归属、持久库中断修复和压缩中断分别由针对性测试覆盖；未调用真实模型。PR #107 最终 head a350f39 的 CI run 40349300280 全部通过（verify 4m4s），于 2026-10-26 squash 合入 master（f1ed357）；本步完成。
 
 ## 下一步
 
@@ -39,3 +39,7 @@ Windows PowerShell / bundled Node 24.22.1，System32 与 Node 24 位于本进程
 例：重启前已有 Node Session 且 Turn 未闭合，存储恢复补记失败与 interrupted 错误；本查询返回原 Session、失败终态与 host-stopped，不再次执行该 Turn。尚未开始过的另一 Node 返回 unestablished。
 
 现有 `rpc/project.ts` 作为包级公共协议入口已超过 300 行，本步仅追加新公共出口，保留原因是维持既有消费路径和公开协议兼容；恢复类型、运行时校验与 Host 实现分别独立，未继续扩张原大型 Project 校验文件。
+
+## 合并与交接
+
+[PR #107](https://github.com/likeWind221/Navo/pull/107) 已合并，当前代码 head 的本机与 CI 门禁均通过。源码、契约及测试已逐模块审查；前端 F6.2 接入独立实施，不将查询完成视为桌面恢复完成。专用 worktree 与分支在无未提交工作后清理。后续为 F14.2a 当前资料查看副本。
