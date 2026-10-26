@@ -13,10 +13,14 @@ const DesignSample = import.meta.env.DEV
 
 const WorkspacePreview = import.meta.env.DEV ? lazy(() => import("./preview/Workspace")) : null;
 const ProjectPreview = import.meta.env.DEV ? lazy(() => import("./preview/Project")) : null;
+const ResourcePreview = import.meta.env.DEV ? lazy(() => import("./preview/Resource")) : null;
 
 export function App(): React.JSX.Element {
   if (ProjectPreview !== null && new URLSearchParams(window.location.search).get("preview") === "project") {
     return <Suspense fallback={<p>正在加载项目原型……</p>}><ProjectPreview /></Suspense>;
+  }
+  if (ResourcePreview !== null && new URLSearchParams(window.location.search).get("preview") === "resource") {
+    return <Suspense fallback={<p>正在加载资料库验收页……</p>}><ResourcePreview /></Suspense>;
   }
   if (WorkspacePreview !== null && new URLSearchParams(window.location.search).get("preview") === "workspace") {
     return <Suspense fallback={<p>正在加载工作区……</p>}><WorkspacePreview /></Suspense>;
@@ -33,6 +37,7 @@ export function App(): React.JSX.Element {
 
 function DesktopWorkspace(): React.JSX.Element {
   const api = window.desktop?.project;
+  const resource = window.desktop?.resource;
   const projects = useProjects(api);
   const [creating, setCreating] = useState(false);
   const [openRequest, setOpenRequest] = useState<{ readonly id: string } | null>(null);
@@ -42,7 +47,7 @@ function DesktopWorkspace(): React.JSX.Element {
       id: projectEntryId(project.projectId),
       title: project.name,
       kind: "project",
-      content: <ProjectDetail api={api} projectId={project.projectId} />,
+      content: <ProjectDetail api={api} resource={resource} projectId={project.projectId} />,
     })),
   ];
 
