@@ -14,6 +14,7 @@ import {
   projectResourcesMethod,
   projectTurnMethod,
 } from "../../rpc/project.js";
+import { projectSessionRecoveryMethod } from "../../rpc/project/session.js";
 import type {
   AutoRunSnapshotV1,
   NodeReviewInput,
@@ -32,6 +33,7 @@ import { createNodeId, createProjectId } from "../brand/ids.js";
 import { toProjectFailure } from "./project/failure.js";
 import { createProjectFollowHandler } from "./project/follow.js";
 import { createProjectTurnHandler } from "./project/turn.js";
+import { createProjectSessionRecoveryHandler } from "./project/session.js";
 import {
   describeNode,
   describeResource,
@@ -51,6 +53,7 @@ export function registerProjectMethods(router: StreamRpcRouter, ctx: Context): (
     router.register(projectMailboxMethod, unary(input => readMailbox(ctx, input))),
     router.register(projectResourcesMethod, unary(input => listResources(ctx, input.projectId))),
     router.register(projectTurnMethod, createProjectTurnHandler(ctx)),
+    router.register(projectSessionRecoveryMethod, createProjectSessionRecoveryHandler(ctx)),
     router.register(projectNodeReviewMethod, unary(input => reviewNode(ctx, input))),
     router.register(projectFollowMethod, createProjectFollowHandler(ctx)),
     router.register(projectAutoRunStartMethod, unary(input => startAutoRun(ctx, input))),
