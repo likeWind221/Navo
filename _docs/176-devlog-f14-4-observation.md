@@ -32,3 +32,7 @@
 - 最终现场 `%TEMP%/navo-f144-host-exv2oef_`；4次本机受控生成、0外部生成/Embedding。证据为本轮外部 `f144/host.json`、`host-shutdown.log`，上一轮同样通过的现场 `navo-f144-host-rvvb6xrc` 保留。
 - 首轮QA把既有start RPC的即时running应答误当最终结果，断言失败；修正脚本按follow的paused/completed终态验收，未修改生产算法。失败证据 `f144/first-failure/` 与现场 `navo-f144-host-1eeh5h0_` 保留。
 - 项目/路线由生产createApp构造固定验收夹具，不声称验证Main自主规划质量；真实远程模型、Electron Bridge及正式F8页面未在本步验收。
+
+## PR 收口
+
+[PR #117](https://github.com/likeWind221/Navo/pull/117) head `a3665947f4ef530642d5772077cfb118d71ddc3d` 的CI `40386332385` verify成功（3分43秒），已squash合入 `12ffa7a`。Git worktree与分支已清理；`D:/Program/Navo-f14.4`仍有忽略的node_modules，自动审批审查以blocked by policy拒绝递归删除，保留并报告。F14.4完成，F8正式页面未提前勾选；接续F14.5。
