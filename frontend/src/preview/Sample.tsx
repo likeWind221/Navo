@@ -3,10 +3,10 @@ import { Icon } from "../ui/Icon";
 import styles from "./Sample.module.css";
 
 const swatches = [
-  { name: "暖白画布", color: "#fffefa" },
-  { name: "浅砂底色", color: "#faf3ea" },
-  { name: "陶土强调", color: "#bb8663" },
-  { name: "深棕操作", color: "#805536" },
+  { name: "暖白画布", color: "#f6f7f3" },
+  { name: "浅绿底色", color: "#edf2ee" },
+  { name: "鼠尾草绿", color: "#76a598" },
+  { name: "深青操作", color: "#3f7569" },
 ];
 
 export default function DesignSample(): React.JSX.Element {
@@ -20,9 +20,9 @@ export default function DesignSample(): React.JSX.Element {
         <span className={styles.badge}>视觉样板 · 开发预览</span>
       </header>
       <section className={styles.intro} aria-labelledby="sample-title">
-        <p className={styles.eyebrow}>山丘远征站 / 最小视觉基础</p>
+        <p className={styles.eyebrow}>晴川沙盘 / 工作区视觉基础</p>
         <h1 id="sample-title">留一点空间，<br />让理解慢慢发生。</h1>
-        <p>暖白的纸面，克制的陶土色。一套为阅读与探索准备的界面语言。</p>
+        <p>暖白画布与青绿山川。一套为长时间阅读、对话和探索准备的界面语言。</p>
       </section>
 
       <div className={styles.grid}>
@@ -69,7 +69,7 @@ export default function DesignSample(): React.JSX.Element {
           </div>
         </section>
       </div>
-      <footer className={styles.footer}><span>视觉验证，不代表真实学习进度。</span><span>地图地形后续采用 3D 建模，本页不包含地图资产。</span></footer>
+      <footer className={styles.footer}><span>视觉验证，不代表真实学习进度。</span><span>项目原型已使用 Three.js 三维沙盘；本页只展示基础组件。</span></footer>
     </main>
   );
 }

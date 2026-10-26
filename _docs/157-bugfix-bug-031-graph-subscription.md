@@ -1,6 +1,6 @@
 # 157：BUG-031 图谱抽取与订阅模型参数不兼容
 
-日期：2026-10-26。所属：后端；优先级 P1（阻断本次所选模型路径）。状态：**仅排查，未修复**。跟踪项见 [Bug 表](bug-plan.md)。
+日期：2026-10-26。所属：后端；优先级 P1（阻断所选模型路径）。当前状态：**参数组装修复已合入 PR #102，待真实复验**。跟踪项见 [Bug 表](bug-plan.md)。首次失败与当时未修复的事实保留如下，本次修复追加在后文。
 
 ## 现象与复现
 
@@ -47,6 +47,57 @@ ChatGPT subscription requests do not support maxTokens or temperature.
 
 ## 后续与关闭条件
 
-等待用户单独确认修复范围。修复应明确区分 Provider 的请求能力与图谱预算的执行边界，不能在验收脚本偷偷剥离参数后宣布生产链路已修复。
+首次排查时等待用户确认修复范围。用户随后授权最简单的图谱专用参数修复；本次实现见下节。修复明确区分 Provider 的请求能力与图谱预算的执行边界，没有在验收脚本偷偷剥离参数。
 
 关闭需：必要的参数兼容修复与离线回归、完整本地检查、当前 PR head CI，并在重新报告预算和获授权后完成所选订阅 Provider 的真实图谱构建与跨资料 Main / Node / Review 验收。未完成前 BUG-031 保持未勾选，F13.6 真实后端链路不能记通过。
+
+## 2026-10-26：图谱专用参数修复
+
+基线：最新 master `ae5445b`；独立分支 `fix/bug-031-graph-parameters`。只修改图谱配置 / 请求组装、相关测试及记录；不改订阅适配器、不改前端、不调用真实模型 / Embedding。前次资料、SQLite 和失败状态未触碰。
+
+### 修复流程与代码职责
+
+```text
+GraphConfig.model: provider / model / optional maxTokens / temperature
+                               |
+                               v
+GraphExtractor.request: send exactly the graph configuration
+                               |
+                               v
+existing LLMService -> existing adapter -> validateGraph -> persistence
+                               |
+                               v
+existing stream size / timeout / cancellation controls
+```
+
+- `src/resource/graph/extraction.ts`：GraphConfig.model 复用 GenerateRequest 对应的四个字段类型，图谱模型和生成参数独立于 Main / Node 配置。request 只展开图谱配置，不再硬编码 maxTokens 或 temperature；默认省略两项，显式配置则按原值传递。maxTokens 只校验正安全整数，temperature 只校验有限数，不额外施加通用的模型参数范围；具体接口仍可以拒绝它不支持的字段。
+- `outputTokenLimit` 保留现有配置名与本地语义：默认 4096，对应累计可见输出 4096 * 16 = 65536 字节的接收限制；它不再隐式变成服务端 maxTokens。60 秒超时、取消、结构校验与已有有限格式重试 / 拆批继续复用；支持的接口需要服务端 token 上限时，显式配置 model.maxTokens。
+- 图谱 pipeline 升为 `graph-v2-explicit-parameters`，版本标识额外包含实际配置的 maxTokens / temperature。省略字段以 null 规范化；对象字段顺序不影响版本。参数或默认请求形态变化后，旧图谱沿用 GraphStore 的 superseded / 重建规则，不能复用为新配置结果。未来在启用真实 graph 的应用中打开旧库可能安排重建；本轮仅测试临时库，没有打开原失败库。
+- `tests/resource/graph/extraction.spec.ts`：覆盖默认不注入参数、显式值不被本地预算覆盖、无效数值拒绝、参数变化使 pipeline 不同；复用原有超限、取消、拆批与失败测试。
+- `tests/resource/graph/subscription.spec.ts`：组合真实 Graph 服务、订阅适配器、模拟 Responses SSE 和 SQLite；校验发出的 JSON 没有未配置的字段，响应可被抽取和持久化，graph 达到 active 并能读取来源证据。没有真实鉴权或 HTTP 推理。
+
+配置示例：
+
+```ts
+graph: {
+  model: { provider: "openai", model: "gpt-6-luna" },
+  inputTokenBudget: 8192,
+  outputTokenLimit: 4096,
+}
+```
+
+对于接受相应参数的接口，可在图谱自己的 model 中显式配置 `maxTokens: 4096, temperature: 0`；不从其他 Agent 的设置继承，也不在适配器中静默删除用户设置。
+
+### 验证与交付边界
+
+- Node v24.22.1、Windows PowerShell、System32 在 PATH 前；没有修改持久环境或安装依赖。
+- `pnpm typecheck`：通过。
+- `pnpm test tests/resource/graph tests/llm/adapters/openai.spec.ts --maxWorkers=4`：6 文件 / 37 项通过，4.49 秒。
+- 初轮新测试有 TypeScript exactOptionalPropertyTypes 用法错误和模拟响应输入格式错误，均只修正测试；没有改生产协议来迁就测试。
+- 完整 `NAVO_TEST_MODE=all pnpm test --maxWorkers=4`：159 文件 / 1037 项全部通过，343.61 秒，包含完整 D1–D8 和正文中断恢复。日志目录 `C:\Users\likeW\AppData\Local\Temp\navo-bug031-20261026`。
+- [PR #102](https://github.com/likeWind221/Navo/pull/102) 代码 head `ce3fa89d1bc8826ec9697b7b078929760a72b0bb` 的 [CI run 40296557374](https://github.com/likeWind221/Navo/actions/runs/40296557374) 第二次执行成功，typecheck、normal tests 与 crash-pr 组全部通过；于 2026-10-26 squash 合入 master（`289f4cecc60b4a0aa0661b72a58bbab929401e62`）。本地 / 远端修复分支已删除，无本 Step 专用 worktree，主目录及 PR #100 分支保留。
+- CI 首轮普通组 4 文件 / 5 项超时，另有一次 SQLite 清理 EBUSY；日志保留为 `ci-failed.log`，没有改超时或相邻模块。对应 4 文件 / 23 项在同代码修复分支和基线 master `ae5445b` 上分别通过，5.59 / 4.54 秒，日志为 `ci-cases-branch.log` / `ci-cases-master.log`。仅对同一代码 head 重跑失败 CI 一次后通过；原因未确认，不把复跑通过写成已定位或修复了 CI 环境。
+- 真实模型 / Embedding / GPU 调用为 0；本地组合验证不能替代真实服务器兼容验证，BUG-031 暂不关闭，F13.6 保持进行中。
+- 本修复从 master 独立开发，未引入 Draft PR #100 的验收脚本 / 测试。为保留已发生的验收证据和连续编号，将该 PR 中 155–157 三份历史记录一并登记；156 所述验收代码仍在 PR #100，不能视为本修复已合入这些代码。
+
+下一步：代码修复已按本地 / 当前 head CI 门禁合入并完成分支清理；需要真实复验时重新报告预算并获得授权，不复用此前一次性运行授权。BUG-031 的真实关闭条件不因代码合入而免除。本次代码导读随交付回复提供。

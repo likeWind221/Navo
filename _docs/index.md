@@ -147,7 +147,7 @@
 - [F5.1 工作区布局与导航](57-devlog-f5-1-workspace.md)：侧栏双视图、顶部标签、状态保留与滑动过渡。
 - [F5.2 真实项目入口](75-devlog-f5-2-project-entry.md)：合并整理前的 58 号接入核对；公共项目接口缺口与后端交接，项目创建 / 列表 / 详情的桌面桥接、失败码中文提示、目标可选、标签栏隐藏滚动条与两端淡出，以及 Electron 自动验收与用户人工验收。
 - [F5.3–F5.8 Project 前端闭环规划](88-devlog-f5-project-plan.md)：当前运行期间的项目执行闭环与逐步接入边界。
-- [F5.3 Project 工作区布局与交互设计](90-devlog-f5-3-workspace.md)：Roadmap 主画布与覆盖式 Main/Node 面板，原型用户验收、正式 Electron 布局接入及本地/代码 CI 已通过，PR #53 已 squash 合入 master（e271d5b）。
+- [F5.3 Project 工作区布局与交互设计](90-devlog-f5-3-workspace.md)：原型与正式布局接入已随 PR #53 合入；追加 2026-10-26 全局视觉维护、可旋转三维沙盘、离线交互预览及自动验证，保留后续功能接入边界。
 
 ## 后端 Phase 12
 
@@ -165,9 +165,9 @@
 
 - [F13.4c：资源目录与按需检索](153-devlog-f13-4c-resource-discovery.md)：权限内目录筛选分页、复用混合检索、直接原文阅读；移除全量目录与动态 ID 枚举，取消独立 Working Board。
 - [F13.6：完整任务验收计划](154-devlog-f13-6-acceptance-plan.md)：取消独立 F13.5 引用追踪后，冻结端到端验收目标、范围、场景与验收证据分层。
-- [F13.6：验收准备与缺口盘点](155-devlog-f13-6-preparation.md)：复用测试清单、后端 / Bridge / Renderer 实际边界、最小任务流程、分步通过标准与预算；尚未执行验收。
-- [F13.6：后端完整链路验收](156-devlog-f13-6-backend-acceptance.md)：跨资料多 Node、Main Review、返工、权限 / 失败 / 取消和恢复的组合验证，以及真实入口、预算与证据边界。
-- [BUG-031：图谱抽取与订阅模型参数不兼容](157-bugfix-bug-031-graph-subscription.md)：真实后端验收在生成 HTTP 前被参数校验阻断；仅排查、未修复，保留现场与预算记录。
+- [F13.6：验收准备与缺口盘点](155-devlog-f13-6-preparation.md)：历史验收准备、复用清单与分层边界。
+- [F13.6：后端完整链路验收](156-devlog-f13-6-backend-acceptance.md)：Draft PR #100 中的离线验收与真实失败记录，验收代码尚未随本次修复合入。
+- [BUG-031：图谱抽取与订阅模型参数不兼容](157-bugfix-bug-031-graph-subscription.md)：保留首次真实失败；追加图谱专用参数修复、离线验证与真实复验边界。
 - [F13.4a：统一 Turn Context](152-devlog-f13-4a-turn-context.md)：逐请求读取权威状态、临时上下文注入、Reminder 生命周期与 F12 恢复；过渡目录已由 F13.4c 按需资源工具替代。
 
 - [F13 项目资料库与任务检索规划](124-devlog-f13-plan.md)：原始产品路线与决策记录；当前阶段状态以 [backend-plan.md](backend-plan.md) 为准。2026-10-26 取消独立 F13.5，后端当前进入 F13.6 完整任务验收。

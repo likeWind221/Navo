@@ -1,0 +1,42 @@
+.mapArea { position: relative; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid #d5e1d8; border-radius: 18px; background: #e7eee7; container-type: inline-size; }
+.viewport { position: absolute; inset: 0; overflow: hidden; touch-action: none; cursor: grab; }
+.viewport:active { cursor: grabbing; }
+.viewport > canvas { display: block; width: 100%; height: 100%; }
+.viewport:focus-visible { outline-offset: -4px; }
+.labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.node { position: absolute; top: 0; left: 0; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: white; text-align: center; pointer-events: auto; }
+.node[hidden] { display: none; }
+.marker { display: grid; place-items: center; width: 36px; height: 36px; font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px #233c3955; }
+.marker > svg { width: 15px; height: 15px; }
+.node:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; }
+.label { position: absolute; top: 38px; left: 50%; transform: translateX(-50%); display: block; width: max-content; max-width: 140px; padding: 5px 9px; border: 1px solid #fff9; border-radius: 7px; background: #fffffff0; box-shadow: 0 2px 9px #233c3914; font-size: 11px; font-weight: 600; line-height: 1.5; color: var(--text); transition: background var(--duration), box-shadow var(--duration); }
+.label small { display: block; font-size: 9px; font-weight: 400; color: var(--text-secondary); }
+.node:hover .label, .node[data-selected="true"] .label { background: #fff; box-shadow: 0 3px 12px #233c3929; }
+.node[data-status="进行中"] .label { border-color: #edb8a4; }
+.controls { position: absolute; z-index: 1; top: 20px; right: 18px; display: flex; flex-direction: column; padding: 4px; border: 1px solid #fff9; border-radius: 12px; background: #fffffff0; box-shadow: var(--shadow-panel); }
+.controls button { display: grid; place-items: center; width: 32px; height: 34px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--text); }
+.controls button > svg { width: 18px; height: 18px; }
+.controls button:hover:not(:disabled) { background: var(--surface-muted); }
+.controls button:disabled { opacity: .35; }
+.controls button:last-child { margin-top: 5px; border-top: 1px solid var(--border); border-radius: 0 0 7px 7px; }
+.legend { position: absolute; left: 18px; bottom: 18px; display: flex; align-items: center; gap: 18px; padding: 10px 14px; border: 1px solid #ffffffe0; border-radius: 11px; background: #fffffff0; box-shadow: var(--shadow-panel); color: #4c645b; font-size: 11px; pointer-events: none; }
+.legend span { display: flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 12px; border: 2px solid #98aaa0; border-radius: 50%; }
+.legend i[data-state="done"] { border-color: #5e927e; background: #5e927e; }
+.legend i[data-state="active"] { border-color: var(--coral); }
+.compass { position: absolute; right: 20px; bottom: 20px; display: grid; justify-items: center; color: #385f59; opacity: .7; pointer-events: none; }
+.compass small { font-size: 10px; }
+.compass svg { width: 32px; height: 32px; stroke-width: 1; }
+.empty { position: absolute; inset: 0; display: grid; place-content: center; padding: 24px; pointer-events: none; }
+.empty > * { pointer-events: auto; }
+.failure { position: absolute; inset: 0; display: grid; place-content: center; padding: 32px; background: var(--canvas); color: var(--danger); font-size: 12px; }
+@container (max-width: 550px) {
+  .node:not([data-selected="true"]) .label { visibility: hidden; opacity: 0; }
+  .node:hover .label, .node:focus-visible .label { visibility: visible; opacity: 1; }
+}
+@media (max-width: 650px) {
+  .mapArea { border-radius: 12px; }
+  .controls { top: 12px; right: 12px; }
+  .legend { left: 12px; bottom: 12px; gap: 10px; padding: 8px 10px; font-size: 10px; }
+  .compass { right: 12px; bottom: 12px; }
+}

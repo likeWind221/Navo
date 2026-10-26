@@ -1,4 +1,4 @@
-.markdown { min-width: 0; max-width: 100%; font-size: 15px; line-height: 1.8; overflow-wrap: anywhere; white-space: normal; }
+.markdown { min-width: 0; max-width: 100%; font-size: 14px; line-height: 1.85; overflow-wrap: anywhere; white-space: normal; }
 .markdown p { margin: 0.65em 0; font-size: inherit; white-space: normal; }
 .markdown > :first-child { margin-top: 0; }
 .markdown > :last-child { margin-bottom: 0; }
@@ -14,7 +14,7 @@
 .markdown blockquote { margin: 0.75em 0; padding: 0.15em 1em; border-left: 3px solid var(--control-border); color: var(--text-secondary); }
 .markdown a { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 3px; }
 .markdown a:focus-visible, .markdown pre:focus-visible, .tableScroll:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
-.markdown code { font: 0.9em/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; background: var(--surface-muted); padding: 0.15em 0.35em; border-radius: 4px; }
+.markdown code { font: 0.9em/1.6 var(--font-mono); background: var(--surface-muted); padding: 0.15em 0.35em; border-radius: 4px; }
 .codeBlock { min-width: 0; margin: 0.8em 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface-muted); }
 .language { padding: 5px 12px; font-size: 11px; color: var(--text-secondary); border-bottom: 1px solid var(--border); }
 .markdown pre { max-width: 100%; margin: 0; padding: 12px; overflow-x: auto; white-space: pre; overflow-wrap: normal; line-height: 1.6; }
