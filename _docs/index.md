@@ -164,9 +164,10 @@
 ## Phase 13 规划
 
 - [F13.4c：资源目录与按需检索](153-devlog-f13-4c-resource-discovery.md)：权限内目录筛选分页、复用混合检索、直接原文阅读；移除全量目录与动态 ID 枚举，取消独立 Working Board。
+- [F13.6：完整任务验收计划](154-devlog-f13-6-acceptance-plan.md)：取消独立 F13.5 引用追踪后，冻结端到端验收目标、范围、场景与验收证据分层。
 - [F13.4a：统一 Turn Context](152-devlog-f13-4a-turn-context.md)：逐请求读取权威状态、临时上下文注入、Reminder 生命周期与 F12 恢复；过渡目录已由 F13.4c 按需资源工具替代。
 
-- [F13 项目资料库与任务检索规划](124-devlog-f13-plan.md)：登记 F13.0–F13.6 功能目标、前后端分工、首版边界与验收要求；F13.1c、F13.2a、F13.2b 后端能力均已交付；F13.2 Renderer 页面仍待前端，2026-10-22 已确认不新增 F13.2c，后端下一步转入 F13.3a 只读审计与技术设计，见 [141](141-devlog-f13-2-handoff-f13-3.md)。
+- [F13 项目资料库与任务检索规划](124-devlog-f13-plan.md)：原始产品路线与决策记录；当前阶段状态以 [backend-plan.md](backend-plan.md) 为准。2026-10-26 取消独立 F13.5，后端当前进入 F13.6 完整任务验收。
 - [F13.0 产品设计（已完成）](125-devlog-f13-0-design.md)：用户已确认资料管理、页面操作、异常恢复、搜索变化、Agent 按需检索、文件级引用及六组验收场景；含前后端交接、调研取舍与新会话开发交接，F13.1–F13.6 未实施。
 - [F13.1a：共享资产生命周期内核 v1.3](126-devlog-f13-1a-design.md)：共享资产生命周期、操作记录同事务提交、路径规范、Host 单实例与方案 B 读取租约；Step A–D 已完成，PR #80 合并，已完成操作重试修复见 PR #81 / [133](133-bugfix-bug-023-replayed-operation-result.md)。
 - [F13.1a Step C 共享生命周期内核](127-devlog-f13-1a-kernel.md)：Schema v3、事件/操作同事务、不可变版本、读取租约、安全清理、正式 Host 单实例与启动恢复；代码已随 PR #80 合并，真实中断验收见 [129](129-devlog-f13-1a-interruption.md)。
