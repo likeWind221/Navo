@@ -102,3 +102,14 @@
 - 新现场 `C:\Users\likeW\AppData\Local\Temp\navo-f136-real-Quk7AE`，日志 `C:\Users\likeW\AppData\Local\Temp\navo-f136-retest-20261026`；旧现场原样保留。
 
 当前下一步为定位 Embedding 端点连通性，再按单独授权复验；F13.6 保持进行中，PR #100 保持 Draft。
+
+
+## 2026-10-26：按明确边界授权合并
+
+用户在合并各分支时明确回复“允许按上述边界合并 #100”：仅合并已验证的离线测试、验收脚本及失败记录；F13.6 保持进行中，BUG-031 / BUG-032 不关闭，不执行新的真实模型任务。此前保持 Draft 的决定保留为历史，本次授权取代该合并限制。
+
+同步最新 master 时保留 OpenRouter 的独立验收结论，验收脚本改用迁移后的 QwenEmbeddingAdapter，保持原有 Qwen 模型、维度、预算和失败即停行为，不自动切换真实验收服务。真实图谱、多 Node、Main Review 和正式 Renderer 仍待分别验收。
+
+合并复核时将脚本单独纳入严格类型检查，发现 runtime 的 app 变量未声明类型；补充为 open 的实际返回类型后，脚本和传递依赖均通过。零推理预检再次通过（0 请求），现场 `C:/Users/likeW/AppData/Local/Temp/navo-f136-real-ENorlD`。本次仅补齐验收入口类型，不改变 App 生命周期。
+
+合并后的本地验证：bundled Node 24.22.1 / Windows PowerShell；根包 `tsc --noEmit`、验收脚本单独严格类型检查与 `git diff --check` 通过；完整 `vitest run --maxWorkers=4` 为 165 文件 / 1054 项全部通过（361.17 秒，包含完整进程恢复组）。日志 `%TEMP%/navo-merge-100-tests.log`，零推理日志 `%TEMP%/navo-merge-100-preflight.log`。真实失败现场原样保留，本轮未调用真实模型。
