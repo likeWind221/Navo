@@ -24,6 +24,7 @@
     "qa:project": "electron out/main/project.js",
     "qa:session-context": "electron out/main/session.js",
     "qa:resource": "electron out/main/resource.js",
+    "qa:f71": "electron scripts/qa/f71.cjs",
     "qa:visual": "electron scripts/qa/visual.cjs",
     "demo:visual": "node scripts/demo/visual.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"

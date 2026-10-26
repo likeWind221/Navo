@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { NodeStatusV1, ProjectDetailV1 } from "../../../../rpc/project.js";
+import type { DesktopResourceApi } from "../../../shared/resource.js";
 import { Icon } from "../../ui/Icon";
 import { RoadmapMap } from "./Map";
 import type { MapGraph } from "./map/model";
 import styles from "./workspace.module.css";
+import { ResourceLibrary } from "./resource/Library";
 
 type Message = { role: "user" | "assistant"; text: string };
 const statusLabels: Record<NodeStatusV1, string> = { locked: "待解锁", idle: "可执行", working: "进行中", submitted: "待验收", completing: "已完成", skipped: "已跳过" };
 
-export function ProjectWorkspace({ detail, demo, previewControls }: { readonly detail: ProjectDetailV1; readonly demo?: MapGraph; readonly previewControls?: ReactNode }): React.JSX.Element {
+export function ProjectWorkspace({ detail, resource, demo, previewControls }: { readonly detail: ProjectDetailV1; readonly resource?: DesktopResourceApi | undefined; readonly demo?: MapGraph; readonly previewControls?: ReactNode }): React.JSX.Element {
   const graph = useMemo<MapGraph>(() => demo ?? {
     nodes: detail.roadmap?.nodes.map(node => ({ id: node.nodeId, title: node.title, note: node.description, status: statusLabels[node.status] })) ?? [],
     edges: detail.roadmap?.edges ?? [],
@@ -22,6 +24,8 @@ export function ProjectWorkspace({ detail, demo, previewControls }: { readonly d
   const [opened, setOpened] = useState<string[]>([]);
   const [visible, setVisible] = useState(true);
   const [full, setFull] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const resourceButton = useRef<HTMLButtonElement>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const node = nodes.find(item => item.id === active);
@@ -53,6 +57,11 @@ export function ProjectWorkspace({ detail, demo, previewControls }: { readonly d
       { role: "assistant", text: active === "main" ? "我会围绕研究目标继续调整路线。你可以点击中间的节点，查看该任务的工作会话。" : "已记录这条要求。这里将承载该节点的执行对话、工具过程与结果。" },
     ] }));
     setDrafts(previous => ({ ...previous, [active]: "" }));
+  }
+
+  function closeLibrary(): void {
+    setLibraryOpen(false);
+    requestAnimationFrame(() => resourceButton.current?.focus());
   }
 
   return <article className={styles.project} data-panel={visible} data-full={full} aria-label={`项目 ${project.name}`}>
@@ -101,7 +110,7 @@ export function ProjectWorkspace({ detail, demo, previewControls }: { readonly d
             <dt>状态</dt><dd>{project.status === "active" ? "进行中" : "已归档"}</dd>
             <dt>创建时间</dt><dd><time dateTime={project.createdAt}>{new Date(project.createdAt).toLocaleString("zh-CN", { hour12: false })}</time></dd>
           </dl></details>
-          <button disabled title="消息查看即将开放">消息</button><button disabled title="资源查看即将开放">资源</button>
+          <button disabled title="消息查看即将开放">消息</button><button ref={resourceButton} disabled={resource === undefined} aria-haspopup="dialog" aria-expanded={libraryOpen} title={resource === undefined ? "资料库仅在桌面应用中可用" : "打开资料库"} onClick={() => setLibraryOpen(true)}>资料</button>
         </nav>
         <div className={styles.messages}>
           <div className={styles.nodeHeading}><span className={styles.nodeBadge} data-node={Boolean(node)}>{node ? nodeNumber : <Icon name="guide" />}</span><div><small>{node ? "NODE WORKSPACE" : "MAIN AGENT"}</small><h2>{node ? title : "一起探索下一步"}</h2></div></div>
@@ -120,5 +129,6 @@ export function ProjectWorkspace({ detail, demo, previewControls }: { readonly d
         </div>
       </div>
     </aside>}
+    {libraryOpen && resource !== undefined && <ResourceLibrary api={resource} projectId={project.projectId} onClose={closeLibrary} />}
   </article>;
 }
