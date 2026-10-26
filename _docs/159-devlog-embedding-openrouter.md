@@ -40,9 +40,14 @@ $env:EMBEDDING_PROVIDER = 'openrouter'
 - `pnpm test --maxWorkers=4`：162 文件 / 1045 项全部通过，295.90 秒；未设置 NAVO_TEST_MODE，保留完整进程恢复测试。日志在 `%TEMP%/navo-openrouter-20261026/full.log`。
 - 通过临时 tsconfig 单独检查 `scripts/retrieval/smoke.ts`，同时纳入仓库 ambient declarations；首轮临时配置未包含这些声明而报缺失类型，补齐 include 后通过，无须改动生产源码或安装依赖。
 - `git diff --cached --check` 通过，旧 Embedding 路径无运行引用，未修改 `frontend/**`。
-- 真实请求尚未执行，等待独立预算授权；不把离线成功视为真实模型已通过。
-- 真实 smoke 使用新临时目录与合成资料，验证批量输出、索引、中英文排序、权限、原文偏移、重开复用，不接触业务库。图谱、两 Node 与 Main Review 属于 PR #100 的完整任务验收。
+- 用户随后明确授权仅执行 Embedding 完整链路：最多 12 次 Embedding、0 次生成、3 分钟；合成资料、失败停止、不自动重跑。未授权本次继续 F13.6 图谱、两 Node 或 Main Review。
+- 执行一次 `$env:EMBEDDING_PROVIDER='openrouter'; pnpm exec tsx scripts/retrieval/smoke.ts`：真实通过，10 次 HTTP 请求全部 200、11 条输入（首个批量含两条，其余单条）、生成调用为 0，总耗时 6988.167 ms；未使用现有 GPU 服务或业务数据库，未重跑。
+- 两条批量向量均通过 2048 维与有限数值校验；三份资料的向量索引全部 active，Provider / model / dimension 均匹配。
+- 四个 Main 排名断言全部通过：企鹅问题命中 penguin.md、英文与中文事务问题命中 database.md、合成私有项目问题命中 private.md。Node 查询不返回私有 Resource 或预算内容；返回片段的 UTF-16 原文位置与资料代次准确。重开同一 SQLite 库时 active build ID 保持一致，未重新向量化，重开查询仍通过。
+- 原始报告与临时 SQLite 保留在 `C:/Users/likeW/AppData/Local/Temp/navo-retrieval-smoke-24aMox/`，报告 `result.json`；终端日志为 `%TEMP%/navo-openrouter-20261026/real.log`。HTTP 单请求计时到收到响应头，整体耗时包括解析与本地断言；未额外查询账户账单或剩余额度。
+- [PR #104](https://github.com/likeWind221/Navo/pull/104) 代码 head `4c592fb` 的 [CI run 40307062851](https://github.com/likeWind221/Navo/actions/runs/40307062851) 成功；类型检查、普通测试和进程恢复门禁通过。
+- 本次是真实 Embedding / 索引 / 检索 smoke，不是规模质量评测；hybrid 查询仅有向量证据，未生成图谱。图片、真实生成模型、两 Node 与 Main Review 不在本次授权范围，BUG-031 / BUG-032 保持原状态。
 
 ## 下一步
 
-完成完整检查后按用户选定范围执行一次真实验收，记录实际请求量、耗时和证据；任一步失败停止，不自动重跑。保留 BUG-031 / BUG-032 状态，满足各自条件才关闭。随后经 PR 与当前 head CI 收口。最终交付包含模块导读和实际边界。
+Embedding 接入及授权真实验收已完成。按仓库规则等待 PR #104 最新 head CI 成功后合并；本次后续仅收尾，不启动图谱或完整任务实验。保留 BUG-031 / BUG-032 原状态。最终交付包含模块导读、10 次真实请求结果与实际边界。
