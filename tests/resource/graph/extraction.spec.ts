@@ -21,6 +21,8 @@ describe("batched graph extraction", () => {
     const id = createToolCallId("graph-call");
     ctx.llm.registerAdapter("graph-test", { async *stream(request) {
       expect(request.tools?.[0]?.name).toBe("extract_graph");
+      expect(request).not.toHaveProperty("maxTokens");
+      expect(request).not.toHaveProperty("temperature");
       yield { type: "content-started", contentIndex: 0, contentType: "tool-call", toolCallId: id };
       yield { type: "content-delta", contentIndex: 0, contentType: "tool-call", toolCallId: id,
         toolNameDelta: "extract_graph", delta: JSON.stringify(facts([{ id: "c0", text: "body" }])) };
@@ -32,6 +34,30 @@ describe("batched graph extraction", () => {
     await extractor.extract([chunk(0)], new AbortController().signal, (_, graph) => results.push(graph));
     expect(results).toHaveLength(1);
     expect(results[0]).toMatchObject({ entities: [{ name: "Alice" }, { name: "Bob" }] });
+  });
+
+  it("uses only graph-specific generation settings and fingerprints their effective values", async () => {
+    const ctx = await context();
+    const llm = adapter();
+    ctx.llm.registerAdapter("graph-test", llm);
+    const configured = { ...config, model: { ...config.model, maxTokens: 20_000, temperature: 0.7 } };
+    const extractor = new GraphExtractor(ctx.llm, configured);
+    await extractor.extract([chunk(0)], new AbortController().signal, () => {});
+    expect(llm.requests[0]).toMatchObject({ maxTokens: 20_000, temperature: 0.7 });
+    const baseline = new GraphExtractor(ctx.llm, config);
+    expect(extractor.pipelineVersion).not.toBe(baseline.pipelineVersion);
+    expect(new GraphExtractor(ctx.llm, { ...configured, model: { ...configured.model, temperature: 0 } }).pipelineVersion)
+      .not.toBe(extractor.pipelineVersion);
+    expect(new GraphExtractor(ctx.llm, { ...configured, model: { ...configured.model, maxTokens: 8192 } }).pipelineVersion)
+      .not.toBe(extractor.pipelineVersion);
+    expect(new GraphExtractor(ctx.llm, { ...config, model: { model: config.model.model, provider: config.model.provider } }).pipelineVersion)
+      .toBe(baseline.pipelineVersion);
+  });
+
+  it.each([{ maxTokens: 0 }, { maxTokens: 1.5 }, { temperature: Number.NaN }])("rejects invalid generation settings %j", async parameters => {
+    const ctx = await context();
+    expect(() => new GraphExtractor(ctx.llm, { ...config, model: { ...config.model, ...parameters } }))
+      .toThrow("Graph generation parameters are invalid");
   });
 
   it("packs multiple chunks within the budget and rejects an oversized single chunk", async () => {

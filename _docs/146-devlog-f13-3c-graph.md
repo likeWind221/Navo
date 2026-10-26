@@ -3,6 +3,8 @@
 日期：2026-10-24；基线：master `1b61b68`；分支：`phase13-f13.3c-graph`。
 状态：✅ 实现、本机验证与 PR #92 最新 head CI 通过；2026-10-24 用户追加授权合并，已合入 master（de2bb17）。不开始 F13.3d。
 
+2026-10-26 参数契约更新：BUG-031 修复后，图谱生成参数由 GraphConfig.model 显式提供；默认不再发送 maxTokens / temperature。原 outputTokenLimit 配置只保留本地累计输出大小限制，不再代表服务端 token 上限；需要且接口支持时显式设置 model.maxTokens。构建版本记录参数变化，实施与复验边界见 [157](157-bugfix-bug-031-graph-subscription.md)。下文保留首次交付历史。
+
 ## 冻结设计
 
 1. 复用 LLMService，按 Token 预算将多个 Chunk 组批。优先工具调用结构化参数，兼容严格 JSON 文本；输出必须通过运行时 Schema 校验。关系必须包含主体、客体、类型、来源 Chunk ID。仅格式错误或输出超限允许有限重试和拆批。
