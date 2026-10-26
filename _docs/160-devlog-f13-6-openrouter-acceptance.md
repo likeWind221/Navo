@@ -54,4 +54,14 @@ F13.6 保持进行中，前端状态不变。保留本轮失败现场与 Draft P
 - 首次提交 `3368638` 的 CI run `40324804820` 普通测试有 5 项超时（shell/execution、library/flow、library/failure），没有修改相应测试或生产实现，不断言根因已确认；原日志 ci-first-failed.log 保留。后续当前提交门禁另核对，不修改超时或绕过 CI。
 - 最终相关回归 `tests/integration/library`、`tests/tools/shell/execution.spec.ts`、`tests/tools/project/goal.spec.ts`、`tests/host/project/goal.spec.ts`：6 文件 / 24 项通过，11.22 秒；日志 final-related.log。包含首轮 CI 超时所在文件；与 master 的对应生产 / 测试代码无差异，但本轮没有运行独立 master 对照，不能据此确认 CI 环境根因。
 
-最新下一步：BUG-035 已确认为验收脚本来源契约缺陷并按方案 A 修复（直读由 fetch 轨迹证明，`source_ids` 只校验可追溯性），完整本地 1056 项与 CI run `40334741718` 已通过，待另行授权的真实复验；F13.6 保持进行中，PR #105 保持 Draft，不自动开始第四轮真实任务。前端 / Bridge / Renderer 与原 Qwen 端点不在本轮验收范围。代码导读随本轮最终交付提供。
+最新下一步：BUG-035 已确认为验收脚本来源契约缺陷并按方案 A 修复（直读由 fetch 轨迹证明，`source_ids` 只校验可追溯性），完整本地 1056 项与 CI run `40334741718` 已通过；第四轮真实复验见下节。F13.6 后端链路随后通过，父项仍待正式 Renderer；PR #105 保持 Draft，不自动开始下一阶段。前端 / Bridge / Renderer 与原 Qwen 端点不在本轮验收范围。代码导读随本轮最终交付提供。
+
+## 第四轮：来源契约修复后的完整真实任务
+
+用户授权一次真实复验，仍为 48 生成 / 20 Embedding / 20 分钟、单项 Embedding 60 秒、失败即停。零推理预检通过（`%TEMP%/navo-f136-real-cGL8qS`，0 请求）。
+
+- 现场 `%TEMP%/navo-f136-real-R8uzdx`，282093ms，`outcome=passed`；生成 22 次（图谱 5）、Embedding 7 次全部 HTTP 200；模型 `openai / gpt-6-luna`，Embedding `openrouter / nvidia/nemotron-3.5-embed-1b:free` / 2048 维。
+- Main 确认与两 Node 规划、Node A 三份原文检索与读取、Review A 物化成果与定向共享、同库重开状态和请求数不变、Node B 读取交接与约束、最终 Review B 全部通过；两 Node 均为 `completing`，最终 Main Review 实际 fetch `recommendation.md` 并判 complete，`unrecovered=0`。
+- Node B 的 `source_ids` 为 comparison 与 constraints 两项，均在本回合实际 fetch；本轮未再出现额外搜索 / 上游来源声明。离线回归另行覆盖“额外支持来源可通过”和“未出现 ID 拒绝”两个分支。
+- 因此 BUG-035、BUG-031、BUG-033、BUG-034 的完整任务关闭条件均已满足；F13.6 后端完整链路通过，父项仍待正式 Renderer 验收。Bridge / Renderer、原 Qwen 端点与规模质量评测不在本轮范围。
+- 日志 `%TEMP%/navo-f136-openrouter-20261026/real-bug035.log`；证据 `evidence/result.json`、`5-node-b.json`、`6-review-b.json` 与 `navo.db` 原样保留。

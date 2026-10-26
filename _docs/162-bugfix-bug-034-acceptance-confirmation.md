@@ -1,6 +1,6 @@
 # 162：BUG-034 完整验收脚本缺少 Main 目标确认回合
 
-日期：2026-10-26。所属：后端验收脚本，优先级 P1。状态：**脚本已修正，待真实复验**。跟踪项见 [Bug 表](bug-plan.md)，运行记录见 [160](160-devlog-f13-6-openrouter-acceptance.md)。
+日期：2026-10-26。所属：后端验收脚本，优先级 P1。状态：**脚本已修正，真实复验通过，关闭**。跟踪项见 [Bug 表](bug-plan.md)，运行记录见 [160](160-devlog-f13-6-openrouter-acceptance.md)。
 
 ## 现象与复现
 
@@ -32,3 +32,7 @@
 ## 修正后的真实复验
 
 第三轮在 `%TEMP%/navo-f136-real-3yfalI` 实际通过 confirm / plan 两回合，目标未改变，创建两个依赖 Node，并完成 Node A、Main Review、定向共享、同库重开及 Node B 提交。本项脚本错误没有复现；完整任务被独立 [BUG-035](163-bugfix-bug-035-node-source-evidence.md) 阻断。类型检查与本地完整 1054 项通过，最终 head CI 待核对；未在原失败库续跑。
+
+### 完整任务真实通过，关闭
+
+2026-10-26 第四轮再次实际通过 confirm / plan 两回合：确认前 Roadmap 不存在、Node 数为 0、项目目标不变；确认后创建两个依赖 Node，并完成 Node A、Review A、同库重开、Node B、最终 Review B，`outcome=passed`。完整本地 1056 项与代码 / 记录 head `a3fb032` 的 CI run `40335277583` 均通过。真实目标确认与后续任务、本地完整检查、当前 head CI 三项关闭条件满足，BUG-034 关闭。

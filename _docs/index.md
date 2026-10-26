@@ -167,12 +167,12 @@
 - [F13.6：完整任务验收计划](154-devlog-f13-6-acceptance-plan.md)：取消独立 F13.5 引用追踪后，冻结端到端验收目标、范围、场景与验收证据分层。
 - [F13.6：验收准备与缺口盘点](155-devlog-f13-6-preparation.md)：历史验收准备、复用清单与分层边界。
 - [F13.6：后端完整链路验收](156-devlog-f13-6-backend-acceptance.md)：Draft PR #100 中的离线验收与真实失败记录，验收代码尚未随本次修复合入。
-- [BUG-031：图谱抽取与订阅模型参数不兼容](157-bugfix-bug-031-graph-subscription.md)：参数修复已合入，两份真实图谱 active；完整任务被 BUG-033 阻断，保持待验。
+- [BUG-031：图谱抽取与订阅模型参数不兼容](157-bugfix-bug-031-graph-subscription.md)：参数修复已合入，第四轮真实完整任务通过，全部成果图谱 active，关闭。
 - [BUG-032：真实验收 Embedding 端点连接失败](158-bugfix-bug-032-embedding-connectivity.md)：原 Qwen 端点未修复，用户决定搁置，后续使用 OpenRouter；保留原失败现场。
-- [F13.6：OpenRouter 后端完整验收复验](160-devlog-f13-6-openrouter-acceptance.md)：三轮按分别授权执行；最新图谱、Node A、Main Review 与重开通过，Node B 来源声明失败，完整任务未通过。
-- [BUG-033：OpenRouter Embedding 真实验收请求超时](161-bugfix-bug-033-openrouter-timeout.md)：按授权将验收时限调为 60 秒，后两轮 Embedding 全部 200；完整任务待验。
-- [BUG-034：完整验收脚本缺少 Main 目标确认回合](162-bugfix-bug-034-acceptance-confirmation.md)：补齐两回合，真实确认 / 规划及后续任务通过，待当前 head CI。
-- [BUG-035：第二 Node 的来源声明与实际原文读取不一致](163-bugfix-bug-035-node-source-evidence.md)：已确认验收判据与检查不同义，按方案 A 改为轨迹证明直读、`source_ids` 只校验可追溯性，并补三项回归；完整本地与 CI 通过，待真实复验。
+- [F13.6：OpenRouter 后端完整验收复验](160-devlog-f13-6-openrouter-acceptance.md)：四轮按分别授权执行；第四轮修复来源契约后完整通过，生成 22 次、Embedding 7 次全 200，最终 Review complete。
+- [BUG-033：OpenRouter Embedding 真实验收请求超时](161-bugfix-bug-033-openrouter-timeout.md)：验收时限调为 60 秒后第四轮 7 次 Embedding 全部 200，完整任务通过；前次超时根因未定位。
+- [BUG-034：完整验收脚本缺少 Main 目标确认回合](162-bugfix-bug-034-acceptance-confirmation.md)：补齐两回合；第四轮真实确认 / 规划与完整任务通过，本地 1056 项与 CI 通过，关闭。
+- [BUG-035：第二 Node 的来源声明与实际原文读取不一致](163-bugfix-bug-035-node-source-evidence.md)：已按方案 A 修复来源契约并补三项回归；第四轮真实运行来源声明与 fetch 轨迹一致，最终 Review 与完整任务通过，关闭。
 - [F13.4a：统一 Turn Context](152-devlog-f13-4a-turn-context.md)：逐请求读取权威状态、临时上下文注入、Reminder 生命周期与 F12 恢复；过渡目录已由 F13.4c 按需资源工具替代。
 
 - [F13 项目资料库与任务检索规划](124-devlog-f13-plan.md)：原始产品路线与决策记录；当前阶段状态以 [backend-plan.md](backend-plan.md) 为准。2026-10-26 取消独立 F13.5，后端当前进入 F13.6 完整任务验收。

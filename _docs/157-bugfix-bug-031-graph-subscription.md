@@ -1,6 +1,6 @@
 # 157：BUG-031 图谱抽取与订阅模型参数不兼容
 
-日期：2026-10-26。所属：后端；优先级 P1（阻断所选模型路径）。当前状态：**参数组装修复已合入 PR #102，两份真实图谱成功，完整任务待验**。跟踪项见 [Bug 表](bug-plan.md)。首次失败与当时未修复的事实保留如下，本次修复追加在后文。
+日期：2026-10-26。所属：后端；优先级 P1（阻断所选模型路径）。当前状态：**参数组装修复已合入 PR #102，完整真实任务通过，关闭**。跟踪项见 [Bug 表](bug-plan.md)。首次失败与当时未修复的事实保留如下，本次修复追加在后文。
 
 ## 现象与复现
 
@@ -111,3 +111,7 @@ graph: {
 2026-10-26 用户授权切换 OpenRouter Embedding 完整验收，详见 [160](160-devlog-f13-6-openrouter-acceptance.md)。三份资料中，两份向量索引与对应真实图谱均 active，图谱 next_ordinal=1，pipeline 中 maxTokens / temperature 均 null，旧参数错误未复现。第三份 Embedding 触及 15 秒超时，完整任务在 Main 规划前停止，登记 [BUG-033](161-bugfix-bug-033-openrouter-timeout.md)。因此现已获得真实图谱成功证据，但完整两 Node / Main Review 关闭条件仍未满足，本项保持未勾选。原始现场 `%TEMP%/navo-f136-real-1c6qU9`；没有重跑。
 
 用户之后分别授权调整单次时限为 60 秒复验，以及修正确认流程后再次复验。最新第三轮三份原文及 comparison.md 的索引与真实图谱全部 active，Node A 搜索返回真实图谱来源路径，Main 首次 Review 与同库重开通过；原参数错误未复现。完整任务停在 Node B 来源声明校验，属于独立 [BUG-035](163-bugfix-bug-035-node-source-evidence.md)，最终 Main Review 未执行。BUG-031 的具体参数修复已获得真实成功证据，既有完整任务关闭条件仍未全部满足。
+
+### 完整任务真实通过，关闭
+
+2026-10-26 第四轮在来源契约修复后执行，预算仍为 48 生成 / 20 Embedding / 20 分钟。真实运行 `%TEMP%/navo-f136-real-R8uzdx` 完成两 Node、Main Review、同库重开与最终 Review，`outcome=passed`；生成 22 次（图谱 5 次），Embedding 7 次全部 HTTP 200。三份源资料、comparison.md 与 recommendation.md 的索引和图谱均 active，旧固定参数错误未复现。因此“真实图谱 / 多 Node / Main Review”关闭条件满足，BUG-031 关闭；本轮不覆盖 Bridge / Renderer 或图谱质量评测。

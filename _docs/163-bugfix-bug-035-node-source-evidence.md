@@ -1,6 +1,6 @@
 # 163：BUG-035 第二 Node 的来源声明与实际原文读取不一致
 
-日期：2026-10-26。所属：后端验收脚本 / 来源契约，优先级 P1。状态：**已修复，待真实复验**。跟踪项见 [Bug 表](bug-plan.md)，完整运行记录见 [160](160-devlog-f13-6-openrouter-acceptance.md)。
+日期：2026-10-26。所属：后端验收脚本 / 来源契约，优先级 P1。状态：**已修复，真实复验通过**。跟踪项见 [Bug 表](bug-plan.md)，完整运行记录见 [160](160-devlog-f13-6-openrouter-acceptance.md)。
 
 ## 现象与复现
 
@@ -73,4 +73,14 @@
 - `tests/integration/library`：3 文件 / 11 项通过，包含新增 3 项。
 - 完整本地：165 文件 / 1056 项全部通过，366.95 秒（bundled Node v24.21.0，`NAVO_TEST_MODE=all`，`--maxWorkers=4`）；日志 `%TEMP%/navo-bug035-full.log`。
 - 本地提交 `35042b6` 已推送；CI run `40334741718` 通过（2m49s，含 typecheck、normal tests、crash recovery tests）。
-- 未执行真实推理、未重跑真实验收、未修改产品代码。BUG-035 仍保持未勾选，需真实运行中 Node B 来源校验通过并完成最终 Main Review 后再关闭。
+- 未执行真实推理、未重跑真实验收、未修改产品代码。此时 BUG-035 保持未勾选；后续真实复验见下节。
+
+## 2026-10-26：真实复验通过
+
+用户授权一次真实复验，预算 48 生成 / 20 Embedding / 20 分钟，单项 Embedding 60 秒；生成使用 `openai / gpt-6-luna` 订阅路径，Embedding 使用 OpenRouter `nvidia/nemotron-3.5-embed-1b:free` / 2048 维。零推理预检通过（`%TEMP%/navo-f136-real-cGL8qS`，0 请求）。
+
+- 一次运行，现场 `%TEMP%/navo-f136-real-R8uzdx`，282093ms，`outcome=passed`；生成 22 次（其中图谱 5 次），Embedding 7 次全部 HTTP 200（3161 / 664 / 909 / 1971 / 1739 / 2458 / 1750ms）。
+- 三份源资料与 comparison.md、recommendation.md 的索引 / 图谱 active；Main 确认与规划、Node A 读取三份原文、Review A 定向共享、同库重开、Node B、最终 Review B 全部通过；两 Node 均为 `completing`，`lastReview=complete`。
+- Node B 实际 fetch comparison `7c32c164-0b89-4d11-84b0-60c14b51df8e` 与 constraints `d35c8c52-cacc-41d5-ada0-4c8b792ab6c9`，提交的 `source_ids` 恰好是这两项；`criteria.note` 与工具轨迹一致。最终 Review B 实际 fetch 物化成果 `2ddcd94c-fc5f-4a5d-b7bd-77b43ed0867d`，确认两份原文与答案数值；`unrecovered=0`。
+- 本轮真实输出没有再次列入搜索 / 上游来源，因此未触发“额外支持来源”分支；该分支由新增离线回归覆盖。真实输出满足判据，不能替代离线回归对另一分支的证明。
+- 关闭条件满足：必读来源实际 fetch、来源声明可追溯、最终 Main Review 与完整任务通过。BUG-035 关闭；不把 Bridge / Renderer、原 Qwen 端点或规模质量评测视为已验证。
