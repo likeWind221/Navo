@@ -5,6 +5,14 @@ import type { GraphBuildRecord } from "../../storage/graph.js";
 import type { ResourceIndexBuildRecord } from "../../storage/indexing.js";
 import { CHUNKER_VERSION } from "../index/chunker.js";
 
+export type GraphResourceStatus = "absent" | "building" | "active" | "failed" | "stale";
+
+export interface GraphResourceDescription {
+  readonly status: GraphResourceStatus;
+  readonly readable: boolean;
+  readonly errorCode: string | null;
+}
+
 export class GraphStore {
   constructor(private readonly ctx: Context, private readonly pipelineVersion: string | undefined) {}
 
@@ -21,6 +29,22 @@ export class GraphStore {
     return (this.pipelineVersion === undefined || build.pipeline_version === this.pipelineVersion)
       && this.sources().some(source => source.build_id === build.source_build_id && source.project_id === build.project_id
         && source.resource_id === build.resource_id && source.source_asset_generation === build.source_asset_generation);
+  }
+
+  describe(projectId: string, resourceId: string): GraphResourceDescription {
+    const allBuilds = this.ctx.storage.atomic(tx => tx.listGraphBuilds()).filter(build =>
+      build.project_id === projectId && build.resource_id === resourceId);
+    const builds = allBuilds.filter(build => build.status !== "superseded");
+    const current = builds.filter(build => this.current(build));
+    const active = current.find(build => build.status === "active");
+    if (active !== undefined) return { status: "active", readable: true, errorCode: null };
+    const building = current.find(build => build.status === "building");
+    if (building !== undefined) return { status: "building", readable: false, errorCode: null };
+    const failed = current.find(build => build.status === "failed");
+    if (failed !== undefined) return { status: "failed", readable: false, errorCode: failed.error_code };
+    return allBuilds.length === 0
+      ? { status: "absent", readable: false, errorCode: null }
+      : { status: "stale", readable: false, errorCode: null };
   }
 
   reconcile(): void {

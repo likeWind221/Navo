@@ -413,3 +413,5 @@ F14.2a 已随 [PR #108](https://github.com/likeWind221/Navo/pull/108) 合入 mas
 F14.2b 已随 [PR #109](https://github.com/likeWind221/Navo/pull/109) 合入 master（c7999b3），本机完整 1076 项、正式 Host 零推理重处理与最终 head CI 通过，见 [167](167-devlog-f14-2b-content.md)。后续 c 的结果见下方交接。
 
 F14.2c 已随 [PR #110](https://github.com/likeWind221/Navo/pull/110) 合入 master（124998d），本机完整 1080 项、正式 Host 零推理接口检查与当前 head CI 通过，见 [171](171-devlog-f14-2c-cancel.md)。F14.2 公共交接父项完成；前端 F7.3 尚未消费。F14.3a 已随 [PR #113](https://github.com/likeWind221/Navo/pull/113) 合入 master（11984aa），本机完整1089项、正式Host零推理目录查询与重启检查及当前head CI全部通过，见 [172](172-devlog-f14-3a-query.md)。F14.3b已随 [PR #114](https://github.com/likeWind221/Navo/pull/114) 合入（02a9951），本机完整1104项、正式Host受控/持久图谱读取与当前head CI通过，见 [173](173-devlog-f14-3b-search.md)。当前下一步c正式Host显式图谱配置；a/b/c全部完成后才收口F14.3。
+
+F14.3c 已完成本机类型检查、完整1112项与正式Host受控验收，见 [174](174-devlog-f14-3c-graph-host.md)。当前等待独立PR的head CI，暂不勾选F14.3父项或c；后续接续F14.4，前端F7.4另行消费。

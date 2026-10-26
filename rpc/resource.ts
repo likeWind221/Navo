@@ -6,6 +6,8 @@ export { resourceContentRetryMethod } from "./resource/content.js";
 export { resourceContentCancelMethod } from "./resource/content.js";
 export { resourceQueryMethod } from "./resource/query.js";
 export { resourceSearchMethod } from "./resource/search.js";
+export { resourceGraphStatusMethod } from "./resource/graph.js";
+export type { ResourceGraphStatusInputV1, ResourceGraphStatusResultV1, ResourceGraphStatusItemV1 } from "./resource/graph.js";
 export type { ResourceSearchInputV1, ResourceSearchResultV1 } from "./resource/search.js";
 export type { ResourceQueryInputV1, ResourceQueryResultV1, ResourceQueryItemV1, ResourceIndexStatusV1 } from "./resource/query.js";
 export type {

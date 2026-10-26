@@ -23,6 +23,18 @@ export interface KernelHostStorageConfig {
 
 export type KernelHostEmbeddingConfig = EmbeddingConfig;
 
+export type KernelHostGraphAdapterConfig =
+  | { readonly provider: "qwen"; readonly baseUrl: string; readonly apiKey?: string; readonly enableThinking: boolean }
+  | { readonly provider: "openai"; readonly home: string; readonly accountId?: string };
+
+export interface KernelHostGraphConfig {
+  readonly model: { readonly provider: `graph:${"qwen" | "openai"}`; readonly model: string; readonly maxTokens?: number; readonly temperature?: number };
+  readonly compatibilityProvider: "qwen" | "openai";
+  readonly inputTokenBudget: number;
+  readonly outputTokenLimit: number;
+  readonly adapter: KernelHostGraphAdapterConfig;
+}
+
 export type KernelHostConfig = KernelHostCommonConfig & (
   | { readonly provider: "qwen"; readonly adapter: QwenChatAdapterConfig }
   | { readonly provider: "openai"; readonly adapter: { readonly home: string; readonly accountId?: string } }
@@ -34,6 +46,7 @@ interface KernelHostCommonConfig {
   readonly search?: KernelHostSearchConfig;
   readonly file?: KernelHostFileConfig;
   readonly embedding?: KernelHostEmbeddingConfig;
+  readonly graph?: KernelHostGraphConfig;
 }
 
 const DEFAULT_BASE_URL = "http://192.168.99.2:8090/v1";
@@ -41,6 +54,9 @@ const DEFAULT_MODEL = "qwen3.8-27b";
 const DEFAULT_MAX_TOKENS = 8_192;
 const MAX_OUTPUT_TOKENS = 65_536;
 const MAX_CONTEXT_TOKENS = 10_000_000;
+const DEFAULT_GRAPH_MAX_TOKENS = 4_096;
+const DEFAULT_GRAPH_INPUT_TOKENS = 8_192;
+const DEFAULT_GRAPH_OUTPUT_TOKENS = 4_096;
 
 /** Resolve trusted process environment once so credentials stay inside Host. */
 export function resolveKernelHostConfig(
@@ -95,19 +111,8 @@ export function resolveKernelHostConfig(
     shellJobDir: join(home, "cache", "shell"),
   });
   const storage = Object.freeze({ path: join(home, "navo.db") });
-  return Object.freeze({
+  const common = {
     storage,
-    ...(provider === "openai" ? {
-      provider,
-      adapter: Object.freeze({ home, ...(env.LLM_ACCOUNT_ID === undefined ? {} : { accountId: env.LLM_ACCOUNT_ID.trim() }) }),
-    } : {
-      provider,
-      adapter: Object.freeze({
-        baseUrl: env.LLM_BASE_URL?.trim() || DEFAULT_BASE_URL,
-        enableThinking: optionalBoolean("LLM_ENABLE_THINKING", env.LLM_ENABLE_THINKING, true),
-        ...(apiKey === undefined ? {} : { apiKey }),
-      }),
-    }),
     agent: Object.freeze({
       model: Object.freeze(modelConfig),
       systemPrompt: "You are Navo, a concise and helpful AI agent.",
@@ -123,7 +128,80 @@ export function resolveKernelHostConfig(
     ...(search === undefined ? {} : { search }),
     ...(embedding === undefined ? {} : { embedding }),
     file,
-  });
+  };
+  if (provider === "qwen") {
+    const mainAdapter = Object.freeze({
+      baseUrl: env.LLM_BASE_URL?.trim() || DEFAULT_BASE_URL,
+      enableThinking: optionalBoolean("LLM_ENABLE_THINKING", env.LLM_ENABLE_THINKING, true),
+      ...(apiKey === undefined ? {} : { apiKey }),
+    });
+    const graph = resolveGraphConfig(env, "qwen", mainAdapter, home);
+    return Object.freeze({ ...common, provider, adapter: mainAdapter, ...(graph === undefined ? {} : { graph }) });
+  }
+  const mainAdapter = Object.freeze({ home, ...(env.LLM_ACCOUNT_ID === undefined ? {} : { accountId: env.LLM_ACCOUNT_ID.trim() }) });
+  const graph = resolveGraphConfig(env, "openai", mainAdapter, home);
+  return Object.freeze({ ...common, provider, adapter: mainAdapter, ...(graph === undefined ? {} : { graph }) });
+}
+
+function resolveGraphConfig(
+  env: NodeJS.ProcessEnv,
+  mainProvider: "qwen" | "openai",
+  mainAdapter: Extract<KernelHostConfig, { provider: "qwen" | "openai" }>["adapter"],
+  home: string,
+): KernelHostGraphConfig | undefined {
+  const providerValue = env.GRAPH_PROVIDER?.trim();
+  const modelValue = env.GRAPH_MODEL?.trim();
+  if (providerValue === undefined && modelValue === undefined) return undefined;
+  if (providerValue === undefined || modelValue === undefined) throw new TypeError("GRAPH_PROVIDER and GRAPH_MODEL must be provided together.");
+  if (providerValue !== "qwen" && providerValue !== "openai") throw new TypeError("GRAPH_PROVIDER must be 'qwen' or 'openai'.");
+  if (!modelValue || modelValue.length > 256 || /[\r\n]/.test(modelValue)) throw new TypeError("GRAPH_MODEL must be a non-empty model name of at most 256 characters.");
+  const inputTokenBudget = boundedIntegerRange("GRAPH_INPUT_TOKEN_BUDGET", env.GRAPH_INPUT_TOKEN_BUDGET, DEFAULT_GRAPH_INPUT_TOKENS, 2_048, 131_072);
+  const outputTokenLimit = boundedIntegerRange("GRAPH_OUTPUT_TOKEN_LIMIT", env.GRAPH_OUTPUT_TOKEN_LIMIT, DEFAULT_GRAPH_OUTPUT_TOKENS, 256, 16_384);
+  const model = {
+    provider: `graph:${providerValue}` as `graph:${"qwen" | "openai"}`,
+    model: modelValue,
+    ...(providerValue === "qwen" ? { maxTokens: env.GRAPH_MAX_TOKENS === undefined
+      ? Math.min(DEFAULT_GRAPH_MAX_TOKENS, outputTokenLimit)
+      : boundedIntegerRange("GRAPH_MAX_TOKENS", env.GRAPH_MAX_TOKENS, DEFAULT_GRAPH_MAX_TOKENS, 1, outputTokenLimit) } : {}),
+    ...(providerValue === "qwen" && env.GRAPH_TEMPERATURE !== undefined ? { temperature: boundedTemperature("GRAPH_TEMPERATURE", env.GRAPH_TEMPERATURE) } : {}),
+  };
+  if (providerValue === "openai") {
+    for (const name of ["GRAPH_BASE_URL", "GRAPH_API_KEY", "GRAPH_ENABLE_THINKING", "GRAPH_MAX_TOKENS", "GRAPH_TEMPERATURE"]) {
+      if (env[name] !== undefined) throw new TypeError(`${name} is not supported by the ChatGPT subscription Graph provider.`);
+    }
+    const accountId = env.GRAPH_ACCOUNT_ID === undefined ? (mainProvider === "openai" && "accountId" in mainAdapter ? mainAdapter.accountId : undefined) : env.GRAPH_ACCOUNT_ID.trim();
+    if (env.GRAPH_ACCOUNT_ID !== undefined && !accountId) throw new TypeError("GRAPH_ACCOUNT_ID must be non-empty when provided.");
+    return Object.freeze({ model, compatibilityProvider: providerValue, inputTokenBudget, outputTokenLimit,
+      adapter: Object.freeze({ provider: "openai" as const, home, ...(accountId === undefined ? {} : { accountId }) }) });
+  }
+  if (env.GRAPH_ACCOUNT_ID !== undefined) throw new TypeError("GRAPH_ACCOUNT_ID is only supported by the ChatGPT subscription Graph provider.");
+  const mainQwen = mainProvider === "qwen" && "baseUrl" in mainAdapter ? mainAdapter : undefined;
+  const explicitBaseUrl = env.GRAPH_BASE_URL?.trim();
+  const baseUrl = explicitBaseUrl ?? mainQwen?.baseUrl;
+  if (baseUrl === undefined) throw new TypeError("GRAPH_BASE_URL is required for a Qwen Graph when Main does not use Qwen.");
+  const normalizedBaseUrl = normalizeHttpUrl("GRAPH_BASE_URL", baseUrl);
+  const sameEndpoint = mainQwen !== undefined && normalizeHttpUrl("LLM_BASE_URL", mainQwen.baseUrl) === normalizedBaseUrl;
+  const graphApiKey = env.GRAPH_API_KEY ?? (sameEndpoint ? mainQwen?.apiKey : undefined);
+  if (graphApiKey !== undefined && (graphApiKey.length === 0 || /[\r\n]/.test(graphApiKey))) throw new TypeError("GRAPH_API_KEY must be non-empty and must not contain newlines.");
+  const enableThinking = env.GRAPH_ENABLE_THINKING === undefined
+    ? sameEndpoint && mainQwen !== undefined ? mainQwen.enableThinking ?? false : false
+    : optionalBoolean("GRAPH_ENABLE_THINKING", env.GRAPH_ENABLE_THINKING, false);
+  return Object.freeze({ model, compatibilityProvider: providerValue, inputTokenBudget, outputTokenLimit,
+    adapter: Object.freeze({ provider: "qwen" as const, baseUrl: normalizedBaseUrl, enableThinking,
+      ...(graphApiKey === undefined ? {} : { apiKey: graphApiKey }) }) });
+}
+
+function boundedTemperature(name: string, value: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 2) throw new TypeError(`${name} must be a number from 0 through 2.`);
+  return parsed;
+}
+
+function normalizeHttpUrl(name: string, value: string): string {
+  let url: URL;
+  try { url = new URL(value); } catch (cause: unknown) { throw new TypeError(`${name} must be an absolute HTTP(S) URL.`, { cause }); }
+  if ((url.protocol !== "http:" && url.protocol !== "https:") || url.username || url.password) throw new TypeError(`${name} must be an HTTP(S) URL without credentials.`);
+  return url.href.replace(/\/$/, "");
 }
 
 function boundedInteger(
@@ -135,6 +213,20 @@ function boundedInteger(
   const parsed = value === undefined ? fallback : Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > maximum) {
     throw new TypeError(`${name} must be an integer from 1 through ${maximum}.`);
+  }
+  return parsed;
+}
+
+function boundedIntegerRange(
+  name: string,
+  value: string | undefined,
+  fallback: number,
+  minimum: number,
+  maximum: number,
+): number {
+  const parsed = value === undefined ? fallback : Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < minimum || parsed > maximum) {
+    throw new TypeError(`${name} must be an integer from ${minimum} through ${maximum}.`);
   }
   return parsed;
 }

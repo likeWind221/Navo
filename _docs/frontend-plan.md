@@ -439,3 +439,5 @@ F5.4 当前等待 BUG-036 的可用认证路径，真实门禁保持；本轮独
 - F5.4 Draft PR #111 最新 head b3ab928 已删除未使用的独立follow取消通道，统一沿用已接入的operation取消；类型检查、前端176项、构建与CI 40368700048通过。真实Main的AUTH403门禁仍未通过，不合并，不自动开始F5.5。
 
 - 2026-10-27 后端F14.3b已随 [PR #114](https://github.com/likeWind221/Navo/pull/114) 合入（02a9951），见 [173](173-devlog-f14-3b-search.md)：用户问题检索按文件归并、提供片段与位置、翻页不重复Embedding，变化与过期可辨识；本机1104项、正式Host受控及已有持久图谱读取、当前head CI通过。交由 `backend-plan.md` 实施的此依赖已交付；F7.4的Bridge/页面与c正式Host显式图谱抽取配置尚未完成。
+
+- 2026-10-27 后端F14.3c已完成本机1112项和正式Host受控配置/恢复验收，待独立PR当前head CI收口，见 [174](174-devlog-f14-3c-graph-host.md)。此交接由backend-plan.md实施；F7.4 Bridge和正式搜索页面尚未交付，取消的图谱浏览、正文预览及独立引用不恢复。
