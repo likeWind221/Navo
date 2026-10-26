@@ -25,6 +25,7 @@ export class ResourceIndexStore {
       }
       const build = buildRecord(content, chunks.length, provider);
       tx.createIndexBuild(build, chunks.map(chunk => chunkRecord(build.build_id, chunk)));
+      tx.bumpCatalogVersion(content.project_id);
       return build;
     });
   }
@@ -33,7 +34,7 @@ export class ResourceIndexStore {
     return this.storage.atomic(tx => tx.listIndexBuilds("building").filter(build => {
       const content = tx.getResourceContent(build.project_id, build.resource_id);
       if (content !== undefined && compatible(build, content, provider)) return true;
-      tx.supersedeIndexBuild(build.build_id);
+      if (tx.supersedeIndexBuild(build.build_id)) tx.bumpCatalogVersion(build.project_id);
       return false;
     }));
   }
@@ -55,15 +56,36 @@ export class ResourceIndexStore {
   }
 
   publish(buildId: string): boolean {
-    return this.storage.atomic(tx => tx.publishIndexBuild(buildId));
+    return this.storage.atomic(tx => {
+      const changed = tx.publishIndexBuild(buildId);
+      if (changed) {
+        const build = tx.getIndexBuild(buildId);
+        if (build !== undefined) tx.bumpCatalogVersion(build.project_id);
+      }
+      return changed;
+    });
   }
 
   fail(buildId: string, code: string, message: string): boolean {
-    return this.storage.atomic(tx => tx.failIndexBuild(buildId, code, message));
+    return this.storage.atomic(tx => {
+      const changed = tx.failIndexBuild(buildId, code, message);
+      if (changed) {
+        const build = tx.getIndexBuild(buildId);
+        if (build !== undefined) tx.bumpCatalogVersion(build.project_id);
+      }
+      return changed;
+    });
   }
 
   supersede(buildId: string): boolean {
-    return this.storage.atomic(tx => tx.supersedeIndexBuild(buildId));
+    return this.storage.atomic(tx => {
+      const changed = tx.supersedeIndexBuild(buildId);
+      if (changed) {
+        const build = tx.getIndexBuild(buildId);
+        if (build !== undefined) tx.bumpCatalogVersion(build.project_id);
+      }
+      return changed;
+    });
   }
 
   validateStored(build: ResourceIndexBuildRecord): void {

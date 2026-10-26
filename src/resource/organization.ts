@@ -67,7 +67,10 @@ export class ResourceOrganization {
     const occupied = this.occupied(projectId);
     const candidate = numberedFolderPath(normalized, occupied);
     const now = new Date().toISOString();
-    this.ctx.storage.atomic(tx => tx.insertFolder({ projectId, path: candidate, createdAt: now, updatedAt: now }));
+    this.ctx.storage.atomic(tx => {
+      tx.insertFolder({ projectId, path: candidate, createdAt: now, updatedAt: now });
+      tx.bumpCatalogVersion(projectId);
+    });
     this.ctx.storage.write(() => {}, () => this.ctx.emit("project/changed", projectId));
     return { path: candidate, explicit: true };
   }
@@ -127,7 +130,10 @@ export class ResourceOrganization {
       for (const folder of movedFolders) tx.insertFolder({ ...folder, path: change(folder.path), updatedAt: now });
     };
     if (events.length) this.store.appendMany(events, persist);
-    else this.ctx.storage.atomic(persist);
+    else this.ctx.storage.atomic(tx => {
+      persist(tx);
+      tx.bumpCatalogVersion(projectId);
+    });
     if (events.length === 0) this.ctx.storage.write(() => {}, () => this.ctx.emit("project/changed", projectId));
     return { path: target, explicit: movedFolders.some(folder => libraryPathKey(folder.path) === libraryPathKey(source.path)) };
   }
@@ -158,7 +164,10 @@ export class ResourceOrganization {
     }
     if (failed.length) return { status: "partial", deleted, failed };
     const folders = this.ctx.storage.loadFolders(input.projectId).filter(folder => insideFolder(folder.path, source.path));
-    this.ctx.storage.atomic(tx => { for (const folder of folders) tx.deleteFolder(input.projectId, folder.path); });
+    this.ctx.storage.atomic(tx => {
+      for (const folder of folders) tx.deleteFolder(input.projectId, folder.path);
+      tx.bumpCatalogVersion(input.projectId);
+    });
     this.ctx.storage.write(() => {}, () => this.ctx.emit("project/changed", input.projectId));
     return { status: "deleted", deleted, failed };
   }

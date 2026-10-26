@@ -25,4 +25,5 @@ export type ResourceErrorCode =
   | "resource-not-owned"
   | "resource-content-unavailable"
   | "folder-unavailable"
-  | "folder-conflict";
+  | "folder-conflict"
+  | "query-changed";

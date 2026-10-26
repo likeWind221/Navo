@@ -85,6 +85,7 @@ export class ResourceStore {
     }
     const results = frozenEvents.map(event => staged.get(event.resourceId)!);
     this.storage.atomic(tx => {
+      tx.bumpCatalogVersion(projectId);
       persist?.(tx);
       this.storage.write(inner => inner.appendEvents({ domain: "resource", ownerId: projectId,
         projectId, firstSeq: history.length + 1, events: frozenEvents }), () => {

@@ -4,6 +4,8 @@ export { resourceViewCopyMethod } from "./resource/view.js";
 export type { ResourceViewCopyInputV1, ResourceViewCopyV1 } from "./resource/view.js";
 export { resourceContentRetryMethod } from "./resource/content.js";
 export { resourceContentCancelMethod } from "./resource/content.js";
+export { resourceQueryMethod } from "./resource/query.js";
+export type { ResourceQueryInputV1, ResourceQueryResultV1, ResourceQueryItemV1, ResourceIndexStatusV1 } from "./resource/query.js";
 export type {
   ResourceContentCancelInputV1,
   ResourceContentCancelResultV1,
@@ -92,6 +94,7 @@ export type ResourceFailureCode =
   | "path-conflict"
   | "revision-conflict"
   | "operation-conflict"
+  | "query-changed"
   | "internal";
 
 export interface ResourceLibraryInputV1 {

@@ -9,6 +9,7 @@ import { ResourceError } from "./errors.js";
 import { normalizeLibraryPath } from "./library.js";
 import { requireActiveResourceProject } from "./validation.js";
 import type { ResourceViewCopy } from "./view.js";
+import { queryUserResources, type UserResourceQueryInput, type UserResourceQueryResult } from "./user/query.js";
 
 export interface UserImportInput {
   readonly projectId: ProjectId;
@@ -112,6 +113,10 @@ export class UserResourceService extends Service {
     const { directories, resources } = this.ctx.resources.browseUserLibrary(projectId, path);
     return { directories, resources: resources.map(resource => ({ resource,
       contentStatus: this.ctx.content.status(projectId, resource.id)?.status ?? null })) };
+  }
+
+  query(input: UserResourceQueryInput, signal: AbortSignal): UserResourceQueryResult {
+    return queryUserResources(this.ctx, input, signal);
   }
 
   createFolder(projectId: ProjectId, path: string) {
