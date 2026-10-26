@@ -427,3 +427,5 @@ F11.3 后端公共契约的前端独立验收已通过：前端 typecheck/test/b
 - 2026-10-27 后端 F14.2b 失败正文显式重处理已随 [PR #109](https://github.com/likeWind221/Navo/pull/109) 合入，见 [167](167-devlog-f14-2b-content.md)：按当前版本接受 failed 资料重新排队，accepted / pending 与最终正文结果分开；交由 `backend-plan.md` 实施的此依赖已交付。F7.3 页面与按钮尚未消费，目标处理取消仍待 F14.2c，不标记前端完成。
 
 - 2026-10-27 后端 F14.2c 定向正文取消已随 [PR #110](https://github.com/likeWind221/Navo/pull/110) 合入，见 [171](171-devlog-f14-2c-cancel.md)：当前版本 / 代次匹配才请求取消，requested 与最终 failed/cancelled 分开。至此查看副本、失败重处理和定向取消 Root 公共能力已交付（交由 `backend-plan.md` 实施）；F7.3 的 Bridge、可信拖拽、默认应用打开及页面消费未完成。当前 F5.4 保留为 [Draft PR #111](https://github.com/likeWind221/Navo/pull/111)，受控与离线验收通过，BUG-036 真实认证门禁未通过，不因 CI 成功自动合并。
+
+- BUG-037 独立主线复现并完成最小窄屏定位修复：窗口外宽547px / Renderer531px时会话面板由2px恢复为350px，原生鼠标交互、前端165项与根1080项通过，当前 head CI / 合并待核对，见 [169](169-bugfix-bug-037-panel.md)。此项恢复已有F5.3布局，不接入F5.4 Main新回合，不替代BUG-036真实认证门禁。
