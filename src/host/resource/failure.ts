@@ -15,6 +15,8 @@ const codes: Partial<Record<ResourceErrorCode, ResourceFailureCode>> = {
   "operation-result-stale": "operation-conflict",
   "content-state-conflict": "operation-conflict",
   "query-changed": "query-changed",
+  "search-expired": "search-expired",
+  "search-changed": "search-changed",
   "invalid-resource": "invalid-request",
   "invalid-access": "invalid-request",
 };

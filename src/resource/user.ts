@@ -10,6 +10,7 @@ import { normalizeLibraryPath } from "./library.js";
 import { requireActiveResourceProject } from "./validation.js";
 import type { ResourceViewCopy } from "./view.js";
 import { queryUserResources, type UserResourceQueryInput, type UserResourceQueryResult } from "./user/query.js";
+import type { UserSearchInput, UserSearchResult } from "./user/search.js";
 
 export interface UserImportInput {
   readonly projectId: ProjectId;
@@ -109,6 +110,10 @@ export class UserResourceService extends Service {
     return this.ctx.resources.listLibraryFolders(projectId);
   }
 
+  listForSearch(projectId: ProjectId) {
+    return this.ctx.resources.listByProject(projectId);
+  }
+
   browse(projectId: ProjectId, path: string | null = null) {
     const { directories, resources } = this.ctx.resources.browseUserLibrary(projectId, path);
     return { directories, resources: resources.map(resource => ({ resource,
@@ -117,6 +122,10 @@ export class UserResourceService extends Service {
 
   query(input: UserResourceQueryInput, signal: AbortSignal): UserResourceQueryResult {
     return queryUserResources(this.ctx, input, signal);
+  }
+
+  search(input: UserSearchInput, signal: AbortSignal): Promise<UserSearchResult> {
+    return this.ctx.userResourceSearch.search(input, signal);
   }
 
   createFolder(projectId: ProjectId, path: string) {

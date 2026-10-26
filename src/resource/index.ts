@@ -89,6 +89,8 @@ export class ResourceIndexProcessor extends Service {
     ]);
   }
 
+  isConfigured(): boolean { return this.provider !== undefined; }
+
   async idle(): Promise<void> {
     while (this.scheduled !== undefined || this.running !== undefined) {
       if (this.running !== undefined) await this.running;

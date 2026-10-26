@@ -5,7 +5,8 @@ import type { ResourcePrincipal } from "./model.js";
 import { GraphExtractor, type GraphConfig } from "./graph/extraction.js";
 import { GraphError } from "./graph/errors.js";
 import { GraphStore } from "./graph/store.js";
-import { readGraph, type GraphSnapshot } from "./graph/read.js";
+import { readGraph, readGraphForResources, type GraphSnapshot } from "./graph/read.js";
+import type { ProjectResource } from "./model.js";
 
 export class ResourceGraph extends Service {
   static inject = ["storage", "resources", "content", "llm"];
@@ -58,6 +59,14 @@ export class ResourceGraph extends Service {
 
   read(projectId: ProjectId, viewer: ResourcePrincipal, resourceIds?: readonly ResourceId[]): GraphSnapshot {
     return readGraph(this.ctx, projectId, viewer, resourceIds);
+  }
+
+  readUser(projectId: ProjectId, scope: () => readonly ProjectResource[], resourceIds?: readonly ResourceId[]): GraphSnapshot {
+    return readGraphForResources(this.ctx, projectId, scope(), resourceIds);
+  }
+
+  configurationKey(): string {
+    return JSON.stringify(this.extractor === undefined ? null : this.extractor.pipelineVersion);
   }
 
   async idle(): Promise<void> {

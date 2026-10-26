@@ -1,7 +1,7 @@
 import { Service, type Context } from "cordis";
 import type { EmbeddingProvider } from "../embedding/types.js";
 import type { ProjectId, ResourceId } from "../brand/ids.js";
-import type { ResourcePrincipal } from "./model.js";
+import type { ProjectResource, ResourcePrincipal } from "./model.js";
 import type { ActiveChunkRecord } from "../storage/indexing.js";
 import { ResourceIndexError } from "./index/errors.js";
 import { decodeVector, dot, encodeVector, VECTOR_ENCODING_VERSION } from "./index/vector.js";
@@ -14,6 +14,10 @@ export interface IndexSearchRequest {
   readonly topK?: number;
   readonly resourceIds?: readonly ResourceId[];
   readonly signal?: AbortSignal;
+}
+
+interface UserIndexSearchRequest extends Omit<IndexSearchRequest, "viewer"> {
+  readonly userScope: () => readonly ProjectResource[];
 }
 
 export interface IndexSearchResult {
@@ -45,6 +49,14 @@ export class IndexSearch extends Service {
   }
 
   async search(request: IndexSearchRequest): Promise<readonly IndexSearchResult[]> {
+    return this.searchScoped(request, () => this.ctx.resources.listVisible(request.projectId, request.viewer));
+  }
+
+  async searchUser(request: UserIndexSearchRequest): Promise<readonly IndexSearchResult[]> {
+    return this.searchScoped(request, request.userScope);
+  }
+
+  private async searchScoped(request: Omit<IndexSearchRequest, "viewer">, scope: () => readonly ProjectResource[]): Promise<readonly IndexSearchResult[]> {
     const provider = this.provider;
     if (provider === undefined) throw new ResourceIndexError("embedding-unconfigured", "Embedding is not configured.");
     const query = request.query.trim();
@@ -52,7 +64,7 @@ export class IndexSearch extends Service {
     if (!query || !Number.isSafeInteger(topK) || topK < 1 || topK > 100) {
       throw new ResourceIndexError("invalid-query", "Semantic search requires a query and topK from 1 through 100.");
     }
-    const visible = this.ctx.resources.listVisible(request.projectId, request.viewer);
+    const visible = scope();
     const requested = request.resourceIds === undefined ? undefined : new Set(request.resourceIds);
     const resources = visible.filter(resource => requested === undefined || requested.has(resource.id));
     if (resources.length === 0) return Object.freeze([]);
@@ -77,8 +89,9 @@ export class IndexSearch extends Service {
         after = rows.at(-1)!.chunk_id;
       }
     }
+    const current = new Map(scope().map(resource => [resource.id, resource]));
     const results = candidates.flatMap(({ row, score }) => {
-      const resource = this.ctx.resources.getVisible(request.projectId, row.resource_id as ResourceId, request.viewer);
+      const resource = current.get(row.resource_id as ResourceId);
       if (resource?.assetGeneration !== row.source_asset_generation) return [];
       return [{ resourceId: resource.id, chunkId: row.chunk_id, ordinal: row.ordinal, text: row.text,
         startOffsetUtf16: row.start_offset_utf16, endOffsetUtf16: row.end_offset_utf16,
