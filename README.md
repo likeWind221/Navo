@@ -12,6 +12,14 @@
 
 Navo 是一个从 0 手写的长程任务 Agent 编排框架。用户给出一个 Goal，系统把它拆成可编辑的 Roadmap（有向无环的节点图）；一个 Main Agent 负责规划与协调，多个相互隔离的 Node Agent 各自负责一个节点；节点之间的产物以带访问控制的 Resource 交接；每一个 Agent Turn 都由 Human 启动，节点完成也由 Human 最终确认。
 
+### 产品界面演示
+
+<p align="center">
+  <img src="assets/readme/navo-product-demo.webp" alt="Navo desktop product demo showing the roadmap workspace and Main Agent panel" width="100%" />
+</p>
+
+<p align="center"><sub>当前产品界面：项目工作区、路线图画布与 Main Agent 会话面板。</sub></p>
+
 <p align="center">
   <img src="assets/readme/navo-features.svg" alt="Navo core product strengths" width="100%" />
 </p>

@@ -1,45 +1,47 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="600" viewBox="0 0 1600 600" role="img" aria-labelledby="title desc">
-<title id="title">Navo — Adaptive long-horizon agent orchestration</title><desc id="desc">A green and white product banner showing a goal becoming a roadmap coordinated by Main and Node Agents, with Resources and Mailbox.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="620" viewBox="0 0 1600 620" role="img" aria-labelledby="title desc">
+<title id="title">Navo — Adaptive long-horizon agent orchestration</title>
+<desc id="desc">Navo coordinates long-running work through an adaptive roadmap, Main Agent, Node Agents, and controlled resources.</desc>
 <defs>
- <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#eefaf4"/></linearGradient>
- <linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#087f5b"/><stop offset="1" stop-color="#38b982"/></linearGradient>
- <linearGradient id="mint" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#b8f0d8"/><stop offset="1" stop-color="#e6f8ef"/></linearGradient>
- <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="10" stdDeviation="13" flood-color="#0c7854" flood-opacity=".10"/></filter>
- <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#2da876" stroke-width="1.5"/></marker>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#fbfdfb"/><stop offset="100%" stop-color="#f0f8f3"/></linearGradient>
+  <linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0f766e"/><stop offset="100%" stop-color="#36a875"/></linearGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#245f48" flood-opacity=".10"/></filter>
 </defs>
-<rect width="1600" height="600" rx="28" fill="url(#bg)"/>
-<g fill="none" stroke="#d9f2e6" stroke-width="2"><path d="M0 90H820M0 140H760M900 0V600M950 0V600M1500 0V600"/><path d="M0 500C240 420 360 650 620 560S900 460 1040 520" stroke-dasharray="7 10"/><path d="M1110 0C1320 100 1370 30 1600 110" stroke-dasharray="7 10"/></g>
-<circle cx="1500" cy="100" r="10" fill="#83d9b3"/><circle cx="620" cy="560" r="8" fill="#83d9b3"/><circle cx="1120" cy="515" r="6" fill="#b6e9d3"/>
-<path d="M0 470C170 400 330 580 500 540S730 485 860 600H0Z" fill="#e2f8ed" opacity=".7"/>
+<rect width="1600" height="620" rx="28" fill="url(#bg)"/>
+<g stroke="#dcefe4" stroke-width="1.5" opacity=".8"><path d="M0 100H760M0 155H690M0 210H730M0 265H620"/><path d="M1040 0V620M1110 0V620M1180 0V620M1250 0V620"/></g>
+<path d="M0 535C180 470 300 590 470 560S720 480 870 535s270 90 420 20 220-30 310-5v70H0Z" fill="#e6f5ec"/>
 <g font-family="Inter,Segoe UI,Arial,sans-serif">
- <text x="78" y="210" font-size="116" font-weight="800" letter-spacing="-5" fill="#075b43">Navo</text>
- <text x="82" y="286" font-size="43" font-weight="720" fill="#123e32">Adaptive long-horizon</text>
- <text x="82" y="337" font-size="43" font-weight="720" fill="#123e32">agent orchestration</text>
- <text x="84" y="383" font-size="22" fill="#607d73">Roadmaps, node agents, resources, and human control.</text>
- <g font-size="15" font-weight="650">
-  <rect x="82" y="426" width="174" height="38" rx="19" fill="#e1f7ed" stroke="#bfead7"/><text x="169" y="450" text-anchor="middle" fill="#087f5b">Adaptive Roadmap</text>
-  <rect x="267" y="426" width="142" height="38" rx="19" fill="#e1f7ed" stroke="#bfead7"/><text x="338" y="450" text-anchor="middle" fill="#087f5b">Multi-Agent</text>
-  <rect x="420" y="426" width="190" height="38" rx="19" fill="#e1f7ed" stroke="#bfead7"/><text x="515" y="450" text-anchor="middle" fill="#087f5b">Human-in-the-loop</text>
- </g>
+  <text x="86" y="110" font-size="17" font-weight="700" letter-spacing="4" fill="#6c8c7d">LONG-HORIZON AGENT ORCHESTRATION</text>
+  <text x="82" y="245" font-size="118" font-weight="800" letter-spacing="-5" fill="#124b3d">Navo</text>
+  <text x="88" y="315" font-size="43" font-weight="750" fill="#173f35">Long-running work,</text>
+  <text x="88" y="366" font-size="43" font-weight="750" fill="#173f35">coordinated with control.</text>
+  <text x="90" y="414" font-size="21" fill="#647c70">Adaptive roadmaps. Isolated node execution.</text>
+  <text x="90" y="444" font-size="21" fill="#647c70">Controlled resources. Human confirmation.</text>
+  <g font-size="15" font-weight="700">
+    <rect x="88" y="488" width="174" height="40" rx="20" fill="#e2f5e9" stroke="#c5e7d4"/><text x="175" y="513" text-anchor="middle" fill="#137451">Adaptive Roadmap</text>
+    <rect x="274" y="488" width="142" height="40" rx="20" fill="#e2f5e9" stroke="#c5e7d4"/><text x="345" y="513" text-anchor="middle" fill="#137451">Multi-Agent</text>
+    <rect x="428" y="488" width="192" height="40" rx="20" fill="#e2f5e9" stroke="#c5e7d4"/><text x="524" y="513" text-anchor="middle" fill="#137451">Human in the loop</text>
+  </g>
 </g>
 <g filter="url(#shadow)">
- <rect x="920" y="62" width="520" height="128" rx="22" fill="#fff" stroke="#d4f0e3" stroke-width="2"/>
- <rect x="910" y="245" width="260" height="132" rx="22" fill="#fff" stroke="#bcebd6" stroke-width="2"/>
- <rect x="1210" y="245" width="300" height="132" rx="22" fill="#fff" stroke="#d4f0e3" stroke-width="2"/>
- <rect x="940" y="425" width="500" height="104" rx="22" fill="#fff" stroke="#d4f0e3" stroke-width="2"/>
+  <rect x="800" y="54" width="720" height="500" rx="28" fill="#fff" stroke="#d9ebe1" stroke-width="2"/>
+  <rect x="844" y="92" width="632" height="94" rx="18" fill="#f6fbf8" stroke="#dcefe4"/>
+  <rect x="844" y="220" width="268" height="130" rx="18" fill="#fff" stroke="#dcefe4"/>
+  <rect x="1132" y="220" width="344" height="130" rx="18" fill="#fff" stroke="#dcefe4"/>
+  <rect x="844" y="384" width="632" height="124" rx="18" fill="#f7fbf8" stroke="#dcefe4"/>
 </g>
-<g font-family="Inter,Segoe UI,Arial,sans-serif" fill="#123e32">
- <circle cx="963" cy="99" r="20" fill="#dff8ec"/><circle cx="963" cy="99" r="10" fill="none" stroke="#16865f" stroke-width="3"/><circle cx="963" cy="99" r="3" fill="#16865f"/><path d="M967 95l9 -9" stroke="#16865f" stroke-width="3" stroke-linecap="round"/>
- <text x="996" y="106" font-size="24" font-weight="700">Goal → Roadmap</text>
- <g fill="url(#mint)"><rect x="960" y="130" width="82" height="24" rx="8" fill="#2eb67d"/><rect x="1064" y="130" width="82" height="24" rx="8"/><rect x="1168" y="130" width="82" height="24" rx="8"/><rect x="1272" y="130" width="82" height="24" rx="8" fill="#eff7f3"/></g>
- <g stroke="#7acba7" stroke-width="2.5" fill="none" marker-end="url(#arrow)"><path d="M1044 142H1058"/><path d="M1148 142H1162"/><path d="M1252 142H1266"/><path d="M1175 310H1200"/><path d="M1040 190V231"/><path d="M1040 377V410"/></g>
- <circle cx="958" cy="292" r="23" fill="#e2f8ed"/><rect x="941" y="281" width="34" height="25" rx="8" fill="#0d7757"/><circle cx="951" cy="293" r="3" fill="#b8f5d9"/><circle cx="965" cy="293" r="3" fill="#b8f5d9"/><path d="M958 281v-8" stroke="#0d7757" stroke-width="3"/><circle cx="958" cy="270" r="3" fill="#0d7757"/>
- <text x="990" y="291" font-size="21" font-weight="700">Main Agent</text><text x="990" y="319" font-size="15" fill="#6b877d">Plan · Coordinate</text>
- <text x="1240" y="283" font-size="21" font-weight="700">Node Agents</text>
- <g fill="#dff7eb" stroke="#8edcba"><rect x="1240" y="300" width="58" height="42" rx="12"/><rect x="1308" y="300" width="58" height="42" rx="12"/><rect x="1376" y="300" width="58" height="42" rx="12"/></g>
- <g fill="#13835f"><circle cx="1269" cy="313" r="6"/><rect x="1257" y="320" width="24" height="12" rx="6"/><circle cx="1337" cy="313" r="6"/><rect x="1325" y="320" width="24" height="12" rx="6"/><circle cx="1405" cy="313" r="6"/><rect x="1393" y="320" width="24" height="12" rx="6"/></g>
- <text x="970" y="462" font-size="20" font-weight="700">Resources / Mailbox</text>
- <g fill="#e5f8ef"><rect x="970" y="477" width="64" height="36" rx="10"/><rect x="1050" y="477" width="64" height="36" rx="10"/><rect x="1130" y="477" width="64" height="36" rx="10"/><rect x="1210" y="477" width="64" height="36" rx="10"/></g>
- <g stroke="#16865f" stroke-width="2.5" fill="none"><ellipse cx="1002" cy="488" rx="13" ry="5"/><path d="M989 488v12c0 7 26 7 26 0v-12M989 494c0 7 26 7 26 0"/><path d="M1070 484h17l8 8v13h-25zM1087 484v9h8"/><circle cx="1162" cy="495" r="13"/><path d="M1149 495h26M1162 482c7 7 7 19 0 26M1162 482c-7 7-7 19 0 26"/><rect x="1227" y="486" width="29" height="19" rx="3"/><path d="M1228 488l14 10 14-10"/></g>
+<g font-family="Inter,Segoe UI,Arial,sans-serif" fill="#173f35">
+  <circle cx="883" cy="126" r="22" fill="#e2f5e9"/><circle cx="883" cy="126" r="10" fill="none" stroke="#15805e" stroke-width="3"/><circle cx="883" cy="126" r="3" fill="#15805e"/><path d="M888 121l8-8" stroke="#15805e" stroke-width="3" stroke-linecap="round"/>
+  <text x="920" y="122" font-size="25" font-weight="750">Goal → Adaptive Roadmap</text>
+  <text x="920" y="151" font-size="16" fill="#6b8378">Break a large objective into dependent, editable steps.</text>
+  <g><rect x="920" y="164" width="88" height="9" rx="4.5" fill="url(#green)"/><rect x="1022" y="164" width="88" height="9" rx="4.5" fill="#bde7d0"/><rect x="1124" y="164" width="88" height="9" rx="4.5" fill="#d7efe2"/><rect x="1226" y="164" width="88" height="9" rx="4.5" fill="#e7f4ed"/><rect x="1328" y="164" width="88" height="9" rx="4.5" fill="#edf7f1"/></g>
+  <circle cx="879" cy="260" r="22" fill="#e2f5e9"/><rect x="863" y="248" width="32" height="25" rx="8" fill="#106a51"/><circle cx="873" cy="260" r="3" fill="#dff4e9"/><circle cx="885" cy="260" r="3" fill="#dff4e9"/><path d="M879 248v-8" stroke="#106a51" stroke-width="3" stroke-linecap="round"/><circle cx="879" cy="237" r="3" fill="#106a51"/>
+  <text x="915" y="264" font-size="23" font-weight="750">Main Agent</text><text x="868" y="307" font-size="16" fill="#6b8378">Plan · coordinate · replan</text>
+  <text x="1160" y="253" font-size="22" font-weight="750">Node Agents</text><text x="1160" y="277" font-size="15" fill="#6b8378">Scoped execution, one node at a time</text>
+  <g fill="#e8f7ef" stroke="#c9e8d7"><rect x="1160" y="292" width="78" height="40" rx="12"/><rect x="1250" y="292" width="78" height="40" rx="12"/><rect x="1340" y="292" width="78" height="40" rx="12"/></g>
+  <g fill="#147b58"><circle cx="1199" cy="304" r="5"/><rect x="1187" y="312" width="24" height="12" rx="6"/><circle cx="1289" cy="304" r="5"/><rect x="1277" y="312" width="24" height="12" rx="6"/><circle cx="1379" cy="304" r="5"/><rect x="1367" y="312" width="24" height="12" rx="6"/></g>
+  <text x="870" y="420" font-size="23" font-weight="750">Resources &amp; Mailbox</text><text x="870" y="448" font-size="16" fill="#6b8378">Share artifacts with explicit access boundaries.</text>
+  <g fill="#e5f5ec"><rect x="870" y="463" width="66" height="30" rx="9"/><rect x="950" y="463" width="66" height="30" rx="9"/><rect x="1030" y="463" width="66" height="30" rx="9"/><rect x="1110" y="463" width="66" height="30" rx="9"/></g>
+  <g fill="none" stroke="#16805d" stroke-width="2.2"><ellipse cx="903" cy="472" rx="12" ry="4"/><path d="M891 472v10c0 5 24 5 24 0v-10M891 477c0 5 24 5 24 0"/><path d="M969 469h16l7 7v11h-23zM985 469v7h7"/><circle cx="1063" cy="478" r="11"/><path d="M1052 478h22M1063 467c6 6 6 16 0 22M1063 467c-6 6-6 16 0 22"/><rect x="1127" y="469" width="31" height="19" rx="3"/><path d="M1128 471l14 10 15-10"/></g>
 </g>
+<g fill="none" stroke="#62bd91" stroke-width="3" stroke-linecap="round"><path d="M978 186v24"/><path d="M972 203l6 7 6-7"/><path d="M1112 285h16"/><path d="M1121 279l7 6-7 6"/><path d="M978 350v24"/><path d="M972 367l6 7 6-7"/></g>
 </svg>
