@@ -4,6 +4,7 @@ import type { Context } from "cordis";
 import type { CommandAnchor, CommandEvent } from "../../shared/content.js";
 import { DISPLAY_SUMMARY_MAX_CHARS } from "../../shared/content.js";
 import { CommandError, commandFailure } from "./errors.js";
+import { beginOrdinaryActivity } from "../session/directory.js";
 import type {
   CommandDefinition,
   CommandEventHandler,
@@ -83,11 +84,17 @@ export class CommandService extends Service {
     }
     const run = () => this.run(definition, input, anchor, onEvent, signal);
     if (definition.mode === "queued") {
+      let release: (() => void) | undefined;
       try {
+        release = input.name === "compact"
+          ? beginOrdinaryActivity(this.ctx, input.sessionId)
+          : undefined;
         await this.ctx.agentRuntime.enqueueCommand(input.sessionId, run, signal);
       } catch (error: unknown) {
         if (signal.aborted) await this.cancel(input, anchor, onEvent);
         else await onEvent({ ...scope(input, anchor), type: "command-failed", failure: commandFailure(error) });
+      } finally {
+        release?.();
       }
     } else {
       await run();

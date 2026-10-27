@@ -255,3 +255,5 @@
 - [F7.1 项目资料库浏览与信息](175-devlog-f7-1-library.md)：正式目录、资料信息与项目隔离；受控窄屏及真实 Electron/Host 零推理验收。
 
 - [F14.4 自动运行持续观察](176-devlog-f14-4-observation.md)：项目运行基线、自动回合公开内容、晚订阅身份及取消/关闭清理；前端F8另行消费。
+
+- [F14.5 独立普通会话管理](177-devlog-f14-5-ordinary-sessions.md)：普通会话创建、分页、重命名、归档恢复与活动租约；Main / Node 隔离、standalone 历史迁移及正式 Host 重启持久化。

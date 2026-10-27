@@ -16,6 +16,7 @@ import { EVENT_HISTORY_QUERY, openDatabase } from "./schema.js";
 import { resourceIndexTransaction, type ResourceIndexTransaction } from "./indexing.js";
 import { resourceCatalogTransaction, type ResourceCatalogTransaction } from "./catalog.js";
 import { retrievalTransaction, type RetrievalTransaction } from "./retrieval.js";
+import { ordinarySessionTransaction, type OrdinarySessionTransaction } from "./ordinary.js";
 
 export class StorageService extends Service {
   private readonly db: DatabaseSync;
@@ -144,7 +145,7 @@ export interface StorageConfig {
   readonly path: string;
 }
 
-export interface StorageTransaction extends FileOperationTransaction, ResourceContentTransaction, LibraryFolderTransaction, ResourceIndexTransaction, GraphTransaction, RetrievalTransaction, ResourceCatalogTransaction {
+export interface StorageTransaction extends FileOperationTransaction, ResourceContentTransaction, LibraryFolderTransaction, ResourceIndexTransaction, GraphTransaction, RetrievalTransaction, ResourceCatalogTransaction, OrdinarySessionTransaction {
   appendEvents(append: EventAppend): void;
   hasEvents(domain: EventDomain, ownerId: string): boolean;
   bindWorkspace(binding: WorkspaceBindingRecord): void;
@@ -184,6 +185,7 @@ function createTransaction(db: DatabaseSync): StorageTransaction {
     ...resourceCatalogTransaction(db),
     ...graphTransaction(db),
     ...retrievalTransaction(db),
+    ...ordinarySessionTransaction(db),
     appendEvents({ domain, ownerId, projectId, firstSeq, events }) {
       if ((projectId === null && domain !== "session") || (projectId !== null && (typeof projectId !== "string" || !projectId.trim()))) {
         throw new StorageError("invalid-record", "Stored events require a valid Project owner or a standalone Session.");

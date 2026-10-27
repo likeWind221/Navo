@@ -5,6 +5,8 @@ import type { TurnLifecycleEvent } from "../../shared/content.js";
 import { createMessageId, createSessionId } from "../brand/ids.js";
 import type { TurnModelConfig } from "../agent/types.js";
 import { StreamEventQueue } from "./turn/queue.js";
+import { beginOrdinaryActivity } from "../session/directory.js";
+import { toSessionFailure } from "./session/failure.js";
 
 export interface AgentTurnHandlerConfig {
   readonly model: TurnModelConfig;
@@ -20,8 +22,15 @@ export function createAgentTurnHandler(
     const events = new StreamEventQueue<AgentTurnEvent>();
     const textContents = new Set<number>();
     let terminated = false;
+    const sessionId = createSessionId(input.sessionId);
+    let release: (() => void) | undefined;
+    try {
+      release = beginOrdinaryActivity(ctx, sessionId);
+    } catch (error: unknown) {
+      throw toSessionFailure(error);
+    }
     const execution = ctx.agentRuntime.runTurn({
-      sessionId: createSessionId(input.sessionId),
+      sessionId,
       requestId: input.requestId,
       userMessage: {
         id: createMessageId(input.requestId),
@@ -69,6 +78,7 @@ export function createAgentTurnHandler(
       for await (const event of events) yield event;
     } finally {
       await execution;
+      release?.();
     }
   };
 }

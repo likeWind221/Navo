@@ -19,6 +19,7 @@ import { createMainAgentProfile, MAIN_AGENT_TOOL_NAMES } from "../../src/project
 import { MainSessionService } from "../../src/project/session.js";
 import { ProjectStore } from "../../src/project/store.js";
 import { ResourceService } from "../../src/resource/service.js";
+import { OrdinarySessionDirectory } from "../../src/session/directory.js";
 import { SessionStore } from "../../src/session/store.js";
 import type { CommandEvent } from "../../shared/content.js";
 import { ToolService } from "../../src/tools/service.js";
@@ -68,6 +69,7 @@ async function createKit(
   await ctx.plugin(CommandService);
   await ctx.plugin(MainSessionService, { model: compactingModel });
   await ctx.plugin(NodeSessionService, { model: compactingModel });
+  await ctx.plugin(OrdinarySessionDirectory);
   await ctx.plugin(SessionContextResolver, agent === null ? {} : { agent: { ...agent } });
   await ctx.plugin(CompactCommand);
   const adapter = new MockLLMAdapter(entries);
@@ -208,6 +210,22 @@ describe("manual compaction command", () => {
       block => block.type === "text" && block.text.includes("<compacted-summary>"),
     ))).toBe(true);
     expect(turnRequest.messages.some(message => message.id === createMessageId("seed-user-0"))).toBe(false);
+  });
+
+  it("keeps a compact lease visible to archive checks while it runs", async () => {
+    const kit = await createKit([{ kind: "hang" }]);
+    const session = kit.ctx.sessionDirectory.create("Compact");
+    seedHistory(kit.ctx, session.sessionId, 6, 1_200);
+    const controller = new AbortController();
+
+    const completed = executeCompact(kit, session.sessionId, { signal: controller.signal });
+    await Promise.resolve();
+    expect(() => kit.ctx.sessionDirectory.archive(session.sessionId, session.revision))
+      .toThrow(expect.objectContaining({ code: "session-active" }));
+
+    controller.abort();
+    await completed;
+    expect(kit.ctx.sessionDirectory.archive(session.sessionId, session.revision).status).toBe("archived");
   });
 
   it("reports no progress without touching history when there is no safe selection", async () => {
