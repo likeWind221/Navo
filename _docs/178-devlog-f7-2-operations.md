@@ -33,6 +33,8 @@
 - 正式 Electron + 正式 Host 零推理 QA（`pnpm qa:f72-real`）通过：IPC 选择器受控返回真实文件路径，Host 导入、文件夹创建 / 移动、编辑冲突、资料移动和递归删除均走真实 Bridge；未调用模型。
 - F7.1 受控与真实 Electron QA 回归通过。
 - 真实模型与 F7.3 / F7.4 不在本步骤范围。
+- 受控现场 `%TEMP%/navo-f72-qa`；真实 Host 现场 `%TEMP%/navo-f72-real/run-1793071389347`。
+- PR [#119](https://github.com/likeWind221/Navo/pull/119) head `9d0d17d` 的 CI `40444803829` 前两次在既有资源 / 持久化测试上出现 5 秒超时，第三次重跑 verify 通过；未修改测试超时、测试内容或生产代码来绕过。
 
 ## 下一步
 
