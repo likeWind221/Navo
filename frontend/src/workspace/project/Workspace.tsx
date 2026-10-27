@@ -7,6 +7,7 @@ import { RoadmapMap } from "./Map";
 import type { MapGraph } from "./map/model";
 import styles from "./workspace.module.css";
 import { ResourceLibrary } from "./resource/Library";
+import { useResourceOperations } from "./resource/operations";
 
 type Message = { role: "user" | "assistant"; text: string };
 const statusLabels: Record<NodeStatusV1, string> = { locked: "待解锁", idle: "可执行", working: "进行中", submitted: "待验收", completing: "已完成", skipped: "已跳过" };
@@ -18,6 +19,7 @@ export function ProjectWorkspace({ detail, resource, demo, previewControls }: { 
   }, [demo, detail.roadmap]);
   const nodes = graph.nodes;
   const project = detail.project;
+  const resourceOperations = useResourceOperations(resource, project.projectId);
   const [showDemo, setShowDemo] = useState(Boolean(demo));
   const planned = nodes.length > 0 && (demo ? showDemo : true);
   const [active, setActive] = useState("main");
@@ -129,6 +131,6 @@ export function ProjectWorkspace({ detail, resource, demo, previewControls }: { 
         </div>
       </div>
     </aside>}
-    {libraryOpen && resource !== undefined && <ResourceLibrary api={resource} projectId={project.projectId} onClose={closeLibrary} />}
+    {libraryOpen && resource !== undefined && <ResourceLibrary api={resource} projectId={project.projectId} operations={resourceOperations} onClose={closeLibrary} />}
   </article>;
 }

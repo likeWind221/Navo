@@ -71,9 +71,9 @@ async function main() {
     assert(selectedA.includes("notes/研究笔记.md"));
     await capture("selected-info");
     assert.equal(await run("window.__f71.project('a').activeCount()"), 1);
-    assert.equal(await run("window.__f71.project('a').listenerCount()"), 1);
+    assert.equal(await run("window.__f71.project('a').listenerCount()"), 2);
 
-    await run("window.__f71.project('a').update('f71-a-nested', '研究笔记·已更新.md')");
+    await run("window.__f71.project('a').update('f72-a-nested', '研究笔记·已更新.md')");
     await waitFor(hasText(library("A"), "研究笔记·已更新.md"));
 
     await nativeClick('nav[aria-label="项目列表"] button[title="项目 B · 研究资料"]');
@@ -87,7 +87,7 @@ async function main() {
     await nativeClick(`${library("B")} [role=alert] button`);
     await waitFor(`document.querySelector(${JSON.stringify(`${section("B")} [role=alert]`)}) === null`);
     assert.equal(await run("window.__f71.project('b').activeCount()"), 1);
-    assert.equal(await run("window.__f71.project('b').listenerCount()"), 1);
+    assert.equal(await run("window.__f71.project('b').listenerCount()"), 2);
     await escape();
     await waitFor(`document.querySelector(${JSON.stringify(library("B"))}) === null`);
 
@@ -101,7 +101,7 @@ async function main() {
     assert(await visibleHit(library("A")));
     await capture("narrow-selected-info");
 
-    await run("window.__f71.project('a').remove('f71-a-nested')");
+    await run("window.__f71.project('a').remove('f72-a-nested')");
     await waitFor(hasText(library("A"), "当前目录为空"));
     await nativeClick(`${library("A")} nav[aria-label="资料库路径"] button`);
     await nativeClick(`${library("A")} [aria-label="资料库内容"] button`);
@@ -109,6 +109,9 @@ async function main() {
 
     await escape();
     await waitFor(`document.querySelector(${JSON.stringify(library("A"))}) === null`);
+    await nativeClick('header nav[aria-label="已打开的标签页"] button[aria-label="关闭 项目 A · 研究资料"]');
+    await nativeClick('header nav[aria-label="已打开的标签页"] button[aria-label="关闭 项目 B · 研究资料"]');
+    await waitFor("window.__f71.project('a').activeCount() === 0 && window.__f71.project('b').activeCount() === 0");
     const result = {
       narrow, projectA: { active: await run("window.__f71.project('a').activeCount()"), listeners: await run("window.__f71.project('a').listenerCount()"), cancelled: await run("window.__f71.project('a').cancelledIds()") },
       projectB: { active: await run("window.__f71.project('b').activeCount()"), listeners: await run("window.__f71.project('b').listenerCount()"), cancelled: await run("window.__f71.project('b').cancelledIds()") }, errors,
