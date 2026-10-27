@@ -436,7 +436,7 @@ F5.4 当前等待 BUG-036 的可用认证路径，真实门禁保持；独立 F7
 
 - 2026-10-27 后端 F14.3a 已随 [PR #113](https://github.com/likeWind221/Navo/pull/113) 合入（11984aa），见 [172](172-devlog-f14-3a-query.md)：用户可按名称/描述及目录后代查找资料，稳定分页、识别变化并查看当前兼容索引状态；本机1089项、正式Host零推理与重启检查、当前head CI通过。交由 `backend-plan.md` 实施的此部分已交付；F7.4 的语义搜索、Bridge和正式页面未完成，前端步骤不提前勾选。
 
-- F5.4 Draft PR #111 最新 head b3ab928 已删除未使用的独立follow取消通道，统一沿用已接入的operation取消；类型检查、前端176项、构建与CI 40368700048通过。真实Main的AUTH403门禁仍未通过，不合并，不自动开始F5.5。
+- F5.4 Draft PR #111 最新 head b3ab928 已删除未使用的独立follow取消通道，统一沿用已接入的operation取消；类型检查、前端176项、构建与CI 40368700048通过。真实Main的AUTH403门禁仍未通过，不合并，不自动开始F5.5。2026-10-27 补充诊断：当前出口直连 token 端点仍 403，临时干净出口下刷新与 `pnpm chatgpt models` 成功；真实 Main 两回合仍未运行，#111 保持 Draft，等待真实模型预算与干净出口授权。
 
 - 2026-10-27 后端F14.3b已随 [PR #114](https://github.com/likeWind221/Navo/pull/114) 合入（02a9951），见 [173](173-devlog-f14-3b-search.md)：用户问题检索按文件归并、提供片段与位置、翻页不重复Embedding，变化与过期可辨识；本机1104项、正式Host受控及已有持久图谱读取、当前head CI通过。交由 `backend-plan.md` 实施的此依赖已交付；F7.4的Bridge/页面与c正式Host显式图谱抽取配置尚未完成。
 

@@ -8,7 +8,7 @@
 
 - [x] BUG-037：独立 master 已复现窄屏项目会话面板2px；最小列定位修复、实际 Electron、前端165项与根1080项、当前 head CI 均通过；PR #112 已合入（ec14333），关闭，见 [169](169-bugfix-bug-037-panel.md)。
 
-- [ ] BUG-036：F5.4 真实 Main 两回合在凭据刷新阶段 AUTH 失败；零生成诊断确认 token 端点 HTTP 403 / application/json，具体拒绝原因未确认，仅排查未修复，见 [168](168-bugfix-bug-036-auth.md)。
+- [ ] BUG-036：F5.4 真实 Main 两回合在凭据刷新阶段 AUTH 失败；零生成诊断确认 token 端点 HTTP 403 / application/json。2026-10-27 补充：当前出口直连仍 403，临时干净出口下同一端点返回 200 且 `pnpm chatgpt models` 刷新并列出模型，说明与出口路由 / IP 相关；真实 Main 仍未跑，未修复、未关闭，见 [168](168-bugfix-bug-036-auth.md)。
 
 - [x] BUG-035：已按方案 A 修复验收来源契约：直读由成功 fetch 轨迹证明，`source_ids` 只要求可追溯的支持来源并拒绝本回合未出现的 ID；新增三项回归，完整本地 1056 项与 CI run `40334741718` 通过。第四轮真实运行 `%TEMP%/navo-f136-real-R8uzdx` 的 Node B 来源声明与 fetch 轨迹一致，最终 Main Review 与完整任务通过，关闭，见 [163](163-bugfix-bug-035-node-source-evidence.md)。
 - [x] BUG-034：验收脚本已补齐 Main 目标确认两回合；第四轮真实确认 / 规划、两 Node、Review 与同库重开通过，完整本地 1056 项与 head `a3fb032` 的 CI run `40335277583` 通过，关闭，见 [162](162-bugfix-bug-034-acceptance-confirmation.md)。
@@ -74,7 +74,7 @@
 |---|---|---|---|---|---|
 | BUG-038 | P2 / 前端 Host 验证 | 首次 Mock Host 启动超过 5 秒预算 | 原日志保留；同 master 定向、分支定向和完整 176 项复验均通过；原因未知，未修复 | 复现时取得启动证据，定位并修复后同场景稳定通过及当前 head CI 成功；单次复验不自动关闭 | [170：仅排查，待复现](170-bugfix-bug-038-host-startup.md) |
 | BUG-037 | P1 / 前端布局 | 547px 窗口的项目会话面板极窄，无法阅读或输入 | 独立 master 已复现2px；修复后350px，原生交互、前端165项、根1080项与CI 40367528661通过；PR #112合入ec14333 | 主线复现后最小修复，宽 / 窄屏实际可见与点击通过，本机及当前 head CI 成功并合并 | [169：已修复并合入](169-bugfix-bug-037-panel.md) |
-| BUG-036 | P1 / 后端认证与外部依赖 | 既有 ChatGPT 凭据刷新被拒绝，阻断 F5.4 真实 Main 规划 | 已证实两个 AUTH 失败 Turn 与 token 端点 HTTP 403；本地 connected 不等于服务端可用；拒绝原因未确认 | 明确可用认证链后，在新隔离库通过预填 / 空目标真实 Main 确认规划；涉及代码时须完整本机与当前 head CI | [168：仅排查，未修复](168-bugfix-bug-036-auth.md) |
+| BUG-036 | P1 / 后端认证与外部依赖 | 既有 ChatGPT 凭据刷新被拒绝，阻断 F5.4 真实 Main 规划 | 已证实两个 AUTH 失败 Turn 与 token 端点 HTTP 403；本地 connected 不等于服务端可用；2026-10-27 干净出口下同一端点 200、刷新与 models 成功，确认与出口路由 / IP 相关，服务端拒绝原因仍未确认 | 明确可用认证链后，在新隔离库通过预填 / 空目标真实 Main 确认规划；涉及代码时须完整本机与当前 head CI | [168：仅排查，未修复](168-bugfix-bug-036-auth.md) |
 | BUG-035 | P1 / 后端验收脚本 | Node B 将搜索 / 上游来源混入本回合直接读取声明 | 已确认判据（至少两份真实 fetch）与检查（source_ids 只能列 fetch）不同义；按方案 A 改为轨迹证明直读、source_ids 只校验可追溯性，并补三项回归 | 必读来源实际 fetch、来源声明可追溯，并完成最终 Main Review 和完整任务；第四轮真实运行通过 | [163：已修复并真实复验通过](163-bugfix-bug-035-node-source-evidence.md) |
 | BUG-034 | P1 / 后端验收脚本 | 脚本未经历目标确认就断言两个 Node | 已补齐两回合；第四轮真实确认 / 规划、两 Node、Review 与同库重开通过，本地 1056 项与 head `a3fb032` CI 通过 | 修正后真实目标确认 / 规划及后续任务、本地完整检查与当前 head CI 通过 | [162：真实复验通过，关闭](162-bugfix-bug-034-acceptance-confirmation.md) |
 | BUG-033 | P1 / 后端验收依赖 | OpenRouter 单项 Embedding 曾触及验收 15 秒预算 | 改为 60 秒后，第四轮 7 次请求全部 200；完整任务通过；前次 15 秒超时根因未定位 | 实际 Embedding 与完整图谱 / 两 Node / Main Review 任务通过 | [161：调整时限后完整通过，关闭](161-bugfix-bug-033-openrouter-timeout.md) |
