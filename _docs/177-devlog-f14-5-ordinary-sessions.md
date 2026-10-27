@@ -30,6 +30,7 @@
 - 真实 stdio Host 零推理验收：创建、分页、重命名、归档、重启后读取、恢复均通过；未调用模型。
 - `git diff --check` 通过。
 - 真实模型和 Electron 页面不在本步骤范围；F5.4 的真实 Main 认证仍受 BUG-036 阻断。
+- PR [#118](https://github.com/likeWind221/Navo/pull/118) head `bbc04a7` 的 CI `40444187477` verify 通过（3分57秒），已 squash 合入 `a185778`。
 
 ## 下一步
 

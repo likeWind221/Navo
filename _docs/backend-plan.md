@@ -420,6 +420,6 @@ F14.4 已在独立分支实施。范围保持自动运行状态和用户可见�
 
 F14.4本机完整1118项与正式Host受控观察/暂停/恢复/重启/关闭验收通过，见 [176](176-devlog-f14-4-observation.md)，PR #117 head a366594的CI 40386332385通过，已squash合入12ffa7a；前端F8仍未消费。
 
-F14.5 已完成本机类型检查、完整 1130 项、31 项专项与正式 stdio Host 零推理 create/list/rename/archive/restore/restart 验收，见 [177](177-devlog-f14-5-ordinary-sessions.md)。PR 与当前 head CI 在收口时补充。
+F14.5 已完成本机类型检查、完整 1130 项、31 项专项与正式 stdio Host 零推理 create/list/rename/archive/restore/restart 验收，见 [177](177-devlog-f14-5-ordinary-sessions.md)。[PR #118](https://github.com/likeWind221/Navo/pull/118) head `bbc04a7` 的 CI `40444187477` 通过，已 squash 合入 `a185778`。
 
 当前下一步为 F14.6 原始公开历史与查找导出：分页阅读消息、工具往返、回合终态与压缩记录，支持当前会话文字查找与显式选定导出；不公开系统提示词、凭据或内部日志。原始历史是后续会话 UI 与导出的公共事实源，不改变 F14.5 的普通会话身份与归档语义。
