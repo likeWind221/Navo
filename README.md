@@ -15,10 +15,10 @@ Navo 是一个从 0 手写的长程任务 Agent 编排框架。用户给出一�
 ### 产品界面演示
 
 <p align="center">
-  <img src="assets/readme/navo-product-demo.webp" alt="Navo desktop product demo showing the roadmap workspace and Main Agent panel" width="100%" />
+  <img src="frontend/qa-output/demo-shell.png" alt="Navo agent execution demo showing run controls, tool execution steps, and results" width="100%" />
 </p>
 
-<p align="center"><sub>当前产品界面：项目工作区、路线图画布与 Main Agent 会话面板。</sub></p>
+<p align="center"><sub>Agent 执行演示：展示运行控制、工具调用步骤与结果回显（Mock 模式）。</sub></p>
 
 <p align="center">
   <img src="assets/readme/navo-features.svg" alt="Navo core product strengths" width="100%" />
