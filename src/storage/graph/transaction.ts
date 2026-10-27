@@ -1,8 +1,10 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { GraphBuildRecord, GraphEvidenceRecord, GraphTransaction } from "../graph.js";
 import { removeFacts, writeFacts } from "./facts.js";
+import { resourceCatalogTransaction } from "../catalog.js";
 
 export function graphTransaction(db: DatabaseSync): GraphTransaction {
+  const catalog = resourceCatalogTransaction(db);
   const readBuild = (id: string) => db.prepare("SELECT * FROM graph_builds WHERE build_id = ?").get(id) as unknown as GraphBuildRecord | undefined;
   const current = (build: GraphBuildRecord) => db.prepare(`SELECT 1 FROM resource_index_builds i JOIN resource_content c
     ON c.project_id = i.project_id AND c.resource_id = i.resource_id
@@ -10,8 +12,11 @@ export function graphTransaction(db: DatabaseSync): GraphTransaction {
     AND i.source_asset_generation = ? AND c.source_asset_generation = i.source_asset_generation AND c.status = 'ready'`)
     .get(build.source_build_id, build.project_id, build.resource_id, build.source_asset_generation) !== undefined;
   const supersede = (id: string) => {
+    const build = readBuild(id);
+    if (build?.status === "superseded") return;
     db.prepare("UPDATE graph_builds SET status = 'superseded' WHERE build_id = ?").run(id);
     removeFacts(db, id);
+    if (build !== undefined) catalog.bumpCatalogVersion(build.project_id);
   };
   return {
     listGraphBuilds() {
@@ -22,6 +27,7 @@ export function graphTransaction(db: DatabaseSync): GraphTransaction {
       db.prepare("INSERT INTO graph_builds VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
         .run(build.build_id, build.project_id, build.resource_id, build.source_asset_generation, build.source_build_id,
           build.pipeline_version, build.status, build.next_ordinal, build.error_code);
+      catalog.bumpCatalogVersion(build.project_id);
     },
     writeGraphBatch(buildId, start, end, graph) {
       const build = readBuild(buildId);
@@ -46,13 +52,18 @@ export function graphTransaction(db: DatabaseSync): GraphTransaction {
         .all(build.project_id, build.resource_id);
       for (const row of previous) supersede(row.build_id as string);
       db.prepare("UPDATE graph_builds SET status = 'active', error_code = NULL WHERE build_id = ?").run(buildId);
+      catalog.bumpCatalogVersion(build.project_id);
       return true;
     },
     failGraphBuild(buildId, code) {
-      db.prepare("UPDATE graph_builds SET status = 'failed', error_code = ? WHERE build_id = ? AND status = 'building'").run(code, buildId);
+      const build = readBuild(buildId);
+      const result = db.prepare("UPDATE graph_builds SET status = 'failed', error_code = ? WHERE build_id = ? AND status = 'building'").run(code, buildId);
+      if (result.changes > 0 && build !== undefined) catalog.bumpCatalogVersion(build.project_id);
     },
     resumeGraphBuild(buildId) {
-      db.prepare("UPDATE graph_builds SET status = 'building', error_code = NULL WHERE build_id = ? AND status = 'failed'").run(buildId);
+      const build = readBuild(buildId);
+      const result = db.prepare("UPDATE graph_builds SET status = 'building', error_code = NULL WHERE build_id = ? AND status = 'failed'").run(buildId);
+      if (result.changes > 0 && build !== undefined) catalog.bumpCatalogVersion(build.project_id);
     },
     supersedeGraphBuild: supersede,
     readGraphEvidence(projectId, resourceIds) {

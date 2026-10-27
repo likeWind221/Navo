@@ -18,6 +18,9 @@ describe("graph failure, cancellation and restart", () => {
     const resource = await publish(initial.ctx, initial.project.id, initial.workspace, "long.md", longBody);
     const failed = initial.ctx.resourceGraph.status(initial.project.id, resource.id)!;
     expect(failed).toMatchObject({ status: "failed", error_code: "model-failed" });
+    expect(initial.ctx.resourceGraph.describe(initial.project.id, resource.id)).toEqual({
+      status: "failed", readable: false, errorCode: "model-failed",
+    });
     expect(failed.next_ordinal).toBeGreaterThan(0);
     expect(initial.ctx.resourceGraph.read(initial.project.id, { kind: "main" })).toEqual({ entities: [], relations: [] });
     await close(initial.ctx);
@@ -88,6 +91,9 @@ describe("graph failure, cancellation and restart", () => {
     db.close();
     const llm = adapter(() => ({ entities: [], relations: [] }));
     const resumed = await open(initial.path, llm);
+    expect(resumed.resourceGraph.describe(initial.project.id, resource.id)).toEqual({
+      status: "stale", readable: false, errorCode: null,
+    });
     await settle(resumed);
     expect(llm.requests).toHaveLength(1);
     expect(resumed.storage.atomic(tx => tx.listGraphBuilds()).find(build => build.build_id === old.build_id)?.status).toBe("superseded");

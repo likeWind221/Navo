@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ProjectDetailV1 } from "../../../../rpc/project.js";
 import type { DesktopProjectApi, DesktopProjectFailure } from "../../../shared/project.js";
+import type { DesktopResourceApi } from "../../../shared/resource.js";
 import { projectFailureMessage } from "./failure";
 import { missingBridge } from "./hook";
 import { ProjectWorkspace } from "./Workspace";
@@ -13,8 +14,9 @@ export type ProjectDetailState =
   | { readonly status: "ready"; readonly detail: ProjectDetailV1 }
   | { readonly status: "failed"; readonly failure: DesktopProjectFailure };
 
-export function ProjectDetail({ api, projectId, runtime }: {
+export function ProjectDetail({ api, resource, projectId, runtime }: {
   readonly api: DesktopProjectApi | undefined;
+  readonly resource: DesktopResourceApi | undefined;
   readonly projectId: string;
   readonly runtime?: ProjectRuntime | undefined;
 }): React.JSX.Element {
@@ -40,12 +42,13 @@ export function ProjectDetail({ api, projectId, runtime }: {
     };
   }, [load]);
 
-  return <ProjectDetailView state={state} api={api} runtime={runtime} onRetry={() => void load()} />;
+  return <ProjectDetailView state={state} api={api} resource={resource} runtime={runtime} onRetry={() => void load()} />;
 }
 
-export function ProjectDetailView({ state, api, runtime, onRetry }: {
+export function ProjectDetailView({ state, api, resource, runtime, onRetry }: {
   readonly state: ProjectDetailState;
   readonly api?: DesktopProjectApi | undefined;
+  readonly resource?: DesktopResourceApi | undefined;
   readonly runtime?: ProjectRuntime | undefined;
   readonly onRetry: () => void;
 }): React.JSX.Element {
@@ -56,5 +59,5 @@ export function ProjectDetailView({ state, api, runtime, onRetry }: {
       <button type="button" className={styles.secondary} onClick={onRetry}>重试</button>
     </div>;
   }
-  return <ProjectWorkspace key={state.detail.project.projectId} detail={state.detail} api={api} runtime={runtime} />;
+  return <ProjectWorkspace key={state.detail.project.projectId} detail={state.detail} api={api} resource={resource} runtime={runtime} />;
 }

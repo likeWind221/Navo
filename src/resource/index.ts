@@ -4,15 +4,19 @@ import { EmbeddingError } from "../embedding/errors.js";
 import { createProjectId, createResourceId, type ProjectId, type ResourceId } from "../brand/ids.js";
 import type { ResourceContentRecord } from "../storage/content.js";
 import type { ResourceIndexBuildRecord } from "../storage/indexing.js";
-import { chunkText } from "./index/chunker.js";
+import { CHUNKER_VERSION, chunkText } from "./index/chunker.js";
 import { compatible, ResourceIndexStore } from "./index/store.js";
-import { encodeVector } from "./index/vector.js";
+import { encodeVector, VECTOR_ENCODING_VERSION } from "./index/vector.js";
 
 export interface ResourceIndexConfig { readonly provider?: EmbeddingProvider; readonly batchSize?: number }
 export type ResourceIndexStatus =
   | { readonly status: "waiting-config" }
   | { readonly status: "absent" }
   | { readonly status: ResourceIndexBuildRecord["status"]; readonly buildId: string; readonly errorCode: string | null };
+
+export type CurrentResourceIndexStatus =
+  | { readonly status: "waiting-config" | "absent" | "stale" }
+  | { readonly status: "building" | "active" | "failed"; readonly buildId: string; readonly errorCode: string | null };
 
 export class ResourceIndexProcessor extends Service {
   static inject = ["storage", "resources", "projects", "content"];
@@ -60,6 +64,32 @@ export class ResourceIndexProcessor extends Service {
     if (latest !== undefined) return { status: latest.status, buildId: latest.build_id, errorCode: latest.error_code };
     return this.provider === undefined && this.ctx.content.read(projectId, resourceId) !== undefined ? { status: "waiting-config" } : { status: "absent" };
   }
+
+  currentStatus(projectId: ProjectId, resourceId: ResourceId): CurrentResourceIndexStatus {
+    const provider = this.provider;
+    const content = this.ctx.content.read(projectId, resourceId);
+    if (content === undefined) return { status: "absent" };
+    if (provider === undefined) return { status: "waiting-config" };
+    const builds = this.store.builds().filter(build => build.project_id === projectId && build.resource_id === resourceId);
+    const compatibleBuilds = builds.filter(build => build.status !== "superseded"
+      && build.source_asset_generation === content.source_asset_generation && compatible(build, content, provider));
+    const current = compatibleBuilds.at(-1);
+    if (current !== undefined && current.status !== "superseded") {
+      return { status: current.status, buildId: current.build_id, errorCode: current.error_code };
+    }
+    return builds.length === 0 ? { status: "absent" } : { status: "stale" };
+  }
+
+  configurationKey(): string {
+    const provider = this.provider;
+    return JSON.stringify(provider === undefined ? ["unconfigured", CHUNKER_VERSION, VECTOR_ENCODING_VERSION] : [
+      provider.id, provider.model, provider.revision, provider.dimension,
+      provider.documentTemplateVersion, provider.queryTemplateVersion,
+      CHUNKER_VERSION, VECTOR_ENCODING_VERSION,
+    ]);
+  }
+
+  isConfigured(): boolean { return this.provider !== undefined; }
 
   async idle(): Promise<void> {
     while (this.scheduled !== undefined || this.running !== undefined) {

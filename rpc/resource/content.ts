@@ -1,12 +1,24 @@
 import { RpcError } from "../errors.js";
 import type { RpcMethod, RpcOutputValidator } from "../protocol.js";
-import { parseContentRetryInput, parseContentRetryResult } from "./content/validation.js";
+import {
+  parseContentCancelInput,
+  parseContentCancelResult,
+  parseContentRetryInput,
+  parseContentRetryResult,
+} from "./content/validation.js";
 
 export const resourceContentRetryMethod: RpcMethod<ResourceContentRetryInputV1, ResourceContentRetryResultV1> = Object.freeze({
   name: "resource.content.retry.v1",
   parseInput: parseContentRetryInput,
   parseOutput: parseContentRetryResult,
   createOutputValidator: () => singleOutput(parseContentRetryResult),
+});
+
+export const resourceContentCancelMethod: RpcMethod<ResourceContentCancelInputV1, ResourceContentCancelResultV1> = Object.freeze({
+  name: "resource.content.cancel.v1",
+  parseInput: parseContentCancelInput,
+  parseOutput: parseContentCancelResult,
+  createOutputValidator: () => singleOutput(parseContentCancelResult),
 });
 
 export interface ResourceContentRetryInputV1 {
@@ -22,6 +34,20 @@ export interface ResourceContentRetryResultV1 {
   readonly assetGeneration: number;
   readonly status: "accepted";
   readonly contentStatus: "pending";
+}
+
+export interface ResourceContentCancelInputV1 {
+  readonly projectId: string;
+  readonly resourceId: string;
+  readonly expectedRevision: number;
+}
+
+export interface ResourceContentCancelResultV1 {
+  readonly projectId: string;
+  readonly resourceId: string;
+  readonly revision: number;
+  readonly assetGeneration: number;
+  readonly status: "requested" | "not-active";
 }
 
 function singleOutput<T>(parse: (value: unknown) => T): RpcOutputValidator<T> {

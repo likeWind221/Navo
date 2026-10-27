@@ -9,6 +9,8 @@ import { ResourceError } from "./errors.js";
 import { normalizeLibraryPath } from "./library.js";
 import { requireActiveResourceProject } from "./validation.js";
 import type { ResourceViewCopy } from "./view.js";
+import { queryUserResources, type UserResourceQueryInput, type UserResourceQueryResult } from "./user/query.js";
+import type { UserSearchInput, UserSearchResult } from "./user/search.js";
 
 export interface UserImportInput {
   readonly projectId: ProjectId;
@@ -84,6 +86,22 @@ export class UserResourceService extends Service {
     };
   }
 
+  cancelContent(input: { projectId: ProjectId; resourceId: ResourceId; expectedRevision: number }) {
+    requireActiveResourceProject(this.ctx, input.projectId);
+    const resource = this.ctx.resources.get(input.projectId, input.resourceId);
+    if (resource === undefined) throw new ResourceError("resource-unavailable", "Resource is unavailable.");
+    if (resource.revision !== input.expectedRevision) {
+      throw new ResourceError("stale-revision", "Read the current Resource before cancelling its content.");
+    }
+    return {
+      projectId: input.projectId,
+      resourceId: input.resourceId,
+      revision: resource.revision,
+      assetGeneration: resource.assetGeneration,
+      status: this.ctx.content.cancelCurrent(input.projectId, input.resourceId, resource.assetGeneration),
+    };
+  }
+
   delete(input: Omit<DeleteResourceInput, "actor">) {
     return this.ctx.resources.deleteUser(input);
   }
@@ -92,10 +110,22 @@ export class UserResourceService extends Service {
     return this.ctx.resources.listLibraryFolders(projectId);
   }
 
+  listForSearch(projectId: ProjectId) {
+    return this.ctx.resources.listByProject(projectId);
+  }
+
   browse(projectId: ProjectId, path: string | null = null) {
     const { directories, resources } = this.ctx.resources.browseUserLibrary(projectId, path);
     return { directories, resources: resources.map(resource => ({ resource,
       contentStatus: this.ctx.content.status(projectId, resource.id)?.status ?? null })) };
+  }
+
+  query(input: UserResourceQueryInput, signal: AbortSignal): UserResourceQueryResult {
+    return queryUserResources(this.ctx, input, signal);
+  }
+
+  search(input: UserSearchInput, signal: AbortSignal): Promise<UserSearchResult> {
+    return this.ctx.userResourceSearch.search(input, signal);
   }
 
   createFolder(projectId: ProjectId, path: string) {

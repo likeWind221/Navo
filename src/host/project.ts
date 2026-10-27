@@ -5,6 +5,7 @@ import {
   projectAutoRunPauseMethod,
   projectAutoRunResumeMethod,
   projectAutoRunStartMethod,
+  projectAutoRunFollowMethod,
   projectCreateMethod,
   projectFollowMethod,
   projectGetMethod,
@@ -32,6 +33,7 @@ import type { RpcStreamHandler } from "../../rpc/stream.js";
 import { createNodeId, createProjectId } from "../brand/ids.js";
 import { toProjectFailure } from "./project/failure.js";
 import { createProjectFollowHandler } from "./project/follow.js";
+import { createProjectAutoRunFollowHandler } from "./project/autorun.js";
 import { createProjectTurnHandler } from "./project/turn.js";
 import { createProjectSessionRecoveryHandler } from "./project/session.js";
 import {
@@ -56,6 +58,7 @@ export function registerProjectMethods(router: StreamRpcRouter, ctx: Context): (
     router.register(projectSessionRecoveryMethod, createProjectSessionRecoveryHandler(ctx)),
     router.register(projectNodeReviewMethod, unary(input => reviewNode(ctx, input))),
     router.register(projectFollowMethod, createProjectFollowHandler(ctx)),
+    router.register(projectAutoRunFollowMethod, createProjectAutoRunFollowHandler(ctx)),
     router.register(projectAutoRunStartMethod, unary(input => startAutoRun(ctx, input))),
     router.register(projectAutoRunPauseMethod, unary(input => pauseAutoRun(ctx, input))),
     router.register(projectAutoRunResumeMethod, unary(input => resumeAutoRun(ctx, input))),

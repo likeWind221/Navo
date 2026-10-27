@@ -19,6 +19,7 @@ describe("graph lifecycle and visibility", () => {
     expect(before.relations).toHaveLength(2);
     expect(before.relations.every(relation => relation.evidence.length === 2)).toBe(true);
     expect(ctx.resourceGraph.status(project.id, first.id)?.status).toBe("active");
+    expect(ctx.resourceGraph.describe(project.id, first.id)).toEqual({ status: "active", readable: true, errorCode: null });
     await writeFile(join(workspace, "replacement.md"), "empty document");
     const replaced = await ctx.resources.replace({ projectId: project.id, resourceId: first.id, actor: { kind: "main" },
       expectedRevision: first.revision, sourceRef: "replacement.md" });

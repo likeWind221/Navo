@@ -16,7 +16,12 @@ import {
   projectResourcesMethod,
   projectNodeReviewMethod,
   projectTurnMethod,
+  sessionArchiveMethod,
   sessionCommandMethod,
+  sessionCreateMethod,
+  sessionListMethod,
+  sessionRenameMethod,
+  sessionRestoreMethod,
   StreamRpcClient,
 } from "../../rpc/index.js";
 import type { RpcClientFrame, RpcClientTransport } from "../../rpc/index.js";
@@ -126,6 +131,50 @@ if (mode === "all" || mode === "normal") describe("Kernel Host process lifecycle
       await rm(root, { recursive: true, force: true });
       const after = await withRealHost(env, async (client) => (await collect(client.stream(projectListMethod, {})))[0]!);
       expect(after).toEqual(before);
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
+  it("persists created, renamed, and archived ordinary Sessions across the real Host restart", async () => {
+    const base = await mkdtemp(join(tmpdir(), "navo-process-ordinary-"));
+    const home = join(base, "home");
+    try {
+      const before = await withRealHost({ NAVO_HOME: home }, async (client) => {
+        const [first] = await collect(client.stream(sessionCreateMethod, { title: "First ordinary" }));
+        const [second] = await collect(client.stream(sessionCreateMethod, { title: "Second ordinary" }));
+        const [page] = await collect(client.stream(sessionListMethod, { limit: 1, query: "", status: "all" }));
+        expect(page!.entries).toHaveLength(1);
+        const [next] = await collect(client.stream(sessionListMethod, {
+          limit: 1, query: "", status: "all", cursor: page!.nextCursor!,
+        }));
+        expect(new Set([page!.entries[0]!.sessionId, next!.entries[0]!.sessionId]))
+          .toEqual(new Set([first!.sessionId, second!.sessionId]));
+
+        const [renamed] = await collect(client.stream(sessionRenameMethod, {
+          sessionId: first!.sessionId, title: "Renamed ordinary", expectedRevision: first!.revision,
+        }));
+        expect(renamed!.title).toBe("Renamed ordinary");
+        const [archived] = await collect(client.stream(sessionArchiveMethod, {
+          sessionId: first!.sessionId, expectedRevision: renamed!.revision,
+        }));
+        expect(archived!.status).toBe("archived");
+        return { first: archived!, second: second! };
+      });
+
+      const after = await withRealHost({ NAVO_HOME: home }, async (client) => {
+        const [list] = await collect(client.stream(sessionListMethod, { limit: 10, query: "", status: "all" }));
+        expect(list!.entries).toContainEqual(before.first);
+        expect(list!.entries).toContainEqual(before.second);
+        const [restored] = await collect(client.stream(sessionRestoreMethod, {
+          sessionId: before.first.sessionId, expectedRevision: before.first.revision,
+        }));
+        expect(restored).toMatchObject({
+          sessionId: before.first.sessionId, title: "Renamed ordinary", status: "active",
+        });
+        return restored!;
+      });
+      expect(after.revision).toBeGreaterThan(before.first.revision);
     } finally {
       await rm(base, { recursive: true, force: true });
     }

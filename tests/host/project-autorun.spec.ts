@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  projectAutoRunFollowMethod,
   projectAutoRunGetMethod,
   projectAutoRunPauseMethod,
   projectAutoRunStartMethod,
@@ -10,6 +11,26 @@ import { createNodeId, createProjectId } from "../../src/brand/ids.js";
 import { call, failureOf, host, seedRoadmap, workspace } from "./project/helpers.js";
 
 describe("Kernel Host AutoRun methods", () => {
+  it("streams a baseline and automatic public turn events without starting a run", async () => {
+    const { ctx, client, adapter } = await host([{ kind: "hang" }]);
+    const created = await call(client, projectCreateMethod, {
+      name: "Observe", goal: "Observe automatically", workspaceRoot: await workspace(),
+    });
+    const { first } = seedRoadmap(ctx, created.projectId);
+    const controller = new AbortController();
+    const stream = client.stream(projectAutoRunFollowMethod, { projectId: created.projectId }, { signal: controller.signal });
+    const iterator = stream[Symbol.asyncIterator]();
+    expect((await iterator.next()).value).toEqual({ type: "snapshot", snapshot: null });
+    await call(client, projectAutoRunStartMethod, { projectId: created.projectId });
+    expect((await iterator.next()).value).toMatchObject({ type: "run-started", snapshot: { status: "running" } });
+    expect((await iterator.next()).value).toMatchObject({ type: "target-started", target: { kind: "node", nodeId: first } });
+    expect((await iterator.next()).value).toMatchObject({ type: "turn-event", event: { type: "turn-started" } });
+    expect(adapter.requests).toHaveLength(1);
+    controller.abort();
+    await iterator.next().catch(() => undefined);
+    expect(ctx.projectRuntime.stopNode(createProjectId(created.projectId), createNodeId(first))).toBe(true);
+  });
+
   it("starts AutoRun without waiting for the full execution loop", async () => {
     const { ctx, client, adapter } = await host([{ kind: "hang" }]);
     const created = await call(client, projectCreateMethod, {

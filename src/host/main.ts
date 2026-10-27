@@ -11,6 +11,7 @@ import { registerProjectMethods } from "./project.js";
 import { registerResourceMethods } from "./resource.js";
 import { registerSessionMethods } from "./session.js";
 import { resolveKernelHostConfig } from "./config.js";
+import type { KernelHostConfig, KernelHostGraphAdapterConfig } from "./config.js";
 import { StdioRpcServerTransport } from "./stdio.js";
 import { createAgentTurnHandler } from "./turn.js";
 import { createAgentTurnV2Handler } from "./turn/v2.js";
@@ -28,6 +29,8 @@ export async function runKernelHost(): Promise<void> {
 
 async function serveKernelHost(): Promise<void> {
   const config = resolveKernelHostConfig();
+  const mainAdapter = createMainAdapter(config);
+  const graphAdapter = config.graph === undefined ? undefined : createGraphAdapter(config.graph.adapter, config, mainAdapter);
   const fileEnvironment = config.file === undefined
     ? undefined
     : await createFileEnvironment(config.file.cwd);
@@ -52,16 +55,11 @@ async function serveKernelHost(): Promise<void> {
     ...(config.search === undefined && fileEnvironment === undefined
       ? {}
       : { tools }),
+    ...(config.graph === undefined ? {} : { graph: config.graph }),
   });
-  const unregister = ctx.llm.registerAdapter(
-    config.provider,
-    config.provider === "qwen" ? new QwenChatCompletionsAdapter(config.adapter)
-      : new OpenAIAdapter({
-          auth: new ChatGPTAuth({ home: config.adapter.home,
-            openBrowser: async () => { throw new Error("Run pnpm chatgpt login before using the Host."); } }),
-          ...(config.adapter.accountId === undefined ? {} : { accountId: config.adapter.accountId }),
-        }),
-  );
+  const unregisterMain = ctx.llm.registerAdapter(config.provider, mainAdapter.adapter);
+  const unregisterGraph = graphAdapter === undefined ? undefined
+    : ctx.llm.registerAdapter(config.graph!.model.provider, graphAdapter.adapter);
   const transport = new StdioRpcServerTransport(process.stdin, process.stdout);
   const router = new StreamRpcRouter();
   router.register(agentTurnMethod, createAgentTurnHandler(ctx, config.agent));
@@ -80,10 +78,56 @@ async function serveKernelHost(): Promise<void> {
   } finally {
     process.removeListener("SIGINT", stop);
     process.removeListener("SIGTERM", stop);
-    unregister();
+    await ctx.resourceGraph.stop();
+    unregisterGraph?.();
+    unregisterMain();
     await ctx.fiber.dispose();
     await transport.close();
   }
+}
+
+interface AdapterHandle {
+  readonly adapter: QwenChatCompletionsAdapter | OpenAIAdapter;
+  readonly auth?: ChatGPTAuth;
+}
+
+function createMainAdapter(config: KernelHostConfig): AdapterHandle {
+  if (config.provider === "qwen") return { adapter: new QwenChatCompletionsAdapter(config.adapter) };
+  const auth = new ChatGPTAuth({ home: config.adapter.home,
+    openBrowser: async () => { throw new Error("Run pnpm chatgpt login before using the Host."); } });
+  return { auth, adapter: new OpenAIAdapter({ auth,
+    ...(config.adapter.accountId === undefined ? {} : { accountId: config.adapter.accountId }),
+  }) };
+}
+
+function createGraphAdapter(
+  graph: KernelHostGraphAdapterConfig,
+  config: KernelHostConfig,
+  main: AdapterHandle,
+): AdapterHandle {
+  if (graph.provider === "qwen") {
+    if (config.provider === "qwen" && sameQwenConnection(config.adapter, graph)) return main;
+    return { adapter: new QwenChatCompletionsAdapter(graph) };
+  }
+  if (config.provider === "openai" && graph.home === config.adapter.home
+    && graph.accountId === config.adapter.accountId && main.auth !== undefined) return main;
+  const auth = new ChatGPTAuth({ home: graph.home,
+    openBrowser: async () => { throw new Error("Run pnpm chatgpt login before using the Host."); } });
+  return { auth, adapter: new OpenAIAdapter({ auth,
+    ...(graph.accountId === undefined ? {} : { accountId: graph.accountId }),
+  }) };
+}
+
+function sameQwenConnection(
+  main: Extract<KernelHostConfig, { provider: "qwen" }>['adapter'],
+  graph: Extract<KernelHostGraphAdapterConfig, { provider: "qwen" }>,
+): boolean {
+  return normalizeUrl(main.baseUrl) === normalizeUrl(graph.baseUrl)
+    && main.apiKey === graph.apiKey && main.enableThinking === graph.enableThinking;
+}
+
+function normalizeUrl(value: string): string {
+  return new URL(value).href.replace(/\/$/, "");
 }
 
 if (isDirectExecution(import.meta.url)) {

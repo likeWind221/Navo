@@ -4,8 +4,9 @@ import type { GraphBuildRecord } from "../storage/graph.js";
 import type { ResourcePrincipal } from "./model.js";
 import { GraphExtractor, type GraphConfig } from "./graph/extraction.js";
 import { GraphError } from "./graph/errors.js";
-import { GraphStore } from "./graph/store.js";
-import { readGraph, type GraphSnapshot } from "./graph/read.js";
+import { GraphStore, type GraphResourceDescription } from "./graph/store.js";
+import { readGraph, readGraphForResources, type GraphSnapshot } from "./graph/read.js";
+import type { ProjectResource } from "./model.js";
 
 export class ResourceGraph extends Service {
   static inject = ["storage", "resources", "content", "llm"];
@@ -56,8 +57,22 @@ export class ResourceGraph extends Service {
     return this.ctx.storage.atomic(tx => tx.listGraphBuilds()).filter(build => build.project_id === projectId && build.resource_id === resourceId).at(-1);
   }
 
+  describe(projectId: ProjectId, resourceId: ResourceId): GraphResourceDescription {
+    return this.store.describe(projectId, resourceId);
+  }
+
+  isConfigured(): boolean { return this.extractor !== undefined; }
+
   read(projectId: ProjectId, viewer: ResourcePrincipal, resourceIds?: readonly ResourceId[]): GraphSnapshot {
     return readGraph(this.ctx, projectId, viewer, resourceIds);
+  }
+
+  readUser(projectId: ProjectId, scope: () => readonly ProjectResource[], resourceIds?: readonly ResourceId[]): GraphSnapshot {
+    return readGraphForResources(this.ctx, projectId, scope(), resourceIds);
+  }
+
+  configurationKey(): string {
+    return JSON.stringify(this.extractor === undefined ? null : this.extractor.pipelineVersion);
   }
 
   async idle(): Promise<void> {

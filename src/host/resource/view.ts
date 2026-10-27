@@ -21,8 +21,7 @@ export function describeLibrarySnapshot(
   };
 }
 
-export function describeLibraryItem(ctx: Context, resource: ProjectResource): ResourceLibraryItemV1 {
-  const content = ctx.content.status(resource.projectId, resource.id);
+export function describeLibraryItem(ctx: Context, resource: ProjectResource, content = ctx.content.status(resource.projectId, resource.id)): ResourceLibraryItemV1 {
   return {
     resourceId: resource.id,
     owner: resource.owner.kind === "node" ? { kind: "node", nodeId: resource.owner.nodeId } : { kind: resource.owner.kind },
