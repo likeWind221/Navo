@@ -179,7 +179,11 @@ function applyDesktopEvent(
   now: number,
 ): ConversationState {
   if (update.type === "turn-event") return applyTurnV2Event(state, update.event, now);
-  if (update.type === "turn-error") return failActiveTurn(state, update.requestId, update.failure, now);
+  if (update.type === "turn-error") {
+    return update.failure.code === "cancelled"
+      ? finishTurnForRequest(state, update.requestId, "cancelled", null, now)
+      : failActiveTurn(state, update.requestId, update.failure, now);
+  }
   if (update.type === "command-event") return applyCommandEvent(state, update.event, now);
   if (update.type === "command-error") {
     return applyCommandFailure(state, update.commandId, update.name, update.failure, now);

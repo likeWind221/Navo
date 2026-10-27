@@ -50,13 +50,16 @@ describe("createDesktopProjectApi", () => {
       type: "failed", failure: { code: "invalid-output" },
     });
 
-    const closed = createDesktopProjectApi({ invoke: () => Promise.reject(new Error("No handler registered")) });
+    const closed = createDesktopProjectApi({ invoke: () => Promise.reject(new Error("No handler registered")), on() {}, removeListener() {} });
     expect(await closed.list()).toMatchObject({ type: "failed", failure: { code: "bridge-closed" } });
   });
 });
 
 class FakeIpc implements ProjectIpcRenderer {
   readonly calls: [string, unknown][] = [];
+
+  on(): void {}
+  removeListener(): void {}
 
   constructor(private readonly reply: (channel: string) => unknown) {}
 

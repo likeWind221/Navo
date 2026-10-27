@@ -6,3 +6,7 @@ export const PROJECT_AUTORUN_START_CHANNEL = "navo:project:autorun:start";
 export const PROJECT_AUTORUN_PAUSE_CHANNEL = "navo:project:autorun:pause";
 export const PROJECT_AUTORUN_RESUME_CHANNEL = "navo:project:autorun:resume";
 export const PROJECT_AUTORUN_GET_CHANNEL = "navo:project:autorun:get";
+export const PROJECT_TURN_START_CHANNEL = "navo:project:turn:start";
+export const PROJECT_TURN_CANCEL_CHANNEL = "navo:project:turn:cancel";
+export const PROJECT_FOLLOW_START_CHANNEL = "navo:project:follow:start";
+export const PROJECT_EVENT_CHANNEL = "navo:project:event";

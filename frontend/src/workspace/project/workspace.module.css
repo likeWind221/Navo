@@ -49,6 +49,7 @@
 .auxiliary code { font: 11px/1.6 var(--font-mono); }
 .auxiliary button { border: 0; background: none; padding: 0; color: var(--text-tertiary); font-size: 10px; }
 .messages { flex: 1; min-height: 0; overflow: auto; padding: 22px 22px 18px; }
+.liveConversation { flex: 1; min-height: 0; margin: 16px 14px 0; border-top: 1px solid var(--border); overflow: hidden; }
 .panel[data-full="true"] .messages, .panel[data-full="true"] .composer { width: min(760px, calc(100% - 32px)); align-self: center; }
 .nodeHeading { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
 .nodeBadge { display: grid; place-items: center; flex-shrink: 0; width: 48px; height: 48px; border-radius: 50%; background: #e5eee6; color: var(--accent-strong); font-size: 18px; font-weight: 650; }

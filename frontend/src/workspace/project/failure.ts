@@ -2,6 +2,8 @@ import type { DesktopProjectFailure } from "../../../shared/project.js";
 
 export function projectFailureMessage(failure: DesktopProjectFailure): string {
   switch (failure.code) {
+    case "cancelled":
+      return "项目回合已停止。";
     case "invalid-request":
       return "名称、目标或工作目录不符合要求（名称必填，目标可留空），请检查后重试。";
     case "workspace-conflict":
@@ -9,7 +11,7 @@ export function projectFailureMessage(failure: DesktopProjectFailure): string {
     case "workspace-invalid":
       return "工作目录不存在或不可访问，请重新选择。";
     case "project-not-found":
-      return "项目不存在，可能因 Host 重启已被清空。";
+      return "项目不存在或当前不可用，请重新加载项目列表。";
     case "project-unavailable":
       return "项目当前不可用，请稍后重试。";
     case "runtime-unavailable":

@@ -5,8 +5,8 @@ import {
   parseProjectList,
   parseProjectSummary,
 } from "../../../rpc/project/validation.js";
-import type { DesktopBridgeFailureCode, DesktopProjectApi, DesktopProjectResult } from "../../shared/project.js";
-import { parseDesktopProjectResult, parseWorkspaceChoice } from "../../shared/project/validation.js";
+import type { DesktopBridgeFailureCode, DesktopProjectApi, DesktopProjectEventListener, DesktopProjectResult } from "../../shared/project.js";
+import { parseDesktopProjectEvent, parseDesktopProjectHandle, parseDesktopProjectNull, parseDesktopProjectResult, parseWorkspaceChoice } from "../../shared/project/validation.js";
 import {
   PROJECT_AUTORUN_GET_CHANNEL,
   PROJECT_AUTORUN_PAUSE_CHANNEL,
@@ -16,13 +16,20 @@ import {
   PROJECT_CREATE_CHANNEL,
   PROJECT_GET_CHANNEL,
   PROJECT_LIST_CHANNEL,
+  PROJECT_TURN_START_CHANNEL, PROJECT_TURN_CANCEL_CHANNEL,
+  PROJECT_FOLLOW_START_CHANNEL, PROJECT_EVENT_CHANNEL,
 } from "../../shared/project/channels.js";
 
 export interface ProjectIpcRenderer {
   invoke(channel: string, value: unknown): Promise<unknown>;
+  on(channel: string, listener: (event: unknown, value: unknown) => void): void;
+  removeListener(channel: string, listener: (event: unknown, value: unknown) => void): void;
 }
 
-export function createDesktopProjectApi(ipc: ProjectIpcRenderer): DesktopProjectApi {
+export function createDesktopProjectApi(
+  ipc: ProjectIpcRenderer,
+  reportInvalidUpdate: () => void = () => console.error("[preload] dropped invalid Project event"),
+): DesktopProjectApi {
   async function request<T>(channel: string, input: unknown, parse: (value: unknown) => T) {
     let raw: unknown;
     try {
@@ -46,6 +53,16 @@ export function createDesktopProjectApi(ipc: ProjectIpcRenderer): DesktopProject
     autoRunResume: input => request(PROJECT_AUTORUN_RESUME_CHANNEL, input, parseProjectAutoRunSnapshot),
     autoRunGet: input => request(PROJECT_AUTORUN_GET_CHANNEL, input, parseProjectAutoRunSnapshotOrNull),
     chooseWorkspace: () => request(PROJECT_CHOOSE_WORKSPACE_CHANNEL, null, parseWorkspaceChoice),
+    startTurn: input => request(PROJECT_TURN_START_CHANNEL, input, parseDesktopProjectHandle),
+    cancel: operationId => request(PROJECT_TURN_CANCEL_CHANNEL, operationId, parseDesktopProjectNull),
+    startFollow: input => request(PROJECT_FOLLOW_START_CHANNEL, input, parseDesktopProjectHandle),
+    onEvent(listener: DesktopProjectEventListener): () => void {
+      const receive = (_event: unknown, candidate: unknown): void => {
+        try { listener(parseDesktopProjectEvent(candidate)); } catch { reportInvalidUpdate(); }
+      };
+      ipc.on(PROJECT_EVENT_CHANNEL, receive);
+      return () => ipc.removeListener(PROJECT_EVENT_CHANNEL, receive);
+    },
   } satisfies DesktopProjectApi);
 }
 

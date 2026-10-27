@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { WorkspaceShell } from "./workspace/Shell";
 import type { WorkspaceEntry } from "./workspace/Shell";
 import { ChatWorkspace } from "./workspace/Chat";
@@ -6,6 +6,7 @@ import { ProjectCreate } from "./workspace/project/Create";
 import { ProjectDetail } from "./workspace/project/Detail";
 import { ProjectNotice } from "./workspace/project/Notice";
 import { useProjects } from "./workspace/project/hook";
+import { ProjectRuntime } from "./workspace/project/runtime.js";
 
 const DesignSample = import.meta.env.DEV
   ? lazy(() => import("./preview/Sample"))
@@ -37,6 +38,11 @@ export function App(): React.JSX.Element {
 
 function DesktopWorkspace(): React.JSX.Element {
   const api = window.desktop?.project;
+  const runtime = useMemo(() => new ProjectRuntime(api), [api]);
+  useEffect(() => {
+    runtime.connect();
+    return () => runtime.disconnect();
+  }, [runtime]);
   const resource = window.desktop?.resource;
   const projects = useProjects(api);
   const [creating, setCreating] = useState(false);
@@ -47,7 +53,7 @@ function DesktopWorkspace(): React.JSX.Element {
       id: projectEntryId(project.projectId),
       title: project.name,
       kind: "project",
-      content: <ProjectDetail api={api} resource={resource} projectId={project.projectId} />,
+      content: <ProjectDetail api={api} runtime={runtime} resource={resource} projectId={project.projectId} />,
     })),
   ];
 

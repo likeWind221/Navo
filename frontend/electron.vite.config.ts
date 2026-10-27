@@ -13,6 +13,7 @@ export default defineConfig({
           f36: resolve("scripts/qa/f36.ts"),
           markdown: resolve("scripts/qa/markdown.ts"),
           project: resolve("scripts/qa/project.ts"),
+          main: resolve("scripts/qa/main.ts"),
           autorun: resolve("scripts/qa/autorun.ts"),
           session: resolve("scripts/qa/session.ts"),
           resource: resolve("scripts/qa/resource.ts"),

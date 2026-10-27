@@ -14,5 +14,5 @@ export function ProjectNotice({ state, onRetry }: {
   }
   if (state.projects.length > 0) return null;
   if (state.status === "loading") return <p className={styles.notice} role="status">正在加载项目……</p>;
-  return <p className={styles.notice}>暂无项目。项目目前只保存在内存中，Host 重启后会清空。</p>;
+  return <p className={styles.notice}>暂无项目。已创建的项目会在 Host 重启后恢复；如果看不到项目，请重新加载。</p>;
 }
