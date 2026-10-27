@@ -257,3 +257,5 @@
 - [F14.4 自动运行持续观察](176-devlog-f14-4-observation.md)：项目运行基线、自动回合公开内容、晚订阅身份及取消/关闭清理；前端F8另行消费。
 
 - [F14.5 独立普通会话管理](177-devlog-f14-5-ordinary-sessions.md)：普通会话创建、分页、重命名、归档恢复与活动租约；Main / Node 隔离、standalone 历史迁移及正式 Host 重启持久化。
+
+- [F7.2 资料导入与整理](178-devlog-f7-2-operations.md)：项目级操作状态、导入逐项进度与取消、文件夹与资料整理、版本冲突草稿；受控 Electron 与正式 Host 零推理验收。
