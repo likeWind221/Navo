@@ -8,7 +8,7 @@
 
 - [x] BUG-037：独立 master 已复现窄屏项目会话面板2px；最小列定位修复、实际 Electron、前端165项与根1080项、当前 head CI 均通过；PR #112 已合入（ec14333），关闭，见 [169](169-bugfix-bug-037-panel.md)。
 
-- [ ] BUG-036：F5.4 真实 Main 两回合在凭据刷新阶段 AUTH 失败；零生成诊断确认 token 端点 HTTP 403 / application/json。2026-10-27 补充：当前出口直连仍 403，临时干净出口下同一端点返回 200 且 `pnpm chatgpt models` 刷新并列出模型，说明与出口路由 / IP 相关；真实 Main 仍未跑，未修复、未关闭，见 [168](168-bugfix-bug-036-auth.md)。
+- [ ] BUG-036：F5.4 真实 Main 两回合在凭据刷新阶段 AUTH 失败；零生成诊断确认 token 端点 HTTP 403 / application/json。2026-10-27 补充：当前出口直连仍 403，临时干净出口下同一端点返回 200 且 `pnpm chatgpt models` 刷新并列出模型，说明与出口路由 / IP 相关；真实 Main 仍未跑，未修复、未关闭。用户同日明确允许带此已知缺口直接合并 F5.4 PR #111（commit `c8586fa`）；授权仅限本次合并，BUG-036 保持未勾选，后续仍须真实复验，见 [168](168-bugfix-bug-036-auth.md)。
 
 - [x] BUG-035：已按方案 A 修复验收来源契约：直读由成功 fetch 轨迹证明，`source_ids` 只要求可追溯的支持来源并拒绝本回合未出现的 ID；新增三项回归，完整本地 1056 项与 CI run `40334741718` 通过。第四轮真实运行 `%TEMP%/navo-f136-real-R8uzdx` 的 Node B 来源声明与 fetch 轨迹一致，最终 Main Review 与完整任务通过，关闭，见 [163](163-bugfix-bug-035-node-source-evidence.md)。
 - [x] BUG-034：验收脚本已补齐 Main 目标确认两回合；第四轮真实确认 / 规划、两 Node、Review 与同库重开通过，完整本地 1056 项与 head `a3fb032` 的 CI run `40335277583` 通过，关闭，见 [162](162-bugfix-bug-034-acceptance-confirmation.md)。
