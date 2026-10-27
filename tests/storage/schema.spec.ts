@@ -142,3 +142,17 @@ for (const version of [2, 3, 4, 5, 6]) {
     for (const name of ["graph_builds", "graph_entities", "graph_relations", "graph_evidence"]) expect(after.tables).toContainEqual({ name });
   });
 }
+
+it("upgrades schema v8 with the ordinary Session catalog and migrates standalone history", async () => {
+  const path = await temporaryDatabase(roots, "navo-schema-v8-");
+  const ctx = await app(path);
+  const sessionId = createSessionId("schema-v8-session");
+  ctx.sessions.append({ type: "user-message", sessionId,
+    data: { message: { id: createMessageId("schema-v8-message"), role: "user", content: [{ type: "text", text: "old" }] } } });
+  await close(ctx);
+  rawSql(path, "DROP TABLE ordinary_sessions; PRAGMA user_version = 8;");
+  const upgraded = await app(path);
+  expect(upgraded.sessionDirectory.list({ query: "", status: "all", limit: 50 }).entries)
+    .toMatchObject([{ sessionId: String(sessionId), title: "Untitled conversation" }]);
+  expect(snapshot(path).tables).toContainEqual({ name: "ordinary_sessions" });
+});

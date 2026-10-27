@@ -1,5 +1,14 @@
 import type { RpcMethod, RpcOutputValidator } from "./protocol.js";
 import { RpcError } from "./errors.js";
+export {
+  ORDINARY_SESSION_PAGE_MAX,
+  ORDINARY_SESSION_TITLE_MAX,
+  sessionArchiveMethod,
+  sessionCreateMethod,
+  sessionListMethod,
+  sessionRenameMethod,
+  sessionRestoreMethod,
+} from "./session/ordinary.js";
 import {
   parseSessionContextFollowEvent,
   parseSessionContextFollowInput,
@@ -14,7 +23,43 @@ export const SESSION_HISTORY_PAGE_MAX = 50;
 export type SessionFailureCode =
   | "session-context-unavailable"
   | "history-changed"
+  | "session-not-found"
+  | "session-not-ordinary"
+  | "session-archived"
+  | "session-active"
+  | "session-revision-conflict"
+  | "session-catalog-changed"
+  | "session-unavailable"
+  | "session-invalid-title"
   | "internal";
+
+export interface OrdinarySessionCreateInputV1 { readonly title?: string }
+export interface OrdinarySessionMutationInputV1 { readonly sessionId: string; readonly expectedRevision: number; readonly title?: string }
+export interface OrdinarySessionEntryV1 {
+  readonly sessionId: string;
+  readonly title: string;
+  readonly status: "active" | "archived";
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly revision: number;
+}
+export interface OrdinarySessionCursorV1 {
+  readonly catalogRevision: number;
+  readonly offset: number;
+  readonly query: string;
+  readonly status: "all" | "active" | "archived";
+}
+export interface OrdinarySessionListInputV1 {
+  readonly limit: number;
+  readonly query: string;
+  readonly status: "all" | "active" | "archived";
+  readonly cursor?: OrdinarySessionCursorV1;
+}
+export interface OrdinarySessionListV1 {
+  readonly catalogRevision: number;
+  readonly entries: readonly OrdinarySessionEntryV1[];
+  readonly nextCursor: OrdinarySessionCursorV1 | null;
+}
 
 export interface SessionContextInputV1 {
   readonly sessionId: string;

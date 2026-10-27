@@ -9,8 +9,9 @@ import { StorageError } from "./errors.js";
 import { LIBRARY_FOLDERS_SCHEMA } from "./folders.js";
 import { RESOURCE_INDEX_SCHEMA } from "./indexing.js";
 import { RESOURCE_CATALOG_SCHEMA } from "./catalog.js";
+import { ORDINARY_SESSION_SCHEMA } from "./ordinary.js";
 
-export const STORAGE_SCHEMA_VERSION = 8;
+export const STORAGE_SCHEMA_VERSION = 9;
 export const STORAGE_APPLICATION_ID = 0x4e41564f;
 
 export const EVENT_HISTORY_QUERY =
@@ -35,6 +36,7 @@ ${LIBRARY_FOLDERS_SCHEMA}
 ${RESOURCE_INDEX_SCHEMA}
 ${GRAPH_SCHEMA}
 ${RESOURCE_CATALOG_SCHEMA}
+${ORDINARY_SESSION_SCHEMA}
 CREATE TABLE workspace_bindings (
   project_id TEXT PRIMARY KEY,
   root       TEXT NOT NULL UNIQUE
@@ -82,10 +84,10 @@ function configureDatabase(db: DatabaseSync, path: string): void {
         throw unsupported(path, "has an unversioned schema or a foreign application id");
       }
       db.exec(SCHEMA);
-    } else if (![1, 2, 3, 4, 5, 6, 7, STORAGE_SCHEMA_VERSION].includes(Number(version)) || applicationId !== STORAGE_APPLICATION_ID) {
+    } else if (![1, 2, 3, 4, 5, 6, 7, 8, STORAGE_SCHEMA_VERSION].includes(Number(version)) || applicationId !== STORAGE_APPLICATION_ID) {
       throw unsupported(path, `has schema ${String(version)} / application id ${String(applicationId)}`);
     } else {
-      const requiredTables = [...REQUIRED_TABLES, ...(Number(version) >= 3 ? ["resource_file_operations"] : []), ...(Number(version) >= 4 ? ["resource_content"] : []), ...(Number(version) >= 5 ? ["library_folders"] : []), ...(Number(version) >= 6 ? ["resource_index_builds", "resource_chunks"] : []), ...(Number(version) >= 7 ? ["graph_builds", "graph_entities", "graph_relations", "graph_evidence"] : []), ...(Number(version) >= 8 ? ["resource_catalog_versions"] : [])];
+      const requiredTables = [...REQUIRED_TABLES, ...(Number(version) >= 3 ? ["resource_file_operations"] : []), ...(Number(version) >= 4 ? ["resource_content"] : []), ...(Number(version) >= 5 ? ["library_folders"] : []), ...(Number(version) >= 6 ? ["resource_index_builds", "resource_chunks"] : []), ...(Number(version) >= 7 ? ["graph_builds", "graph_entities", "graph_relations", "graph_evidence"] : []), ...(Number(version) >= 8 ? ["resource_catalog_versions"] : []), ...(Number(version) >= 9 ? ["ordinary_sessions"] : [])];
       const tables = db.prepare(
         `SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN (${requiredTables.map(() => "?").join(", ")})`,
       ).all(...requiredTables);
@@ -108,6 +110,7 @@ function configureDatabase(db: DatabaseSync, path: string): void {
       if (Number(version) < 6) db.exec(`${RESOURCE_INDEX_SCHEMA} PRAGMA user_version = 6;`);
       if (Number(version) < 7) db.exec(`${GRAPH_SCHEMA} PRAGMA user_version = 7;`);
       if (Number(version) < 8) db.exec(`${RESOURCE_CATALOG_SCHEMA} PRAGMA user_version = 8;`);
+      if (Number(version) < 9) db.exec(`${ORDINARY_SESSION_SCHEMA} PRAGMA user_version = 9;`);
     }
     db.exec("COMMIT");
   } catch (error: unknown) {

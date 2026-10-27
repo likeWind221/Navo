@@ -18,6 +18,20 @@ import { toSessionFailure } from "./session/failure.js";
 import { createSessionContextFollowHandler } from "./session/follow.js";
 import { readSessionHistory } from "./session/history.js";
 import { createSessionContextSnapshot } from "./session/snapshot.js";
+import {
+  createSessionArchiveHandler,
+  createSessionCreateHandler,
+  createSessionListHandler,
+  createSessionRenameHandler,
+  createSessionRestoreHandler,
+} from "./session/ordinary.js";
+import {
+  sessionArchiveMethod,
+  sessionCreateMethod,
+  sessionListMethod,
+  sessionRenameMethod,
+  sessionRestoreMethod,
+} from "../../rpc/session.js";
 
 export function registerSessionMethods(router: StreamRpcRouter, ctx: Context): () => void {
   const unregister = [
@@ -28,6 +42,11 @@ export function registerSessionMethods(router: StreamRpcRouter, ctx: Context): (
       input => readSessionHistory(ctx, createSessionId(input.sessionId), input),
     )),
     router.register(sessionContextFollowMethod, createSessionContextFollowHandler(ctx)),
+    router.register(sessionCreateMethod, createSessionCreateHandler(ctx)),
+    router.register(sessionListMethod, createSessionListHandler(ctx)),
+    router.register(sessionRenameMethod, createSessionRenameHandler(ctx)),
+    router.register(sessionArchiveMethod, createSessionArchiveHandler(ctx)),
+    router.register(sessionRestoreMethod, createSessionRestoreHandler(ctx)),
   ];
   return () => { for (const dispose of unregister) dispose(); };
 }
@@ -35,9 +54,10 @@ export function registerSessionMethods(router: StreamRpcRouter, ctx: Context): (
 function unary<TInput, TOutput>(
   run: (input: TInput) => TOutput | Promise<TOutput>,
 ): RpcStreamHandler<TInput, TOutput> {
-  return async function* session(input) {
+  return async function* session(input, signal) {
     let output: TOutput;
     try {
+      signal.throwIfAborted();
       output = await run(input);
     } catch (error: unknown) {
       throw toSessionFailure(error);
