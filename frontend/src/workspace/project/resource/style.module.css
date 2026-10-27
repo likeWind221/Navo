@@ -12,6 +12,16 @@
 .breadcrumbs i { color: var(--text-tertiary); font-style: normal; }
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 22px; color: var(--text-tertiary); font-size: 11px; }
 .toolbar button:disabled { color: var(--text-tertiary); opacity: .5; }
+.toolbarGroup { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.toolbarGroup button { display: inline-flex; align-items: center; gap: 4px; }
+.toolbarGroup button > svg { width: 13px; height: 13px; }
+.importHint { margin: -2px 22px 8px; color: var(--text-tertiary); font-size: 10px; }
+.operations { display: grid; gap: 7px; margin: 0 22px 10px; max-height: 150px; overflow: auto; }
+.operation { padding: 8px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-muted); font-size: 11px; }
+.operationHeader { display: flex; align-items: center; gap: 8px; }.operationHeader span { color: var(--text-tertiary); }.operationHeader button { margin-left: auto; border: 0; border-radius: 6px; padding: 3px 7px; background: var(--canvas); color: var(--accent-strong); font-size: 10px; }
+.operation ul { display: grid; gap: 3px; margin: 6px 0 0; padding: 0; list-style: none; }.operation li { display: flex; justify-content: space-between; gap: 8px; color: var(--text-secondary); }.operation li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.operation li small { color: var(--text-tertiary); white-space: nowrap; }.operation p { margin: 6px 0 0; color: var(--danger); }
+.directoryRow { display: flex; min-width: 0; gap: 3px; }.directoryRow .directory { flex: 1; }.itemAction { align-self: stretch; width: 38px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text-tertiary); font-size: 10px; }.itemAction:hover { background: var(--surface-muted); color: var(--text); }
+.directoryActions { display: flex; align-items: center; gap: 7px; margin: 0 22px 10px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 9px; color: var(--text-secondary); font-size: 11px; }.directoryActions strong { margin-right: auto; overflow: hidden; text-overflow: ellipsis; }.directoryActions button, .infoActions button { border: 0; border-radius: 6px; padding: 5px 8px; background: var(--surface-muted); color: var(--accent-strong); font-size: 10px; }.directoryActions button:disabled, .infoActions button:disabled { opacity: .5; }
 .content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 310px); gap: 18px; min-height: 0; flex: 1; padding: 0 22px 22px; overflow: hidden; }
 .items { min-width: 0; overflow: auto; display: grid; align-content: start; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; padding: 2px; }
 .directory, .resource { min-width: 0; display: flex; align-items: center; gap: 9px; padding: 12px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); color: var(--text); text-align: left; }
@@ -27,11 +37,15 @@
 .info h3 { margin: 5px 0 14px; font-size: 16px; overflow-wrap: anywhere; }
 .info dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 9px 12px; margin: 0; font-size: 11px; }
 .info dt { color: var(--text-tertiary); }.info dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--text-secondary); }.info dd .dot { margin-right: 6px; vertical-align: middle; }
+.infoActions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }.infoActions button { border: 1px solid var(--border); background: var(--canvas); }
+.actionDialog { width: min(420px, calc(100% - 28px)); border: 1px solid var(--border); border-radius: 14px; padding: 0; background: var(--canvas); color: var(--text); box-shadow: var(--shadow-panel); }.actionDialog::backdrop { background: #17352d44; }.actionDialog form { display: grid; gap: 14px; padding: 20px; }.actionDialog h3 { margin: 0; font-size: 16px; }.actionDialog p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.6; }.actionDialog label { display: grid; gap: 6px; color: var(--text-secondary); font-size: 11px; }.actionDialog input, .actionDialog textarea { box-sizing: border-box; width: 100%; border: 1px solid var(--border); border-radius: 7px; padding: 8px; background: var(--surface); color: var(--text); font: inherit; }.actionDialog textarea { min-height: 72px; resize: vertical; }.actionDialog form > div { display: flex; justify-content: flex-end; gap: 7px; }.actionDialog form button { border: 0; border-radius: 7px; padding: 7px 12px; background: var(--surface-muted); color: var(--text-secondary); font-size: 11px; }.actionDialog form button[type="submit"] { background: var(--accent-strong); color: var(--canvas); }
 .status, .empty { margin: auto; padding: 24px; color: var(--text-secondary); font-size: 12px; text-align: center; }
 .failure { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 22px 10px; padding: 9px 12px; border: 1px solid #e8bbb1; border-radius: 9px; color: var(--danger); font-size: 11px; }
 @media (max-width: 720px) {
   .library { inset: 8px; height: calc(100% - 16px); border-radius: 13px; }
   .header, .breadcrumbs, .toolbar { padding-left: 14px; padding-right: 14px; }
+  .importHint { margin-left: 14px; margin-right: 14px; }
+  .operations, .directoryActions { margin-left: 14px; margin-right: 14px; }
   .content { grid-template-columns: minmax(0, 1fr); padding: 0 14px 14px; overflow: auto; }
   .items { overflow: visible; }
   .info { min-height: 210px; }
