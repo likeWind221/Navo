@@ -423,3 +423,11 @@ F14.4本机完整1118项与正式Host受控观察/暂停/恢复/重启/关闭验
 F14.5 已完成本机类型检查、完整 1130 项、31 项专项与正式 stdio Host 零推理 create/list/rename/archive/restore/restart 验收，见 [177](177-devlog-f14-5-ordinary-sessions.md)。[PR #118](https://github.com/likeWind221/Navo/pull/118) head `bbc04a7` 的 CI `40444187477` 通过，已 squash 合入 `a185778`。
 
 当前下一步为 F14.6 原始公开历史与查找导出：分页阅读消息、工具往返、回合终态与压缩记录，支持当前会话文字查找与显式选定导出；不公开系统提示词、凭据或内部日志。原始历史是后续会话 UI 与导出的公共事实源，不改变 F14.5 的普通会话身份与归档语义。
+
+## 补充：DeepSeek Flash 生成模型接入
+
+| 状态 | 能力 | 完成标准 |
+|---|---|---|
+| 🔄 | DeepSeek Flash 后端生成与真实验收选择 | 正式 Host 和验收可显式使用 DeepSeek，工具调用、思考历史、错误与取消正确，图谱可独立配置；离线检查和当前 PR head CI 通过。真实 API 兼容性与模型质量单独验收 |
+
+开发记录见 [180](180-devlog-deepseek-flash.md)。本次不推进 F14.6 或评测集开发；外部模型调用需先给预算。

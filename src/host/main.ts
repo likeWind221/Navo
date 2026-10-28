@@ -1,3 +1,4 @@
+import { DeepSeekAdapter } from "../llm/adapters/deepseek.js";
 import { agentTurnMethod, agentTurnV2Method, sessionCommandMethod, StreamRpcRouter, StreamRpcServer } from "../../rpc/index.js";
 import { createApp } from "../app.js";
 import { QwenChatCompletionsAdapter } from "../llm/adapters/qwen.js";
@@ -87,11 +88,12 @@ async function serveKernelHost(): Promise<void> {
 }
 
 interface AdapterHandle {
-  readonly adapter: QwenChatCompletionsAdapter | OpenAIAdapter;
+  readonly adapter: QwenChatCompletionsAdapter | OpenAIAdapter | DeepSeekAdapter;
   readonly auth?: ChatGPTAuth;
 }
 
 function createMainAdapter(config: KernelHostConfig): AdapterHandle {
+  if (config.provider === "deepseek") return { adapter: new DeepSeekAdapter(config.adapter) };
   if (config.provider === "qwen") return { adapter: new QwenChatCompletionsAdapter(config.adapter) };
   const auth = new ChatGPTAuth({ home: config.adapter.home,
     openBrowser: async () => { throw new Error("Run pnpm chatgpt login before using the Host."); } });
@@ -105,6 +107,7 @@ function createGraphAdapter(
   config: KernelHostConfig,
   main: AdapterHandle,
 ): AdapterHandle {
+  if (graph.provider === "deepseek") return { adapter: new DeepSeekAdapter(graph) };
   if (graph.provider === "qwen") {
     if (config.provider === "qwen" && sameQwenConnection(config.adapter, graph)) return main;
     return { adapter: new QwenChatCompletionsAdapter(graph) };

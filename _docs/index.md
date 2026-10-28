@@ -261,3 +261,5 @@
 - [F7.2 资料导入与整理](178-devlog-f7-2-operations.md)：项目级操作状态、导入逐项进度与取消、文件夹与资料整理、版本冲突草稿；受控 Electron 与正式 Host 零推理验收。
 
 - [F5.4 Main 对话与项目状态跟随（带缺口合并）](179-devlog-f5-4-main.md)：Main 回合 / follow 桥接、项目级运行状态与关闭重开；与 F7.1 / F7.2 资料库合并，受控 QA 通过，真实 Main 未验收并按用户授权先行合并。
+
+- [DeepSeek Flash 后端接入](180-devlog-deepseek-flash.md)：正式 Host 生成与图谱配置、工具思考续传及真实验收提供方选择；真实 API 验收待独立授权。

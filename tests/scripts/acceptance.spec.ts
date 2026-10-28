@@ -51,3 +51,11 @@ describe("real acceptance model selection", () => {
     });
   });
 });
+
+it("selects DeepSeek explicitly without rewriting the caller environment", () => {
+  const env = { LLM_PROVIDER: "deepseek", DEEPSEEK_API_KEY: "key" };
+  expect(resolveAcceptanceHostConfig(env)).toMatchObject({ provider: "deepseek",
+    adapter: { apiKey: "key", enableThinking: true },
+    agent: { model: { provider: "deepseek", model: "deepseek-flash" } } });
+  expect(env).not.toHaveProperty("LLM_MODEL");
+});
