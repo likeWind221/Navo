@@ -20,6 +20,8 @@ import type { ShellKind } from "./builtins/shell/types.js";
 import { createShellTool } from "./builtins/shell/tool.js";
 import { ToolService } from "./service.js";
 import type { ToolDefinition } from "./types.js";
+import { McpDirectoryService } from "./mcp/directory.js";
+import type { McpClientConfig } from "./mcp/types.js";
 
 /** Trusted configuration for the complete application-level tool layer. */
 export interface ToolsPluginConfig {
@@ -27,6 +29,7 @@ export interface ToolsPluginConfig {
   readonly fetch?: FetchToolsConfig;
   /** Omit to keep host filesystem capabilities entirely unregistered. */
   readonly file?: FileToolsConfig;
+  readonly mcp?: McpClientConfig;
 }
 
 /** Trusted host bridge from one Session to its fixed file execution environment. */
@@ -56,6 +59,12 @@ export async function ToolsPlugin(
   config: ToolsPluginConfig = {},
 ): Promise<void> {
   await ctx.plugin(ToolService);
+  if (config.mcp !== undefined) {
+    await ctx.plugin(McpDirectoryService, config.mcp);
+    const directory = ctx.mcpDirectory;
+    if (directory === undefined) throw new Error("MCP directory service failed to mount.");
+    await directory.start();
+  }
   await ctx.plugin(SearchTool, config.search);
 
   const file = normalizeFileConfig(config.file);
