@@ -16,6 +16,26 @@ function response(delta: object, finish = "stop") {
     usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 } })}\n\ndata: [DONE]\n\n`);
 }
 
+it("accepts null intermediate usage and emits the final usage", async () => {
+  const adapter = new DeepSeekAdapter({ baseUrl: "https://api.deepseek.com", fetch: async () => new Response(
+    'data: {"choices":[{"delta":{"content":"hello"},"finish_reason":null}],"usage":null}\n\n' +
+    'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":3,"completion_tokens":2}}\n\n' +
+    'data: [DONE]\n\n') });
+  const events = await collect(adapter.stream(request));
+  expect(events).toContainEqual(expect.objectContaining({ type: "content-delta", contentType: "text", delta: "hello" }));
+  expect(events).toContainEqual({ type: "usage", usage: { inputTokens: 3, outputTokens: 2 } });
+  expect(events).toContainEqual({ type: "finished", reason: { kind: "stop" } });
+});
+
+it("leaves usage unknown if no usage object arrives", async () => {
+  const adapter = new DeepSeekAdapter({ baseUrl: "https://api.deepseek.com", fetch: async () => new Response(
+    'data: {"choices":[{"delta":{"content":"hello"},"finish_reason":"stop"}],"usage":null}\n\n' +
+    'data: [DONE]\n\n') });
+  const events = await collect(adapter.stream(request));
+  expect(events.some(event => event.type === "usage")).toBe(false);
+  expect(events).toContainEqual({ type: "finished", reason: { kind: "stop" } });
+});
+
 it("preserves DeepSeek reasoning, tool IDs and arguments through a second request", async () => {
   const bodies: Record<string, any>[] = [];
   const adapter = new DeepSeekAdapter({ baseUrl: "https://api.deepseek.com", apiKey: "key",
