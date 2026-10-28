@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-- [ ] BUG-039：DeepSeek 流式返回 `usage: null` 时解析器抛错，阻断真实问答；离线修复与真实复验待完成，见 [183](183-bugfix-bug-039-stream-usage.md)。
+- [x] BUG-039：DeepSeek 流式 `usage: null` 解析修复；离线完整测试、代码 head CI 与真实 Flash 预检通过，最终提交 CI 为合并门禁，见 [183](183-bugfix-bug-039-stream-usage.md)。
 
 - [ ] BUG-038：F5.4 首轮完整前端检查中一项 Mock Host 启动超时；master / 分支定向及分支完整复验通过，原因未确认，等待复现，见 [170](170-bugfix-bug-038-host-startup.md)。
 

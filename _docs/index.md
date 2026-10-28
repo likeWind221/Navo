@@ -268,4 +268,4 @@
 
 - [MCP 后端支持规划](182-devlog-mcp-plan.md)：Phase15 工具发现、权限调用、本地服务与 AppWorld 交接；当前下一步调整为 F15.1，仅规划。
 
-- [BUG-039 流式 usage 修复](183-bugfix-bug-039-stream-usage.md)：DeepSeek 中间事件 null 用量兼容，真实复验待完成。
+- [BUG-039 流式 usage 修复](183-bugfix-bug-039-stream-usage.md)：DeepSeek 中间事件 null 用量兼容及真实 Flash 预检通过。

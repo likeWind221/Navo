@@ -14,8 +14,8 @@
 
 ## 验证结果与边界
 
-Windows / Node 24：pnpm typecheck 通过；DeepSeek 和 Qwen 专项 2 文件 / 19 项通过。完整测试 183 文件 / 1140 项通过（310.43 秒）；CI 与真实复验待记录。未修改外置评测代码或原失败现场。
+Windows / Node 24：pnpm typecheck 通过；DeepSeek 和 Qwen 专项 2 文件 / 19 项通过。完整测试 183 文件 / 1140 项通过（310.43 秒）；代码 head a7014b7 的 CI run 40698460720 通过。真实 Flash 非思考模式一次预检回答 Paris、正常结束，usage 为输入 110 / 输出 13 / 总计 123 token，证据保存在 D:/Program/NavoBenchmarks/checks/bug039-flash.json；最终文档提交的 CI 仍须通过。未修改外置评测代码或原失败现场。
 
 ## 后续
 
-完整测试及 CI 通过后在已授权预算内执行一次真实预检；成功后按原计划继续测评，失败停止。真实复验未通过前 BUG 保持未关闭。
+在最终提交 CI 通过后完成合并；外置 benchmark 按既有预算执行，任何失败停止。
