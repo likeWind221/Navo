@@ -265,3 +265,5 @@
 - [DeepSeek Flash 后端接入](180-devlog-deepseek-flash.md)：正式 Host 生成与图谱配置、工具思考续传及真实验收提供方选择；真实 API 验收待独立授权。
 
 - [AppWorld 接入核查](181-devlog-appworld-assessment.md)：HTTP执行边界、Node工具选择缺口、判分隔离、平台与取消限制；仅调研，未实施或运行。
+
+- [MCP 后端支持规划](182-devlog-mcp-plan.md)：Phase15 工具发现、权限调用、本地服务与 AppWorld 交接；当前下一步调整为 F15.1，仅规划。

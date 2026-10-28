@@ -40,3 +40,7 @@ Navo tools.register 已有可复用注册与取消出口；NodeSessionService.re
 - https://github.com/StonyBrookNLP/appworld/blob/main/guides/evaluating_terminal_agents.md
 - https://github.com/StonyBrookNLP/appworld/blob/main/pyproject.toml
 - https://api-docs.deepseek.com/quick_start/pricing/
+
+## 2026-10-28 路线调整
+
+用户决定先规划通用 MCP 客户端工具支持，后续 AppWorld 默认采用官方 MCP 接入；本记录的单工具 HTTP 方案保留为历史建议，后续以 [182](182-devlog-mcp-plan.md) 和 backend-plan.md Phase15 为准。本轮仅改计划，未开始实现。
