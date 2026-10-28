@@ -39,7 +39,7 @@ $env:GRAPH_MODEL='deepseek-flash'
 ## 验证结果与边界
 
 - 类型检查通过；适配器、Host 配置与验收选择专项 5 文件 / 40 项通过。
-- bundled Node 24：`NAVO_TEST_MODE=all pnpm test --maxWorkers=4`，183 文件 / 1138 项全部通过，352.04 秒；日志 `%TEMP%/navo-deepseek-full.log`。`git diff --check` 通过。PR 当前 head CI 待收口追加。
+- bundled Node 24：`NAVO_TEST_MODE=all pnpm test --maxWorkers=4`，183 文件 / 1138 项全部通过，352.04 秒；日志 `%TEMP%/navo-deepseek-full.log`。`git diff --check` 通过。[PR #120](https://github.com/likeWind221/Navo/pull/120) 代码 head `78c0689` 的 [CI 40662081402](https://github.com/likeWind221/Navo/actions/runs/40662081402) 全部通过（类型检查、常规测试、进程恢复），verify 3m50s。随后仅补文档收口，合并前确认文档 head CI。
 - 测试使用受控 HTTP / SSE；真实 DeepSeek、GPU 和外部生成调用为 0。未证明真实服务兼容性、长任务质量、线上性能或评分有效性。
 - 官方接口参考：[首次调用](https://api-docs.deepseek.com/quick_start/agent_integrations/)、[思考与工具续传](https://api-docs.deepseek.com/guides/thinking_mode/)。本次依据 API 协议实现，未引用或照搬 DeepSeek Harness 源码。
 
