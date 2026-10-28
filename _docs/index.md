@@ -263,3 +263,5 @@
 - [F5.4 Main 对话与项目状态跟随（带缺口合并）](179-devlog-f5-4-main.md)：Main 回合 / follow 桥接、项目级运行状态与关闭重开；与 F7.1 / F7.2 资料库合并，受控 QA 通过，真实 Main 未验收并按用户授权先行合并。
 
 - [DeepSeek Flash 后端接入](180-devlog-deepseek-flash.md)：正式 Host 生成与图谱配置、工具思考续传及真实验收提供方选择；真实 API 验收待独立授权。
+
+- [AppWorld 接入核查](181-devlog-appworld-assessment.md)：HTTP执行边界、Node工具选择缺口、判分隔离、平台与取消限制；仅调研，未实施或运行。
