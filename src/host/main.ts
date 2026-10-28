@@ -36,6 +36,7 @@ async function serveKernelHost(): Promise<void> {
     ? undefined
     : await createFileEnvironment(config.file.cwd);
   const tools: ToolsPluginConfig = {
+    ...(config.mcp === undefined ? {} : { mcp: config.mcp }),
     ...(config.search === undefined
       ? {}
       : { search: { adapter: new ExaSearchAdapter(config.search) } }),
@@ -53,7 +54,7 @@ async function serveKernelHost(): Promise<void> {
     node: { session: { model: config.agent.model } },
     agent: config.agent,
     ...(config.embedding === undefined ? {} : { embedding: createEmbeddingProvider(config.embedding) }),
-    ...(config.search === undefined && fileEnvironment === undefined
+    ...(config.search === undefined && fileEnvironment === undefined && config.mcp === undefined
       ? {}
       : { tools }),
     ...(config.graph === undefined ? {} : { graph: config.graph }),

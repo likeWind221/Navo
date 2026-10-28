@@ -8,6 +8,8 @@ import { WEB_SEARCH_TOOL_NAME } from "../tools/builtins/search/tool.js";
 import { WEB_FETCH_TOOL_NAME } from "../tools/builtins/fetch/tool.js";
 import { FILE_TOOL_SCHEMAS } from "../tools/builtins/file/types.js";
 import { resolveEmbeddingConfig, type EmbeddingConfig } from "../embedding/provider.js";
+import { resolveMcpClientConfig } from "../tools/mcp/config.js";
+import type { McpClientConfig } from "../tools/mcp/types.js";
 
 export interface KernelHostSearchConfig {
   readonly apiKey: string;
@@ -50,6 +52,7 @@ interface KernelHostCommonConfig {
   readonly file?: KernelHostFileConfig;
   readonly embedding?: KernelHostEmbeddingConfig;
   readonly graph?: KernelHostGraphConfig;
+  readonly mcp?: McpClientConfig;
 }
 
 const DEFAULT_BASE_URL = "http://192.168.99.2:8090/v1";
@@ -101,6 +104,7 @@ export function resolveKernelHostConfig(
   }
   const search = exaApiKey === undefined ? undefined : Object.freeze({ apiKey: exaApiKey });
   const embedding = resolveEmbeddingConfig(env);
+  const mcp = resolveMcpClientConfig(env);
   const fileCwd = env.NAVO_FILE_CWD;
   if (fileCwd !== undefined && !fileCwd.trim()) {
     throw new TypeError("NAVO_FILE_CWD must be a non-empty path when provided.");
@@ -131,6 +135,7 @@ export function resolveKernelHostConfig(
     }),
     ...(search === undefined ? {} : { search }),
     ...(embedding === undefined ? {} : { embedding }),
+    ...(mcp === undefined ? {} : { mcp }),
     file,
   };
   if (provider === "deepseek") {

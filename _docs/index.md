@@ -269,3 +269,5 @@
 - [MCP 后端支持规划](182-devlog-mcp-plan.md)：Phase15 工具发现、权限调用、本地服务与 AppWorld 交接；当前下一步调整为 F15.1，仅规划。
 
 - [BUG-039 流式 usage 修复](183-bugfix-bug-039-stream-usage.md)：DeepSeek 中间事件 null 用量兼容及真实 Flash 预检通过。
+
+- [F15.1 远程 MCP 工具发现](183-devlog-f15-1-mcp-discovery.md)：官方 TypeScript SDK 连接、可信环境配置、工具目录发现与 Navo Schema 兼容标记；本地完整验证待执行。
