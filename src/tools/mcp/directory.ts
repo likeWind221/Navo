@@ -1,3 +1,4 @@
+import { UnsupportedProtocolVersionError } from "@modelcontextprotocol/client";
 import { Service, type Context } from "cordis";
 
 import type { JsonObject } from "../../llm/types.js";
@@ -52,43 +53,97 @@ export class McpDirectoryService extends Service {
   }
 
   private async refreshAll(): Promise<McpDirectorySnapshot> {
-    const servers: McpServerDiscoveryStatus[] = [];
-    const tools: McpDiscoveredTool[] = [];
-    for (const server of this.config.servers) {
-      if (this.stopped) throw new McpDirectoryError("stopped", "MCP directory service is stopped.");
-      let connection = this.connections.get(server.id);
-      const created = connection === undefined;
-      try {
-        if (connection === undefined) {
-          connection = this.factory(server);
-          this.connections.set(server.id, connection);
-          await connection.connect();
-        }
-        const remoteTools = await connection.listTools();
-        if (this.stopped) throw new McpDirectoryError("stopped", "MCP directory service is stopped.");
-        const discovered = normalizeMcpTools(server, remoteTools);
-        tools.push(...discovered);
-        servers.push(Object.freeze({ serverId: server.id, status: "ready", toolCount: discovered.length }));
-      } catch (error: unknown) {
-        if (connection !== undefined) {
-          if (this.connections.get(server.id) === connection) this.connections.delete(server.id);
-          await closeQuietly(connection);
-        }
-        if (this.stopped) throw error;
-        servers.push(Object.freeze({
-          serverId: server.id,
-          status: error instanceof McpDirectoryError && error.code === "directory-invalid" ? "error" : "error",
-          code: error instanceof McpDirectoryError && error.code === "directory-invalid" ? "directory-invalid" : created ? "connection-failed" : "refresh-failed",
-          message: error instanceof McpDirectoryError && error.code === "directory-invalid"
-            ? "The MCP server returned an invalid or ambiguous tool directory."
-            : created ? "The MCP server could not be connected or its tool directory could not be read." : "The MCP tool directory could not be refreshed; the connection was closed.",
-        }));
-      }
-    }
+    const settled = await Promise.allSettled(this.config.servers.map(server => this.refreshServer(server)));
+    const rejected = settled.find((result): result is PromiseRejectedResult => result.status === "rejected");
+    if (rejected !== undefined) throw rejected.reason;
+    const completed = settled as PromiseFulfilledResult<McpServerRefresh>[];
+    const servers = completed.map(result => result.value.status);
+    const tools = completed.flatMap(result => result.value.tools);
     this.revision += 1;
     this.snapshot = deepFreeze({ revision: this.revision, servers, tools });
     return this.snapshot;
   }
+
+  private async refreshServer(server: McpServerConfig): Promise<McpServerRefresh> {
+    if (this.stopped) throw stoppedError();
+    let connection = this.connections.get(server.id);
+    const created = connection === undefined;
+    try {
+      if (connection === undefined) {
+        connection = this.factory(server);
+        this.connections.set(server.id, connection);
+        await connection.connect();
+      }
+      const remoteTools = await connection.listTools();
+      if (this.stopped) throw stoppedError();
+      const discovered = normalizeMcpTools(server, remoteTools);
+      const protocolVersion = connection.protocolVersion();
+      return Object.freeze({
+        status: Object.freeze({
+          serverId: server.id,
+          status: "ready",
+          toolCount: discovered.length,
+          ...(protocolVersion === undefined ? {} : { protocolVersion }),
+        }),
+        tools: discovered,
+      });
+    } catch (error: unknown) {
+      if (connection !== undefined) {
+        if (this.connections.get(server.id) === connection) this.connections.delete(server.id);
+        await closeQuietly(connection);
+      }
+      if (this.stopped) throw error;
+      return Object.freeze({
+        status: failureStatus(server, error, created, connection?.protocolVersion()),
+        tools: Object.freeze([]),
+      });
+    }
+  }
+}
+
+interface McpServerRefresh {
+  readonly status: McpServerDiscoveryStatus;
+  readonly tools: readonly McpDiscoveredTool[];
+}
+
+function failureStatus(
+  server: McpServerConfig,
+  error: unknown,
+  created: boolean,
+  protocolVersion: string | undefined,
+): McpServerDiscoveryStatus {
+  const versionUnsupported = isVersionUnsupported(error);
+  const directoryInvalid = error instanceof McpDirectoryError && error.code === "directory-invalid";
+  const code = versionUnsupported
+    ? "version-unsupported"
+    : directoryInvalid
+      ? "directory-invalid"
+      : created
+        ? "connection-failed"
+        : "refresh-failed";
+  const message = versionUnsupported
+    ? "The MCP server does not support a protocol version accepted by Navo."
+    : directoryInvalid
+      ? "The MCP server returned an invalid or ambiguous tool directory."
+      : created
+        ? "The MCP server could not be connected or its tool directory could not be read."
+        : "The MCP tool directory could not be refreshed; the connection was closed.";
+  return Object.freeze({
+    serverId: server.id,
+    status: "error",
+    code,
+    message,
+    ...(protocolVersion === undefined ? {} : { protocolVersion }),
+  });
+}
+
+function isVersionUnsupported(error: unknown): boolean {
+  if (error instanceof UnsupportedProtocolVersionError) return true;
+  return typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === -32022;
+}
+
+function stoppedError(): McpDirectoryError {
+  return new McpDirectoryError("stopped", "MCP directory service is stopped.");
 }
 
 export function normalizeMcpTools(server: McpServerConfig, remoteTools: readonly McpRemoteTool[]): readonly McpDiscoveredTool[] {

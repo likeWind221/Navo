@@ -61,9 +61,11 @@ export async function ToolsPlugin(
   await ctx.plugin(ToolService);
   if (config.mcp !== undefined) {
     await ctx.plugin(McpDirectoryService, config.mcp);
-    const directory = ctx.mcpDirectory;
-    if (directory === undefined) throw new Error("MCP directory service failed to mount.");
-    await directory.start();
+    await ctx.inject(["mcpDirectory"], async injected => {
+      const directory = injected.mcpDirectory;
+      if (directory === undefined) throw new Error("MCP directory service failed to mount.");
+      await directory.start();
+    });
   }
   await ctx.plugin(SearchTool, config.search);
 
