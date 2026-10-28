@@ -4,6 +4,8 @@
 
 ## 当前状态
 
+- [x] BUG-039：DeepSeek 流式 `usage: null` 解析修复；离线完整测试、代码 head CI 与真实 Flash 预检通过，最终提交 CI 为合并门禁，见 [183](183-bugfix-bug-039-stream-usage.md)。
+
 - [ ] BUG-038：F5.4 首轮完整前端检查中一项 Mock Host 启动超时；master / 分支定向及分支完整复验通过，原因未确认，等待复现，见 [170](170-bugfix-bug-038-host-startup.md)。
 
 - [x] BUG-037：独立 master 已复现窄屏项目会话面板2px；最小列定位修复、实际 Electron、前端165项与根1080项、当前 head CI 均通过；PR #112 已合入（ec14333），关闭，见 [169](169-bugfix-bug-037-panel.md)。
@@ -72,6 +74,7 @@
 
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
+| BUG-039 | P1 / 后端 LLM | DeepSeek 流式生成遇到 null usage 时中断 | 真实预检报 TypeError；本地构造 SSE 复现，根因是只跳过 undefined | null 和缺失不导致中断，最终用量与未知用量正确，非空错误明确；本地完整、当前 head CI 与真实 Flash 复验通过 | [183](183-bugfix-bug-039-stream-usage.md) |
 | BUG-038 | P2 / 前端 Host 验证 | 首次 Mock Host 启动超过 5 秒预算 | 原日志保留；同 master 定向、分支定向和完整 176 项复验均通过；原因未知，未修复 | 复现时取得启动证据，定位并修复后同场景稳定通过及当前 head CI 成功；单次复验不自动关闭 | [170：仅排查，待复现](170-bugfix-bug-038-host-startup.md) |
 | BUG-037 | P1 / 前端布局 | 547px 窗口的项目会话面板极窄，无法阅读或输入 | 独立 master 已复现2px；修复后350px，原生交互、前端165项、根1080项与CI 40367528661通过；PR #112合入ec14333 | 主线复现后最小修复，宽 / 窄屏实际可见与点击通过，本机及当前 head CI 成功并合并 | [169：已修复并合入](169-bugfix-bug-037-panel.md) |
 | BUG-036 | P1 / 后端认证与外部依赖 | 既有 ChatGPT 凭据刷新被拒绝，阻断 F5.4 真实 Main 规划 | 已证实两个 AUTH 失败 Turn 与 token 端点 HTTP 403；本地 connected 不等于服务端可用；2026-10-27 干净出口下同一端点 200、刷新与 models 成功，确认与出口路由 / IP 相关，服务端拒绝原因仍未确认 | 明确可用认证链后，在新隔离库通过预填 / 空目标真实 Main 确认规划；涉及代码时须完整本机与当前 head CI | [168：仅排查，未修复](168-bugfix-bug-036-auth.md) |

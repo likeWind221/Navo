@@ -31,7 +31,7 @@ export async function* translateChatCompletionsSse(
   for await (const payload of readSseData(body, options)) {
     if (payload === "[DONE]") break;
     const event = parseEvent(payload, options.errorLabel);
-    usage = event.usage === undefined ? usage : parseUsage(event.usage, options.errorLabel);
+    usage = event.usage == null ? usage : parseUsage(event.usage, options.errorLabel);
     const choice = event.choices?.[0];
     if (choice === undefined) continue;
     const delta = choice.delta;
@@ -184,7 +184,7 @@ function invalidEvent(errorLabel: string, message: string, cause?: unknown): LLM
 
 interface OpenAiStreamEvent {
   readonly choices?: readonly OpenAiChoice[];
-  readonly usage?: OpenAiUsage;
+  readonly usage?: OpenAiUsage | null;
 }
 
 interface OpenAiChoice {
