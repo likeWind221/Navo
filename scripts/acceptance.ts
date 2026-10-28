@@ -1,3 +1,4 @@
+import { DeepSeekAdapter } from "../src/llm/adapters/deepseek.js";
 import type { KernelHostConfig } from "../src/host/config.js";
 import { resolveKernelHostConfig } from "../src/host/config.js";
 import { OpenAIAdapter } from "../src/llm/adapters/openai.js";
@@ -5,7 +6,7 @@ import { ChatGPTAuth } from "../src/llm/auth/chatgpt.js";
 
 export const REAL_ACCEPTANCE_MODEL = "gpt-6-luna";
 
-type AcceptanceHostConfig = Extract<KernelHostConfig, { readonly provider: "openai" }>;
+type AcceptanceHostConfig = Extract<KernelHostConfig, { readonly provider: "openai" | "deepseek" }>;
 
 const incompatibleVariables = [
   "LLM_MAX_TOKENS",
@@ -19,6 +20,7 @@ export function createAcceptanceEnvironment(
   env: NodeJS.ProcessEnv = process.env,
   model = REAL_ACCEPTANCE_MODEL,
 ): NodeJS.ProcessEnv {
+  if (env.LLM_PROVIDER === "deepseek") return { ...env, LLM_MODEL: env.LLM_MODEL?.trim() || "deepseek-flash" };
   const result: NodeJS.ProcessEnv = {
     ...env,
     LLM_PROVIDER: "openai",
@@ -33,11 +35,12 @@ export function resolveAcceptanceHostConfig(
   model = REAL_ACCEPTANCE_MODEL,
 ): AcceptanceHostConfig {
   const config = resolveKernelHostConfig(createAcceptanceEnvironment(env, model));
-  if (config.provider !== "openai") throw new Error("Real acceptance requires the OpenAI subscription provider.");
+  if (config.provider !== "openai" && config.provider !== "deepseek") throw new Error("Real acceptance requires OpenAI subscription or DeepSeek.");
   return config;
 }
 
-export function createAcceptanceAdapter(config: AcceptanceHostConfig): OpenAIAdapter {
+export function createAcceptanceAdapter(config: AcceptanceHostConfig): OpenAIAdapter | DeepSeekAdapter {
+  if (config.provider === "deepseek") return new DeepSeekAdapter(config.adapter);
   return new OpenAIAdapter({
     auth: new ChatGPTAuth({
       home: config.adapter.home,

@@ -16,8 +16,9 @@ import {
 } from "./acceptance.js";
 
 async function main(): Promise<void> {
-  const config = resolveAcceptanceHostConfig();
-  const environment = createAcceptanceEnvironment();
+  const config = resolveAcceptanceHostConfig({ ...process.env, LLM_PROVIDER: "openai" });
+  assert(config.provider === "openai");
+  const environment = createAcceptanceEnvironment({ ...process.env, LLM_PROVIDER: "openai" });
   const auth = new ChatGPTAuth({
     home: config.adapter.home,
     openBrowser: async () => { throw new Error("Run pnpm chatgpt login first."); },

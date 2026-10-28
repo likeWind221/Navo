@@ -1,3 +1,4 @@
+import type { DeepSeekAdapterConfig } from "../llm/adapters/deepseek.js";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -25,11 +26,12 @@ export type KernelHostEmbeddingConfig = EmbeddingConfig;
 
 export type KernelHostGraphAdapterConfig =
   | { readonly provider: "qwen"; readonly baseUrl: string; readonly apiKey?: string; readonly enableThinking: boolean }
+  | { readonly provider: "deepseek"; readonly baseUrl: string; readonly apiKey: string; readonly enableThinking: boolean }
   | { readonly provider: "openai"; readonly home: string; readonly accountId?: string };
 
 export interface KernelHostGraphConfig {
-  readonly model: { readonly provider: `graph:${"qwen" | "openai"}`; readonly model: string; readonly maxTokens?: number; readonly temperature?: number };
-  readonly compatibilityProvider: "qwen" | "openai";
+  readonly model: { readonly provider: `graph:${"qwen" | "openai" | "deepseek"}`; readonly model: string; readonly maxTokens?: number; readonly temperature?: number };
+  readonly compatibilityProvider: "qwen" | "openai" | "deepseek";
   readonly inputTokenBudget: number;
   readonly outputTokenLimit: number;
   readonly adapter: KernelHostGraphAdapterConfig;
@@ -37,6 +39,7 @@ export interface KernelHostGraphConfig {
 
 export type KernelHostConfig = KernelHostCommonConfig & (
   | { readonly provider: "qwen"; readonly adapter: QwenChatAdapterConfig }
+  | { readonly provider: "deepseek"; readonly adapter: DeepSeekAdapterConfig }
   | { readonly provider: "openai"; readonly adapter: { readonly home: string; readonly accountId?: string } }
 );
 
@@ -63,8 +66,8 @@ export function resolveKernelHostConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): KernelHostConfig {
   const provider = env.LLM_PROVIDER?.trim() ?? "qwen";
-  if (provider !== "qwen" && provider !== "openai") {
-    throw new TypeError("LLM_PROVIDER must be 'qwen' or 'openai'.");
+  if (provider !== "qwen" && provider !== "openai" && provider !== "deepseek") {
+    throw new TypeError("LLM_PROVIDER must be 'qwen', 'openai' or 'deepseek'.");
   }
   if (provider === "openai") {
     for (const name of ["LLM_MAX_TOKENS", "LLM_TEMPERATURE", "LLM_ENABLE_THINKING", "LLM_API_KEY", "LLM_BASE_URL"]) {
@@ -75,7 +78,8 @@ export function resolveKernelHostConfig(
       throw new TypeError("LLM_ACCOUNT_ID must be non-empty when provided.");
     }
   }
-  const model = env.LLM_MODEL?.trim() || DEFAULT_MODEL;
+  const model = env.LLM_MODEL?.trim() || (provider === "deepseek" ? "deepseek-flash" : DEFAULT_MODEL);
+  if (provider === "deepseek" && env.LLM_ACCOUNT_ID !== undefined) throw new TypeError("LLM_ACCOUNT_ID is not supported by DeepSeek.");
   const contextWindow = optionalInteger("LLM_CONTEXT_WINDOW", env.LLM_CONTEXT_WINDOW, MAX_CONTEXT_TOKENS);
   const autoCompactLimit = optionalInteger("LLM_AUTO_COMPACT_LIMIT", env.LLM_AUTO_COMPACT_LIMIT, MAX_CONTEXT_TOKENS);
   const modelConfig = {
@@ -129,6 +133,17 @@ export function resolveKernelHostConfig(
     ...(embedding === undefined ? {} : { embedding }),
     file,
   };
+  if (provider === "deepseek") {
+    const key = env.LLM_API_KEY ?? env.DEEPSEEK_API_KEY;
+    if (!key || /[\r\n]/.test(key)) throw new TypeError("DEEPSEEK_API_KEY or LLM_API_KEY is required and must not contain newlines.");
+    const mainAdapter = Object.freeze({
+      baseUrl: normalizeHttpUrl("LLM_BASE_URL", env.LLM_BASE_URL?.trim() || "https://api.deepseek.com"),
+      apiKey: key,
+      enableThinking: optionalBoolean("LLM_ENABLE_THINKING", env.LLM_ENABLE_THINKING, true),
+    });
+    const graph = resolveGraphConfig(env, "deepseek", mainAdapter, home);
+    return Object.freeze({ ...common, provider, adapter: mainAdapter, ...(graph === undefined ? {} : { graph }) });
+  }
   if (provider === "qwen") {
     const mainAdapter = Object.freeze({
       baseUrl: env.LLM_BASE_URL?.trim() || DEFAULT_BASE_URL,
@@ -145,20 +160,20 @@ export function resolveKernelHostConfig(
 
 function resolveGraphConfig(
   env: NodeJS.ProcessEnv,
-  mainProvider: "qwen" | "openai",
-  mainAdapter: Extract<KernelHostConfig, { provider: "qwen" | "openai" }>["adapter"],
+  mainProvider: "qwen" | "openai" | "deepseek",
+  mainAdapter: Extract<KernelHostConfig, { provider: "qwen" | "openai" | "deepseek" }>["adapter"],
   home: string,
 ): KernelHostGraphConfig | undefined {
   const providerValue = env.GRAPH_PROVIDER?.trim();
   const modelValue = env.GRAPH_MODEL?.trim();
   if (providerValue === undefined && modelValue === undefined) return undefined;
   if (providerValue === undefined || modelValue === undefined) throw new TypeError("GRAPH_PROVIDER and GRAPH_MODEL must be provided together.");
-  if (providerValue !== "qwen" && providerValue !== "openai") throw new TypeError("GRAPH_PROVIDER must be 'qwen' or 'openai'.");
+  if (providerValue !== "qwen" && providerValue !== "openai" && providerValue !== "deepseek") throw new TypeError("GRAPH_PROVIDER must be 'qwen', 'openai' or 'deepseek'.");
   if (!modelValue || modelValue.length > 256 || /[\r\n]/.test(modelValue)) throw new TypeError("GRAPH_MODEL must be a non-empty model name of at most 256 characters.");
   const inputTokenBudget = boundedIntegerRange("GRAPH_INPUT_TOKEN_BUDGET", env.GRAPH_INPUT_TOKEN_BUDGET, DEFAULT_GRAPH_INPUT_TOKENS, 2_048, 131_072);
   const outputTokenLimit = boundedIntegerRange("GRAPH_OUTPUT_TOKEN_LIMIT", env.GRAPH_OUTPUT_TOKEN_LIMIT, DEFAULT_GRAPH_OUTPUT_TOKENS, 256, 16_384);
   const model = {
-    provider: `graph:${providerValue}` as `graph:${"qwen" | "openai"}`,
+    provider: `graph:${providerValue}` as `graph:${"qwen" | "openai" | "deepseek"}`,
     model: modelValue,
     ...(providerValue === "qwen" ? { maxTokens: env.GRAPH_MAX_TOKENS === undefined
       ? Math.min(DEFAULT_GRAPH_MAX_TOKENS, outputTokenLimit)
@@ -175,6 +190,17 @@ function resolveGraphConfig(
       adapter: Object.freeze({ provider: "openai" as const, home, ...(accountId === undefined ? {} : { accountId }) }) });
   }
   if (env.GRAPH_ACCOUNT_ID !== undefined) throw new TypeError("GRAPH_ACCOUNT_ID is only supported by the ChatGPT subscription Graph provider.");
+  if (providerValue === "deepseek") {
+    const baseUrl = normalizeHttpUrl("GRAPH_BASE_URL", env.GRAPH_BASE_URL?.trim() || "https://api.deepseek.com");
+    const sameEndpoint = mainProvider === "deepseek" && "baseUrl" in mainAdapter && mainAdapter.baseUrl === baseUrl;
+    const apiKey = env.GRAPH_API_KEY ?? (sameEndpoint && "apiKey" in mainAdapter ? mainAdapter.apiKey : env.DEEPSEEK_API_KEY);
+    if (!apiKey || /[\r\n]/.test(apiKey)) throw new TypeError("DeepSeek Graph requires a valid API key.");
+    return Object.freeze({ model: { ...model, maxTokens: boundedIntegerRange("GRAPH_MAX_TOKENS", env.GRAPH_MAX_TOKENS,
+      Math.min(DEFAULT_GRAPH_MAX_TOKENS, outputTokenLimit), 1, outputTokenLimit) },
+      compatibilityProvider: providerValue, inputTokenBudget, outputTokenLimit,
+      adapter: Object.freeze({ provider: "deepseek" as const, baseUrl, apiKey,
+        enableThinking: optionalBoolean("GRAPH_ENABLE_THINKING", env.GRAPH_ENABLE_THINKING, true) }) });
+  }
   const mainQwen = mainProvider === "qwen" && "baseUrl" in mainAdapter ? mainAdapter : undefined;
   const explicitBaseUrl = env.GRAPH_BASE_URL?.trim();
   const baseUrl = explicitBaseUrl ?? mainQwen?.baseUrl;

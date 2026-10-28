@@ -7,7 +7,7 @@ import type { ContentBlockType, FinishReason, ModelEvent, TokenUsage } from "../
 
 export interface ChatCompletionsStreamOptions {
   readonly errorLabel: string;
-  readonly reasoningField?: "reasoning";
+  readonly reasoningField?: "reasoning" | "reasoning_content";
   readonly generatedToolCallIdPrefix: string;
 }
 
@@ -191,6 +191,7 @@ interface OpenAiChoice {
   readonly delta?: {
     readonly content?: unknown;
     readonly reasoning?: unknown;
+    readonly reasoning_content?: unknown;
     readonly tool_calls?: readonly OpenAiToolCallDelta[];
   };
   readonly finish_reason?: unknown;
