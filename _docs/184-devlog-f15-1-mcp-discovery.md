@@ -36,9 +36,9 @@
 - `pnpm typecheck` 通过。
 - `pnpm test tests/tools/mcp`：4 个文件、19 项通过；覆盖默认关闭、非法配置、Schema 不兼容、重名、连接失败、刷新失败、关闭、协议版本不支持、插件装配、多服务隔离，以及真实 Streamable HTTP 的分页、认证头和协议版本。
 - 全量 `pnpm test --maxWorkers=4`：187 个文件、1159 项全部通过。
-- [PR #121](https://github.com/likeWind221/Navo/pull/121) 的当前 head CI `verify` 通过；收口前以 PR checks 的最新结果为准。
+- [PR #121](https://github.com/likeWind221/Navo/pull/121) 的最终 head CI `verify` 通过（run [40703048104](https://github.com/likeWind221/Navo/actions/runs/40703048104)）。
 - 未连接真实 AppWorld 或第三方 MCP 服务；未实现工具执行、本地 stdio、OAuth、MCP Server 或 AppWorld 评测。
 
 ## 下一步
 
-F15.1 已收口：PR #121，CI run 40702230680 通过。F15.2 处理工具授权、调用与结果映射，并用真实 AppWorld 工具目录检查 Schema 兼容覆盖面。
+F15.1 已收口：PR #121 squash 合入 `f44478d`，最终 head CI run 40703048104 通过；索引修正随后以 `f219825` 直接提交到 master。F15.2 处理工具授权、调用与结果映射，并用真实 AppWorld 工具目录检查 Schema 兼容覆盖面。
