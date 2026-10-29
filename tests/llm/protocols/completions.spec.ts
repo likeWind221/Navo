@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createMessageId } from "../../../src/brand/ids.js";
 import { serializeChatCompletionsRequest } from "../../../src/llm/protocols/completions/request.js";
 import { translateChatCompletionsSse } from "../../../src/llm/protocols/completions/stream.js";
-import type { GenerateRequest, ModelEvent } from "../../../src/llm/types.js";
+import type { GenerateRequest, ModelEvent, TokenUsage } from "../../../src/llm/types.js";
 
 describe("Chat Completions protocol", () => {
   it("serializes a provider-neutral request without Qwen fields", () => {
@@ -74,6 +74,42 @@ describe("Chat Completions protocol", () => {
     ]);
     expect(events).not.toContainEqual(expect.objectContaining({ delta: "hidden" }));
   });
+
+  it("keeps provider-declared cache hit tokens in usage", async () => {
+    const events = await collect(usageStream({
+      prompt_tokens: 100,
+      completion_tokens: 5,
+      prompt_cache_hit_tokens: 64,
+    }));
+
+    expect(events).toContainEqual({
+      type: "usage",
+      usage: { inputTokens: 100, outputTokens: 5, cacheReadTokens: 64 },
+    });
+  });
+
+  it("keeps an explicit zero cache hit report", async () => {
+    const events = await collect(usageStream({
+      prompt_tokens: 100,
+      completion_tokens: 5,
+      prompt_cache_hit_tokens: 0,
+    }));
+
+    expect(usageEvent(events)).toEqual({ inputTokens: 100, outputTokens: 5, cacheReadTokens: 0 });
+  });
+
+  it("omits cache hit tokens that are absent or malformed", async () => {
+    for (const reported of [undefined, null, -1, 1.5, "64"]) {
+      const events = await collect(usageStream({
+        prompt_tokens: 100,
+        completion_tokens: 5,
+        ...(reported === undefined ? {} : { prompt_cache_hit_tokens: reported }),
+      }));
+
+      expect(usageEvent(events)).toMatchObject({ inputTokens: 100, outputTokens: 5 });
+      expect(usageEvent(events)).not.toHaveProperty("cacheReadTokens");
+    }
+  });
 });
 
 function request(): GenerateRequest {
@@ -102,4 +138,17 @@ async function collect(stream: AsyncIterable<ModelEvent>): Promise<ModelEvent[]>
   const events: ModelEvent[] = [];
   for await (const event of stream) events.push(event);
   return events;
+}
+
+function usageStream(usage: Readonly<Record<string, unknown>>): AsyncIterable<ModelEvent> {
+  return translateChatCompletionsSse(sseResponse([
+    `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }], usage })}\n\n`,
+    "data: [DONE]\n\n",
+  ]).body!, { errorLabel: "Other", generatedToolCallIdPrefix: "other-generated" });
+}
+
+function usageEvent(events: readonly ModelEvent[]): TokenUsage {
+  const event = events.find((candidate) => candidate.type === "usage");
+  if (event === undefined || event.type !== "usage") throw new Error("usage event is missing");
+  return event.usage;
 }
