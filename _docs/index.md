@@ -271,3 +271,5 @@
 - [BUG-039 流式 usage 修复](183-bugfix-bug-039-stream-usage.md)：DeepSeek 中间事件 null 用量兼容及真实 Flash 预检通过。
 
 - [F15.1 远程 MCP 工具发现](184-devlog-f15-1-mcp-discovery.md)：官方 TypeScript SDK 连接、可信环境配置、工具目录发现与 Navo Schema 兼容标记；本地完整验证与 Streamable HTTP 验收通过。
+
+- [DeepSeek 缓存命中率调研](185-devlog-cache-hit-probe.md)：usage 缓存字段被丢弃、本机无历史会话；真实探针测得冷启动首轮 0%、其后 93%–95%，跨会话热前缀 96%；仅调研，未改源码。
