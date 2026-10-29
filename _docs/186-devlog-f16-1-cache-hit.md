@@ -16,16 +16,17 @@
 ## 坑与发现
 
 - 协议生成器在 `finish` 未出现时会提前返回，不产出 `usage`。最初用 `choices: []` 的 fixture 导致三条用例都拿不到 usage 事件，改为携带 `finish_reason: "stop"` 的末包后正常；这也说明测试 fixture 必须模拟真实末包形态。
-- 本机 PATH 上的 Node 为 v22.23.1（`pi-node`），低于仓库要求的 `>=24.0.0`；本轮完整测试在该版本上通过，CI 使用 Node 24，仍需 CI 复核。
-- 推送 GitHub 连续失败（`github.com:443` 超时），本 Step 尚未推送、未开 PR，因此按约定状态记为 🔄 而不是 ✅。
+- 本机 PATH 上的 Node 为 v22.23.1（`pi-node`），低于仓库要求的 `>=24.0.0`；本轮完整测试在该版本上通过，CI 使用 Node 24 复核通过。
+- 直连 GitHub 连续超时，改用系统已启用的本地代理（`127.0.0.1:7897`）后推送成功；git 配置未持久化代理，后续推送仍需显式指定或自行配置。
 
 ## 验证结果
 
 - `pnpm exec vitest run tests/llm/protocols/completions.spec.ts tests/llm/adapters/deepseek.spec.ts`：15 项通过。
 - `pnpm typecheck`：通过。
-- `pnpm test`：187 个文件 / 1162 项通过，耗时约 374 秒。
+- `pnpm test`：187 个文件 / 1162 项通过，耗时约 374 秒（Node v22.23.1）。
+- PR #123 CI `verify` 通过（3m55s，Node 24），squash 合入 master（`84ecd22`）。
 - 真实 API 未调用：本轮只验证解析约定，字段真实形态以提供方返回为准。
 
 ## 下一步
 
-网络恢复后推送 `phase16-f16.1-cache-hit`、开 PR，等 CI 通过且本地检查齐备后 squash 合并，再把计划状态改为 ✅。会话级聚合、快照字段与桌面展示仍未规划。
+本 Step 已收口。会话级聚合、上下文快照字段与桌面展示仍未规划，需要时另行立项。

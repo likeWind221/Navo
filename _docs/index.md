@@ -274,4 +274,4 @@
 
 - [DeepSeek 缓存命中率调研](185-devlog-cache-hit-probe.md)：usage 缓存字段被丢弃、本机无历史会话；真实探针测得冷启动首轮 0%、其后 93%–95%，跨会话热前缀 96%；仅调研，未改源码。
 
-- [F16.1 保留缓存命中信息](186-devlog-f16-1-cache-hit.md)：协议层解析 `prompt_cache_hit_tokens`、0 与缺失可区分、非法值静默省略；本机单测与 1162 项完整测试通过，待推送与 CI。
+- [F16.1 保留缓存命中信息](186-devlog-f16-1-cache-hit.md)：协议层解析 `prompt_cache_hit_tokens`、0 与缺失可区分、非法值静默省略；本机 1162 项完整测试与 PR #123 CI 通过并合入 master。
