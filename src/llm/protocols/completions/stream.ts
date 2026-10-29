@@ -169,6 +169,8 @@ function parseUsage(value: OpenAiUsage, errorLabel: string): TokenUsage {
     inputTokens: value.prompt_tokens,
     outputTokens: value.completion_tokens,
     ...(isCount(value.total_tokens) ? { totalTokens: value.total_tokens } : {}),
+    ...(isCount(value.prompt_cache_hit_tokens)
+      ? { cacheReadTokens: value.prompt_cache_hit_tokens } : {}),
     ...(isCount(value.completion_tokens_details?.reasoning_tokens)
       ? { reasoningTokens: value.completion_tokens_details.reasoning_tokens } : {}),
   };
@@ -207,5 +209,6 @@ interface OpenAiUsage {
   readonly prompt_tokens?: unknown;
   readonly completion_tokens?: unknown;
   readonly total_tokens?: unknown;
+  readonly prompt_cache_hit_tokens?: unknown;
   readonly completion_tokens_details?: { readonly reasoning_tokens?: unknown };
 }
