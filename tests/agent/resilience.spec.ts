@@ -278,7 +278,7 @@ describe("AgentRuntime resilience", () => {
     await expect(kit.ctx.agentRuntime.runTurn(turnInput("truncated-pair")))
       .resolves.toMatchObject({ status: "completed" });
     expect(kit.adapter.requests[1]?.messages.map((message) => message.role))
-      .toEqual(["user", "assistant", "user", "user"]);
+      .toEqual(["system", "user", "assistant", "user", "user"]);
   });
 });
 
