@@ -17,12 +17,14 @@ describe("composeSystemPrompt", () => {
   it("does not duplicate the core rules when the caller already carries them", () => {
     const composed = composeSystemPrompt(`caller\n${CORE_AGENT_PROMPT}`);
     expect(composed).toBe(`caller\n${CORE_AGENT_PROMPT}`);
-    expect(composed.split("Never claim an operation succeeded").length).toBe(2);
+    expect(composed.split("Do not state that something was done").length).toBe(2);
   });
 
   it("states verification, delivery and honesty obligations without surface-specific wording", () => {
+    expect(CORE_AGENT_PROMPT.split("\n")).toHaveLength(8);
     expect(CORE_AGENT_PROMPT).toContain("invalid and boundary inputs");
-    expect(CORE_AGENT_PROMPT).toContain("omits a required section");
+    expect(CORE_AGENT_PROMPT).toContain("Re-read the file you wrote");
+    expect(CORE_AGENT_PROMPT).toContain("a missing required section is a missing deliverable");
     expect(CORE_AGENT_PROMPT).toContain("exit code");
     expect(CORE_AGENT_PROMPT).not.toMatch(/resource|roadmap|node|project/i);
   });
