@@ -150,6 +150,13 @@
 - 分文件重构必须在同一改动中更新生产导入、测试导入、计划/架构文档和公共出口，并用 `rg` 确认旧路径无残留；纯结构重构必须保持业务行为与既有测试断言不变。
 - 每个 Plugin/领域模块的公开可抛出错误不得汇总到全局 errors 文件；可序列化的 `Failure`、`Result` 不得与可抛出的 `Error` class 混放。
 
+## 网络访问（必须遵守）
+
+- 本机直连 `github.com`、`raw.githubusercontent.com` 与部分境外站点会失败（`getaddrinfo ENOENT` 或超时，2026-10-31 实测）。系统代理为 `http://127.0.0.1:7897`（Clash Party 混合端口），同一日实测上述两个域名经代理返回 200。
+- `web_fetch`、`web_search` 走宿主直连，不能指定代理。拉取仓库、README、release、论文附件时改用 shell 并显式带代理：`curl.exe -sS -x http://127.0.0.1:7897 <url>`、`git -c http.proxy=http://127.0.0.1:7897 clone <repo>`。
+- 代理不通时先确认 Clash Party 正在运行及其混合端口，再更新本节记录的地址；不得为绕过失败去改源码、测试或项目配置里的网络设置。
+- 代理地址属于本机开发环境，不得写入源码、测试、提交的配置或评测镜像；WSL 内的 Docker 拉取仍按既有 systemd drop-in 处理。
+
 ## 文档管理约束（必须遵守）
 1. **所有 markdown 文档只允许放在 `_docs/`**，项目根目录不放任何 `.md`（本文件与面向仓库访客的 `README.md` 除外）。
 2. **编号命名：** `_docs/NN-Name.md`，数字为编号（00 = PRD），文件名小写中划线；`backend-plan.md`、`frontend-plan.md`、`bug-plan.md`、`index.md` 为例外（无编号前缀）。
