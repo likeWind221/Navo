@@ -278,3 +278,5 @@
 
 - [Harness-Bench 接入调研与方案](187-devlog-harness-bench.md)：任务集、判分口径与 OCI 一次回合契约的源码核实，Navo 适配（仓库外 `navo-bench`）、WSL + Docker 环境与 Docker 代理修复；general 274 全量（DeepSeek-V4-Flash）272 题可计分，均分 0.6299 / R0.8 47.1% / R1 21.7%，软工 0.502 为短板，2 题因 grader 环境不可计分。
 - [核心 Agent 纪律下沉与系统提示词](188-devlog-core-agent-prompt.md)：把验证、交付、诚实三类通用工作纪律从产品 profile 提到 `src/agent/prompt.ts`，在回合请求装配处与调用方角色提示组合，Node/Main profile 去重；说明为什么改核心装配而不是改默认提示词，以及未采用运行时提醒门的原因。
+
+- [Interaction Bench 适配核查](189-devlog-ibench-assessment.md)：44 题 UI 交互缺陷修复基准的规格、判分与榜单事实，与 Navo 长程能力的错位分析；仅调研，建议不接入，吸收 BDD 规格与失败分列；并列出替代候选 Terminal-Bench 4.0 / PlanBench-XL / DeepPlanning / TheAgentCompany 与采用顺序，及官网与公开榜单核实、τ-bench 家族适配分析（含 τ³-Banking 的知识库、任务与检索配置事实）、Terminal-Bench 4.0 的 68 题构成与社区榜单关闭事实。
