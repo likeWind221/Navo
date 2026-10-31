@@ -406,12 +406,12 @@ if (mode === "all" || mode === "normal") describe("Kernel Host process lifecycle
       expect(continued.slice(0, history.length)).toEqual(history);
       const request = continued.findLast(event => event.type === "llm-requested");
       if (request?.type !== "llm-requested") throw new Error("Missing continued request");
-      expect(request.data.messages.slice(0, -1)).toEqual(messages);
+      expect(request.data.messages.filter((message) => message.role !== "system").slice(0, -1)).toEqual(messages);
       expect(continued.filter(event => event.type === "tool-call-requested"))
         .toEqual(history.filter(event => event.type === "tool-call-requested"));
       const separate = after.filter(event => event.sessionId === "other").find(event => event.type === "llm-requested");
       if (separate?.type !== "llm-requested") throw new Error("Missing separate request");
-      expect(separate.data.messages).toHaveLength(1);
+      expect(separate.data.messages).toHaveLength(2);
     } finally {
       await rm(home, { recursive: true, force: true });
     }

@@ -275,3 +275,6 @@
 - [DeepSeek 缓存命中率调研](185-devlog-cache-hit-probe.md)：usage 缓存字段被丢弃、本机无历史会话；真实探针测得冷启动首轮 0%、其后 93%–95%，跨会话热前缀 96%；仅调研，未改源码。
 
 - [F16.1 保留缓存命中信息](186-devlog-f16-1-cache-hit.md)：协议层解析 `prompt_cache_hit_tokens`、0 与缺失可区分、非法值静默省略；本机 1162 项完整测试与 PR #123 CI 通过并合入 master。
+
+- [Harness-Bench 接入调研与方案](187-devlog-harness-bench.md)：任务集、判分口径与 OCI 一次回合契约的源码核实，Navo 适配（仓库外 `navo-bench`）、WSL + Docker 环境与 Docker 代理修复；general 274 全量（DeepSeek-V4-Flash）272 题可计分，均分 0.6299 / R0.8 47.1% / R1 21.7%，软工 0.502 为短板，2 题因 grader 环境不可计分。
+- [核心 Agent 纪律下沉与系统提示词](188-devlog-core-agent-prompt.md)：把验证、交付、诚实三类通用工作纪律从产品 profile 提到 `src/agent/prompt.ts`，在回合请求装配处与调用方角色提示组合，Node/Main profile 去重；说明为什么改核心装配而不是改默认提示词，以及未采用运行时提醒门的原因。

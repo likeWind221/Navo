@@ -129,7 +129,8 @@ describe("Standalone Session persistence", () => {
     expect(calls).toBe(1);
     await next.ctx.agentRuntime.runTurn({ ...input,
       userMessage: { ...input.userMessage, id: createMessageId("next"), content: [{ type: "text", text: "Continue" }] } });
-    expect(next.adapter.requests[0]!.messages.slice(0, -1)).toEqual(messages);
+    expect(next.adapter.requests[0]!.messages.filter((message) => message.role !== "system").slice(0, -1))
+      .toEqual(messages);
     expect(calls).toBe(1);
   });
 });

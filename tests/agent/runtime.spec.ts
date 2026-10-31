@@ -60,9 +60,9 @@ describe("AgentRuntime", () => {
       expect.objectContaining({ status: "completed" }),
     ]);
     expect(kit.adapter.requests).toHaveLength(2);
-    expect(kit.adapter.requests[0]?.messages.map(messageText))
+    expect(kit.adapter.requests[0]?.messages.filter((message) => message.role !== "system").map(messageText))
       .toEqual(["first-concurrent"]);
-    expect(kit.adapter.requests[1]?.messages.map(messageText))
+    expect(kit.adapter.requests[1]?.messages.filter((message) => message.role !== "system").map(messageText))
       .toEqual(["first-concurrent", "first answer", "second-concurrent"]);
     expect(kit.ctx.sessions.getEvents(sessionId)
       .filter((event) => event.type === "turn-started" || event.type === "turn-ended")
@@ -188,7 +188,7 @@ describe("AgentRuntime", () => {
     }))
       .resolves.toMatchObject({ status: "completed", steps: 2 });
     expect(kit.adapter.requests[1]?.messages.map((message) => message.role))
-      .toEqual(["user", "assistant", "user"]);
+      .toEqual(["system", "user", "assistant", "user"]);
     expect(kit.adapter.requests[1]?.messages.at(-1)?.content[0])
       .toMatchObject({ type: "tool-result", toolCallId: call.id });
     assertClosed(kit, "tool");

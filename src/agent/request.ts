@@ -6,6 +6,7 @@ import type { CollectedStream } from "../llm/collect.js";
 import type { FinishReason, GenerateRequest, LlmFailure } from "../llm/types.js";
 import { createDeadline } from "./limits.js";
 import type { RetryableAttempt } from "./limits.js";
+import { composeSystemPrompt } from "./prompt.js";
 import type { ModelCompletion, TurnModelConfig, TurnScope } from "./types.js";
 import { inspectContextPressure, publishContextPressure } from "../context/pressure.js";
 import { compactSession } from "../context/compaction/compact.js";
@@ -23,7 +24,10 @@ export async function requestModel(
   const timeoutMs = limits.modelTimeoutMs;
   const deadline = createDeadline(signal, timeoutMs);
   try {
-    let request = createGenerateRequest(ctx, input, deadline.signal);
+    let request = createGenerateRequest(ctx, {
+      ...input,
+      systemPrompt: composeSystemPrompt(input.systemPrompt),
+    }, deadline.signal);
     let pressure = inspectContextPressure(
       input.sessionId,
       ctx.sessions.getEvents(input.sessionId),

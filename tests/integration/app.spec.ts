@@ -91,14 +91,15 @@ describe("Navo application integration", () => {
     expect(execute).toHaveBeenCalledOnce();
     expect(execute.mock.calls[0]?.[0]).toEqual({ text: "closed loop" });
     expect(adapter.requests).toHaveLength(2);
-    expect(adapter.requests[0]?.messages).toEqual([userMessage]);
+    expect(adapter.requests[0]?.messages[0]?.role).toBe("system");
+    expect(adapter.requests[0]?.messages.slice(1)).toEqual([userMessage]);
     expect(adapter.requests[0]?.tools).toEqual([
       expect.objectContaining({ name: "echo" }),
     ]);
     expect(adapter.requests[1]?.messages.map((message) => message.role))
-      .toEqual(["user", "assistant", "user"]);
-    expect(adapter.requests[1]?.messages[1]?.content).toEqual([toolCall]);
-    expect(adapter.requests[1]?.messages[2]?.content).toEqual([{
+      .toEqual(["system", "user", "assistant", "user"]);
+    expect(adapter.requests[1]?.messages[2]?.content).toEqual([toolCall]);
+    expect(adapter.requests[1]?.messages[3]?.content).toEqual([{
       type: "tool-result",
       toolCallId: toolCall.id,
       content: [{ type: "text", text: "closed loop" }],
