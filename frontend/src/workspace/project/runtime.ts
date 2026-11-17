@@ -1,20 +1,15 @@
-import type { ProjectDetailV1, ProjectTurnInput } from "../../../../rpc/project.js";
+import type { ProjectDetailV1 } from "../../../../rpc/project.js";
 import type { DesktopProjectApi, DesktopProjectEvent, DesktopProjectFailure } from "../../../shared/project.js";
-import { conversationReducer, initialConversationState } from "../chat/conversation.js";
-import type { ConversationAction, ConversationState } from "../chat/conversation.js";
+import { ProjectTurns } from "./runtime/turns.js";
+import type { ProjectChatTarget, ProjectTargetSnapshot } from "./runtime/turns.js";
 
 export interface ProjectRuntimeSnapshot {
-  readonly conversation: ConversationState;
-  readonly draft: string;
   readonly detail: ProjectDetailV1 | null;
   readonly followFailure: DesktopProjectFailure | null;
-  readonly busy: boolean;
 }
 
 interface Entry {
   readonly projectId: string;
-  conversation: ConversationState;
-  draft: string;
   detail: ProjectDetailV1 | null;
   followFailure: DesktopProjectFailure | null;
   readonly listeners: Set<() => void>;
@@ -22,16 +17,20 @@ interface Entry {
   followStarting: boolean;
   followGeneration: number;
   readonly stoppedFollowIds: Set<string>;
-  active: { readonly requestId: string; readonly operationId: string | null } | null;
-  cancelRequested: boolean;
 }
 
 export class ProjectRuntime {
   private readonly entries = new Map<string, Entry>();
+  private readonly turns: ProjectTurns;
   private removeEvents: (() => void) | null = null;
   private disposed = false;
 
-  constructor(private readonly api: DesktopProjectApi | undefined) {}
+  constructor(private readonly api: DesktopProjectApi | undefined) {
+    this.turns = new ProjectTurns(api, projectId => {
+      const entry = this.entries.get(projectId);
+      if (entry !== undefined) this.notify(entry);
+    });
+  }
 
   connect(): void {
     if (this.api === undefined || this.removeEvents !== null || this.disposed) return;
@@ -59,62 +58,20 @@ export class ProjectRuntime {
     return this.read(this.ensure(projectId, detail));
   }
 
-  setDraft(projectId: string, detail: ProjectDetailV1, value: string): void {
-    const entry = this.ensure(projectId, detail);
-    entry.draft = value;
-    this.notify(entry);
+  targetSnapshot(projectId: string, target: ProjectChatTarget): ProjectTargetSnapshot {
+    return this.turns.snapshot(projectId, target);
   }
 
-  send(projectId: string, detail: ProjectDetailV1): boolean {
-    const entry = this.ensure(projectId, detail);
-    const text = entry.draft.trim();
-    if (!text || entry.active !== null) return false;
-    const requestId = crypto.randomUUID();
-    entry.active = { requestId, operationId: null };
-    entry.cancelRequested = false;
-    entry.draft = "";
-    this.dispatch(entry, {
-      type: "turn-submitted",
-      requestId,
-      userMessageId: `user-${requestId}`,
-      assistantMessageId: `assistant-${requestId}`,
-      text,
-    });
-    this.notify(entry);
-    if (this.api === undefined) {
-      this.dispatch(entry, { type: "turn-command-failed", requestId, failure: { code: "bridge-unavailable", message: "项目对话仅在桌面应用中可用" } });
-      entry.active = null;
-      this.notify(entry);
-      return true;
-    }
-    const api = this.api;
-    const input: ProjectTurnInput = { projectId, requestId, text, target: { kind: "main" } };
-    void api.startTurn(input).then(result => {
-      if (result.type !== "ok") {
-        if (entry.active?.requestId === requestId) {
-          this.dispatch(entry, { type: "turn-command-failed", requestId, failure: result.failure });
-          entry.active = null;
-          this.notify(entry);
-        }
-        return;
-      }
-      if (entry.active?.requestId !== requestId) {
-        void api.cancel(result.value.subscriptionId);
-        return;
-      }
-      entry.active = { requestId, operationId: result.value.subscriptionId };
-      if (entry.cancelRequested) void api.cancel(result.value.subscriptionId);
-      this.notify(entry);
-    });
-    return true;
+  setDraft(projectId: string, target: ProjectChatTarget, value: string): void {
+    this.turns.setDraft(projectId, target, value);
   }
 
-  cancel(projectId: string, detail: ProjectDetailV1): boolean {
-    const entry = this.ensure(projectId, detail);
-    if (entry.active === null) return false;
-    entry.cancelRequested = true;
-    if (entry.active.operationId !== null) void this.api?.cancel(entry.active.operationId);
-    return true;
+  send(projectId: string, target: ProjectChatTarget): boolean {
+    return this.turns.send(projectId, target);
+  }
+
+  cancel(projectId: string, target: ProjectChatTarget): boolean {
+    return this.turns.cancel(projectId, target);
   }
 
   reconnect(projectId: string, detail: ProjectDetailV1): void {
@@ -131,9 +88,9 @@ export class ProjectRuntime {
     this.disconnect();
     for (const entry of this.entries.values()) {
       this.stopFollow(entry);
-      if (entry.active?.operationId !== null && entry.active !== null) void this.api?.cancel(entry.active.operationId);
       entry.listeners.clear();
     }
+    this.turns.dispose();
     this.entries.clear();
   }
 
@@ -141,9 +98,9 @@ export class ProjectRuntime {
     let entry = this.entries.get(projectId);
     if (entry === undefined) {
       entry = {
-        projectId, conversation: initialConversationState, draft: "", detail,
+        projectId, detail,
         followFailure: null, listeners: new Set(), followId: null, followStarting: false,
-        followGeneration: 0, stoppedFollowIds: new Set(), active: null, cancelRequested: false,
+        followGeneration: 0, stoppedFollowIds: new Set(),
       };
       this.entries.set(projectId, entry);
     } else if (entry.detail === null) entry.detail = detail;
@@ -211,22 +168,7 @@ export class ProjectRuntime {
       this.notify(entry);
       return;
     }
-    const active = entry.active;
-    if (active === null) return;
-    if (event.type === "turn-event") {
-      if (event.event.requestId !== active.requestId) return;
-      this.dispatch(entry, { type: "agent-event", update: { type: "turn-event", event: event.event } });
-      if (isTerminal(event.event.type)) entry.active = null;
-    } else {
-      if (active.operationId !== null && active.operationId !== event.operationId) return;
-      this.dispatch(entry, { type: "agent-event", update: { type: "turn-error", requestId: active.requestId, failure: event.failure } });
-      entry.active = null;
-    }
-    this.notify(entry);
-  }
-
-  private dispatch(entry: Entry, action: ConversationAction): void {
-    entry.conversation = conversationReducer(entry.conversation, action, Date.now());
+    this.turns.receive(event);
   }
 
   private notify(entry: Entry): void { for (const listener of entry.listeners) listener(); }
@@ -240,11 +182,7 @@ export class ProjectRuntime {
   }
 
   private read(entry: Entry): ProjectRuntimeSnapshot {
-    return { conversation: entry.conversation, draft: entry.draft, detail: entry.detail, followFailure: entry.followFailure, busy: entry.active !== null };
+    return { detail: entry.detail, followFailure: entry.followFailure };
   }
-}
-
-function isTerminal(type: string): boolean {
-  return type === "turn-completed" || type === "turn-cancelled" || type === "turn-failed" || type === "turn-truncated";
 }
 

@@ -1,5 +1,6 @@
 import type { AgentTurnV2Event } from "../../../rpc/content.js";
 import type {
+  NodeV1,
   ProjectCreateInput,
   ProjectDetailV1,
   ProjectFollowV1,
@@ -22,6 +23,8 @@ import type { ProjectHost } from "../../electron/ipc/project/handler.js";
 export class ControlledProjectHost implements ProjectHost {
   private readonly projects = new Map<string, ProjectDetailV1>();
   private readonly failFirstTurn: boolean;
+  readonly turnInputs: ProjectTurnInput[] = [];
+  readonly abortedTargets: ProjectTurnInput["target"][] = [];
   private nextId = 1;
   private revision = 0;
 
@@ -30,11 +33,11 @@ export class ControlledProjectHost implements ProjectHost {
   }
 
   stream<TInput, TOutput>(method: RpcMethod<TInput, TOutput>, input: TInput, options?: RpcStreamOptions): AsyncIterable<TOutput> {
-    if (method === projectListMethod) return this.validated(method, input, one({ projects: [...this.projects.values()].map(detail => detail.project) } as ProjectListV1), options?.signal);
-    if (method === projectCreateMethod) return this.validated(method, input, one(this.create(input as ProjectCreateInput)), options?.signal);
-    if (method === projectGetMethod) return this.validated(method, input, one(this.get(input as ProjectRefInput)), options?.signal);
-    if (method === projectFollowMethod) return this.validated(method, input, this.follow(input as ProjectRefInput, options?.signal), options?.signal);
-    if (method === projectTurnMethod) return this.validated(method, input, this.turn(input as ProjectTurnInput, options?.signal), options?.signal);
+    if (method.name === projectListMethod.name) return this.validated(method, input, one({ projects: [...this.projects.values()].map(detail => detail.project) } as ProjectListV1), options?.signal);
+    if (method.name === projectCreateMethod.name) return this.validated(method, input, one(this.create(input as ProjectCreateInput)), options?.signal);
+    if (method.name === projectGetMethod.name) return this.validated(method, input, one(this.get(input as ProjectRefInput)), options?.signal);
+    if (method.name === projectFollowMethod.name) return this.validated(method, input, this.follow(input as ProjectRefInput, options?.signal), options?.signal);
+    if (method.name === projectTurnMethod.name) return this.validated(method, input, this.turn(input as ProjectTurnInput, options?.signal), options?.signal);
     return one(null) as AsyncIterable<TOutput>;
   }
 
@@ -78,6 +81,11 @@ export class ControlledProjectHost implements ProjectHost {
   }
 
   private async *turn(input: ProjectTurnInput, signal: AbortSignal | undefined): AsyncGenerator<AgentTurnV2Event> {
+    this.turnInputs.push(input);
+    if (input.target.kind === "node") {
+      yield* this.nodeTurn(input, input.target.nodeId, signal);
+      return;
+    }
     let detail = this.get(input);
     const turnId = "controlled-turn-" + (++this.revision);
     const fail = this.failFirstTurn && this.revision === 1;
@@ -124,7 +132,10 @@ export class ControlledProjectHost implements ProjectHost {
       const goal = detail.project.goal ?? "比较本地文件夹与逻辑资料夹的整理方式，按上手成本和维护成本给出短文建议；不联网、不执行 Shell 或文件操作。";
       const roadmap: RoadmapV1 = {
         revision: 1,
-        nodes: [node("controlled-node-1", "确认目标并整理执行路线"), node("controlled-node-2", "验证路线产出")],
+        nodes: [
+          node("controlled-node-1", "确认目标并整理执行路线"),
+          node("controlled-node-2", "验证路线产出", "locked"),
+        ],
         edges: [{ from: "controlled-node-1", to: "controlled-node-2" }],
       };
       detail = { ...detail, project: { ...detail.project, goal, revision: detail.project.revision + 1 }, roadmap };
@@ -135,13 +146,91 @@ export class ControlledProjectHost implements ProjectHost {
     yield { type: "turn-completed", sessionId: detail.main.sessionId, requestId: input.requestId, turnId };
     void signal;
   }
+
+  private async *nodeTurn(input: ProjectTurnInput, nodeId: string, signal: AbortSignal | undefined): AsyncGenerator<AgentTurnV2Event> {
+    let detail = this.get(input);
+    const current = detail.roadmap?.nodes.find(item => item.nodeId === nodeId);
+    if (current === undefined) throw new Error("Unknown controlled node");
+    if (!current.actions.run) throw new Error("Controlled node does not allow execution");
+    const turnId = "controlled-turn-" + (++this.revision);
+    const sessionId = "controlled-session-" + input.projectId + "-" + current.nodeId;
+    detail = this.saveNode(detail, current.nodeId, {
+      ...current,
+      status: "working",
+      turnActive: true,
+      actions: { ...current.actions, run: false },
+    });
+    try {
+      yield { type: "turn-started", sessionId, requestId: input.requestId, turnId };
+      await delay(250);
+      yield {
+        type: "step-started", sessionId, requestId: input.requestId,
+        turnId, stepId: "controlled-node-step", messageId: "controlled-node-message",
+      };
+      yield {
+        type: "content-started", sessionId, requestId: input.requestId,
+        turnId, stepId: "controlled-node-step", messageId: "controlled-node-message", contentIndex: 0, kind: "text",
+      };
+      yield {
+        type: "content-delta", sessionId, requestId: input.requestId,
+        turnId, stepId: "controlled-node-step", messageId: "controlled-node-message", contentIndex: 0,
+        delta: "节点执行完成，当前运行期间的会话与状态已保留。",
+      };
+      yield {
+        type: "content-completed", sessionId, requestId: input.requestId,
+        turnId, stepId: "controlled-node-step", messageId: "controlled-node-message", contentIndex: 0,
+      };
+      yield {
+        type: "step-completed", sessionId, requestId: input.requestId,
+        turnId, stepId: "controlled-node-step", messageId: "controlled-node-message",
+      };
+      if (input.text.trim().startsWith("停止前")) {
+        await abort(signal);
+        return;
+      }
+      this.finishNode(input.projectId, nodeId, current);
+      yield { type: "turn-completed", sessionId, requestId: input.requestId, turnId };
+    } finally {
+      if (signal?.aborted) {
+        this.abortedTargets.push(input.target);
+        this.finishNode(input.projectId, nodeId, current);
+      }
+    }
+  }
+
+  private saveNode(detail: ProjectDetailV1, nodeId: string, nodeValue: NodeV1): ProjectDetailV1 {
+    if (detail.roadmap === null) throw new Error("Controlled node turn requires a roadmap");
+    const next = {
+      ...detail,
+      project: { ...detail.project, revision: detail.project.revision + 1 },
+      roadmap: {
+        ...detail.roadmap,
+        nodes: detail.roadmap.nodes.map(item => item.nodeId === nodeId ? nodeValue : item),
+      },
+    };
+    this.projects.set(detail.project.projectId, next);
+    return next;
+  }
+
+  private finishNode(projectId: string, nodeId: string, original: NodeV1): void {
+    const detail = this.projects.get(projectId);
+    const current = detail?.roadmap?.nodes.find(item => item.nodeId === nodeId);
+    if (detail === undefined || current === undefined || !current.turnActive) return;
+    this.saveNode(detail, nodeId, {
+      ...original,
+      status: "idle",
+      hasSession: true,
+      turnActive: false,
+      actions: { ...original.actions, run: true },
+    });
+  }
 }
 
-function node(nodeId: string, title: string) {
+function node(nodeId: string, title: string, status: "idle" | "locked" = "idle"): NodeV1 {
   return {
-    nodeId, revision: 1, requirement: "required" as const, status: "idle" as const,
+    nodeId, revision: 1, requirement: "required" as const, status,
     title, description: title, acceptanceCriteria: ["完成并可检查"], hasSession: false, turnActive: false,
-    actions: { run: true, complete: false, skip: false, rework: false, review: false },
+    actions: { run: status === "idle", complete: false, skip: false, rework: false, review: false },
     confirmation: null, submission: null, pendingFeedback: null, review: null,
     reworkCount: 0, reviewPending: false,
   };
