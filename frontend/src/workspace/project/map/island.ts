@@ -62,7 +62,7 @@ export function createIsland(island: IslandModel): IslandView {
   return {
     group, surface, anchor: new THREE.Vector3(island.position.x, island.position.y + .43, island.position.z),
     setState: (status, selected) => {
-      disc.material.color.set(status === "进行中" ? "#dc846e" : status === "已完成" ? "#4f8976" : status === "已跳过" ? "#a5aaa4" : "#8a9f91");
+      disc.material.color.set((status === "进行中" || status === "执行中") ? "#dc846e" : status === "已完成" ? "#4f8976" : status === "已跳过" ? "#a5aaa4" : status === "待验收" ? "#c7a252" : status === "可执行" ? "#6f9eb4" : "#8d8d9e");
       ring.material.color.set(selected ? "#ffdab9" : "#fffbed");
       ring.scale.setScalar(selected ? 1.18 : 1);
     },

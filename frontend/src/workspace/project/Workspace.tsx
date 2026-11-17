@@ -1,32 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import type { NodeStatusV1, ProjectDetailV1 } from "../../../../rpc/project.js";
+import type { ProjectDetailV1 } from "../../../../rpc/project.js";
 import type { DesktopProjectApi } from "../../../shared/project.js";
 import type { DesktopResourceApi } from "../../../shared/resource.js";
 import { Icon } from "../../ui/Icon";
 import { RoadmapMap } from "./Map";
+import { statusLabels } from "./map/model";
 import type { MapGraph } from "./map/model";
 import styles from "./workspace.module.css";
 import { ProjectConversation } from "./Conversation";
 import { ProjectRuntime } from "./runtime.js";
+import { NodeDetails } from "./Node";
 import { ResourceLibrary } from "./resource/Library";
 import { useResourceOperations } from "./resource/operations";
 
 type Message = { role: "user" | "assistant"; text: string };
-const statusLabels: Record<NodeStatusV1, string> = { locked: "待解锁", idle: "可执行", working: "进行中", submitted: "待验收", completing: "已完成", skipped: "已跳过" };
 
 export function ProjectWorkspace({ detail: initialDetail, api, resource, runtime, demo, previewControls }: { readonly detail: ProjectDetailV1; readonly api?: DesktopProjectApi | undefined; readonly resource?: DesktopResourceApi | undefined; readonly runtime?: ProjectRuntime | undefined; readonly demo?: MapGraph; readonly previewControls?: ReactNode }): React.JSX.Element {
   const projectRuntime = useMemo(() => runtime ?? new ProjectRuntime(api), [runtime, api]);
-  const [detail, setDetail] = useState(initialDetail);
+  const [snapshot, setSnapshot] = useState(() => projectRuntime.snapshot(initialDetail.project.projectId, initialDetail));
+  const detail = snapshot.detail ?? initialDetail;
   useEffect(() => runtime === undefined ? () => projectRuntime.disconnect() : undefined, [projectRuntime, runtime]);
   useEffect(() => {
     return projectRuntime.subscribe(initialDetail.project.projectId, initialDetail, () => {
-      const next = projectRuntime.snapshot(initialDetail.project.projectId, initialDetail).detail;
-      if (next !== null) setDetail(next);
+      setSnapshot(projectRuntime.snapshot(initialDetail.project.projectId, initialDetail));
     });
   }, [projectRuntime, initialDetail]);
   const graph = useMemo<MapGraph>(() => demo ?? {
-    nodes: detail.roadmap?.nodes.map(node => ({ id: node.nodeId, title: node.title, note: node.description, status: statusLabels[node.status] })) ?? [],
+    nodes: detail.roadmap?.nodes.map(node => ({ id: node.nodeId, title: node.title, note: node.description, status: statusLabels[node.status], requirement: node.requirement })) ?? [],
     edges: detail.roadmap?.edges ?? [],
   }, [demo, detail.roadmap]);
   const nodes = graph.nodes;
@@ -43,6 +44,7 @@ export function ProjectWorkspace({ detail: initialDetail, api, resource, runtime
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const node = nodes.find(item => item.id === active);
+  const selectedNode = !demo ? detail.roadmap?.nodes.find(item => item.nodeId === active) : undefined;
   const title = node?.title ?? "Main";
   const nodeNumber = String(nodes.findIndex(item => item.id === active) + 1).padStart(2, "0");
 
@@ -78,21 +80,21 @@ export function ProjectWorkspace({ detail: initialDetail, api, resource, runtime
     requestAnimationFrame(() => resourceButton.current?.focus());
   }
 
-  return <article className={styles.project} data-panel={visible} data-full={full} aria-label={`项目 ${project.name}`}>
+  return <article className={styles.project} data-panel={visible} data-full={full} data-node={selectedNode !== undefined} aria-label={`项目 ${project.name}`}>
     <header className={styles.mapHeader}>
       <div className={styles.eyebrow}>RESEARCH WORKSPACE</div>
       <h1>{project.name}</h1>
       <p>{project.goal ?? "目标待确定"}</p>
-      <div className={styles.mapTools}><span><Icon name="map" />Roadmap <small>执行路线</small></span>
-        <span>{planned ? `${nodes.length} 座岛屿 · ${nodes.filter(item => item.status === "已完成").length} 个已完成` : detail.roadmap === null ? "尚未规划" : "路线已创建"}</span></div>
+      <div className={styles.mapTools}><span><Icon name="map" />Roadmap <small>执行路线</small>{detail.roadmap && <small>v{detail.roadmap.revision}</small>}</span>
+        <span>{planned ? `${nodes.length} 座岛屿 · ${nodes.filter(item => item.status === "已完成").length} 个已完成 · ${nodes.filter(item => item.status === "已跳过").length} 个跳过` : detail.roadmap === null ? "尚未规划" : "路线已创建"}</span></div>
       {previewControls && <div className={styles.previewTools}>{previewControls}</div>}
     </header>
-    <RoadmapMap graph={graph} active={active} planned={planned} onOpen={openNode}>
+    <RoadmapMap graph={graph} active={active} planned={planned} onOpen={openNode} failure={snapshot.followFailure} onReconnect={() => projectRuntime.reconnect(project.projectId, detail)}>
       <div className={styles.empty}>
         <span className={styles.emptyIcon}><Icon name="guide" /></span>
         <span className={styles.eyebrow}>YOUR NEXT EXPLORATION</span>
         <h2>{demo && nodes.length === 0 ? "还没有节点岛屿" : detail.roadmap === null ? "从一个目标，走向一条路线" : "项目路线已创建"}</h2>
-        <p>{demo && nodes.length === 0 ? "点击上方「新增岛屿」，看看路线如何生长。" : detail.roadmap === null ? "规划完成后，你的任务、依赖与进度会在这里展开。" : "路线地图展示即将开放，已有路线数据会继续保留。"}</p>
+        <p>{demo && nodes.length === 0 ? "点击上方「新增岛屿」，看看路线如何生长。" : detail.roadmap === null ? "规划完成后，你的任务、依赖与进度会在这里展开。" : "当前路线没有工作节点，可以与 Main 讨论并补充任务。"}</p>
         {demo && nodes.length > 0 && <button onClick={() => setShowDemo(true)}>查看示例路线 <Icon name="arrow" /></button>}
       </div>
     </RoadmapMap>
@@ -126,7 +128,8 @@ export function ProjectWorkspace({ detail: initialDetail, api, resource, runtime
           </dl></details>
           <button disabled title="消息查看即将开放">消息</button><button ref={resourceButton} disabled={resource === undefined} aria-haspopup="dialog" aria-expanded={libraryOpen} title={resource === undefined ? "资料库仅在桌面应用中可用" : "打开资料库"} onClick={() => setLibraryOpen(true)}>资料</button>
         </nav>
-        {(demo || node) && <div className={styles.messages}>
+        {selectedNode && detail.roadmap && <NodeDetails node={selectedNode} roadmap={detail.roadmap} onOpen={openNode} />}
+        {(demo || (node && !selectedNode)) && <div className={styles.messages}>
           <div className={styles.nodeHeading}><span className={styles.nodeBadge} data-node={Boolean(node)}>{node ? nodeNumber : <Icon name="guide" />}</span><div><small>{node ? "NODE WORKSPACE" : "MAIN AGENT"}</small><h2>{node ? title : "一起探索下一步"}</h2></div></div>
           <div className={styles.context}><span>{node ? "当前节点" : "项目目标"}</span><p>{node?.note ?? project.goal ?? "目标待确定"}</p>{node && demo && <small>验收条件：提供可检查的结果与来源证据。</small>}</div>
           {demo ? <div className={styles.assistant}><div className={styles.author}><span>N</span><strong>{node ? "Node" : "Main"}</strong><small>工作会话</small></div><div>
@@ -140,7 +143,7 @@ export function ProjectWorkspace({ detail: initialDetail, api, resource, runtime
         {!demo && <div className={styles.liveConversation} hidden={node !== undefined}><ProjectConversation runtime={projectRuntime} projectId={project.projectId} detail={detail}>
           {!node && <><div className={styles.nodeHeading}><span className={styles.nodeBadge}><Icon name="guide" /></span><div><small>MAIN AGENT</small><h2>一起探索下一步</h2></div></div><div className={styles.context}><span>项目目标</span><p>{project.goal ?? "目标待确定"}</p></div></>}
         </ProjectConversation></div>}
-        {(!demo && !node) ? null : <div className={styles.composer}>
+        {!demo ? null : <div className={styles.composer}>
           <textarea aria-label={`${title} 草稿`} placeholder={node ? "补充这个节点的要求…" : "与 Main 讨论目标与路线…"} value={drafts[active] ?? ""} onChange={event => setDrafts(previous => ({ ...previous, [active]: event.target.value }))} />
           <div><span>{demo ? "原型演示 · 不调用模型" : "草稿 · 对话发送即将开放"}</span><button aria-label={demo ? "发送示例消息" : "发送消息"} disabled={!demo || !drafts[active]?.trim()} onClick={send}><Icon name="arrow" /></button></div>
         </div>}

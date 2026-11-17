@@ -282,3 +282,7 @@
 - [Interaction Bench 适配核查](189-devlog-ibench-assessment.md)：44 题 UI 交互缺陷修复基准的规格、判分与榜单事实，与 Navo 长程能力的错位分析；仅调研，建议不接入，吸收 BDD 规格与失败分列；并列出替代候选 Terminal-Bench 4.0 / PlanBench-XL / DeepPlanning / TheAgentCompany 与采用顺序，及官网与公开榜单核实、τ-bench 家族适配分析（含 τ³-Banking 的知识库、任务与检索配置事实）、Terminal-Bench 4.0 的 68 题构成与社区榜单关闭事实。
 
 - [F5.4 DeepSeek 验收与项目独立预算](190-devlog-f5-4-deepseek.md)：每项目独立 100 用户回合 / 模型步骤额度，清理验收进程旧配置，记录受控与真实 Electron 验收。
+
+- [F5.5 路线展示与节点详情](191-devlog-f5-5-prototype.md)：正式快照、六状态、依赖与节点详情；新版 CI 收口及本机完整、Electron 验收记录。
+
+- [BUG-040/041/042 CI 测试超时](192-bugfix-bug-040-041-ci-timeouts.md)：首次与后续超时、本机及 CI 诊断、新版失败用例独立重试证据；仅排查，均未修复。

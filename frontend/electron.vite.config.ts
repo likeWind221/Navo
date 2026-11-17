@@ -7,6 +7,7 @@ export default defineConfig({
     build: {
       externalizeDeps: true,
       rollupOptions: {
+        external: ["vite", "@vitejs/plugin-react"],
         input: {
           index: resolve("electron/main.ts"),
           chat: resolve("scripts/qa/chat.ts"),
@@ -14,6 +15,7 @@ export default defineConfig({
           markdown: resolve("scripts/qa/markdown.ts"),
           project: resolve("scripts/qa/project.ts"),
           main: resolve("scripts/qa/main.ts"),
+          roadmap: resolve("scripts/qa/roadmap.ts"),
           autorun: resolve("scripts/qa/autorun.ts"),
           session: resolve("scripts/qa/session.ts"),
           resource: resolve("scripts/qa/resource.ts"),

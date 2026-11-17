@@ -11,6 +11,19 @@ const detail: ProjectDetailV1 = {
 const detailTwo: ProjectDetailV1 = { ...detail, project: { ...detail.project, projectId: "p-2", name: "另一个项目" } };
 
 describe("ProjectRuntime", () => {
+  it("replaces roadmap facts from follow without starting a turn", () => {
+    const api = new FakeProjectApi();
+    const runtime = new ProjectRuntime(api);
+    runtime.subscribe("p-1", detail, () => undefined);
+    const next: ProjectDetailV1 = { ...detail, roadmap: { revision: 7, nodes: [], edges: [] } };
+    api.emit({ type: "follow-snapshot", operationId: "follow-1", projectId: "p-1", snapshot: { detail: next, mailboxSequence: 0, resourceRevision: 0 } });
+    expect(runtime.snapshot("p-1", detail).detail).toBe(next);
+    expect(api.turnInputs).toHaveLength(0);
+    api.emit({ type: "follow-snapshot", operationId: "other", projectId: "p-2", snapshot: { detail: detailTwo, mailboxSequence: 0, resourceRevision: 0 } });
+    expect(runtime.snapshot("p-1", detail).detail).toBe(next);
+    runtime.dispose();
+  });
+
   it("routes a turn event received before the start acknowledgement by request id", async () => {
     const api = new FakeProjectApi();
     const runtime = new ProjectRuntime(api);

@@ -1,0 +1,25 @@
+.details { flex:1; min-height:0; overflow:auto; padding:20px; overflow-wrap:anywhere; }
+.badges { display:flex; align-items:center; flex-wrap:wrap; gap:10px; font-size:11px; color:var(--text-secondary); }
+.badges>span:last-child { border:1px solid var(--border); border-radius:4px; padding:2px 6px; font-size:10px; }
+.badges [data-status="执行中"] { color:#b1644c; }
+.badges [data-status="可执行"] { color:#44788b; }
+.badges [data-status="待验收"] { color:#997528; }
+.badges [data-status="已完成"] { color:#3f7b67; }
+.details h2 { font-size:20px; font-weight:500; line-height:1.5; margin:12px 0 23px; }
+.details section { margin-top:23px; }
+.details h3 { margin:0 0 10px; font-size:11px; font-weight:500; color:var(--text-secondary); }
+.details h3 small { margin-left:5px; font-weight:400; font-family:var(--font-mono); }
+.details p,.details li { font-size:12px; line-height:1.85; margin:0; }
+.details ul { padding-left:17px; margin:0; display:grid; gap:7px; }
+.details li::marker { color:var(--control-border); }
+.relations { display:grid; gap:7px; }
+.relations button { display:flex; align-items:center; gap:10px; padding:8px 0; border:0; background:transparent; color:var(--text); text-align:left; cursor:pointer; }
+.relations button:hover { color:var(--accent-strong); }
+.relations button>span:first-child { display:grid; place-items:center; flex-shrink:0; width:27px; height:29px; background:var(--surface-muted); border-radius:7px; font-family:var(--font-mono); font-size:10px; color:var(--text-secondary); }
+.relations button>span:nth-child(2) { flex:1; font-size:12px; overflow-wrap:anywhere; }
+.relations small { display:block; color:var(--text-secondary); font-size:10px; margin-top:3px; }
+.relations svg { width:13px; height:13px; flex-shrink:0; color:var(--text-tertiary); }
+.actions { border-top:1px solid var(--border); padding-top:18px; }
+.actions>div { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.actions>div>span { padding:5px 8px; border:1px solid var(--border); border-radius:5px; font-size:11px; }
+.details .muted { color:var(--text-secondary); font-size:11px; }
