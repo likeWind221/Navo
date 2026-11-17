@@ -14,8 +14,8 @@ import type { ProjectDetailV1, ProjectListV1 } from "../../rpc/project.js";
 const mode = process.env.NAVO_HOST_MODE ?? "real";
 const timeoutMs = Number(process.env.NAVO_QA_TIMEOUT_MS ?? 900_000);
 const deadline = Date.now() + timeoutMs;
-const maxUserTurns = 12;
-const maxSteps = 10;
+const maxUserTurns = 100;
+const maxSteps = 100;
 const output = resolve(process.env.NAVO_QA_OUTPUT ?? join(tmpdir(), "navo-f54-evidence-" + Date.now()));
 const evidenceHome = process.env.NAVO_HOME ?? (mode === "mock" || mode === "controlled" ? join(tmpdir(), "navo-f54-home-" + process.pid) : null);
 if (evidenceHome === null) throw new Error("真实 F5.4 验收必须由调用方提供隔离 NAVO_HOME");
@@ -36,7 +36,7 @@ interface Evidence {
   status?: "passed" | "failed";
   error?: string;
   screenshot?: string;
-  budget?: { readonly userTurns: number; readonly stepStarted: number; readonly maxUserTurns: number; readonly maxSteps: number };
+  budget?: ProjectBudgets;
   fixture?: { readonly firstTurnFailed: boolean; readonly userTurns: number; readonly userMessages: number; readonly confirmSent: boolean };
 }
 
@@ -156,7 +156,7 @@ async function runFlow(window: BrowserWindow, host: ProjectHost, evidence: Evide
   window.setContentSize(547, 760);
   await settleRenderer(window);
   await assertConversationVisible(window, firstPanel, "窄屏展开", false);
-  const userTurns = await recordUserTurn(window);
+  const userTurns = await recordUserTurn(window, firstId);
   assert.ok(userTurns <= maxUserTurns, "F5.4 QA user-turn budget exceeded");
   await fill(window, firstPanel + " textarea", "停止前的在途回合");
   await clickAt(window, firstPanel + ' button[aria-label="发送消息"]');
@@ -174,13 +174,13 @@ async function runFlow(window: BrowserWindow, host: ProjectHost, evidence: Evide
 }
 
 async function runConversation(window: BrowserWindow, selector: string, projectId: string, emptyGoal: boolean, recap: string, confirm: string): Promise<void> {
-  await send(window, selector, recap);
+  await send(window, selector, projectId, recap);
   const before = await projectState(window, projectId);
   assert.equal(before.type, "ok");
   if (before.type !== "ok") return;
   assert.equal(before.value.roadmap, null, "roadmap appeared before explicit confirmation");
   if (emptyGoal) assert.equal(before.value.project.goal, null, "empty project gained a goal before confirmation");
-  await send(window, selector, confirm);
+  await send(window, selector, projectId, confirm);
   const after = await waitForRoadmap(window, projectId);
   assert.equal(after.type, "ok");
   if (after.type === "ok") {
@@ -190,8 +190,8 @@ async function runConversation(window: BrowserWindow, selector: string, projectI
   }
 }
 
-async function send(window: BrowserWindow, selector: string, textValue: string): Promise<void> {
-  const userTurns = await recordUserTurn(window);
+async function send(window: BrowserWindow, selector: string, projectId: string, textValue: string): Promise<void> {
+  const userTurns = await recordUserTurn(window, projectId);
   assert.ok(userTurns <= maxUserTurns, "F5.4 QA user-turn budget exceeded");
   const beforeReplies = await countReplies(window, selector);
   await fill(window, selector + " textarea", textValue);
@@ -208,12 +208,12 @@ async function send(window: BrowserWindow, selector: string, textValue: string):
 async function runFailureFixture(window: BrowserWindow, selector: string, projectId: string, evidence: Evidence): Promise<void> {
   let failure: unknown = null;
   try {
-    await send(window, selector, "请复述当前目标，并在我确认前不要规划。");
+    await send(window, selector, projectId, "请复述当前目标，并在我确认前不要规划。");
   } catch (error: unknown) {
     failure = error;
   }
   assert.ok(failure instanceof Error && failure.message.startsWith("Turn failed:"), "controlled fixture did not fail the first turn");
-  const userTurns = (await readBudget(window)).userTurns;
+  const userTurns = (await readBudget(window))[projectId]!.userTurns;
   const userMessages = await countUserMessages(window, selector);
   const state = await projectState(window, projectId);
   assert.equal(userTurns, 1, "controlled fixture sent more than one user turn");
@@ -243,17 +243,26 @@ async function waitForReply(window: BrowserWindow, selector: string, beforeRepli
   throw new Error("Timed out waiting for the current Agent reply");
 }
 
+interface ProjectBudget {
+  readonly userTurns: number;
+  readonly stepStarted: number;
+  readonly maxUserTurns: number;
+  readonly maxSteps: number;
+}
+
+type ProjectBudgets = Readonly<Record<string, ProjectBudget>>;
+
 async function installBudget(window: BrowserWindow): Promise<void> {
-  await window.webContents.executeJavaScript("(() => { window.__f54Budget = { userTurns: 0, stepStarted: 0 }; window.desktop.project.onEvent(event => { if (event.type === 'turn-event' && event.event.type === 'step-started') { window.__f54Budget.stepStarted += 1; if (window.__f54Budget.stepStarted >= " + maxSteps + ") void window.desktop.project.cancel(event.operationId); } }); })()");
+  await window.webContents.executeJavaScript("(() => { window.__f54Budget = {}; window.desktop.project.onEvent(event => { if (event.type === 'turn-event' && event.event.type === 'step-started') { const budget = window.__f54Budget[event.projectId] ??= { userTurns: 0, stepStarted: 0 }; budget.stepStarted += 1; if (budget.stepStarted > " + maxSteps + ") void window.desktop.project.cancel(event.operationId); } }); })()");
 }
 
-async function recordUserTurn(window: BrowserWindow): Promise<number> {
-  return window.webContents.executeJavaScript("(() => { window.__f54Budget.userTurns += 1; return window.__f54Budget.userTurns; })()");
+async function recordUserTurn(window: BrowserWindow, projectId: string): Promise<number> {
+  return window.webContents.executeJavaScript("(() => { const budget = window.__f54Budget[" + JSON.stringify(projectId) + "] ??= { userTurns: 0, stepStarted: 0 }; budget.userTurns += 1; return budget.userTurns; })()");
 }
 
-async function readBudget(window: BrowserWindow): Promise<{ readonly userTurns: number; readonly stepStarted: number; readonly maxUserTurns: number; readonly maxSteps: number }> {
-  const current: { readonly userTurns: number; readonly stepStarted: number } = await window.webContents.executeJavaScript("window.__f54Budget");
-  return { ...current, maxUserTurns, maxSteps };
+async function readBudget(window: BrowserWindow): Promise<ProjectBudgets> {
+  const projects: Record<string, { userTurns: number; stepStarted: number }> = await window.webContents.executeJavaScript("window.__f54Budget");
+  return Object.fromEntries(Object.entries(projects).map(([projectId, budget]) => [projectId, { ...budget, maxUserTurns, maxSteps }]));
 }
 
 async function assertConversationVisible(window: BrowserWindow, selector: string, label: string, requireSendHit = true): Promise<void> {

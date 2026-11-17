@@ -6,7 +6,7 @@
 
 - [x] BUG-039：DeepSeek 流式 `usage: null` 解析修复；离线完整测试、代码 head CI 与真实 Flash 预检通过，最终提交 CI 为合并门禁，见 [183](183-bugfix-bug-039-stream-usage.md)。
 
-- [ ] BUG-038：F5.4 首轮完整前端检查中一项 Mock Host 启动超时；master / 分支定向及分支完整复验通过，原因未确认，等待复现，见 [170](170-bugfix-bug-038-host-startup.md)。
+- [ ] BUG-038：F5.4 首轮完整前端检查中一项 Mock Host 启动超时；master / 分支定向及分支完整复验通过，原因未确认；2026-11-17 真实 F5.4 再遇 10 秒启动超时，同期探针证实同用户 Host 竞争，首次失败是否同因未定，见 [170](170-bugfix-bug-038-host-startup.md)。
 
 - [x] BUG-037：独立 master 已复现窄屏项目会话面板2px；最小列定位修复、实际 Electron、前端165项与根1080项、当前 head CI 均通过；PR #112 已合入（ec14333），关闭，见 [169](169-bugfix-bug-037-panel.md)。
 

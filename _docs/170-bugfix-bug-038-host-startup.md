@@ -21,3 +21,9 @@ KernelHostProcess、该项测试和根 Mock Host 入口不在 F5.4 实际 diff �
 ## 后续
 
 再次出现时保留启动进程 stderr、退出码、ready 标记与时间，确认是实际业务故障还是环境竞争后按 Bug 分支修复；修复应使同一场景稳定通过并保留当前 head CI。本项与 BUG-036 认证 HTTP 403 分开跟踪。入口：[Bug 计划](bug-plan.md)。
+
+## 2026-11-17 F5.4 真实验收启动失败
+
+首次真实 DeepSeek 桌面验收在既有 10 秒 Host 启动预算处失败，尚未进入 UI 任务。证据 `%TEMP%/navo-f54-deepseek-20261117-evidence/f5-4-real.json`，同目录保留失败截图。当时后端完整测试同时执行。随后独立零生成启动探针在约 0.7 秒收到 `host-already-running`，源码 `src/host/lock.ts` 证实 Host 锁以 OS 用户为边界，隔离 NAVO_HOME 不隔离 Host 锁。由此确认当前存在同用户 Host 竞争，但不能据此断定首次 10 秒超时同因；保持未修复，先等待完整测试退出后串行复验，不增加生产超时或自动重试。本次验收记录见 [190](190-devlog-f5-4-deepseek.md)。
+
+同日后端完整测试退出后，原生产启动配置下串行真实 Electron 复验通过（Host 输出 ready，后续 DeepSeek 两项目场景 passed）。未修复生产代码、未调整启动时限；首次超时根因仍未充分确认，本项保持未关闭。
