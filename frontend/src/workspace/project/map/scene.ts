@@ -176,7 +176,7 @@ export function createMapScene(container: HTMLDivElement, labels: HTMLDivElement
       draw();
     },
     recenter: () => {
-      const working = Array.from(models.values()).find(model => model.node.status === "进行中");
+      const working = Array.from(models.values()).find(model => ["进行中", "执行中"].includes(model.node.status));
       const anchor = views.get(selected)?.anchor ?? (working ? views.get(working.node.id)?.anchor : undefined);
       if (!anchor) { fit(); return; }
       const offset = camera.position.clone().sub(controls.target);

@@ -1,3 +1,5 @@
+import type { NodeStatusV1 } from "../../../../../rpc/project.js";
+
 export interface MapGraph {
   readonly nodes: readonly MapNode[];
   readonly edges: readonly MapEdge[];
@@ -16,6 +18,7 @@ export interface MapNode {
   readonly title: string;
   readonly note: string;
   readonly status: string;
+  readonly requirement?: "required" | "optional";
 }
 
 export interface MapEdge {
@@ -113,3 +116,7 @@ function freeSlot(origin: Hex, occupied: ReadonlySet<string>, seed: number): Hex
 function key(hex: Hex): string {
   return `${hex.q},${hex.r}`;
 }
+
+export const stateSymbols: Readonly<Record<string, string>> = { "待解锁": "◇", "可执行": "▷", "执行中": "◉", "待验收": "◷", "已完成": "✓", "已跳过": "−" };
+
+export const statusLabels: Readonly<Record<NodeStatusV1, string>> = { locked: "待解锁", idle: "可执行", working: "执行中", submitted: "待验收", completing: "已完成", skipped: "已跳过" };

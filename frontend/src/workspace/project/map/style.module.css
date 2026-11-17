@@ -12,14 +12,14 @@
 .label { position: absolute; top: 38px; left: 50%; transform: translateX(-50%); display: block; width: max-content; max-width: 140px; padding: 5px 9px; border: 1px solid #fff9; border-radius: 7px; background: #fffffff0; box-shadow: 0 2px 9px #233c3914; font-size: 11px; font-weight: 600; line-height: 1.5; color: var(--text); transition: background var(--duration), box-shadow var(--duration); }
 .label small { display: block; font-size: 9px; font-weight: 400; color: var(--text-secondary); }
 .node:hover .label, .node[data-selected="true"] .label { background: #fff; box-shadow: 0 3px 12px #233c3929; }
-.node[data-status="进行中"] .label { border-color: #edb8a4; }
+.node[data-status="执行中"] .label { border-color: #edb8a4; }
 .controls { position: absolute; z-index: 1; top: 20px; right: 18px; display: flex; flex-direction: column; padding: 4px; border: 1px solid #fff9; border-radius: 12px; background: #fffffff0; box-shadow: var(--shadow-panel); }
 .controls button { display: grid; place-items: center; width: 32px; height: 34px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--text); }
 .controls button > svg { width: 18px; height: 18px; }
 .controls button:hover:not(:disabled) { background: var(--surface-muted); }
 .controls button:disabled { opacity: .35; }
 .controls button:last-child { margin-top: 5px; border-top: 1px solid var(--border); border-radius: 0 0 7px 7px; }
-.legend { position: absolute; left: 18px; bottom: 18px; display: flex; align-items: center; gap: 18px; padding: 10px 14px; border: 1px solid #ffffffe0; border-radius: 11px; background: #fffffff0; box-shadow: var(--shadow-panel); color: #4c645b; font-size: 11px; pointer-events: none; }
+.legend { position: absolute; left: 18px; bottom: 18px; display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; max-width: calc(100% - 36px); padding: 10px 14px; border: 1px solid #ffffffe0; border-radius: 11px; background: #fffffff0; box-shadow: var(--shadow-panel); color: #4c645b; font-size: 11px; pointer-events: none; }
 .legend span { display: flex; align-items: center; gap: 6px; }
 .legend i { width: 12px; height: 12px; border: 2px solid #98aaa0; border-radius: 50%; }
 .legend i[data-state="done"] { border-color: #5e927e; background: #5e927e; }
@@ -40,3 +40,17 @@
   .legend { left: 12px; bottom: 12px; gap: 10px; padding: 8px 10px; font-size: 10px; }
   .compass { right: 12px; bottom: 12px; }
 }
+
+.node[data-selected="true"] .label { border-color:#6b9a8d; box-shadow:0 0 0 3px #6b9a8d26,0 4px 16px #24483d1a; }
+.label em { position:absolute; top:-9px; right:-8px; font-size:9px; font-style:normal; padding:1px 5px; border-radius:4px; background:#f2f0e6; border:1px solid #d8d7c8; color:#787661; }
+.node[data-status="可执行"] small,.legend [data-status="可执行"] { color:#44788b; }
+.node[data-status="执行中"] small,.legend [data-status="执行中"] { color:#b1644c; }
+.node[data-status="待验收"] small,.legend [data-status="待验收"] { color:#997528; }
+.node[data-status="已完成"] small,.legend [data-status="已完成"] { color:#3f7b67; }
+.node[data-status="待解锁"] small,.legend [data-status="待解锁"] { color:#7a7b8b; }
+.node[data-status="已跳过"] small,.legend [data-status="已跳过"] { color:#8b938c; }
+.node[data-status="已跳过"] .label { background:#f3f5f0ed; }
+.disconnected { position:absolute; left:12px; right:12px; top:12px; z-index:2; display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 12px; background:#fbf4e8; border:1px solid #e9dbbd; border-radius:9px; color:#8a6c3d; }
+.disconnected>div { display:grid; gap:4px; font-size:11px; }
+.disconnected strong { font-size:12px; font-weight:500; }
+.disconnected button { background:none; border:0; color:#87632b; font-size:11px; white-space:nowrap; cursor:pointer; }
