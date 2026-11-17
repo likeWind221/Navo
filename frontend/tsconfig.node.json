@@ -21,6 +21,7 @@
     "scripts/qa/chat.ts",
     "scripts/qa/roadmap.ts",
     "scripts/qa/autorun.ts",
+    "scripts/qa/node.ts",
     "scripts/qa/session.ts",
     "scripts/qa/resource.ts",
     "electron.vite.config.ts",

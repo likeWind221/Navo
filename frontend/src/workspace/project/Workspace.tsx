@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import type { ProjectDetailV1 } from "../../../../rpc/project.js";
+import type { NodeV1, ProjectDetailV1 } from "../../../../rpc/project.js";
 import type { DesktopProjectApi } from "../../../shared/project.js";
 import type { DesktopResourceApi } from "../../../shared/resource.js";
 import { Icon } from "../../ui/Icon";
@@ -10,6 +10,7 @@ import type { MapGraph } from "./map/model";
 import styles from "./workspace.module.css";
 import { ProjectConversation } from "./Conversation";
 import { ProjectRuntime } from "./runtime.js";
+import type { ProjectChatTarget } from "./runtime/turns.js";
 import { NodeDetails } from "./Node";
 import { ResourceLibrary } from "./resource/Library";
 import { useResourceOperations } from "./resource/operations";
@@ -45,6 +46,9 @@ export function ProjectWorkspace({ detail: initialDetail, api, resource, runtime
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const node = nodes.find(item => item.id === active);
   const selectedNode = !demo ? detail.roadmap?.nodes.find(item => item.nodeId === active) : undefined;
+  const target = useMemo<ProjectChatTarget>(() => selectedNode === undefined
+    ? { kind: "main" }
+    : { kind: "node", nodeId: selectedNode.nodeId }, [selectedNode?.nodeId]);
   const title = node?.title ?? "Main";
   const nodeNumber = String(nodes.findIndex(item => item.id === active) + 1).padStart(2, "0");
 
@@ -128,8 +132,7 @@ export function ProjectWorkspace({ detail: initialDetail, api, resource, runtime
           </dl></details>
           <button disabled title="消息查看即将开放">消息</button><button ref={resourceButton} disabled={resource === undefined} aria-haspopup="dialog" aria-expanded={libraryOpen} title={resource === undefined ? "资料库仅在桌面应用中可用" : "打开资料库"} onClick={() => setLibraryOpen(true)}>资料</button>
         </nav>
-        {selectedNode && detail.roadmap && <NodeDetails node={selectedNode} roadmap={detail.roadmap} onOpen={openNode} />}
-        {(demo || (node && !selectedNode)) && <div className={styles.messages}>
+        {demo && <div className={styles.messages}>
           <div className={styles.nodeHeading}><span className={styles.nodeBadge} data-node={Boolean(node)}>{node ? nodeNumber : <Icon name="guide" />}</span><div><small>{node ? "NODE WORKSPACE" : "MAIN AGENT"}</small><h2>{node ? title : "一起探索下一步"}</h2></div></div>
           <div className={styles.context}><span>{node ? "当前节点" : "项目目标"}</span><p>{node?.note ?? project.goal ?? "目标待确定"}</p>{node && demo && <small>验收条件：提供可检查的结果与来源证据。</small>}</div>
           {demo ? <div className={styles.assistant}><div className={styles.author}><span>N</span><strong>{node ? "Node" : "Main"}</strong><small>工作会话</small></div><div>
@@ -138,10 +141,17 @@ export function ProjectWorkspace({ detail: initialDetail, api, resource, runtime
           </div></div> : node ? <div className={styles.assistant}><p>节点工作会话将在 F5.6 接入。</p></div> : null}
           {(messages[active] ?? []).map((message, index) => <div key={index} className={message.role === "user" ? styles.user : styles.reply}>{message.text}</div>)}
           {demo && nodes.length > 0 && !node && !planned && <button className={styles.planButton} onClick={() => setShowDemo(true)}>生成示例路线 <Icon name="arrow" /></button>}
-          {node && <div className={styles.nodeHint}>{demo ? "原型仅展示交互，不启动 Agent 或修改节点状态。" : "节点工作会话尚未接入，当前只展示路线与保留草稿。"}</div>}
+          {node && <div className={styles.nodeHint}>原型仅展示交互，不启动 Agent 或修改节点状态。</div>}
         </div>}
-        {!demo && <div className={styles.liveConversation} hidden={node !== undefined}><ProjectConversation runtime={projectRuntime} projectId={project.projectId} detail={detail}>
-          {!node && <><div className={styles.nodeHeading}><span className={styles.nodeBadge}><Icon name="guide" /></span><div><small>MAIN AGENT</small><h2>一起探索下一步</h2></div></div><div className={styles.context}><span>项目目标</span><p>{project.goal ?? "目标待确定"}</p></div></>}
+        {!demo && selectedNode && detail.roadmap && <div className={styles.nodeWorkspace}>
+          <div className={styles.nodeDetailArea}><NodeDetails node={selectedNode} roadmap={detail.roadmap} onOpen={openNode} /></div>
+          <div className={styles.nodeChat}><ProjectConversation key={`node-${selectedNode.nodeId}`} runtime={projectRuntime} projectId={project.projectId} detail={detail} target={target}
+            disabled={!selectedNode.actions.run} disabledHint={executionHint(selectedNode)}>
+            <div className={styles.nodeHeading}><span className={styles.nodeBadge} data-node="true">{nodeNumber}</span><div><small>NODE WORKSPACE</small><h2>{selectedNode.title}</h2></div></div>
+          </ProjectConversation></div>
+        </div>}
+        {!demo && !selectedNode && <div className={styles.liveConversation}><ProjectConversation key="main" runtime={projectRuntime} projectId={project.projectId} detail={detail} target={target}>
+          <div className={styles.nodeHeading}><span className={styles.nodeBadge}><Icon name="guide" /></span><div><small>MAIN AGENT</small><h2>一起探索下一步</h2></div></div><div className={styles.context}><span>项目目标</span><p>{project.goal ?? "目标待确定"}</p></div>
         </ProjectConversation></div>}
         {!demo ? null : <div className={styles.composer}>
           <textarea aria-label={`${title} 草稿`} placeholder={node ? "补充这个节点的要求…" : "与 Main 讨论目标与路线…"} value={drafts[active] ?? ""} onChange={event => setDrafts(previous => ({ ...previous, [active]: event.target.value }))} />
@@ -151,4 +161,12 @@ export function ProjectWorkspace({ detail: initialDetail, api, resource, runtime
     </aside>}
     {libraryOpen && resource !== undefined && <ResourceLibrary api={resource} projectId={project.projectId} operations={resourceOperations} onClose={closeLibrary} />}
   </article>;
+}
+
+function executionHint(node: NodeV1): string {
+  if (node.turnActive) return "节点回合正在进行";
+  if (node.status === "locked") return "等待前置节点完成";
+  if (node.status === "submitted") return "节点已交作业，等待验收";
+  if (node.status === "working") return "节点正在执行";
+  return "当前节点暂不可执行";
 }

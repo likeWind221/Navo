@@ -24,6 +24,16 @@ describe("Composer", () => {
     expect(markup).not.toContain("disabled=\"\"");
   });
 
+  it("disables an idle draft with a caller-owned reason", () => {
+    const markup = renderToStaticMarkup(
+      <Composer value="节点草稿" disabled disabledHint="等待前置节点完成" busy={false} onSubmit={vi.fn(() => true)} onCancel={vi.fn(() => true)} onChange={vi.fn()} />,
+    );
+
+    expect(markup).toMatch(/<textarea[^>]*disabled=""/);
+    expect(markup).toContain("等待前置节点完成");
+    expect(markup).toContain(">节点草稿</textarea>");
+  });
+
   it("supports a caller-owned draft and unique input ids", () => {
     const markup = renderToStaticMarkup(
       <Composer value="项目草稿" inputId="project-p-1-chat-input" onChange={vi.fn()} busy={false} onSubmit={vi.fn(() => true)} onCancel={vi.fn(() => true)} />,
