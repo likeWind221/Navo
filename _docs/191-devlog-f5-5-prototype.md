@@ -43,3 +43,7 @@ Node.tsx 是独立只读节点视图边界（少于40行但拥有其样式与测
 ## 清理与下一步
 
 已删除本次独立原型五个文件：`frontend/f55.html`、`frontend/scripts/demo/f55.mjs`、`frontend/src/preview/f55/{main.tsx,model.ts,style.css}`，生产构建没有原型引用；既有 preview/Project 保留。仅保留可复跑正式组件的 QA 夹具，不保留原型控制器/重复样式。下一步为 F5.6a 节点执行，未开始。本机完整检查已通过；[PR #126](https://github.com/likeWind221/Navo/pull/126) 代码 head `f076683` 的 [CI 44037466017](https://github.com/likeWind221/Navo/actions/runs/44037466017) 复跑通过，verify 3m50s（类型、常规与崩溃恢复）。首轮CI两项后端测试超时保留为 [BUG-040/041](192-bugfix-bug-040-041-ci-timeouts.md)，仅排查、未修复。F5.5已登记完成，最终仅文档提交仍等待当前head CI后合并。
+
+### 最终交接状态
+
+代码head的成功不覆盖后续文档head失败：452477c的CI两轮未通过，最新7项后端测试超时（BUG-042）。当前F5.5恢复进行中，PR #126未合并；前端实现、本机187/1166与Electron结果仍有效。停止自动复跑，下一动作是后端测试/CI排查，不开始F5.6a；详见[192](192-bugfix-bug-040-041-ci-timeouts.md)。
