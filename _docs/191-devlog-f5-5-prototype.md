@@ -44,6 +44,14 @@ Node.tsx 是独立只读节点视图边界（少于40行但拥有其样式与测
 
 已删除本次独立原型五个文件：`frontend/f55.html`、`frontend/scripts/demo/f55.mjs`、`frontend/src/preview/f55/{main.tsx,model.ts,style.css}`，生产构建没有原型引用；既有 preview/Project 保留。仅保留可复跑正式组件的 QA 夹具，不保留原型控制器/重复样式。下一步为 F5.6a 节点执行，未开始。本机完整检查已通过；[PR #126](https://github.com/likeWind221/Navo/pull/126) 代码 head `f076683` 的 [CI 44037466017](https://github.com/likeWind221/Navo/actions/runs/44037466017) 复跑通过，verify 3m50s（类型、常规与崩溃恢复）。首轮CI两项后端测试超时保留为 [BUG-040/041](192-bugfix-bug-040-041-ci-timeouts.md)，仅排查、未修复。F5.5已登记完成，最终仅文档提交仍等待当前head CI后合并。
 
-### 最终交接状态
+### 前次阻塞状态（历史）
 
 代码head的成功不覆盖后续文档head失败：452477c的CI两轮未通过，最新7项后端测试超时（BUG-042）。当前F5.5恢复进行中，PR #126未合并；前端实现、本机187/1166与Electron结果仍有效。停止自动复跑，下一动作是后端测试/CI排查，不开始F5.6a；详见[192](192-bugfix-bug-040-041-ci-timeouts.md)。
+
+## 2026-11-17 新版 CI 下收口
+
+- 做了什么：保留工作区已有的 BUG-040 排查与用户搁置记录，同步 master 的 PR #127（89fb3fa），复用完整测试后对失败用例独立重试一次的 CI 策略；本轮只更新收口文档，不修改 F5.5 生产代码、后端或测试预算。
+- 验证：Windows、Node 24.22.1、System32 优先；`pnpm typecheck` 与 `NAVO_TEST_MODE=all pnpm test --maxWorkers=4` 通过，188 文件 / 1166 项，366.46 秒，日志 `%TEMP%/navo-f55-close-full.log`。前端 typecheck / build / 33 文件 187 项通过；`pnpm exec electron out/main/roadmap.js` 与 `NAVO_HOST_MODE=controlled pnpm qa:main` 通过，证据 `%TEMP%/navo-f55-qa/result.json` 和 `%TEMP%/navo-f55-close-f54/f5-4-controlled.json`。
+- CI：同步后的 head e8ba924 在 [44055348623](https://github.com/likeWind221/Navo/actions/runs/44055348623) 通过。常规首次 1156 通过 / 1 项 5 秒超时：`tests/integration/library/failure.spec.ts` 的 `keeps private and cross-project evidence out of a Node report while Main can review private project artifacts`；该项独立重试一次通过，崩溃恢复 3 项通过。首次失败与重试日志均在该运行保留。最终文档 head 同样须通过 CI 后才合并。
+- 关键决策与边界：沿用用户已选择的新版 CI 门禁，BUG-040/041/042 保持未关闭；本轮没有定位或修复间歇超时，没有重复真实模型验收。已有公开快照和 Electron 交互验收仍是 F5.5 的证据，执行、确认、返工入口归 F5.6。
+- 最终交接：F5.5 实现与验证完成，按 PR #126 串行收口；当前下一步 F5.6a，未开始。原代码导读已交付，本轮为 CI / 文档收尾；不新增公共契约。

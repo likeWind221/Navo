@@ -58,3 +58,9 @@ Windows 本机、Node 24、System32 优先、NAVO_TEST_MODE=normal，临时在�
 用户决定暂时搁置 BUG-040；根因未明、未修复，保持未勾选。用户要求 CI 完整测试后，对失败测试项单独重试一次；首次失败和重试结果均应保留。该流程是否已交付以实际 CI 配置与合并状态为准。
 
 CI 失败用例单独重试策略已由 PR #127 合入 master（89fb3fa）；Node 24 本地 typecheck、188 文件 / 1166 项、受控重试与错误场景及当前 head CI 均通过。F5.5 开发分支尚未同步该 master 提交。
+
+## 2026-11-17 F5.5 同步新版 CI
+
+F5.5 已同步 PR #127 的主线提交。head e8ba924 的 [CI 44055348623](https://github.com/likeWind221/Navo/actions/runs/44055348623) 常规测试首次 1156 通过、1 项 5 秒超时：`tests/integration/library/failure.spec.ts` 的 `keeps private and cross-project evidence out of a Node report while Main can review private project artifacts`；按新策略单独重试一次通过，崩溃恢复 3 项通过，verify 成功。该次跨后端资料套件超时作为 BUG-042 的追加现象保留，不认定与旧失败共享根因。首次失败和重试结果均保留在同一 CI 日志中。
+
+本机 Node 24.22.1、System32 优先、NAVO_TEST_MODE=all 完整 188 文件 / 1166 项一次通过（366.46 秒）；前端 187 项、构建及两项受控 Electron 验收通过。新版门禁允许 F5.5 在最终文档 head CI 通过后收口；BUG-040/041/042 均未修复、未关闭，关闭条件不变。收口详见 [191](191-devlog-f5-5-prototype.md)。
