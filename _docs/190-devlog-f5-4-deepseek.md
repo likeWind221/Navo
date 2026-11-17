@@ -29,7 +29,7 @@
 - 真实 DeepSeek Electron 首轮在 Host 启动 10 秒处失败，未到模型回合；同期独立探针返回 host-already-running。完整测试结束后串行复验通过，未修改生产启动时限，BUG-038 保持未关闭，见 [笔记](170-bugfix-bug-038-host-startup.md)。
 - 串行真实验收证据 `%TEMP%/navo-f54-deepseek-20261117-serial-evidence/f5-4-real.json`：status=passed；预填与空目标均在明确确认前无路线，确认后各生成恰好两节点；草稿隔离、关闭重开、停止、547px 窄屏通过。项目一用户回合 3 / 模型步骤 3，项目二 2 / 4；宽屏截图已目视检查，显示真实 Main 回复及两座节点岛屿。
 - 实际入口：前端目录 `NAVO_HOST_MODE=real pnpm qa:main`，隔离 NAVO_HOME；受控入口 `NAVO_HOST_MODE=controlled pnpm qa:main`。用户真实模型验收授权已明确；本次不重复要求订阅路径通过，不关闭 BUG-036。
-- 本机与真实验收已通过，等待本 PR 当前 head CI；F5.4 完成状态在 CI 通过后登记。
+- [PR #125](https://github.com/likeWind221/Navo/pull/125) 代码 head `72a9bca` 的 [CI 44009549265](https://github.com/likeWind221/Navo/actions/runs/44009549265) 通过（verify 3m51s，包含类型、常规与崩溃恢复检查）；F5.4 状态更新为完成。随后仅文档收口，合并仍等待最终 head CI。
 
 ## 下一步
 
