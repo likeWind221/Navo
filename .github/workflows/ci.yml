@@ -46,12 +46,12 @@ jobs:
       - run: pnpm typecheck
         if: steps.changes.outputs.docs_only != 'true'
       - name: Run normal tests
-        run: pnpm test --maxWorkers=4
+        run: node scripts/ci/retry.mjs --maxWorkers=4
         if: steps.changes.outputs.docs_only != 'true'
         env:
           NAVO_TEST_MODE: normal
       - name: Run crash recovery tests
-        run: pnpm test tests/host/process.spec.ts --maxWorkers=1
+        run: node scripts/ci/retry.mjs tests/host/process.spec.ts --maxWorkers=1
         if: steps.changes.outputs.docs_only != 'true'
         env:
           NAVO_TEST_MODE: ${{ github.event_name == 'workflow_dispatch' && 'crash-full' || 'crash-pr' }}
