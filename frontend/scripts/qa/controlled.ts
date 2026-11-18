@@ -17,8 +17,12 @@ import {
   projectGetMethod,
   projectListMethod,
   projectNodeReviewMethod,
+  projectSessionRecoveryMethod,
   projectTurnMethod,
 } from "../../../rpc/project.js";
+import { sessionHistoryMethod } from "../../../rpc/session.js";
+import type { SessionHistoryInputV1 } from "../../../rpc/session.js";
+import type { ProjectSessionRecoveryV1 } from "../../../rpc/project/session.js";
 import type { RpcMethod, RpcStreamOptions } from "../../../rpc/index.js";
 import { RpcError } from "../../../rpc/errors.js";
 import type { ProjectHost } from "../../electron/ipc/project/handler.js";
@@ -49,6 +53,21 @@ export class ControlledProjectHost implements ProjectHost {
     if (method.name === projectListMethod.name) return this.validated(method, input, one({ projects: [...this.projects.values()].map(detail => detail.project) } as ProjectListV1), options?.signal);
     if (method.name === projectCreateMethod.name) return this.validated(method, input, one(this.create(input as ProjectCreateInput)), options?.signal);
     if (method.name === projectGetMethod.name) return this.validated(method, input, one(this.get(input as ProjectRefInput)), options?.signal);
+    if (method.name === projectSessionRecoveryMethod.name) {
+      const { projectId } = input as ProjectRefInput;
+      const detail = this.get({ projectId });
+      const sessions: ProjectSessionRecoveryV1["sessions"] = (detail.roadmap?.nodes ?? []).map(node => {
+        const owner = { kind: "node" as const, nodeId: node.nodeId };
+        return node.hasSession
+          ? { owner, status: "available", sessionId: `controlled-session-${projectId}-${node.nodeId}`, lastEndedTurn: null }
+          : { owner, status: "unestablished" };
+      });
+      return this.validated(method, input, one({ projectId, sessions }), options?.signal);
+    }
+    if (method.name === sessionHistoryMethod.name) {
+      const { sessionId } = input as SessionHistoryInputV1;
+      return this.validated(method, input, one({ sessionId, surfaceGeneration: 0, entries: [], nextCursor: null }), options?.signal);
+    }
     if (method.name === projectNodeReviewMethod.name) return this.validated(method, input, this.review(input as NodeReviewInput), options?.signal);
     if (method.name === projectFollowMethod.name) return this.validated(method, input, this.follow(input as ProjectRefInput, options?.signal), options?.signal);
     if (method.name === projectTurnMethod.name) return this.validated(method, input, this.turn(input as ProjectTurnInput, options?.signal), options?.signal);

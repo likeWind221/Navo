@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { app, BrowserWindow } from "electron";
 import type { ProjectDetailV1, ProjectListV1 } from "../../../rpc/project.js";
 import { registerProjectIpc } from "../../electron/ipc/project.js";
+import { registerSessionContextIpc, SessionContextController } from "../../electron/ipc/session-context.js";
 import { ProjectController } from "../../electron/ipc/project/controller.js";
 import { ControlledProjectHost } from "./controlled.js";
 
@@ -39,6 +40,8 @@ async function main(): Promise<void> {
   const workspace = await mkdtemp(join(tmpdir(), "navo-f56a-workspace-"));
   const host = new ControlledProjectHost();
   const controller = new ProjectController(host);
+  const sessionController = new SessionContextController(host);
+  const unregisterSession = registerSessionContextIpc(sessionController);
   const unregister = registerProjectIpc(host, async () => ({ canceled: false, filePaths: [workspace] }), controller);
   const window = new BrowserWindow({
     width: 1280, height: 900, show: false,
@@ -67,6 +70,8 @@ async function main(): Promise<void> {
   } finally {
     if (timer !== undefined) clearTimeout(timer);
     unregister();
+    unregisterSession();
+    sessionController.dispose();
     controller.dispose();
     if (!window.isDestroyed()) window.destroy();
     await rm(workspace, { recursive: true, force: true });

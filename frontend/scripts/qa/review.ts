@@ -6,6 +6,7 @@ import { app, BrowserWindow } from "electron";
 import type { NodeV1, ProjectDetailV1, ProjectListV1 } from "../../../rpc/project.js";
 import { registerProjectIpc } from "../../electron/ipc/project.js";
 import { ProjectController } from "../../electron/ipc/project/controller.js";
+import { registerSessionContextIpc, SessionContextController } from "../../electron/ipc/session-context.js";
 import { ControlledProjectHost } from "./controlled.js";
 
 const timeoutMs = Number(process.env.NAVO_QA_TIMEOUT_MS ?? 180_000);
@@ -42,6 +43,8 @@ async function main(): Promise<void> {
   const host = new ControlledProjectHost({ submitNodeOnFinish: true });
   const controller = new ProjectController(host);
   const unregister = registerProjectIpc(host, async () => ({ canceled: false, filePaths: [workspace] }), controller);
+  const sessionController = new SessionContextController(host);
+  const unregisterSession = registerSessionContextIpc(sessionController);
   const window = new BrowserWindow({
     width: 1280, height: 900, show: false,
     webPreferences: { preload: resolve("out/preload/index.js"), contextIsolation: true, nodeIntegration: false, sandbox: true },
@@ -69,6 +72,8 @@ async function main(): Promise<void> {
   } finally {
     if (timer !== undefined) clearTimeout(timer);
     unregister();
+    unregisterSession();
+    sessionController.dispose();
     controller.dispose();
     if (!window.isDestroyed()) window.destroy();
     await rm(workspace, { recursive: true, force: true });
@@ -152,8 +157,9 @@ async function runFlow(window: BrowserWindow, host: ControlledProjectHost, evide
   assert.equal(reviewReply.status, "completed");
   assert.ok(reviewReply.text.includes("复盘完成"));
   const reviewed = await waitForNode(window, projectId, "controlled-node-1", node => node.reworkCount === 1 && node.status === "idle");
-  await waitForText(window, reviewArea, "补充 2024 年来源后重新提交");
-  await waitForText(window, reviewArea, "证据链仍不完整");
+  assert.match(reviewed.pendingFeedback?.feedback ?? "", /补充 2024 年来源后重新提交/);
+  assert.match(reviewed.review?.reason ?? "", /证据链仍不完整/);
+  await waitFor(window, `document.querySelector(${JSON.stringify(reviewArea)}) === null`);
   evidence.mainReview = {
     target: host.turnInputs.at(-1)?.target,
     text: host.turnInputs.at(-1)?.text,
@@ -200,7 +206,7 @@ async function runFlow(window: BrowserWindow, host: ControlledProjectHost, evide
   assert.equal(optimistic.status, "submitted");
   const completed = await waitForNode(window, projectId, "controlled-node-1", node => node.status === "completing");
   assert.match(completed.confirmation?.reason ?? "", /重试后人工通过/);
-  await waitForText(window, reviewArea, "人工确认记录");
+  await waitFor(window, `document.querySelector(${JSON.stringify(reviewArea)}) === null`);
   assert.equal(host.turnInputs.length, turnsBeforeManual);
   evidence.completion = {
     status: completed.status,
@@ -219,7 +225,8 @@ async function runFlow(window: BrowserWindow, host: ControlledProjectHost, evide
   await fill(window, reasonInput, reason);
   await click(window, submitReview);
   const reworked = await waitForNode(window, projectId, "controlled-node-2", node => node.status === "idle" && node.reviewPending === false);
-  await waitForText(window, reviewArea, reason);
+  assert.equal(reworked.pendingFeedback?.feedback, reason);
+  await waitFor(window, `document.querySelector(${JSON.stringify(reviewArea)}) === null`);
   evidence.rework = { status: reworked.status, feedback: reworked.pendingFeedback?.feedback, reworkCount: reworked.reworkCount };
 
   await send(window, panel, "按返工意见重新执行");
@@ -228,7 +235,8 @@ async function runFlow(window: BrowserWindow, host: ControlledProjectHost, evide
   await waitFor(window, "document.querySelector(" + JSON.stringify(reasonInput) + ") !== null");
   await click(window, submitReview);
   const skipped = await waitForNode(window, projectId, "controlled-node-2", node => node.status === "skipped");
-  await waitForText(window, reviewArea, "人工决定跳过");
+  assert.equal(skipped.confirmation?.reason, "人工决定跳过");
+  await waitFor(window, `document.querySelector(${JSON.stringify(reviewArea)}) === null`);
   evidence.skipped = { status: skipped.status, reason: skipped.confirmation?.reason };
   evidence.turns = host.turnInputs.map(input => ({ text: input.text, target: input.target }));
   evidence.reviews = host.reviewInputs.map(input => ({ nodeId: input.nodeId, action: input.action, reason: input.reason, reviewedRevision: input.reviewedRevision }));
