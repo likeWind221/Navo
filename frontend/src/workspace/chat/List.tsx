@@ -4,6 +4,7 @@ import type {
   ConversationMessage,
   ConversationTimelineEntry,
 } from "./conversation.js";
+import type { ReactNode } from "react";
 import { isTurnLive, shouldFoldProcess, splitTurnContent } from "./process.js";
 import { ProcessRow } from "./process/Row.js";
 import { Activity } from "./process/Activity.js";
@@ -11,12 +12,13 @@ import styles from "../style.module.css";
 import { Markdown } from "./Markdown.js";
 import { Icon } from "../../ui/Icon.js";
 
-export function MessageList({ messages, commands = [], timeline }: {
+export function MessageList({ messages, commands = [], timeline, children }: {
   readonly messages: readonly ConversationMessage[];
   readonly commands?: readonly CommandConversationMessage[];
   readonly timeline?: readonly ConversationTimelineEntry[];
+  readonly children?: ReactNode;
 }): React.JSX.Element {
-  if (messages.length === 0 && commands.length === 0) {
+  if (messages.length === 0 && commands.length === 0 && !children) {
     return (
       <div className={styles.welcome}>
         <span className={styles.welcomeMark}><Icon name="guide" /></span>
@@ -34,6 +36,7 @@ export function MessageList({ messages, commands = [], timeline }: {
             {commands.map((command) => <CommandMessage key={command.id} command={command} />)}
           </>
         : timeline.map((entry) => renderTimelineEntry(entry, messages, commands))}
+      {children}
     </div>
   );
 }

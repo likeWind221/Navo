@@ -1,5 +1,7 @@
 import type {
   AutoRunSnapshotV1,
+  NodeReviewInput,
+  NodeV1,
   ProjectCreateInput,
   ProjectDetailV1,
   ProjectFailureCode,
@@ -10,11 +12,14 @@ import type {
   ProjectTurnInput,
 } from "../../rpc/project.js";
 import type { AgentTurnV2Event } from "../../rpc/content.js";
+import type { ProjectSessionRecoveryV1 } from "../../rpc/project/session.js";
 
 export interface DesktopProjectApi {
   list(): Promise<DesktopProjectResult<ProjectListV1>>;
   create(input: ProjectCreateInput): Promise<DesktopProjectResult<ProjectSummaryV1>>;
   get(input: ProjectRefInput): Promise<DesktopProjectResult<ProjectDetailV1>>;
+  getSessions(input: ProjectRefInput): Promise<DesktopProjectResult<ProjectSessionRecoveryV1>>;
+  review(input: NodeReviewInput): Promise<DesktopProjectResult<NodeV1>>;
   autoRunStart(input: ProjectRefInput): Promise<DesktopProjectResult<AutoRunSnapshotV1>>;
   autoRunPause(input: ProjectRefInput): Promise<DesktopProjectResult<AutoRunSnapshotV1>>;
   autoRunResume(input: ProjectRefInput): Promise<DesktopProjectResult<AutoRunSnapshotV1>>;

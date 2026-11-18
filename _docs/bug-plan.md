@@ -4,6 +4,18 @@
 
 ## 当前状态
 
+- [ ] BUG-049：用户报告 Node 对话记录再次变空；已接入 Node 会话定位及有效历史，前端检查通过，实际现场和桌面验收由用户进行，见 [199](199-bugfix-bug-049-node-history.md)。
+
+- [ ] BUG-048：Node 未提交作业时错误出现验收卡片；用户明确要求仅在 LLM 通过提交工具交作业后显示。已修正显示条件，待真实桌面验收与 CI，见 [197](197-bugfix-bug-048-node-review.md)。
+
+- [ ] BUG-047：前端刷新或应用重启后，Main 对话区域为空；已接入 Main 有效历史及读取失败重试，前端完整测试、类型检查与构建通过；用户现场及真实桌面重启复验、CI 待完成，见 [196](196-bugfix-bug-047-main-history.md)。
+
+- [ ] BUG-043：Electron 开发版把 Electron 可执行文件当 Node 启动 `tsx`，Host 静默退出，界面显示“后端未连接”；已证实根因并改为独立 Node 启动，本机定向测试、类型检查、构建和实际 ready 标记通过，待当前 head CI 与合并后勾选，见 [194](194-bugfix-bug-043-electron-host.md)。
+
+- [ ] BUG-044：Main 专用工具白名单遗漏已注册的 `read`，导致 Main 无法读取 Project Workspace 文件；已按 Host 文件能力条件加入只读能力，定向测试与类型检查通过，待真实 DeepSeek 读取复验，见 [195](195-bugfix-bug-044-046-main-read-node-ui.md)。
+- [ ] BUG-045：Roadmap 创建成功后 Main 缺少 Node 启动交接；已在系统提示和 `create_roadmap` 成功回执中加入按依赖启动 Node Agent 的交接要求，待新规划回合真实复验，见 [195](195-bugfix-bug-044-046-main-read-node-ui.md)。
+- [ ] BUG-046：Node 工作页重复展示节点详情、编号和标题，与已精简的 Main 会话不一致；已移除 idle Node 的顶部信息，定向测试与窗口观察通过，待 F5.6b 人工验收，见 [195](195-bugfix-bug-044-046-main-read-node-ui.md)。
+
 - [ ] BUG-042：F5.5 曾出现7项跨后端套件超时（6项5秒、1项15秒）；同步新版 CI 后又有1项5秒超时、独立重试通过，最终 verify 成功；根因未定、未修复，后端排查独立保留，见 [192](192-bugfix-bug-040-041-ci-timeouts.md)。
 
 - [ ] BUG-040：用户决定暂时搁置；F5.5 CI 资料来源验收测试触及5秒超时，收尾ENOTEMPTY；本机完整及定向复验通过，根因未定、未修复，见 [192](192-bugfix-bug-040-041-ci-timeouts.md)。
@@ -59,7 +71,7 @@
 
 - [x] BUG-012：F11.4 真实验收脚本未调用入口且未提供下游所需材料；已修正，本机完整检查、gpt-6-sol 双节点真实完成及代码 head CI 通过（PR #70，收口提交仍遵循当前 head CI 门禁）。笔记：[106](106-bugfix-bug-012-autorun-acceptance.md)。
 
-未关闭：BUG-002、BUG-007、BUG-010、BUG-019、BUG-025、BUG-032。BUG-002 等待复现，BUG-007 / BUG-032 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 / BUG-025 仅排查、未修复；BUG-031、BUG-033、BUG-034、BUG-035 已因第四轮真实完整任务通过而关闭；BUG-014～018 已随 PR #79 合入关闭，BUG-021 / 022 与 BUG-023 均已满足各自关闭条件。
+未关闭：BUG-002、BUG-007、BUG-010、BUG-019、BUG-025、BUG-032、BUG-043、BUG-044、BUG-045、BUG-046。BUG-002 等待复现，BUG-007 / BUG-032 经用户决定搁置，BUG-010 待 Qwen / Electron 验收，BUG-019 / BUG-025 仅排查、未修复，BUG-043 待当前 head CI 与合并，BUG-044～046 待真实 Main 与 F5.6b 人工验收；BUG-031、BUG-033、BUG-034、BUG-035 已因第四轮真实完整任务通过而关闭；BUG-014～018 已随 PR #79 合入关闭，BUG-021 / 022 与 BUG-023 均已满足各自关闭条件。
 
 - [x] BUG-001：Node 续接时未读取已共享的新验证资源（已修复：续接资源变化通知 + Resource ID 语义）
 - [ ] BUG-002：验证节点发布文件时出现来源不可用错误（诊断已补齐，未复现；2026-10-07 用户决定保持未关闭，等待复现后依证据定性）
@@ -79,6 +91,13 @@
 
 | ID | 优先级 / 所属端 | 现象与影响 | 证据与归因状态 | 关闭条件 | 笔记 |
 |---|---|---|---|---|---|
+| BUG-049 | P1 / 前端会话 | Node 对话区域为空，无法查看此前记录 | 用户截图；已接入项目会话恢复 RPC 和已有 Session 历史接口，前端 209 项测试、类型检查和构建通过；未读取现场历史 | 正确定位已存在 Node 会话并展示有效历史，区分尚未建立与不可读，验证刷新、重启及新消息衔接和真实现场；完整验证与当前 head CI 通过 | [199：待用户桌面验收](199-bugfix-bug-049-node-history.md) |
+| BUG-048 | P1 / 前端 | 未提交作业的 Node 错误显示验收卡片，退回按钮不可用 | 前端曾将 reviewPending 当作展示条件；后端 reviewPending 不等于提交作业。用户明确验收卡片须等待提交工具，已改为要求 submitted 状态及作业数据 | 未提交及普通回合结束不展示，成功提交后在回复下方展示并可验收；完成真实桌面验收及当前 head CI | [197：待验收](197-bugfix-bug-048-node-review.md) |
+| BUG-047 | P1 / 前端会话 | 前端刷新或重启后 Main 对话不显示 | 用户报告刷新或重启后出现；已接入 Session 有效历史读取及重试，前端 202 测试、类型检查和构建通过；现场数据是否可读取尚未验证 | 使用已有 Main 会话读取并展示实际保留的有效历史，覆盖刷新、重启、历史与新消息衔接及失败提示；真实现场复验、本机完整验证与当前 head CI 通过 | [196：待实际复验](196-bugfix-bug-047-main-history.md) |
+| BUG-043 | P1 / 前端 Host 启动 | Electron 开发版把 Electron 可执行文件当 Node 运行 `tsx`，Host 静默退出，界面显示“后端未连接” | 已复现启动超时；直接运行该组合无 ready，而普通 Node 运行 Host 输出 `[kernel-host] ready`；已改为 Electron 下启动独立 Node 并清理 `ELECTRON_RUN_AS_NODE`，本机实际启动已连通 | 实际 Electron 启动、定向测试、类型检查与构建通过；当前 head CI 成功并随本步合并 | [194：本机已修复，待 CI](194-bugfix-bug-043-electron-host.md) |
+| BUG-044 | P1 / 后端 Agent 工具 | Main 无法读取 Project Workspace 原文，阻断基于现有文件的规划与事实核对 | 已确认 Host 注册文件工具，根因是 Main 专用白名单遗漏 `read`；修复后仅在有文件能力时向 Main / Main Review 开放只读，定向测试和两端类型检查通过 | 真实 DeepSeek 请求包含 `read` 并成功读取 Workspace 文件；两回合回归、完整验证与当前 head CI 通过 | [195：本机已修复，待真实复验](195-bugfix-bug-044-046-main-read-node-ui.md) |
+| BUG-045 | P1 / 后端规划交接 | Roadmap 创建后没有提示用户启动可执行 Node，规划结果缺少下一步操作 | 已确认提示和回执均未要求交接；修复后回执与 Main 提示均要求列出可执行 Node、按依赖顺序启动独立 Node Agent | 新规划回合的真实 Main 回复包含计划已记录、可执行 Node、启动顺序和未自动开始声明；完整验证与当前 head CI 通过 | [195：本机已修复，待真实复验](195-bugfix-bug-044-046-main-read-node-ui.md) |
+| BUG-046 | P2 / 前端 Node 工作页 | Node 页面顶部重复展示详情、编号和标题，挤占会话空间且与 Main 不一致 | 已确认生产分支仍渲染 `NodeDetails` 与独立标题；修复后 idle Node 只显示会话，验收信息仅在提交或复盘状态出现 | 实际 Electron 中 idle Node 无节点详情与重复标题，submitted Node 的验收面板及视图切换仍可用；前端完整验证与当前 head CI 通过 | [195：本机已修复，待人工验收](195-bugfix-bug-044-046-main-read-node-ui.md) |
 | BUG-039 | P1 / 后端 LLM | DeepSeek 流式生成遇到 null usage 时中断 | 真实预检报 TypeError；本地构造 SSE 复现，根因是只跳过 undefined | null 和缺失不导致中断，最终用量与未知用量正确，非空错误明确；本地完整、当前 head CI 与真实 Flash 复验通过 | [183](183-bugfix-bug-039-stream-usage.md) |
 | BUG-042 | P2 / 后端测试与CI | 多套件测试同时触及5秒/15秒时限 | run44038651088 attempt2为1150通过/7超时；根因未确认 | 定位并按证据修复，本机完整与当前head CI通过 | [192：仅排查，交接后端](192-bugfix-bug-040-041-ci-timeouts.md) |
 | BUG-040 | P2 / 后端测试 | 资料来源集成验收5秒超时并伴随ENOTEMPTY | CI 44037466017失败，本机完整1166及定向32项通过；根因未知，用户决定暂时搁置 | 定位根因及必要修复，相关场景、本机完整与当前head CI通过；复跑不自动关闭 | [192：仅排查](192-bugfix-bug-040-041-ci-timeouts.md) |

@@ -3,7 +3,7 @@ import type { DesktopProjectApi, DesktopProjectEvent, DesktopProjectFailure } fr
 import { conversationReducer, initialConversationState } from "../../chat/conversation.js";
 import type { ConversationAction, ConversationState } from "../../chat/conversation.js";
 
-export type ProjectChatTarget = Extract<ProjectTurnTarget, { readonly kind: "main" } | { readonly kind: "node" }>;
+export type ProjectChatTarget = ProjectTurnTarget;
 
 export interface ProjectTargetSnapshot {
   readonly conversation: ConversationState;
@@ -68,7 +68,9 @@ export class ProjectTurns {
     if (api === undefined) {
       this.reject(entry, requestId, { code: "bridge-closed", message: target.kind === "main"
         ? "项目对话仅在桌面应用中可用"
-        : "节点对话仅在桌面应用中可用" });
+        : target.kind === "review"
+          ? "Main 复盘仅在桌面应用中可用"
+          : "节点对话仅在桌面应用中可用" });
       this.changed(projectId);
       return true;
     }
@@ -187,7 +189,7 @@ export class ProjectTurns {
 }
 
 function targetKey(target: ProjectChatTarget): string {
-  return target.kind === "main" ? "main" : `node:${target.nodeId}`;
+  return target.kind === "main" ? "main" : `${target.kind}:${target.nodeId}`;
 }
 
 function findTarget(project: ProjectEntry, predicate: (entry: TargetEntry) => boolean): TargetEntry | undefined {

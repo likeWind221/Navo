@@ -6,9 +6,13 @@ import {
   projectCreateMethod,
   projectGetMethod,
   projectListMethod,
+  projectNodeReviewMethod,
+  projectSessionRecoveryMethod,
 } from "../../../../rpc/project.js";
+import type { ProjectSessionRecoveryV1 } from "../../../../rpc/project/session.js";
 import type {
   AutoRunSnapshotV1,
+  NodeV1,
   ProjectDetailV1,
   ProjectListV1,
   ProjectSummaryV1,
@@ -33,6 +37,8 @@ export interface ProjectHandlers {
   list(candidate: unknown): Promise<DesktopProjectResult<ProjectListV1>>;
   create(candidate: unknown): Promise<DesktopProjectResult<ProjectSummaryV1>>;
   get(candidate: unknown): Promise<DesktopProjectResult<ProjectDetailV1>>;
+  getSessions(candidate: unknown): Promise<DesktopProjectResult<ProjectSessionRecoveryV1>>;
+  review(candidate: unknown): Promise<DesktopProjectResult<NodeV1>>;
   autoRunStart(candidate: unknown): Promise<DesktopProjectResult<AutoRunSnapshotV1>>;
   autoRunPause(candidate: unknown): Promise<DesktopProjectResult<AutoRunSnapshotV1>>;
   autoRunResume(candidate: unknown): Promise<DesktopProjectResult<AutoRunSnapshotV1>>;
@@ -49,6 +55,8 @@ export function createProjectHandlers(host: ProjectHost): ProjectHandlers {
     list: candidate => callProject(host, projectListMethod, candidate),
     create: candidate => callProject(host, projectCreateMethod, candidate),
     get: candidate => callProject(host, projectGetMethod, candidate),
+    getSessions: candidate => callProject(host, projectSessionRecoveryMethod, candidate),
+    review: candidate => callProject(host, projectNodeReviewMethod, candidate),
     autoRunStart: candidate => callProject(host, projectAutoRunStartMethod, candidate),
     autoRunPause: candidate => callProject(host, projectAutoRunPauseMethod, candidate),
     autoRunResume: candidate => callProject(host, projectAutoRunResumeMethod, candidate),

@@ -10,7 +10,7 @@
 .welcome { min-height: 100%; display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 36px 24px 70px; text-align: center; }
 .welcome > p { color: var(--text-secondary); font-size: 13px; letter-spacing: .5px; margin: 0 0 12px; }
 .welcome h1 { font-family: var(--font-heading); font-size: clamp(24px, 3vw, 32px); font-weight: 600; margin: 0; }
-.inputArea { position: absolute; z-index: 1; right: 50%; bottom: 0; width: min(800px, 100%); padding: 0 24px 32px; background: var(--surface); transform: translateX(50%); }
+.inputArea { position: absolute; z-index: 1; right: 50%; bottom: 0; width: min(860px, 100%); padding: 0 24px 24px; background: var(--surface); transform: translateX(50%); }
 .connection { margin: 0 0 12px; color: var(--text-secondary); font-size: 12px; text-align: center; }
 .composer { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 14px 16px 12px; box-shadow: 0 3px 16px #24483d08; }
 .composer textarea { display: block; resize: none; width: 100%; border: 0; background: transparent; color: var(--text); font-size: 14px; line-height: 1.75; }
@@ -25,7 +25,7 @@
 .composerFooter .stopButton { background: var(--text-secondary); }
 .composerFooter .stopButton:hover { background: var(--text); }
 .stopIcon { display: block; width: 12px; height: 12px; border-radius: 3px; background: currentColor; }
-.messageColumn { max-width: 800px; margin: 0 auto; padding: 32px 48px 190px; }
+.messageColumn { max-width: 844px; margin: 0 auto; padding: 28px 16px 180px; }
 .message { margin-bottom: 28px; max-width: 90%; }
 .userMessage { margin-left: auto; width: fit-content; padding: 12px 20px; border-radius: 14px 14px 4px 14px; background: var(--surface-muted); }
 .assistantMessage { width: 100%; max-width: 100%; margin-right: auto; padding: 4px 0; }
@@ -89,9 +89,9 @@
 }
 @media (max-width: 600px) {
   .topbar { height: 60px; padding: 0 20px; }
-  .inputArea { padding: 0 16px 18px; }
+  .inputArea { padding: 0 20px 18px; }
   .composer { padding: 10px 12px; }
-  .messageColumn { padding: 20px 28px 170px; }
+  .messageColumn { padding: 20px 12px 166px; }
   .connection { font-size: 11px; }
 }
 

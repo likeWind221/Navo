@@ -16,8 +16,39 @@ const summary = {
 };
 
 const createInput = { name: "调研", goal: "整理资料", workspaceRoot: "D:\\work" };
+const node = {
+  nodeId: "node-1",
+  revision: 3,
+  requirement: "required" as const,
+  status: "submitted" as const,
+  title: "整理资料",
+  description: "整理可用资料",
+  acceptanceCriteria: ["保留来源"],
+  hasSession: true,
+  turnActive: false,
+  actions: { run: false, complete: true, skip: true, rework: true, review: true },
+  confirmation: null,
+  submission: {
+    summary: "已整理资料并保留来源",
+    resourceIds: ["resource-1"],
+    criteria: [{ criterion: "保留来源", satisfied: true, note: "已保存引用" }],
+    remaining: [],
+    submittedAt: "2026-11-17T00:00:00.000Z",
+  },
+  pendingFeedback: null,
+  review: null,
+  reworkCount: 0,
+  reviewPending: true,
+};
+const review = { projectId: "project-1", nodeId: "node-1", action: "rework" as const, reason: "补充来源", reviewedRevision: 3 };
 
 describe("createProjectHandlers", () => {
+  it("forwards session recovery to the existing Host method", async () => {
+    const recovery = { projectId: "project-1", sessions: [{ owner: { kind: "node", nodeId: "node-1" }, status: "unestablished" }] };
+    const host = new FakeHost(async function* () { yield recovery; });
+    expect(await createProjectHandlers(host).getSessions({ projectId: "project-1" })).toEqual({ type: "ok", value: recovery });
+    expect(host.calls).toEqual([["project.session.recovery.v1", { projectId: "project-1" }]]);
+  });
   it("passes validated input to the Host and returns its single result", async () => {
     const host = new FakeHost(async function* () { yield summary; });
 
@@ -32,6 +63,22 @@ describe("createProjectHandlers", () => {
     expect(await createProjectHandlers(host).create({ ...createInput, goal: null }))
       .toEqual({ type: "ok", value: pending });
     expect(host.calls).toEqual([["project.create.v1", { ...createInput, goal: null }]]);
+  });
+
+  it("passes validated review input to the Host and returns the updated Node", async () => {
+    const host = new FakeHost(async function* () { yield node; });
+
+    expect(await createProjectHandlers(host).review(review)).toEqual({ type: "ok", value: node });
+    expect(host.calls).toEqual([["project.node.review.v1", review]]);
+  });
+
+  it("rejects invalid review input before calling the Host", async () => {
+    const host = new FakeHost(async function* () { yield node; });
+    const handlers = createProjectHandlers(host);
+
+    expect(await handlers.review({ ...review, reason: "  " })).toMatchObject({ type: "failed", failure: { code: "invalid-input" } });
+    expect(await handlers.review({ ...review, reviewedRevision: 0 })).toMatchObject({ type: "failed", failure: { code: "invalid-input" } });
+    expect(host.calls).toEqual([]);
   });
 
   it("rejects invalid input before calling the Host", async () => {

@@ -67,7 +67,7 @@ async function main() {
     await run("document.querySelector('[data-node-id=explore-1]').click()");
     await waitFor("document.querySelector('[aria-label=项目会话面板]').innerText.includes('Node 06')");
     await run("Array.from(document.querySelectorAll('button')).find(button => button.textContent === '移除末岛').click()");
-    await waitFor("document.querySelectorAll('[data-node-id]').length === 5 && document.querySelector('[aria-label=项目会话面板]').innerText.includes('MAIN AGENT')");
+    await waitFor("document.querySelectorAll('[data-node-id]').length === 5 && !document.querySelector('[aria-label=项目会话面板]').innerText.includes('MAIN AGENT')");
     const removal = await run("({ count: document.querySelectorAll('[data-node-id]').length, canvasPreserved: document.querySelector('canvas') === window.visualCanvas })");
     assert(await run("document.querySelector('canvas') === window.visualCanvas"));
     await capture("islands-removed");

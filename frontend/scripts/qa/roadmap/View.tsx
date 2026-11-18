@@ -23,7 +23,8 @@ function emit(event: DesktopProjectEvent): void { for (const listener of listene
 function publish(): void { emit({ type: "follow-snapshot", projectId: detail.project.projectId, operationId: "follow-" + follows, snapshot: { mailboxSequence: 0, resourceRevision: 0, detail } }); }
 const unsupported = async (): Promise<never> => { throw new Error("Unexpected QA API call"); };
 const api: DesktopProjectApi = {
-  list: unsupported, create: unsupported, get: unsupported, autoRunStart: unsupported, autoRunPause: unsupported, autoRunResume: unsupported, autoRunGet: unsupported, chooseWorkspace: unsupported,
+  list: unsupported, create: unsupported, get: unsupported, review: unsupported, autoRunStart: unsupported, autoRunPause: unsupported, autoRunResume: unsupported, autoRunGet: unsupported, chooseWorkspace: unsupported,
+  async getSessions() { return { type: "ok", value: { projectId: detail.project.projectId, sessions: nodes.map(node => ({ owner: { kind: "node" as const, nodeId: node.nodeId }, status: "unestablished" as const })) } }; },
   onEvent(listener: (event: DesktopProjectEvent) => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
   async startFollow() { follows += 1; queueMicrotask(publish); return { type: "ok", value: { subscriptionId: "follow-" + follows } }; },
   async cancel() { return { type: "ok", value: null }; },

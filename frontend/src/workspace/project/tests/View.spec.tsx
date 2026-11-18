@@ -36,7 +36,7 @@ describe("ProjectDetailView", () => {
     expect(markup).toContain("输入你想探索的问题");
   });
 
-  it("shows the project facts and a pending workspace binding", () => {
+  it("keeps the conversation panel without the former project summary chrome", () => {
     const markup = renderToStaticMarkup(<ProjectDetailView onRetry={vi.fn()} state={{
       status: "ready",
       detail: { project, main: { sessionId: "s-1", turnActive: false }, roadmap: null },
@@ -44,12 +44,15 @@ describe("ProjectDetailView", () => {
 
     expect(markup).toContain("调研");
     expect(markup).toContain("整理资料");
-    expect(markup).toContain("绑定中");
-    expect(markup).toContain("进行中");
-    expect(markup).toContain("dateTime=\"2026-10-08T00:00:00.000Z\"");
     expect(markup).toContain("项目会话面板");
     expect(markup).toContain("回到工作节点");
     expect(markup).toContain("输入你想探索的问题");
+    expect(markup).not.toContain("Main <span>/</span> 项目会话");
+    expect(markup).not.toContain("项目信息");
+    expect(markup).not.toContain("一起探索下一步");
+    expect(markup).not.toContain("MAIN AGENT");
+    expect(markup).not.toContain("绑定中");
+    expect(markup).not.toContain("dateTime=\"2026-10-08T00:00:00.000Z\"");
     expect(markup).not.toContain("生成示例路线");
     expect(markup).not.toContain("检索与整理文献");
   });
