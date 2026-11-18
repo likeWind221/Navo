@@ -78,8 +78,8 @@ export function runPreflight(
   assert(nodeA !== undefined, "Node A is missing during preflight.");
   const nodeB = app.nodes.get(nodeBId);
   assert(nodeB !== undefined, "Node B is missing during preflight.");
-  const nodeAProfile = createNodeAgentProfile({ allowFileRead: true });
-  const nodeBProfile = createNodeAgentProfile({ allowFileRead: true });
+  const nodeAProfile = createNodeAgentProfile({ allowFileTools: true });
+  const nodeBProfile = createNodeAgentProfile({ allowFileTools: true });
   const allSchemas = app.tools.schemas();
   const nodeASchemas = allSchemas.filter(schema => nodeAProfile.toolNames.includes(schema.name));
   const nodeBSchemas = allSchemas.filter(schema => nodeBProfile.toolNames.includes(schema.name));

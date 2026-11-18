@@ -212,18 +212,19 @@ describe("stdio RPC transport and scripted Mock Host", () => {
 
 describe("Kernel Host trusted configuration", () => {
   it("defaults to thinking mode with a bounded output budget", () => {
-    const config = resolveKernelHostConfig({});
+    const config = resolveKernelHostConfig({ DEEPSEEK_API_KEY: "test-key" });
 
-    expect(config.provider).toBe("qwen");
-    if (config.provider !== "qwen") throw new Error("Expected Qwen config.");
+    expect(config.provider).toBe("deepseek");
+    if (config.provider !== "deepseek") throw new Error("Expected DeepSeek config.");
     expect(config.adapter.enableThinking).toBe(true);
+    expect(config.agent.model.model).toBe("deepseek-flash");
     expect(config.agent.model.maxTokens).toBe(8_192);
     expect(config.agent.toolNames).toEqual(["web_fetch", "read", "shell", "edit", "write"]);
     expect(config.search).toBeUndefined();
   });
 
   it("enables web search only when a trusted Exa key is configured", () => {
-    const config = resolveKernelHostConfig({ EXA_API_KEY: "exa-secret" });
+    const config = resolveKernelHostConfig({ DEEPSEEK_API_KEY: "test-key", EXA_API_KEY: "exa-secret" });
 
     expect(config.search).toEqual({ apiKey: "exa-secret" });
     expect(config.agent.toolNames).toEqual(["web_search", "web_fetch", "read", "shell", "edit", "write"]);
@@ -231,20 +232,21 @@ describe("Kernel Host trusted configuration", () => {
   });
 
   it("validates explicit thinking and output-budget overrides", () => {
-    expect(resolveKernelHostConfig({ LLM_ENABLE_THINKING: "false" }))
+    expect(resolveKernelHostConfig({ DEEPSEEK_API_KEY: "test-key", LLM_ENABLE_THINKING: "false" }))
       .toMatchObject({ adapter: { enableThinking: false } });
     expect(resolveKernelHostConfig({
+      DEEPSEEK_API_KEY: "test-key",
       LLM_ENABLE_THINKING: "true",
       LLM_MAX_TOKENS: "4096",
     })).toMatchObject({
       adapter: { enableThinking: true },
       agent: { model: { maxTokens: 4_096 } },
     });
-    expect(() => resolveKernelHostConfig({ LLM_ENABLE_THINKING: "yes" }))
+    expect(() => resolveKernelHostConfig({ DEEPSEEK_API_KEY: "test-key", LLM_ENABLE_THINKING: "yes" }))
       .toThrow("LLM_ENABLE_THINKING");
-    expect(() => resolveKernelHostConfig({ LLM_MAX_TOKENS: "65537" }))
+    expect(() => resolveKernelHostConfig({ DEEPSEEK_API_KEY: "test-key", LLM_MAX_TOKENS: "65537" }))
       .toThrow("LLM_MAX_TOKENS");
-    expect(() => resolveKernelHostConfig({ EXA_API_KEY: "not printable\n" }))
+    expect(() => resolveKernelHostConfig({ DEEPSEEK_API_KEY: "test-key", EXA_API_KEY: "not printable\n" }))
       .toThrow("EXA_API_KEY");
   });
 });

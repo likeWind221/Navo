@@ -77,6 +77,8 @@ describe("create_roadmap creation receipt", () => {
     expect(text).toContain("Created Node mapping:");
     expect(text).toContain(`- design -> ${designId}`);
     expect(text).toContain(`- build -> ${buildId}`);
+    expect(text).toContain("Execution handoff: tell the Human the plan is recorded");
+    expect(text).toContain("Each Node runs as a separate Node Agent");
 
     expect(ctx.nodes.getByProject(project.id).map((node) => JSON.stringify(node.node)))
       .not.toEqual(expect.arrayContaining([expect.stringContaining("design"), expect.stringContaining("build")]));

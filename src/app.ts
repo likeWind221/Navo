@@ -132,7 +132,10 @@ export async function NavoApp(
   await ctx.plugin(ReviewService);
   await ctx.plugin(SubmitReviewTool);
   await ctx.plugin(ReadNodeTurnTool);
-  await ctx.plugin(MainSessionService, { model: config.node.session.model });
+  await ctx.plugin(MainSessionService, {
+    model: config.node.session.model,
+    allowFileTools: config.tools?.file !== undefined,
+  });
   await ctx.plugin(SessionContextResolver, config.agent === undefined ? {} : { agent: config.agent });
   await ctx.plugin(CompactCommand);
   await ctx.plugin(RoadmapStore);

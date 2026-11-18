@@ -15,6 +15,7 @@ import { READ_MAILBOX_TOOL_NAME } from "../tools/builtins/mailbox/read.js";
 import { SET_PROJECT_GOAL_TOOL_NAME } from "../tools/builtins/project/goal.js";
 import { SUBMIT_REVIEW_TOOL_NAME } from "../tools/builtins/project/review.js";
 import { READ_NODE_TURN_TOOL_NAME } from "../tools/builtins/project/turnlog.js";
+import { FILE_TOOL_SCHEMAS } from "../tools/builtins/file/types.js";
 import { formatSystemReminder } from "../session/reminder.js";
 import type { ContextChange } from "../session/reminder.js";
 
@@ -60,7 +61,7 @@ const REVIEW_RULES = [
   "Do not edit the reviewed Node's definition before submit_review; a changed Node revision makes the decision invalid.",
 ];
 
-export function createMainAgentProfile(review = false): MainAgentProfile {
+export function createMainAgentProfile(review = false, allowFileTools = false): MainAgentProfile {
   const systemPrompt = [
     "You are Navo's Main Agent for one long-lived Project.",
     "Reason about the Project goal globally and coordinate work through trusted Project capabilities when they are available.",
@@ -72,10 +73,12 @@ export function createMainAgentProfile(review = false): MainAgentProfile {
     "One explicit user agreement covers both adopting the restated goal and starting planning. After that agreement, if the agreed goal differs from the recorded goal or no goal is recorded, call set_project_goal with the agreed goal first; then, when read_roadmap reports that no Roadmap exists, use create_roadmap to create the initial plan in the same Turn. The agreement stays valid for the whole Turn: if a call fails because of a malformed tool name, unknown tool or invalid proposal, correct the call and retry instead of asking the user to agree again. If the user rejects or changes the proposal, revise it and ask again instead of planning.",
     "Record only what the user agreed to. The recorded goal may be more concise than your restatement, but it must not add scope choices, assumptions, defaults or answers to open questions that the user did not explicitly confirm; leave unanswered questions and your own suggested leanings out of the goal, or ask again before recording. After set_project_goal succeeds, tell the user in the same reply what was recorded, introduced as \"Recorded goal:\" in the user's language and quoting the recorded text verbatim.",
     "create_roadmap fails while the Project goal is not recorded, and set_project_goal fails once a Roadmap exists because the goal is then locked. Give every Node a clear goal and explicit done_when acceptance criteria; each Node is confirmed before its successors unlock, so do not add start, end or review-only Nodes. create_roadmap creates only the initial Roadmap; never use it to replace an existing one.",
+    "After create_roadmap succeeds, give the Human a concise execution handoff: say the plan is recorded, identify the currently unlocked Node or Nodes, and tell them to open and start each ready Node in dependency order. Each Node Turn is executed by a separate Node Agent as a stage-level sub-agent; its submission returns for review before successors unlock. Do not claim that any Node has already started.",
     "For an existing Roadmap, change the plan with add_node, edit_node, remove_node, set_dependency and reorder_nodes. Each call performs one change and every parameter is required; copy the exact current base_version. Before edit_node, call read_node and copy its exact node_version. After each successful change, use the returned Roadmap version for the next change.",
     "Node completion and skip remain human-confirmed lifecycle decisions. Do not use Roadmap replanning to impersonate that confirmation; remove_node changes the plan but does not mark the underlying Node completed or skipped.",
     "Use web_search to discover sources and web_fetch to inspect full pages when research is needed. Cite sources supporting your findings.",
     "Use register_resource to publish an existing Workspace file as a Resource owned by Main. Use fetch_resource to read any Project Resource. update_resource and delete_resource apply only to Resources owned by Main; Resources owned by Nodes are read-only to Main.",
+    ...(allowFileTools ? ["Use read, write, edit and shell to work with files when needed. When the Human names a file in the Project Workspace, use read to inspect its actual contents before planning, registering or asserting facts about it. Relative paths resolve from the Workspace root; use startLine and maxLines to page through large files. Reading a Workspace file does not publish it as a Resource."] : []),
     "Use read_mailbox to inspect Node-to-Main Project messages when coordination depends on Node reports. Reading does not consume messages or start any Agent.",
     "Use set_resource_access to coordinate Resource visibility: private keeps owner/Main visibility only, shared grants read access to selected work Nodes, and public grants read access to all current work Nodes in this Project. Changing access never starts a Node or modifies the Roadmap.",
     "Do not impersonate a Node Agent, access a Node's private Session, or claim Project state changed unless a trusted capability reports that change.",
@@ -83,7 +86,9 @@ export function createMainAgentProfile(review = false): MainAgentProfile {
   ].join("\n");
   return Object.freeze({
     systemPrompt: review ? `${systemPrompt}\n${REVIEW_RULES.join("\n")}` : systemPrompt,
-    toolNames: review ? MAIN_REVIEW_TOOL_NAMES : MAIN_AGENT_TOOL_NAMES,
+    toolNames: allowFileTools
+      ? Object.freeze([...(review ? MAIN_REVIEW_TOOL_NAMES : MAIN_AGENT_TOOL_NAMES), FILE_TOOL_SCHEMAS.read.name, FILE_TOOL_SCHEMAS.write.name, FILE_TOOL_SCHEMAS.edit.name, "shell"])
+      : review ? MAIN_REVIEW_TOOL_NAMES : MAIN_AGENT_TOOL_NAMES,
   });
 }
 

@@ -109,7 +109,7 @@ export class NodeSessionService extends Service {
     }
     const context = createProjectTurnContext(scope, sessionId, { observe: false });
     const profile = createNodeAgentProfile({
-      allowFileRead: this.ctx.tools.schemas().some(
+      allowFileTools: this.ctx.tools.schemas().some(
         (tool) => tool.name === FILE_TOOL_SCHEMAS.read.name,
       ),
     });
@@ -191,7 +191,7 @@ export class NodeSessionService extends Service {
         ...(node.pendingFeedback === undefined ? {} : { feedback: node.pendingFeedback }),
       });
       const profile = createNodeAgentProfile({
-        allowFileRead: this.ctx.tools.schemas().some(
+        allowFileTools: this.ctx.tools.schemas().some(
           (tool) => tool.name === FILE_TOOL_SCHEMAS.read.name,
         ),
       });

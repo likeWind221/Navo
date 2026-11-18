@@ -33,6 +33,7 @@ describe("desktop Host tool availability", () => {
     { search: true, file: true, expected: ["web_search", "web_fetch", "read", "shell", "edit", "write"] },
   ])("advertises configured tools to the model: search=$search file=$file", async ({ search, file, expected }) => {
     const config = resolveKernelHostConfig({
+      DEEPSEEK_API_KEY: "test-key",
       ...(search ? { EXA_API_KEY: "test-key" } : {}),
       ...(file ? { NAVO_FILE_CWD: process.cwd() } : {}),
     });

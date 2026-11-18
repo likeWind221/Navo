@@ -34,4 +34,18 @@ describe("Main Agent Resource profile", () => {
     expect(profile.systemPrompt).toContain("Resources owned by Nodes are read-only");
     expect(profile.systemPrompt).toContain("set_resource_access");
   });
+
+  it("adds file tools to Main and review when the host file capability is available", () => {
+    const plain = createMainAgentProfile();
+    const withRead = createMainAgentProfile(false, true);
+    const reviewWithRead = createMainAgentProfile(true, true);
+
+    expect(plain.toolNames).not.toContain("read");
+    expect(withRead.toolNames).toContain("read");
+    expect(reviewWithRead.toolNames).toContain("read");
+    expect(withRead.toolNames).toEqual(expect.arrayContaining(["shell", "edit", "write"]));
+    expect(reviewWithRead.toolNames).toEqual(expect.arrayContaining(["shell", "edit", "write"]));
+    expect(withRead.systemPrompt).toContain("use read to inspect its actual contents");
+    expect(withRead.systemPrompt).toContain("Reading a Workspace file does not publish it as a Resource");
+  });
 });
