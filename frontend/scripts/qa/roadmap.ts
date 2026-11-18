@@ -25,25 +25,25 @@ async function main(): Promise<void> {
   }
   async function click(source: string): Promise<void> { await evaluate(source + ".click()"); }
   const node = (id: string) => `document.querySelector('[data-node-id="${id}"]')`;
-  const text = "document.querySelector('[aria-label=\"节点详情\"]')?.textContent";
+  const activeTitle = "document.querySelector('[aria-label=\"项目内会话\"] [data-active=\"true\"] button')?.getAttribute('title')";
+  const reviewText = "document.querySelector('[aria-label=\"节点验收\"]')?.textContent";
   try {
     await window.loadURL("http://127.0.0.1:5186/scripts/qa/roadmap/index.html");
     await wait("document.querySelector('[data-ready=\"true\"]') !== null");
     assert.equal(await evaluate("document.querySelectorAll('[data-node-id]').length"), 6);
     await click(node("5"));
-    await wait(text + ".includes('前置节点 3')");
+    await wait(activeTitle + ".includes('对比与综合结论')");
     await click("[...document.querySelectorAll('button')].find(b=>b.textContent==='更新快照')");
-    await wait(text + ".includes('前置节点 2')");
+    await wait("document.querySelectorAll('[data-node-id]').length === 7");
     await wait(node("2") + ".textContent.includes('文献已提交')");
-    assert.equal(await evaluate("document.querySelectorAll('[data-node-id]').length"), 7);
     assert.equal(await evaluate("document.querySelectorAll('canvas').length"), 1);
     await click(node("3"));
-    await wait(text + ".includes('当前没有可用操作')");
-    assert.equal(await evaluate<boolean>(text + ".includes('开始或继续执行')"), false);
+    await wait(activeTitle + ".includes('复现基线方法')");
+    assert.equal(await evaluate("document.querySelector('[aria-label=\"节点详情\"]') === null"), true);
     await click(node("4"));
-    await wait(text + ".includes('确认完成') && " + text + ".includes('退回修改')");
+    await wait(reviewText + ".includes('确认完成') && " + reviewText + ".includes('退回修改')");
     await click(node("6"));
-    await wait(text + ".includes('可选节点')");
+    await wait(activeTitle + ".includes('补充案例分析')");
     await click(node("5"));
     await click("[...document.querySelectorAll('button')].find(b=>b.textContent==='移除汇合节点')");
     await wait("document.querySelector('[aria-label=\"切换到 Main\"]')?.getAttribute('aria-pressed') === 'true'");
@@ -56,7 +56,7 @@ async function main(): Promise<void> {
     await click("[...document.querySelectorAll('button')].find(b=>b.textContent==='恢复路线')");
     await wait("document.querySelectorAll('[data-node-id]').length === 6");
     await click(node("2"));
-    await wait(text + ".includes('整理文献证据')");
+    await wait(activeTitle + ".includes('整理文献证据')");
     await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
     await writeFile(join(output, "wide.png"), (await window.webContents.capturePage()).toPNG());
     window.setContentSize(547, 800);

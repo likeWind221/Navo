@@ -3,7 +3,7 @@ import type { SubmitEvent, KeyboardEvent } from "react";
 import { Icon } from "../../ui/Icon";
 import styles from "../style.module.css";
 
-export function Composer({ onSubmit, busy, onCancel, value, onChange, inputId = "chat-input", disabled = false, disabledHint }: {
+export function Composer({ onSubmit, busy, onCancel, value, onChange, inputId = "chat-input", disabled = false, disabledHint, placeholder = "输入你想探索的问题…" }: {
   readonly onSubmit: (text: string) => boolean;
   readonly busy: boolean;
   readonly onCancel: () => boolean;
@@ -12,6 +12,7 @@ export function Composer({ onSubmit, busy, onCancel, value, onChange, inputId = 
   readonly inputId?: string;
   readonly disabled?: boolean;
   readonly disabledHint?: string | undefined;
+  readonly placeholder?: string | undefined;
 }): React.JSX.Element {
   const [internalDraft, setInternalDraft] = useState("");
   const draft = value ?? internalDraft;
@@ -39,7 +40,7 @@ export function Composer({ onSubmit, busy, onCancel, value, onChange, inputId = 
     <form className={styles.composer} onSubmit={submit}>
       <label className={styles.srOnly} htmlFor={inputId}>消息草稿</label>
       <textarea id={inputId} value={draft} onChange={(event) => updateDraft(event.target.value)}
-        onKeyDown={handleKeyDown} placeholder="输入你想探索的问题…" maxLength={8000}
+        onKeyDown={handleKeyDown} placeholder={placeholder} maxLength={8000}
         aria-describedby={`${inputId}-help`} rows={2} disabled={disabled && !busy} />
       <div className={styles.composerFooter}>
         <small id={`${inputId}-help`}>{busy ? "Agent 正在生成，可以继续编辑草稿" : disabled ? disabledHint ?? "当前不可发送" : "Enter 发送，Shift + Enter 换行"}</small>

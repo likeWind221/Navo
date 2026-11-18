@@ -6,6 +6,7 @@ import { app, BrowserWindow } from "electron";
 import { resolveHostLaunchConfig } from "../../electron/host/launch.js";
 import { KernelHostProcess } from "../../electron/host/process.js";
 import { registerProjectIpc } from "../../electron/ipc/project.js";
+import { registerSessionContextIpc, SessionContextController } from "../../electron/ipc/session-context.js";
 import { ProjectController } from "../../electron/ipc/project/controller.js";
 import type { ProjectHost } from "../../electron/ipc/project/handler.js";
 import { ControlledProjectHost } from "./controlled.js";
@@ -49,6 +50,8 @@ async function main(): Promise<void> {
     : new KernelHostProcess(resolveHostLaunchConfig({ appPath: app.getAppPath() }));
   const hostProcess = host instanceof KernelHostProcess ? host : null;
   const controller = new ProjectController(host);
+  const sessionController = new SessionContextController(host);
+  const unregisterSession = registerSessionContextIpc(sessionController);
   let choice: string | null = workspace;
   const unregister = registerProjectIpc(host, async () => choice === null
     ? { canceled: true, filePaths: [] } : { canceled: false, filePaths: [choice] }, controller);
@@ -87,6 +90,8 @@ async function main(): Promise<void> {
   } finally {
     if (timer !== undefined) clearTimeout(timer);
     unregister();
+    unregisterSession();
+    sessionController.dispose();
     controller.dispose();
     if (!window.isDestroyed()) window.destroy();
     await hostProcess?.close();

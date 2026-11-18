@@ -1,5 +1,13 @@
 # 文档索引
 
+- [BUG-049：Node 对话记录不显示](199-bugfix-bug-049-node-history.md)：已接入 Node 有效历史，待用户桌面验收。
+
+- [Main 和 Node 文件系统工具](198-devlog-project-file-tools.md)：按用户要求开放现有文件工具；定向验证通过，完整测试受 Host 锁冲突及一项超时影响未通过。
+
+- [BUG-048：Node 未提交时错误展示验收卡片](197-bugfix-bug-048-node-review.md)：按用户纠正，只有提交作业后显示验收卡片；待桌面验收。
+
+- [BUG-047：Main 对话刷新后不显示](196-bugfix-bug-047-main-history.md)：已接入 Main 有效历史，前端检查通过；现场和真实桌面复验待完成。
+
 - [BUG-019：模型连接失败底层诊断不足](123-bugfix-bug-019-transport-diagnostics.md)：第一轮代理服务器 TCP 超时有对应日志，第二轮底层错误仍未知；当前六次无认证探测可达，仅排查、未修改配置。
 
 - [BUG-018：验收审查回合关联错误](122-bugfix-bug-018-review-turn.md)：定向、本机与真实最终断言及 PR head CI 通过，已随 PR #79 合入关闭。
@@ -288,3 +296,7 @@
 - [BUG-040/041/042 CI 测试超时](192-bugfix-bug-040-041-ci-timeouts.md)：首次与后续超时、本机及 CI 诊断、新版失败用例独立重试证据；仅排查，均未修复。
 
 - [F5.6a Node 对话与执行](193-devlog-f5-6a-node.md)：Main / Node 目标隔离的会话、草稿、活动请求与取消，节点工作页按公开操作开放执行；受控 Electron 验收与验证边界。
+
+- [BUG-043 Electron 开发版 Host 启动](194-bugfix-bug-043-electron-host.md)：Electron 可执行文件误代 Node 运行 Host 导致“后端未连接”；改为独立 Node、支持路径覆盖，并记录本机修复与验证边界。
+
+- [BUG-044～046 Main 文件读取、规划交接与 Node 顶部信息](195-bugfix-bug-044-046-main-read-node-ui.md)：补齐 Main 的只读文件能力、规划完成后的 Node 启动交接，并移除 Node 工作页重复顶部信息；记录定向检查与待真实验收边界。

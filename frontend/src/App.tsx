@@ -38,7 +38,8 @@ export function App(): React.JSX.Element {
 
 function DesktopWorkspace(): React.JSX.Element {
   const api = window.desktop?.project;
-  const runtime = useMemo(() => new ProjectRuntime(api), [api]);
+  const session = window.desktop?.session;
+  const runtime = useMemo(() => new ProjectRuntime(api, session), [api, session]);
   useEffect(() => {
     runtime.connect();
     return () => runtime.disconnect();

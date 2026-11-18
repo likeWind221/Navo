@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AgentTurnV2Event } from "../../../../rpc/content.js";
-import type { ProjectDetailV1, ProjectTurnInput, ProjectTurnTarget } from "../../../../rpc/project.js";
+import type { NodeReviewInput, NodeV1, ProjectDetailV1, ProjectTurnInput, ProjectTurnTarget } from "../../../../rpc/project.js";
 import type { DesktopProjectApi, DesktopProjectEvent, DesktopProjectResult } from "../../../shared/project.js";
 import { ProjectRuntime } from "./runtime.js";
 
@@ -12,6 +12,19 @@ const detailTwo: ProjectDetailV1 = { ...detail, project: { ...detail.project, pr
 const main: ProjectTurnTarget = { kind: "main" };
 const nodeA: ProjectTurnTarget = { kind: "node", nodeId: "a" };
 const nodeB: ProjectTurnTarget = { kind: "node", nodeId: "b" };
+const reviewA: ProjectTurnTarget = { kind: "review", nodeId: "a" };
+const nodeValue: NodeV1 = {
+  nodeId: "a", revision: 3, requirement: "required", status: "submitted", title: "任务 A", description: "目标",
+  acceptanceCriteria: ["保留证据"], hasSession: true, turnActive: false,
+  actions: { run: false, complete: true, skip: true, rework: true, review: true },
+  confirmation: null,
+  submission: {
+    summary: "已提交作业", resourceIds: ["resource-1"], criteria: [{ criterion: "保留证据", satisfied: true, note: "已保存" }],
+    remaining: [], submittedAt: "2026-11-17T00:00:00.000Z",
+  },
+  pendingFeedback: null, review: null, reworkCount: 0, reviewPending: true,
+};
+const detailNode: ProjectDetailV1 = { ...detail, roadmap: { revision: 1, nodes: [nodeValue], edges: [] } };
 
 describe("ProjectRuntime", () => {
   it("replaces roadmap facts from follow without starting a turn", () => {
@@ -83,6 +96,67 @@ describe("ProjectRuntime", () => {
     runtime.setDraft("p-1", nodeB, "另一个节点");
     expect(runtime.send("p-1", nodeB)).toBe(true);
     expect(api.turnInputs.map(input => input.target)).toEqual([nodeA, nodeB]);
+    runtime.dispose();
+  });
+
+  it("keeps the Main review target separate from Main and Node conversations", () => {
+    const api = new FakeProjectApi();
+    const runtime = new ProjectRuntime(api);
+    runtime.subscribe("p-1", detailNode, () => undefined);
+    runtime.setDraft("p-1", main, "Main 草稿");
+    runtime.setDraft("p-1", nodeA, "Node 草稿");
+    runtime.setDraft("p-1", reviewA, "请复盘这次提交");
+
+    expect(runtime.send("p-1", reviewA)).toBe(true);
+    expect(api.turnInputs.at(-1)?.target).toEqual(reviewA);
+    expect(runtime.targetSnapshot("p-1", reviewA).busy).toBe(true);
+    expect(runtime.targetSnapshot("p-1", main).busy).toBe(false);
+    expect(runtime.targetSnapshot("p-1", nodeA)).toMatchObject({ draft: "Node 草稿", busy: false });
+
+    const requestId = api.turnInputs[0]!.requestId;
+    api.emit({ type: "turn-event", projectId: "p-1", operationId: "review-turn", event: started(requestId, "review-turn") });
+    api.emit({ type: "turn-event", projectId: "p-1", operationId: "review-turn", event: completed(requestId, "review-turn") });
+    expect(runtime.targetSnapshot("p-1", reviewA).conversation.messages.at(-1)).toMatchObject({ role: "assistant", status: "completed" });
+    expect(runtime.targetSnapshot("p-1", main).conversation.messages).toHaveLength(0);
+    runtime.dispose();
+  });
+
+  it("applies a successful manual review result without starting a turn", async () => {
+    const api = new FakeProjectApi();
+    const runtime = new ProjectRuntime(api);
+    runtime.subscribe("p-1", detailNode, () => undefined);
+    const pending = runtime.review("p-1", "a", "complete", "人工验收通过", 3);
+    expect(runtime.reviewSnapshot("p-1", "a").busy).toBe(true);
+    expect(runtime.snapshot("p-1", detailNode).detail?.roadmap?.nodes[0]?.status).toBe("submitted");
+    expect(api.reviewInputs).toEqual([{ projectId: "p-1", nodeId: "a", action: "complete", reason: "人工验收通过", reviewedRevision: 3 }]);
+    const duplicate = await runtime.review("p-1", "a", "rework", "重复提交", 3);
+    expect(duplicate).toMatchObject({ type: "failed", failure: { code: "turn-active" } });
+    expect(api.reviewInputs).toHaveLength(1);
+    api.resolveReview({ type: "ok", value: { ...nodeValue, revision: 4, status: "completing", actions: { ...nodeValue.actions, complete: false, rework: false, review: false } } });
+    expect((await pending).type).toBe("ok");
+    expect(runtime.reviewSnapshot("p-1", "a")).toEqual({ busy: false, failure: null });
+    expect(runtime.snapshot("p-1", detailNode).detail?.roadmap?.nodes[0]).toMatchObject({ revision: 4, status: "completing" });
+    expect(api.turnInputs).toHaveLength(0);
+    runtime.dispose();
+  });
+
+  it("shows a revision conflict, refreshes latest facts once, and does not resend", async () => {
+    const api = new FakeProjectApi();
+    const runtime = new ProjectRuntime(api);
+    runtime.subscribe("p-1", detailNode, () => undefined);
+    const latest = { ...detailNode, roadmap: { revision: 2, nodes: [{ ...nodeValue, revision: 4, submission: { ...nodeValue.submission!, summary: "另一份最新作业" } }], edges: [] } };
+    api.detailValue = latest;
+
+    const pending = runtime.review("p-1", "a", "rework", "补充来源", 3);
+    api.resolveReview({ type: "failed", failure: { code: "revision-conflict", message: "节点版本已变化" } });
+    const result = await pending;
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(result).toMatchObject({ type: "failed", failure: { code: "revision-conflict" } });
+    expect(runtime.reviewSnapshot("p-1", "a").failure?.code).toBe("revision-conflict");
+    expect(api.reviewInputs).toHaveLength(1);
+    expect(api.getCalls).toBe(1);
+    expect(runtime.snapshot("p-1", detailNode).detail?.roadmap?.nodes[0]?.revision).toBe(4);
     runtime.dispose();
   });
 
@@ -190,16 +264,25 @@ function completed(requestId: string, turnId = "turn-1"): AgentTurnV2Event {
 
 class FakeProjectApi implements DesktopProjectApi {
   readonly turnInputs: ProjectTurnInput[] = [];
+  readonly reviewInputs: NodeReviewInput[] = [];
   readonly cancelled: string[] = [];
+  detailValue: ProjectDetailV1 = detail;
+  getCalls = 0;
   deferFollow = false;
   private followIndex = 0;
   private readonly followReplies: ((result: DesktopProjectResult<{ readonly subscriptionId: string }>) => void)[] = [];
   private readonly turnReplies = new Map<string, (result: DesktopProjectResult<{ readonly subscriptionId: string }>) => void>();
+  private readonly reviewReplies: ((result: DesktopProjectResult<NodeV1>) => void)[] = [];
   private listener: ((event: DesktopProjectEvent) => void) | null = null;
 
   list = async () => ({ type: "ok", value: { projects: [] } } as const);
   create = async () => ({ type: "failed", failure: { code: "host-unavailable" as const, message: "unused" } } as const);
-  get = async () => ({ type: "ok", value: detail } as const);
+  get = async () => { this.getCalls += 1; return { type: "ok", value: this.detailValue } as const; };
+  getSessions = async () => ({ type: "ok", value: { projectId: "p-1", sessions: [] } } as const);
+  review = (input: NodeReviewInput): Promise<DesktopProjectResult<NodeV1>> => {
+    this.reviewInputs.push(input);
+    return new Promise(resolve => this.reviewReplies.push(resolve));
+  };
   autoRunStart = async () => ({ type: "failed", failure: { code: "host-unavailable" as const, message: "unused" } } as const);
   autoRunPause = this.autoRunStart;
   autoRunResume = this.autoRunStart;
@@ -222,6 +305,11 @@ class FakeProjectApi implements DesktopProjectApi {
     if (reply === undefined) throw new Error("Unknown turn " + requestId);
     this.turnReplies.delete(requestId);
     reply({ type: "ok", value: { subscriptionId } });
+  }
+  resolveReview(result: DesktopProjectResult<NodeV1>): void {
+    const reply = this.reviewReplies.shift();
+    if (reply === undefined) throw new Error("No pending review");
+    reply(result);
   }
   resolveFollow(subscriptionId: string): void { this.followReplies.shift()?.({ type: "ok", value: { subscriptionId } }); }
   emit(event: DesktopProjectEvent): void { this.listener?.(event); }

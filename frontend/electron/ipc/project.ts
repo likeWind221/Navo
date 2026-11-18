@@ -9,7 +9,9 @@ import {
   PROJECT_CHOOSE_WORKSPACE_CHANNEL,
   PROJECT_CREATE_CHANNEL,
   PROJECT_GET_CHANNEL,
+  PROJECT_SESSIONS_CHANNEL,
   PROJECT_LIST_CHANNEL,
+  PROJECT_NODE_REVIEW_CHANNEL,
   PROJECT_TURN_START_CHANNEL,
   PROJECT_TURN_CANCEL_CHANNEL,
   PROJECT_FOLLOW_START_CHANNEL,
@@ -28,6 +30,8 @@ export function registerProjectIpc(
   ipcMain.handle(PROJECT_LIST_CHANNEL, (_event, candidate: unknown) => handlers.list(candidate));
   ipcMain.handle(PROJECT_CREATE_CHANNEL, (_event, candidate: unknown) => handlers.create(candidate));
   ipcMain.handle(PROJECT_GET_CHANNEL, (_event, candidate: unknown) => handlers.get(candidate));
+  ipcMain.handle(PROJECT_SESSIONS_CHANNEL, (_event, candidate: unknown) => handlers.getSessions(candidate));
+  ipcMain.handle(PROJECT_NODE_REVIEW_CHANNEL, (_event, candidate: unknown) => handlers.review(candidate));
   ipcMain.handle(PROJECT_AUTORUN_START_CHANNEL, (_event, candidate: unknown) => handlers.autoRunStart(candidate));
   ipcMain.handle(PROJECT_AUTORUN_PAUSE_CHANNEL, (_event, candidate: unknown) => handlers.autoRunPause(candidate));
   ipcMain.handle(PROJECT_AUTORUN_RESUME_CHANNEL, (_event, candidate: unknown) => handlers.autoRunResume(candidate));
@@ -40,6 +44,8 @@ export function registerProjectIpc(
     ipcMain.removeHandler(PROJECT_LIST_CHANNEL);
     ipcMain.removeHandler(PROJECT_CREATE_CHANNEL);
     ipcMain.removeHandler(PROJECT_GET_CHANNEL);
+    ipcMain.removeHandler(PROJECT_SESSIONS_CHANNEL);
+    ipcMain.removeHandler(PROJECT_NODE_REVIEW_CHANNEL);
     ipcMain.removeHandler(PROJECT_AUTORUN_START_CHANNEL);
     ipcMain.removeHandler(PROJECT_AUTORUN_PAUSE_CHANNEL);
     ipcMain.removeHandler(PROJECT_AUTORUN_RESUME_CHANNEL);

@@ -11,6 +11,11 @@ import type {
 import { MessageList } from "../List.js";
 
 describe("MessageList", () => {
+  it("places an interactive review card after the assistant reply", () => {
+    const markup = renderToStaticMarkup(<MessageList messages={[assistant("节点回答", "completed")]}><section aria-label="节点验收"><button>确认完成</button></section></MessageList>);
+    expect(markup.indexOf("节点回答")).toBeLessThan(markup.indexOf('aria-label="节点验收"'));
+    expect(markup).toContain("确认完成");
+  });
   it("escapes user input and raw assistant HTML", () => {
     const markup = render([
       { id: "user-1", role: "user", text: "<script>alert(1)</script>" },

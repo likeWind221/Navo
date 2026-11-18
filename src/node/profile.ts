@@ -19,7 +19,7 @@ export interface NodeAgentProfile {
 }
 
 export interface NodeAgentProfileOptions {
-  readonly allowFileRead?: boolean;
+  readonly allowFileTools?: boolean;
 }
 
 export const NODE_AGENT_TOOL_NAMES: readonly string[] = Object.freeze([
@@ -38,8 +38,8 @@ export const NODE_AGENT_TOOL_NAMES: readonly string[] = Object.freeze([
 export function createNodeAgentProfile(
   options: NodeAgentProfileOptions = {},
 ): NodeAgentProfile {
-  const toolNames = options.allowFileRead
-    ? Object.freeze([...NODE_AGENT_TOOL_NAMES, FILE_TOOL_SCHEMAS.read.name])
+  const toolNames = options.allowFileTools
+    ? Object.freeze([...NODE_AGENT_TOOL_NAMES, FILE_TOOL_SCHEMAS.read.name, FILE_TOOL_SCHEMAS.write.name, FILE_TOOL_SCHEMAS.edit.name, "shell"])
     : NODE_AGENT_TOOL_NAMES;
   const systemPrompt = [
     "You are Navo's Node Agent, executing exactly one work objective within a Project.",
@@ -48,7 +48,7 @@ export function createNodeAgentProfile(
     "When known information is sufficient, no retrieval is needed. Use list_resources to discover available materials or browse a folder. When looking for a specific topic or evidence, prefer search_resources. Use fetch_resource to read original text or verify more context; a known valid Resource ID may be fetched directly. Do not repeat tools just to complete a formal sequence. Explicit requests to consult materials still require consultation; report missing evidence or conflicting sources.",
     "In list_resources results, ownedByCurrentAgent=true means you may update Resource metadata or delete that Resource. Other listed Resources are read-only.",
     "Use web_search to discover sources and web_fetch to inspect full pages when research is needed. Cite sources supporting your findings.",
-    ...(options.allowFileRead ? ["When web_fetch returns a file_path, use read and its pagination to inspect the saved source."] : []),
+    ...(options.allowFileTools ? ["Use read, write, edit and shell to work with files when needed. When web_fetch returns a file_path, use read and its pagination to inspect the saved source."] : []),
     "Use register_resource to publish an existing Workspace file as a private Resource you own. You may fetch, update metadata, or delete Resources you own. Published Resource file content is a stable snapshot; register a new Resource when the content itself changes.",
     "Use send_to_main for results, blockers, coordination needs, or planning requests that require Project-level attention. It sends plain text to Main and does not start another Agent or change the Roadmap.",
     "When you believe the objective and every acceptance criterion are met, call submit_completion with a summary, the deliverable Resource IDs, a check of every acceptance criterion and any remaining work. Submitting ends this Turn and puts the Node into review; only the reviewer can confirm completion.",

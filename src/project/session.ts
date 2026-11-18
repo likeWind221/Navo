@@ -14,6 +14,7 @@ import { createMainAgentProfile } from "./profile.js";
 
 export interface MainSessionServiceConfig {
   readonly model: TurnModelConfig;
+  readonly allowFileTools?: boolean;
 }
 
 export interface MainSessionMessageInput {
@@ -41,17 +42,19 @@ export class MainSessionService extends Service {
   static inject = ["projects", "nodes", "resources", "agentRuntime", "sessions"];
 
   private readonly model: TurnModelConfig;
+  private readonly allowFileTools: boolean;
 
   constructor(ctx: Context, config: MainSessionServiceConfig) {
     super(ctx, "mainSessions");
     this.model = snapshotModel(config?.model);
+    this.allowFileTools = config?.allowFileTools === true;
   }
 
   async sendMessage(input: MainSessionMessageInput): Promise<MainSessionTurnResult> {
     const text = requireMessageText(input.text);
     const project = this.requireProject(input.projectId);
     const binding = requireMainBinding(this.ctx, project.mainSessionId, project.id);
-    const profile = createMainAgentProfile(input.review !== undefined);
+    const profile = createMainAgentProfile(input.review !== undefined, this.allowFileTools);
     const context = createProjectTurnContext(this.ctx, binding.sessionId, {
       ...(input.review === undefined ? {} : { reminders: [input.review.checklist], reviewNodeId: input.review.nodeId }),
     });
@@ -82,7 +85,7 @@ export class MainSessionService extends Service {
   resolveContext(sessionId: SessionId): SessionAgentContext {
     const binding = requireMainBinding(this.ctx, sessionId);
     this.requireProject(binding.projectId);
-    const profile = createMainAgentProfile();
+    const profile = createMainAgentProfile(false, this.allowFileTools);
     const context = createProjectTurnContext(this.ctx, sessionId, { observe: false });
     return Object.freeze({
       model: this.model,

@@ -136,6 +136,8 @@ export function createCreateRoadmapTool(ctx: Context): ToolDefinition {
             ...mapping,
             "",
             formatAgentRoadmapView(view),
+            "",
+            "Execution handoff: tell the Human the plan is recorded, name the currently unlocked Node or Nodes, and instruct them to open and start each ready Node in dependency order. Each Node runs as a separate Node Agent; its submission returns for review before successors unlock. Do not claim that any Node has started.",
           ].join("\n"),
           artifact: {
             ...agentRoadmapArtifact(view),

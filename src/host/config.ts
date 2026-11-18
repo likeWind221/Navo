@@ -68,7 +68,7 @@ const DEFAULT_GRAPH_OUTPUT_TOKENS = 4_096;
 export function resolveKernelHostConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): KernelHostConfig {
-  const provider = env.LLM_PROVIDER?.trim() ?? "qwen";
+  const provider = env.LLM_PROVIDER?.trim() ?? "deepseek";
   if (provider !== "qwen" && provider !== "openai" && provider !== "deepseek") {
     throw new TypeError("LLM_PROVIDER must be 'qwen', 'openai' or 'deepseek'.");
   }

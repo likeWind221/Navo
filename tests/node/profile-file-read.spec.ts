@@ -9,9 +9,9 @@ import { UPDATE_RESOURCE_TOOL_NAME } from "../../src/tools/builtins/resource/upd
 import { SET_RESOURCE_ACCESS_TOOL_NAME } from "../../src/tools/builtins/resource/access.js";
 
 describe("NodeAgent file capability", () => {
-  it("adds only read when the host file capability is available", async () => {
+  it("adds the registered file tools when the host file capability is available", async () => {
     const withoutFiles = createNodeAgentProfile();
-    const withRead = createNodeAgentProfile({ allowFileRead: true });
+    const withRead = createNodeAgentProfile({ allowFileTools: true });
 
     expect(withoutFiles.toolNames).not.toContain("read");
     expect(withRead.toolNames).toContain("read");
@@ -23,9 +23,7 @@ describe("NodeAgent file capability", () => {
       SEND_TO_MAIN_TOOL_NAME,
     ]));
     expect(withRead.toolNames).not.toContain(SET_RESOURCE_ACCESS_TOOL_NAME);
-    expect(withRead.toolNames).not.toEqual(
-      expect.arrayContaining(["shell", "edit", "write"]),
-    );
+    expect(withRead.toolNames).toEqual(expect.arrayContaining(["shell", "edit", "write"]));
     expect(withRead.systemPrompt).toContain("file_path");
     expect(withRead.systemPrompt).toContain("read");
   });

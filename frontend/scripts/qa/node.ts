@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { app, BrowserWindow } from "electron";
 import type { ProjectDetailV1, ProjectListV1 } from "../../../rpc/project.js";
 import { registerProjectIpc } from "../../electron/ipc/project.js";
+import { registerSessionContextIpc, SessionContextController } from "../../electron/ipc/session-context.js";
 import { ProjectController } from "../../electron/ipc/project/controller.js";
 import { ControlledProjectHost } from "./controlled.js";
 
@@ -39,6 +40,8 @@ async function main(): Promise<void> {
   const workspace = await mkdtemp(join(tmpdir(), "navo-f56a-workspace-"));
   const host = new ControlledProjectHost();
   const controller = new ProjectController(host);
+  const sessionController = new SessionContextController(host);
+  const unregisterSession = registerSessionContextIpc(sessionController);
   const unregister = registerProjectIpc(host, async () => ({ canceled: false, filePaths: [workspace] }), controller);
   const window = new BrowserWindow({
     width: 1280, height: 900, show: false,
@@ -67,6 +70,8 @@ async function main(): Promise<void> {
   } finally {
     if (timer !== undefined) clearTimeout(timer);
     unregister();
+    unregisterSession();
+    sessionController.dispose();
     controller.dispose();
     if (!window.isDestroyed()) window.destroy();
     await rm(workspace, { recursive: true, force: true });
@@ -105,9 +110,8 @@ async function runFlow(window: BrowserWindow, host: ControlledProjectHost, evide
   await clickAt(window, nodeOneButton);
   await waitFor(window, "document.querySelector(" + JSON.stringify(nodeOneInput) + ") !== null");
   assert.equal(await disabled(window, nodeOneInput), false);
-  const nodeOneText = await text(window, '[aria-label="节点详情"]');
-  assert.ok(nodeOneText.includes("确认目标并整理执行路线"));
-  assert.ok(nodeOneText.includes("完成并可检查"));
+  assert.equal(await window.webContents.executeJavaScript("document.querySelector('[aria-label=\"节点详情\"]') === null"), true);
+  assert.equal(await window.webContents.executeJavaScript("document.querySelector('[aria-label=\"Node 项目对话\"]')?.textContent.includes('NODE WORKSPACE')"), false);
 
   await fill(window, nodeOneInput, "保留节点草稿");
   await click(window, 'button[aria-label="切换到 Main"]');

@@ -25,6 +25,9 @@
 .project[data-full="true"] .panel { position: absolute; inset: 16px; z-index: 3; margin: 0; }
 .rail { display: flex; align-items: center; gap: 4px; overflow-x: auto; flex-shrink: 0; padding: 10px 12px; min-height: 48px; border-bottom: 1px solid #edf0e9; }
 .rail button { border: 0; background: transparent; color: var(--text-secondary); height: 28px; border-radius: 7px; font-size: 11px; padding: 0 10px; white-space: nowrap; }
+.railTools { display: flex; align-items: center; gap: 2px; flex-shrink: 0; margin-left: auto; }
+.railTools button { display: grid; place-items: center; width: 28px; padding: 0; }
+.railTools svg { width: 14px; height: 14px; }
 .mainButton[aria-pressed="true"], .railNode[data-active="true"] { background: var(--surface-muted); color: var(--accent-strong); }
 .rail .mainButton { font-weight: 600; }
 .railNode { display: flex; align-items: center; border-radius: 7px; flex-shrink: 0; }
@@ -33,27 +36,11 @@
 .closeNode svg { width: 11px; height: 11px; }
 .rail button:hover { background: var(--surface-muted); }
 .conversation { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
-.panelHeader { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px 10px; gap: 10px; }
-.breadcrumb { color: var(--text-secondary); font-size: 12px; font-weight: 500; }
-.breadcrumb span { color: #bac6bd; padding: 0 8px; }
-.actions { display: flex; gap: 4px; flex-shrink: 0; }
-.actions button { display: grid; place-items: center; background: none; border: 0; border-radius: 6px; color: var(--text-secondary); width: 26px; height: 26px; padding: 0; }
-.actions button:hover { background: var(--surface-muted); }
-.actions svg { width: 14px; height: 14px; }
-.auxiliary { display: flex; align-items: flex-start; gap: 18px; padding: 0 20px 12px; font-size: 10px; border-bottom: 1px solid #edf0e9; color: var(--text-secondary); }
-.auxiliary details { flex: 1; min-width: 0; }
-.auxiliary summary { cursor: pointer; width: fit-content; }
-.auxiliary dl { margin: 10px 0; }
-.auxiliary dt { color: var(--text-tertiary); }
-.auxiliary dd { margin: 0 0 8px; overflow-wrap: anywhere; }
-.auxiliary code { font: 11px/1.6 var(--font-mono); }
-.auxiliary button { border: 0; background: none; padding: 0; color: var(--text-tertiary); font-size: 10px; }
 .messages { flex: 1; min-height: 0; overflow: auto; padding: 22px 22px 18px; }
-.liveConversation { flex: 1; min-height: 0; margin: 16px 14px 0; border-top: 1px solid var(--border); overflow: hidden; }
-.nodeWorkspace { flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 16px 14px 0; border-top: 1px solid var(--border); overflow: hidden; }
-.nodeDetailArea { display: flex; flex: 0 1 44%; min-height: 170px; max-height: 46%; overflow: hidden; border-bottom: 1px solid var(--border); }
-.nodeDetailArea > section { flex: 1; min-height: 0; }
-.nodeChat { position: relative; flex: 1; min-height: 0; }
+.liveConversation { flex: 1; min-height: 0; overflow: hidden; }
+.nodeWorkspace { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.nodeChat { display: flex; flex: 1; min-height: 0; flex-direction: column; }
+.nodeConversation { position: relative; flex: 1; min-height: 0; }
 .panel[data-full="true"] .messages, .panel[data-full="true"] .composer { width: min(760px, calc(100% - 32px)); align-self: center; }
 .nodeHeading { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
 .nodeBadge { display: grid; place-items: center; flex-shrink: 0; width: 48px; height: 48px; border-radius: 50%; background: #e5eee6; color: var(--accent-strong); font-size: 18px; font-weight: 650; }

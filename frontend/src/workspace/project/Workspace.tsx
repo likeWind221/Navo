@@ -11,7 +11,10 @@ import styles from "./workspace.module.css";
 import { ProjectConversation } from "./Conversation";
 import { ProjectRuntime } from "./runtime.js";
 import type { ProjectChatTarget } from "./runtime/turns.js";
-import { NodeDetails } from "./Node";
+import { nodeExecutionHint, nodeHasSubmission } from "./Node";
+import { NodeReview } from "./node/Review";
+import type { NodeReviewAction } from "./node/Review";
+import nodeStyles from "./node/style.module.css";
 import { ResourceLibrary } from "./resource/Library";
 import { useResourceOperations } from "./resource/operations";
 
@@ -49,6 +52,12 @@ export function ProjectWorkspace({ detail: initialDetail, api, resource, runtime
   const target = useMemo<ProjectChatTarget>(() => selectedNode === undefined
     ? { kind: "main" }
     : { kind: "node", nodeId: selectedNode.nodeId }, [selectedNode?.nodeId]);
+  const reviewTarget = useMemo<ProjectChatTarget | null>(() => selectedNode === undefined
+    ? null
+    : { kind: "review", nodeId: selectedNode.nodeId }, [selectedNode?.nodeId]);
+  const reviewSnapshot = selectedNode === undefined ? null : projectRuntime.reviewSnapshot(project.projectId, selectedNode.nodeId);
+  const reviewTurn = reviewTarget === null ? null : projectRuntime.targetSnapshot(project.projectId, reviewTarget);
+  const showNodeReview = selectedNode !== undefined && nodeHasSubmission(selectedNode);
   const title = node?.title ?? "Main";
   const nodeNumber = String(nodes.findIndex(item => item.id === active) + 1).padStart(2, "0");
 
@@ -67,6 +76,22 @@ export function ProjectWorkspace({ detail: initialDetail, api, resource, runtime
   function closeNode(id: string): void {
     setOpened(previous => previous.filter(value => value !== id));
     if (active === id) setActive("main");
+  }
+
+  function openReview(current: NodeV1): void {
+    if (!current.actions.review) return;
+    const nextTarget = { kind: "review" as const, nodeId: current.nodeId };
+    const snapshot = projectRuntime.targetSnapshot(project.projectId, nextTarget);
+    if (snapshot.busy) return;
+    if (snapshot.draft.trim() === "") {
+      projectRuntime.setDraft(project.projectId, nextTarget, "请复盘这个节点的提交成果和完成标准。");
+    }
+    projectRuntime.send(project.projectId, nextTarget);
+  }
+
+  async function reviewNode(current: NodeV1, action: NodeReviewAction, reason: string): Promise<boolean> {
+    const result = await projectRuntime.review(project.projectId, current.nodeId, action, reason, current.revision);
+    return result.type === "ok";
   }
 
   function send(): void {
@@ -115,23 +140,13 @@ export function ProjectWorkspace({ detail: initialDetail, api, resource, runtime
           <button title={nodes.find(item => item.id === id)?.title} aria-label={`切换到 ${nodes.find(item => item.id === id)?.title}`} onClick={() => setActive(id)}>Node {String(nodes.findIndex(item => item.id === id) + 1).padStart(2, "0")}</button>
           <button className={styles.closeNode} aria-label={`关闭 ${nodes.find(item => item.id === id)?.title}`} onClick={() => closeNode(id)}><Icon name="close" /></button>
         </div>)}
+        <div className={styles.railTools}>
+          <button ref={resourceButton} disabled={resource === undefined} aria-label={resource === undefined ? "资料库仅在桌面应用中可用" : "打开资料库"} aria-haspopup="dialog" aria-expanded={libraryOpen} title={resource === undefined ? "资料库仅在桌面应用中可用" : "打开资料库"} onClick={() => setLibraryOpen(true)}><Icon name="folder" /></button>
+          <button aria-label={full ? "恢复普通宽度" : "完全展开会话面板"} title={full ? "恢复普通宽度" : "完全展开"} onClick={() => setFull(value => !value)}><Icon name={full ? "minimize" : "maximize"} /></button>
+          <button aria-label="收起会话面板" title="收起会话面板" onClick={() => setVisible(false)}><Icon name="chevron" /></button>
+        </div>
       </nav>
       <div className={styles.conversation}>
-        <header className={styles.panelHeader}>
-          <div className={styles.breadcrumb}>Main <span>/</span> {node ? `Node ${nodeNumber}` : "项目会话"}</div>
-          <div className={styles.actions}>
-            <button aria-label={full ? "恢复普通宽度" : "完全展开会话面板"} title={full ? "恢复普通宽度" : "完全展开"} onClick={() => setFull(value => !value)}><Icon name={full ? "minimize" : "maximize"} /></button>
-            <button aria-label="收起会话面板" title="收起会话面板" onClick={() => setVisible(false)}><Icon name="chevron" /></button>
-          </div>
-        </header>
-        <nav className={styles.auxiliary} aria-label="项目辅助信息">
-          <details><summary>项目信息</summary><dl>
-            <dt>工作目录</dt><dd><code>{project.workspaceRoot ?? "绑定中"}</code></dd>
-            <dt>状态</dt><dd>{project.status === "active" ? "进行中" : "已归档"}</dd>
-            <dt>创建时间</dt><dd><time dateTime={project.createdAt}>{new Date(project.createdAt).toLocaleString("zh-CN", { hour12: false })}</time></dd>
-          </dl></details>
-          <button disabled title="消息查看即将开放">消息</button><button ref={resourceButton} disabled={resource === undefined} aria-haspopup="dialog" aria-expanded={libraryOpen} title={resource === undefined ? "资料库仅在桌面应用中可用" : "打开资料库"} onClick={() => setLibraryOpen(true)}>资料</button>
-        </nav>
         {demo && <div className={styles.messages}>
           <div className={styles.nodeHeading}><span className={styles.nodeBadge} data-node={Boolean(node)}>{node ? nodeNumber : <Icon name="guide" />}</span><div><small>{node ? "NODE WORKSPACE" : "MAIN AGENT"}</small><h2>{node ? title : "一起探索下一步"}</h2></div></div>
           <div className={styles.context}><span>{node ? "当前节点" : "项目目标"}</span><p>{node?.note ?? project.goal ?? "目标待确定"}</p>{node && demo && <small>验收条件：提供可检查的结果与来源证据。</small>}</div>
@@ -144,15 +159,22 @@ export function ProjectWorkspace({ detail: initialDetail, api, resource, runtime
           {node && <div className={styles.nodeHint}>原型仅展示交互，不启动 Agent 或修改节点状态。</div>}
         </div>}
         {!demo && selectedNode && detail.roadmap && <div className={styles.nodeWorkspace}>
-          <div className={styles.nodeDetailArea}><NodeDetails node={selectedNode} roadmap={detail.roadmap} onOpen={openNode} /></div>
-          <div className={styles.nodeChat}><ProjectConversation key={`node-${selectedNode.nodeId}`} runtime={projectRuntime} projectId={project.projectId} detail={detail} target={target}
-            disabled={!selectedNode.actions.run} disabledHint={executionHint(selectedNode)}>
-            <div className={styles.nodeHeading}><span className={styles.nodeBadge} data-node="true">{nodeNumber}</span><div><small>NODE WORKSPACE</small><h2>{selectedNode.title}</h2></div></div>
-          </ProjectConversation></div>
+          <div className={styles.nodeChat}>
+            <div className={styles.nodeConversation}>
+              <ProjectConversation key={`node-${selectedNode.nodeId}`} runtime={projectRuntime} projectId={project.projectId} detail={detail} target={target} reviewTarget={reviewTarget}
+                disabled={!selectedNode.actions.run} disabledHint={nodeExecutionHint(selectedNode)} placeholder="继续这个节点的工作，或说明验收前要补充什么…"
+                afterMessages={showNodeReview && <div className={`${nodeStyles.details} ${nodeStyles.reviewCard}`}><NodeReview node={selectedNode} controls={{
+                  busy: reviewSnapshot?.busy ?? false,
+                  failure: reviewSnapshot?.failure ?? null,
+                  mainReviewBusy: reviewTurn?.busy ?? false,
+                  onReview: (action, reason) => reviewNode(selectedNode, action, reason),
+                  onAskMain: () => openReview(selectedNode),
+                  onDismissFailure: () => projectRuntime.dismissReviewFailure(project.projectId, selectedNode.nodeId),
+                }} /></div>} />
+            </div>
+          </div>
         </div>}
-        {!demo && !selectedNode && <div className={styles.liveConversation}><ProjectConversation key="main" runtime={projectRuntime} projectId={project.projectId} detail={detail} target={target}>
-          <div className={styles.nodeHeading}><span className={styles.nodeBadge}><Icon name="guide" /></span><div><small>MAIN AGENT</small><h2>一起探索下一步</h2></div></div><div className={styles.context}><span>项目目标</span><p>{project.goal ?? "目标待确定"}</p></div>
-        </ProjectConversation></div>}
+        {!demo && !selectedNode && <div className={styles.liveConversation}><ProjectConversation key="main" runtime={projectRuntime} projectId={project.projectId} detail={detail} target={target} /></div>}
         {!demo ? null : <div className={styles.composer}>
           <textarea aria-label={`${title} 草稿`} placeholder={node ? "补充这个节点的要求…" : "与 Main 讨论目标与路线…"} value={drafts[active] ?? ""} onChange={event => setDrafts(previous => ({ ...previous, [active]: event.target.value }))} />
           <div><span>{demo ? "原型演示 · 不调用模型" : "草稿 · 对话发送即将开放"}</span><button aria-label={demo ? "发送示例消息" : "发送消息"} disabled={!demo || !drafts[active]?.trim()} onClick={send}><Icon name="arrow" /></button></div>
@@ -161,12 +183,4 @@ export function ProjectWorkspace({ detail: initialDetail, api, resource, runtime
     </aside>}
     {libraryOpen && resource !== undefined && <ResourceLibrary api={resource} projectId={project.projectId} operations={resourceOperations} onClose={closeLibrary} />}
   </article>;
-}
-
-function executionHint(node: NodeV1): string {
-  if (node.turnActive) return "节点回合正在进行";
-  if (node.status === "locked") return "等待前置节点完成";
-  if (node.status === "submitted") return "节点已交作业，等待验收";
-  if (node.status === "working") return "节点正在执行";
-  return "当前节点暂不可执行";
 }

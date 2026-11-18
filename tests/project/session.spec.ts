@@ -191,6 +191,9 @@ describe("MainSessionService identity and context", () => {
     expect(prompt).toContain("leave unanswered questions and your own suggested leanings out of the goal");
     expect(prompt).toContain("After set_project_goal succeeds, tell the user in the same reply what was recorded");
     expect(prompt).toContain("quoting the recorded text verbatim");
+    expect(prompt).toContain("After create_roadmap succeeds, give the Human a concise execution handoff");
+    expect(prompt).toContain("Each Node Turn is executed by a separate Node Agent as a stage-level sub-agent");
+    expect(prompt).toContain("Do not claim that any Node has already started");
     expect(prompt).not.toContain("When read_roadmap reports that no Roadmap exists, use create_roadmap to create the initial plan.");
   });
 

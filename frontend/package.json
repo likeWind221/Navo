@@ -24,6 +24,7 @@
     "qa:project": "electron out/main/project.js",
     "qa:main": "electron out/main/main.js",
     "qa:node": "electron out/main/node.js",
+    "qa:review": "electron out/main/review.js",
     "qa:session-context": "electron out/main/session.js",
     "qa:resource": "electron out/main/resource.js",
     "qa:f71": "electron scripts/qa/f71.cjs",
