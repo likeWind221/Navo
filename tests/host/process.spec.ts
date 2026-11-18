@@ -703,7 +703,7 @@ function startHost(
 ): ChildProcessWithoutNullStreams {
   return spawn(process.execPath, ["--import", "tsx", entry, ...args], {
     cwd: process.cwd(),
-    env: { ...process.env, ...extraEnv },
+    env: { ...process.env, LLM_PROVIDER: "qwen", ...extraEnv },
     stdio: ["pipe", "pipe", "pipe"],
     windowsHide: true,
   });
